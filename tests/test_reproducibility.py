@@ -138,6 +138,4 @@ def test_manifest_append_is_canonical_and_idempotent(tmp_path) -> None:
     lines = manifest.read_text(encoding="utf-8").splitlines()
     assert len(lines) == 1
     assert json.loads(lines[0]) == entry
-    assert lines[0] == json.dumps(
-        entry, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    )
+    assert lines[0] == json.dumps(entry, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
