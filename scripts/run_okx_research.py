@@ -43,6 +43,23 @@ def load_json(path: str | Path) -> dict[str, Any]:
         return json.load(handle)
 
 
+def _build_effective_config(
+    *,
+    data: dict[str, Any],
+    strategy: dict[str, Any],
+    search: dict[str, Any],
+    result_settings: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "data": data,
+        "strategy": strategy,
+        "search": search,
+        "robustness": {
+            "cost_multipliers": [float(value) for value in result_settings["cost_multipliers"]]
+        },
+    }
+
+
 def main() -> int:
     args = parse_args()
     experiment = load_json(args.config)
@@ -99,8 +116,8 @@ def main() -> int:
     )
     report_paths = write_walk_forward_report(result, output)
 
-    effective_config = {
-        "data": {
+    effective_config = _build_effective_config(
+        data={
             "inst_id": inst_id,
             "bar": bar,
             "base_url": base_url.rstrip("/"),
@@ -111,16 +128,16 @@ def main() -> int:
             "pause_seconds": pause_seconds,
             "timeout": timeout,
         },
-        "strategy": base_config.to_dict(),
-        "search": {
+        strategy=base_config.to_dict(),
+        search={
             "momentum_lookbacks": momentum_lookbacks,
             "reversal_lookbacks": reversal_lookbacks,
             "trend_weights": trend_weights,
             "selection_bars": selection_bars,
             "test_bars": test_bars,
         },
-        "robustness": {"cost_multipliers": cost_multipliers},
-    }
+        result_settings=result.settings,
+    )
     artifacts = {**snapshot_paths, **report_paths}
     manifest_entry = build_experiment_manifest_entry(
         effective_config=effective_config,

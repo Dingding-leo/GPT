@@ -278,7 +278,7 @@ def run_walk_forward_research(
     if selection_bars <= longest_lookback:
         raise ValueError("selection_bars must exceed every candidate lookback")
 
-    multipliers = sorted({float(value) for value in cost_multipliers} | {1.0})
+    multipliers = sorted({float(value) for value in cost_multipliers} | {1.0, 2.0})
     if any(not math.isfinite(value) or value <= 0 for value in multipliers):
         raise ValueError("cost multipliers must be finite and positive")
 
@@ -428,13 +428,9 @@ def run_walk_forward_research(
     }
     fold_stability = _assess_fold_stability(folds)
 
-    doubled = next(
-        (metrics for key, metrics in cost_metrics.items() if float(key[:-1]) >= 2.0),
-        cost_metrics[f"{multipliers[-1]:g}x"],
-    )
     status = _classify_robustness(
         aggregate=aggregate,
-        doubled_cost=doubled,
+        doubled_cost=cost_metrics["2x"],
         perturbation_metrics=perturbation_metrics,
         benchmark_assessment=benchmark_assessment,
         fold_stability=fold_stability,
