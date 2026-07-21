@@ -37,11 +37,7 @@ class StrategyConfig:
             if self._min_position_implicit is None
             else self._min_position_implicit
         )
-        minimum = (
-            -self.max_abs_position
-            if self.min_position is None
-            else float(self.min_position)
-        )
+        minimum = -self.max_abs_position if self.min_position is None else float(self.min_position)
         object.__setattr__(self, "min_position", minimum)
         object.__setattr__(self, "_min_position_implicit", minimum_is_implicit)
         if not -self.max_abs_position <= minimum <= self.max_abs_position:
