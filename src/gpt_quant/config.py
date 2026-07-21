@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
@@ -46,8 +47,8 @@ class StrategyConfig:
             raise ValueError("signal weights cannot be negative")
         if self.trend_weight + self.reversal_weight <= 0:
             raise ValueError("at least one signal weight must be positive")
-        if self.transaction_cost_bps < 0:
-            raise ValueError("transaction_cost_bps cannot be negative")
+        if not math.isfinite(self.transaction_cost_bps) or self.transaction_cost_bps < 0:
+            raise ValueError("transaction_cost_bps must be finite and non-negative")
         if self.annualization < 2:
             raise ValueError("annualization must be at least 2")
 
