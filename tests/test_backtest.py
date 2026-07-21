@@ -16,9 +16,7 @@ def test_default_position_floor_tracks_absolute_limit() -> None:
 def test_position_floor_override_remains_explicit() -> None:
     long_only = StrategyConfig(max_abs_position=0.5, min_position=0.0)
     resized_symmetric = StrategyConfig().with_overrides(max_abs_position=0.5)
-    fixed_short_floor = StrategyConfig(min_position=-1.0).with_overrides(
-        max_abs_position=2.0
-    )
+    fixed_short_floor = StrategyConfig(min_position=-1.0).with_overrides(max_abs_position=2.0)
 
     assert long_only.min_position == 0.0
     assert resized_symmetric.min_position == -0.5
