@@ -38,12 +38,11 @@ def test_internal_position_floor_state_is_not_serialized() -> None:
 
 
 def test_future_observation_cannot_change_prior_positions(btc_usdt_prices: pd.Series) -> None:
-    earlier = btc_usdt_prices.iloc[:800]
-    extended = btc_usdt_prices.iloc[:801]
+    earlier = btc_usdt_prices.iloc[:-1]
     config = StrategyConfig()
 
     original = run_backtest(earlier, config).frame
-    changed = run_backtest(extended, config).frame.loc[original.index]
+    changed = run_backtest(btc_usdt_prices, config).frame.loc[original.index]
 
     pd.testing.assert_series_equal(original["position"], changed["position"])
     pd.testing.assert_series_equal(original["strategy_return"], changed["strategy_return"])
@@ -52,9 +51,14 @@ def test_future_observation_cannot_change_prior_positions(btc_usdt_prices: pd.Se
 def test_transaction_costs_reduce_growth_for_identical_positions(
     btc_usdt_prices: pd.Series,
 ) -> None:
-    prices = btc_usdt_prices.iloc[:900]
-    free = run_backtest(prices, StrategyConfig(transaction_cost_bps=0.0)).frame
-    costly = run_backtest(prices, StrategyConfig(transaction_cost_bps=20.0)).frame
+    free = run_backtest(
+        btc_usdt_prices,
+        StrategyConfig(transaction_cost_bps=0.0),
+    ).frame
+    costly = run_backtest(
+        btc_usdt_prices,
+        StrategyConfig(transaction_cost_bps=20.0),
+    ).frame
 
     pd.testing.assert_series_equal(free["position"], costly["position"])
     assert costly["nav"].iloc[-1] < free["nav"].iloc[-1]
@@ -64,6 +68,5 @@ def test_transaction_costs_reduce_growth_for_identical_positions(
 def test_long_only_configuration_never_creates_a_short_position(
     btc_usdt_prices: pd.Series,
 ) -> None:
-    prices = btc_usdt_prices.iloc[:800]
-    frame = run_backtest(prices, StrategyConfig(min_position=0.0)).frame
+    frame = run_backtest(btc_usdt_prices, StrategyConfig(min_position=0.0)).frame
     assert frame["position"].min() >= 0.0
