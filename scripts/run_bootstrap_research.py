@@ -167,9 +167,7 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     json_path = output / "bootstrap.json"
     markdown_path = output / "bootstrap.md"
-    json_path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     markdown_path.write_text(_markdown(payload), encoding="utf-8")
 
     print(f"instrument={args.instrument}")
