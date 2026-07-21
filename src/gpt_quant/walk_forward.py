@@ -306,13 +306,16 @@ def run_walk_forward_research(
 
         ranked: list[tuple[float, StrategyConfig, dict[str, float | int]]] = []
         for candidate in candidates:
+            selection_frame = _run_test_window(
+                selection_history,
+                candidate,
+                selection_start,
+                selection_end,
+                previous_position=0.0,
+            )
             metrics = performance_metrics(
-                run_backtest(
-                    selection_history,
-                    candidate,
-                    start=selection_start,
-                    end=selection_end,
-                )
+                selection_frame,
+                annualization=candidate.annualization,
             )
             score = _score(metrics)
             if np.isfinite(score):
