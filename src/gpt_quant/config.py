@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass, field, replace
 from typing import Any
 
 
@@ -18,6 +18,7 @@ class StrategyConfig:
     reversal_weight: float = 0.30
     transaction_cost_bps: float = 2.0
     annualization: int = 252
+    _min_position_implicit: bool | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if self.momentum_lookback < 2:
@@ -31,8 +32,14 @@ class StrategyConfig:
         if not 0 < self.max_abs_position <= 10:
             raise ValueError("max_abs_position must be in (0, 10]")
 
+        minimum_is_implicit = (
+            self.min_position is None
+            if self._min_position_implicit is None
+            else self._min_position_implicit
+        )
         minimum = -self.max_abs_position if self.min_position is None else float(self.min_position)
         object.__setattr__(self, "min_position", minimum)
+        object.__setattr__(self, "_min_position_implicit", minimum_is_implicit)
         if not -self.max_abs_position <= minimum <= self.max_abs_position:
             raise ValueError("min_position must lie within the absolute position limit")
         if self.trend_weight < 0 or self.reversal_weight < 0:
@@ -49,13 +56,13 @@ class StrategyConfig:
         return self.trend_weight / total, self.reversal_weight / total
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        values = asdict(self)
+        values.pop("_min_position_implicit")
+        return values
 
     def with_overrides(self, **kwargs: Any) -> StrategyConfig:
-        if (
-            "max_abs_position" in kwargs
-            and "min_position" not in kwargs
-            and self.min_position == -self.max_abs_position
-        ):
-            kwargs["min_position"] = -float(kwargs["max_abs_position"])
+        if "min_position" in kwargs:
+            kwargs["_min_position_implicit"] = kwargs["min_position"] is None
+        elif "max_abs_position" in kwargs and self._min_position_implicit:
+            kwargs["min_position"] = None
         return replace(self, **kwargs)
