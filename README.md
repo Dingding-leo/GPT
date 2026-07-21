@@ -43,9 +43,12 @@ r^{\text{strategy}}_t = p^*_{t-1}r_t-c\lvert p^*_{t-1}-p^*_{t-2}\rvert
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
-pytest
+ruff check .
+ruff format --check .
 python scripts/run_okx_research.py --inst-id BTC-USDT --output-dir reports/okx/BTC-USDT
 ```
+
+完整的真实数据复现流程、CLI 参数、输出文件、快照哈希核验和故障排查见 [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md)。
 
 可覆盖默认品种、周期、日期和 API 域名：
 
@@ -84,33 +87,33 @@ reports/okx/BTC-USDT/walk_forward_returns.csv
 
 研究参数位于 [`config/okx_research.json`](config/okx_research.json)。
 
-## 合成数据回归测试
+## 真实数据复现与回归
 
-合成多状态数据仍然保留，用于 CI、未来函数测试和回测逻辑回归，不作为真实 alpha 证据：
+本项目禁止在研究、回测、示例、CI smoke test 和价格序列单元测试中使用合成、模拟或伪造行情。所有价格和成交量输入必须来自真实交易所历史数据，并保留来源、品种、周期、时间范围、原始响应和 SHA-256 证据。
 
-```bash
-python scripts/run_research.py --output-dir reports/synthetic
-```
-
-也可以使用自己的 `timestamp`、`close` CSV：
+`run_research.py` 当前仍包含无 `--csv` 时生成模拟价格的旧路径。该路径违反项目规则，不得执行，也不得作为测试或研究证据。仅允许将经过哈希核验的真实交易所快照显式传入：
 
 ```bash
 python scripts/run_research.py \
-  --csv data/prices.csv \
+  --csv reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv \
   --timestamp-col timestamp \
   --close-col close \
-  --output-dir reports/custom
+  --output-dir reports/holdout/BTC-USDT
 ```
+
+不得使用无法追踪到交易所、请求参数和原始响应的任意 CSV。结构性拒绝测试可以删除或破坏真实快照副本中的字段来验证 fail-closed 行为，但被修改的数据不得用于计算或发布任何收益、Sharpe、回撤或其他表现指标。
 
 ## 每小时自动化
 
-`.github/workflows/hourly-research.yml` 在每小时第 17 分钟运行：
+`.github/workflows/hourly-research.yml` 在每小时第 17 分钟运行。一个 workflow run 只有同时满足以下条件，才可被视为有效质量门禁：
 
-- lint 与格式检查；
-- 单元测试和未来函数回归测试；
-- 合成数据管线检查；
-- BTC-USDT、ETH-USDT 公共日线下载与同参数滚动样本外研究；
-- 报告和原始数据快照作为 GitHub Actions artifact 保存 14 天。
+- lint 与格式检查通过；
+- 所有测试仅使用带来源和哈希的真实交易所快照；
+- smoke test 使用真实交易所数据；
+- BTC-USDT、ETH-USDT 公共日线下载与滚动样本外研究通过；
+- 报告、原始响应、规范化快照和 provenance artifact 均已保存。
+
+当前仓库中的 legacy synthetic smoke-test step 和任何生成价格的测试都是 P0 阻塞项；在它们被替换前，即使 workflow 显示绿色，也不能将相关 run 当作符合本项目数据政策的有效证据。
 
 工作流对仓库只有读取权限，不会自动提交代码，不包含 API key，也不会向 OKX 发送订单。
 
@@ -118,10 +121,11 @@ python scripts/run_research.py \
 
 1. 不用测试 fold 的结果选择该 fold 的参数。
 2. 不展示未计成本的结果作为“净收益”。
-3. 不把合成数据或单次漂亮回测当成真实 alpha。
-4. 不在完成仿真、纸面交易和风控验收前接入真实订单。
+3. 不使用合成、模拟、生成或无法溯源的行情数据。
+4. 不在完成只读行情前向验证和风控验收前接入真实订单。
 5. 不用单条收益曲线替代跨时期、跨市场、参数扰动和容量测试。
-6. 任何数据下载都必须能由原始响应和 SHA-256 哈希追踪。
+6. 任何数据下载都必须能由原始响应、请求参数和 SHA-256 哈希追踪。
+7. 统计重采样只能重采样真实观测收益，且必须明确标注为重采样；不得生成虚构价格路径。
 
 ## 后续阶段
 
@@ -129,6 +133,6 @@ python scripts/run_research.py \
 - 增加 block bootstrap 置信区间、Deflated Sharpe 与 PBO；
 - 使用盘口或成交数据建立滑点、冲击和容量模型；
 - 保存不可变数据快照并建立结果变更审计；
-- 通过只读行情的前向仿真检验研究与实际执行的一致性。
+- 通过只读行情的前向验证检验研究与实际执行的一致性。
 
 > 本仓库仅用于研究和软件工程验证，不构成投资建议，也不保证收益或回撤。
