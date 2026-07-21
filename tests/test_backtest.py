@@ -26,3 +26,9 @@ def test_transaction_costs_reduce_growth_for_identical_positions() -> None:
     pd.testing.assert_series_equal(free["position"], costly["position"])
     assert costly["nav"].iloc[-1] < free["nav"].iloc[-1]
     assert costly["trading_cost"].sum() > 0.0
+
+
+def test_long_only_configuration_never_creates_a_short_position() -> None:
+    prices = generate_regime_prices(rows=800, seed=19)
+    frame = run_backtest(prices, StrategyConfig(min_position=0.0)).frame
+    assert frame["position"].min() >= 0.0

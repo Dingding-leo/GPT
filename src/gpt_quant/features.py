@@ -55,7 +55,7 @@ def build_target_position(prices: pd.Series, config: StrategyConfig) -> pd.Serie
     )
 
     target = (directional_signal * volatility_scalar).clip(
-        -config.max_abs_position,
+        config.min_position,
         config.max_abs_position,
     )
     return target.replace([np.inf, -np.inf], np.nan).fillna(0.0).rename("target_position")
