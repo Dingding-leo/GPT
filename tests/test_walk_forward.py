@@ -1,9 +1,15 @@
 from __future__ import annotations
 
 import pandas as pd
+import pytest
 
-from gpt_quant import StrategyConfig, run_walk_forward_research
-from gpt_quant.walk_forward import _assess_fold_stability, _classify_robustness
+from gpt_quant import StrategyConfig, performance_metrics, run_backtest, run_walk_forward_research
+from gpt_quant.walk_forward import (
+    _assess_fold_stability,
+    _classify_robustness,
+    _run_test_window,
+    _score,
+)
 
 
 def _run(prices: pd.Series):
@@ -45,6 +51,37 @@ def test_walk_forward_folds_are_non_overlapping_and_charge_boundary_turnover(
         result.cost_stress_metrics["4x"]["total_return"]
         <= result.cost_stress_metrics["1x"]["total_return"]
     )
+
+
+def test_selection_windows_charge_entry_from_cash(btc_usdt_prices: pd.Series) -> None:
+    prices = btc_usdt_prices.iloc[:700]
+    result = _run(prices)
+    corrected_boundaries = 0
+
+    for fold in result.folds:
+        start = pd.Timestamp(fold["selection_start"])
+        end = pd.Timestamp(fold["selection_end"])
+        history = prices.loc[:end]
+        config = StrategyConfig(**fold["selected_parameters"])
+        inherited = run_backtest(history, config, start=start, end=end).frame
+        from_cash = _run_test_window(
+            history,
+            config,
+            start,
+            end,
+            previous_position=0.0,
+        )
+        expected_metrics = performance_metrics(from_cash, annualization=config.annualization)
+
+        assert fold["selection_metrics"] == pytest.approx(expected_metrics)
+        assert fold["selection_score"] == pytest.approx(_score(expected_metrics))
+        assert from_cash["turnover"].iloc[0] == pytest.approx(
+            abs(float(from_cash["position"].iloc[0]))
+        )
+        if inherited["turnover"].iloc[0] != pytest.approx(from_cash["turnover"].iloc[0]):
+            corrected_boundaries += 1
+
+    assert corrected_boundaries > 0
 
 
 def test_future_observations_cannot_rewrite_prior_walk_forward_results(
