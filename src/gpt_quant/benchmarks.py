@@ -13,6 +13,7 @@ def _build_frame(
     transaction_cost_bps: float,
     start: pd.Timestamp | str | None,
     end: pd.Timestamp | str | None,
+    initial_position: float = 0.0,
 ) -> pd.DataFrame:
     clean = validate_prices(prices)
     aligned_position = position.reindex(clean.index).fillna(0.0).astype(float)
@@ -35,6 +36,17 @@ def _build_frame(
         frame = frame.loc[start:end].copy()
     if frame.empty:
         raise ValueError("requested benchmark window is empty")
+
+    # Every reported benchmark starts from the same cash state as the strategy.
+    # Recompute the first row after slicing so entry turnover is not inherited
+    # from pre-evaluation history.
+    first = frame.index[0]
+    entry_turnover = abs(float(frame.at[first, "position"]) - initial_position)
+    frame.at[first, "turnover"] = entry_turnover
+    frame.at[first, "trading_cost"] = entry_turnover * transaction_cost_bps / 10_000.0
+    frame.at[first, "strategy_return"] = float(frame.at[first, "position"]) * float(
+        frame.at[first, "asset_return"]
+    ) - float(frame.at[first, "trading_cost"])
     frame["nav"] = (1.0 + frame["strategy_return"]).cumprod()
     return frame
 

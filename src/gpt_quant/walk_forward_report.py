@@ -31,6 +31,10 @@ def write_walk_forward_report(
     returns.reset_index(names="timestamp").to_csv(paths["returns"], index=False)
 
     provenance = result.data_summary.get("provenance", {})
+    assessment = result.benchmark_assessment
+    buy_hold_flags = assessment["beats_buy_and_hold"]
+    buy_hold_differences = assessment["strategy_minus_buy_and_hold"]
+    instrument = str(provenance.get("instrument_id", "Instrument"))
     lines = [
         "# OKX Walk-Forward Research Report",
         "",
@@ -42,12 +46,23 @@ def write_walk_forward_report(
         "",
         f"**{result.robustness_status}**",
         "",
+        "## Benchmark interpretation",
+        "",
+        f"- Beats buy-and-hold total return: `{buy_hold_flags['total_return']}`",
+        f"- Beats buy-and-hold Sharpe: `{buy_hold_flags['sharpe']}`",
+        f"- Beats buy-and-hold Calmar: `{buy_hold_flags['calmar']}`",
+        f"- Has a smaller maximum drawdown than buy-and-hold: `{buy_hold_flags['max_drawdown']}`",
+        f"- Relative drawdown reduction vs buy-and-hold: "
+        f"`{assessment['relative_drawdown_reduction_vs_buy_and_hold']:.2%}`",
+        f"- CAGR difference vs buy-and-hold: `{buy_hold_differences['cagr']:.2%}`",
+        "",
         "## Data",
         "",
         f"- Observations: {result.data_summary['observations']}",
         f"- Range: {result.data_summary['start']} to {result.data_summary['end']}",
         f"- OOS range: {result.data_summary['evaluation_start']} to "
         f"{result.data_summary['evaluation_end']}",
+        f"- Unscored tail bars: {result.data_summary['unscored_tail_bars']}",
     ]
     for key in (
         "provider",
@@ -101,7 +116,7 @@ def write_walk_forward_report(
         "- Only completed OKX candles (`confirm=1`) are used.",
         "- Every fold selects parameters using data ending before its test period.",
         "- Test folds do not overlap; model switches incur boundary turnover costs.",
-        "- BTC-USDT spot is long/cash only, with no leverage or synthetic shorting.",
+        f"- {instrument} is tested long/cash only, with no leverage or synthetic shorting.",
         "- Close-price tests do not reproduce order-book liquidity or guaranteed fills.",
         "",
     ]

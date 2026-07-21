@@ -46,7 +46,12 @@ jobs:
       - name: Run OKX rolling out-of-sample research
         env:
           OKX_BASE_URL: https://www.okx.com
-        run: python scripts/run_okx_research.py --output-dir reports/okx
+        run: |
+          for instrument in BTC-USDT ETH-USDT; do
+            python scripts/run_okx_research.py \
+              --inst-id "$instrument" \
+              --output-dir "reports/okx/$instrument"
+          done
 
       - name: Upload research reports and data snapshots
         uses: actions/upload-artifact@v4

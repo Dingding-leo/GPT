@@ -29,6 +29,7 @@ class WalkForwardResult:
     folds: list[dict[str, Any]]
     aggregate_metrics: dict[str, float | int]
     benchmark_metrics: dict[str, dict[str, float | int]]
+    benchmark_assessment: dict[str, Any]
     cost_stress_metrics: dict[str, dict[str, float | int]]
     perturbation_metrics: dict[str, dict[str, float | int]]
     parameter_stability: dict[str, Any]
@@ -135,6 +136,42 @@ def _reprice(frame: pd.DataFrame, cost_bps: float) -> pd.DataFrame:
     )
     stressed["nav"] = (1.0 + stressed["strategy_return"]).cumprod()
     return stressed
+
+
+def _assess_benchmarks(
+    strategy: Mapping[str, float | int],
+    benchmarks: Mapping[str, Mapping[str, float | int]],
+) -> dict[str, Any]:
+    buy_and_hold = benchmarks["buy_and_hold"]
+    best: dict[str, dict[str, float | str]] = {}
+    for metric in ("total_return", "cagr", "sharpe", "calmar", "max_drawdown"):
+        name, metrics = max(benchmarks.items(), key=lambda item: float(item[1][metric]))
+        best[metric] = {"name": name, "value": float(metrics[metric])}
+
+    buy_hold_drawdown = abs(float(buy_and_hold["max_drawdown"]))
+    strategy_drawdown = abs(float(strategy["max_drawdown"]))
+    drawdown_reduction = (
+        1.0 - strategy_drawdown / buy_hold_drawdown if buy_hold_drawdown > 0 else 0.0
+    )
+    return {
+        "beats_buy_and_hold": {
+            "total_return": float(strategy["total_return"]) > float(buy_and_hold["total_return"]),
+            "cagr": float(strategy["cagr"]) > float(buy_and_hold["cagr"]),
+            "sharpe": float(strategy["sharpe"]) > float(buy_and_hold["sharpe"]),
+            "calmar": float(strategy["calmar"]) > float(buy_and_hold["calmar"]),
+            "max_drawdown": float(strategy["max_drawdown"]) > float(buy_and_hold["max_drawdown"]),
+        },
+        "beats_all_benchmarks": {
+            metric: float(strategy[metric]) > float(details["value"])
+            for metric, details in best.items()
+        },
+        "strategy_minus_buy_and_hold": {
+            metric: float(strategy[metric]) - float(buy_and_hold[metric])
+            for metric in ("total_return", "cagr", "sharpe", "calmar", "max_drawdown")
+        },
+        "relative_drawdown_reduction_vs_buy_and_hold": drawdown_reduction,
+        "best_benchmark_by_metric": best,
+    }
 
 
 def run_walk_forward_research(
@@ -295,6 +332,7 @@ def run_walk_forward_research(
         name: performance_metrics(frame, annualization=base_config.annualization)
         for name, frame in benchmarks.items()
     }
+    benchmark_assessment = _assess_benchmarks(aggregate, benchmark_metrics)
 
     parameter_keys = [
         f"m={item['momentum_lookback']}|r={item['reversal_lookback']}|"
@@ -322,10 +360,26 @@ def run_walk_forward_research(
         status = "reject: non-positive aggregate out-of-sample result"
     elif float(doubled["total_return"]) <= 0:
         status = "reject: result does not survive at least 2x transaction costs"
-    elif positive_variants < max(1, len(perturbation_metrics) // 2):
+    elif positive_variants < max(1, len(perturbation_metrics) - 1):
         status = "reject: result is unstable under modest parameter perturbations"
+    elif (
+        benchmark_assessment["beats_all_benchmarks"]["total_return"]
+        and benchmark_assessment["beats_all_benchmarks"]["sharpe"]
+    ):
+        status = "provisional alpha candidate: beats tested benchmarks on return and Sharpe"
+    elif (
+        benchmark_assessment["beats_all_benchmarks"]["calmar"]
+        and benchmark_assessment["beats_all_benchmarks"]["max_drawdown"]
+    ):
+        status = (
+            "provisional risk-control candidate: improves Calmar and drawdown, "
+            "but not benchmark return/Sharpe"
+        )
     else:
-        status = "provisional: survives initial checks; not evidence of live alpha"
+        status = "reject: no benchmark-relative return, Sharpe, or Calmar advantage"
+
+    evaluation_end_index = clean.index.get_loc(end)
+    unscored_tail_bars = len(clean) - evaluation_end_index - 1
 
     return WalkForwardResult(
         generated_at_utc=datetime.now(UTC).isoformat(),
@@ -335,6 +389,7 @@ def run_walk_forward_research(
             "end": clean.index[-1].isoformat(),
             "evaluation_start": start.isoformat(),
             "evaluation_end": end.isoformat(),
+            "unscored_tail_bars": unscored_tail_bars,
             "provenance": dict(provenance or {}),
         },
         settings={
@@ -348,6 +403,7 @@ def run_walk_forward_research(
         folds=folds,
         aggregate_metrics=aggregate,
         benchmark_metrics=benchmark_metrics,
+        benchmark_assessment=benchmark_assessment,
         cost_stress_metrics=cost_metrics,
         perturbation_metrics=perturbation_metrics,
         parameter_stability=stability,
