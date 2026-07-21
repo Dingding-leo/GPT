@@ -8,7 +8,7 @@ from typing import Any
 
 from gpt_quant import (
     StrategyConfig,
-    load_price_csv,
+    load_verified_price_snapshot,
     run_holdout_research,
     write_research_report,
 )
@@ -16,16 +16,14 @@ from gpt_quant import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run validation/holdout research on an explicit real-market CSV."
+        description="Run validation/holdout research on a verified real-market snapshot."
     )
     parser.add_argument("--config", default="config/research.json")
     parser.add_argument(
-        "--csv",
+        "--snapshot-manifest",
         required=True,
-        help="Real-market timestamp/close CSV. Synthetic or generated inputs are not supported.",
+        help="Manifest for immutable, SHA-256-verified real-market CSV parts.",
     )
-    parser.add_argument("--timestamp-col", default="timestamp")
-    parser.add_argument("--close-col", default="close")
     parser.add_argument("--output-dir", default="reports")
     return parser.parse_args()
 
@@ -39,11 +37,9 @@ def load_json(path: str | Path) -> dict[str, Any]:
 def main() -> int:
     args = parse_args()
     experiment = load_json(args.config)
-    prices = load_price_csv(
-        args.csv,
-        timestamp_col=args.timestamp_col,
-        close_col=args.close_col,
-    )
+    snapshot = load_verified_price_snapshot(args.snapshot_manifest)
+    prices = snapshot.prices
+    metadata = snapshot.metadata
 
     base = StrategyConfig(**experiment.get("strategy", {}))
     search = experiment.get("search", {})
@@ -59,7 +55,10 @@ def main() -> int:
     )
 
     json_path, markdown_path = write_research_report(result, args.output_dir)
-    print(f"data_source=csv:{args.csv}")
+    print(f"data_provider={metadata['provider']}")
+    print(f"instrument_id={metadata['instrument_id']}")
+    print(f"bar={metadata['bar']}")
+    print(f"snapshot_manifest={args.snapshot_manifest}")
     print(f"selected_parameters={json.dumps(result.selected_parameters, sort_keys=True)}")
     print(f"validation_score={result.selection_score:.6f}")
     print(f"holdout_sharpe={result.holdout_metrics['sharpe']:.6f}")
