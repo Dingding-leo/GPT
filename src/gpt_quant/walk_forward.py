@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+import math
 from collections import Counter
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -20,6 +21,9 @@ from .config import StrategyConfig
 from .data import validate_prices
 from .metrics import performance_metrics
 
+_MIN_PROVISIONAL_FOLDS = 3
+_MAX_POSITIVE_FOLD_SHARE = 0.50
+
 
 @dataclass(frozen=True, slots=True)
 class WalkForwardResult:
@@ -33,6 +37,7 @@ class WalkForwardResult:
     cost_stress_metrics: dict[str, dict[str, float | int]]
     perturbation_metrics: dict[str, dict[str, float | int]]
     parameter_stability: dict[str, Any]
+    fold_stability: dict[str, Any]
     robustness_status: str
     combined_frame: pd.DataFrame
     benchmark_frames: dict[str, pd.DataFrame]
@@ -41,7 +46,9 @@ class WalkForwardResult:
     def to_dict(self) -> dict[str, Any]:
         excluded = {"combined_frame", "benchmark_frames", "perturbation_frames"}
         return {
-            name: getattr(self, name) for name in self.__dataclass_fields__ if name not in excluded
+            name: getattr(self, name)
+            for name in self.__dataclass_fields__
+            if name not in excluded
         }
 
 
@@ -155,11 +162,13 @@ def _assess_benchmarks(
     )
     return {
         "beats_buy_and_hold": {
-            "total_return": float(strategy["total_return"]) > float(buy_and_hold["total_return"]),
+            "total_return": float(strategy["total_return"])
+            > float(buy_and_hold["total_return"]),
             "cagr": float(strategy["cagr"]) > float(buy_and_hold["cagr"]),
             "sharpe": float(strategy["sharpe"]) > float(buy_and_hold["sharpe"]),
             "calmar": float(strategy["calmar"]) > float(buy_and_hold["calmar"]),
-            "max_drawdown": float(strategy["max_drawdown"]) > float(buy_and_hold["max_drawdown"]),
+            "max_drawdown": float(strategy["max_drawdown"])
+            > float(buy_and_hold["max_drawdown"]),
         },
         "beats_all_benchmarks": {
             metric: float(strategy[metric]) > float(details["value"])
@@ -172,6 +181,83 @@ def _assess_benchmarks(
         "relative_drawdown_reduction_vs_buy_and_hold": drawdown_reduction,
         "best_benchmark_by_metric": best,
     }
+
+
+def _assess_fold_stability(folds: list[dict[str, Any]]) -> dict[str, Any]:
+    """Measure whether OOS gains are broad enough to support provisional classification."""
+
+    fold_returns = [float(fold["test_metrics"]["total_return"]) for fold in folds]
+    if not fold_returns or not all(np.isfinite(value) for value in fold_returns):
+        raise RuntimeError("walk-forward fold returns must be finite and non-empty")
+
+    positive_returns = [value for value in fold_returns if value > 0.0]
+    positive_total = sum(positive_returns)
+    max_positive_share = (
+        max(positive_returns) / positive_total if positive_total > 0.0 else 1.0
+    )
+    minimum_profitable_folds = math.ceil(len(fold_returns) / 2)
+    reasons: list[str] = []
+    if len(fold_returns) < _MIN_PROVISIONAL_FOLDS:
+        reasons.append(
+            f"requires at least {_MIN_PROVISIONAL_FOLDS} out-of-sample folds"
+        )
+    if len(positive_returns) < minimum_profitable_folds:
+        reasons.append("fewer than half of out-of-sample folds are profitable")
+    if max_positive_share > _MAX_POSITIVE_FOLD_SHARE:
+        reasons.append("one fold contributes more than half of positive fold return")
+
+    return {
+        "fold_count": len(fold_returns),
+        "profitable_folds": len(positive_returns),
+        "losing_or_flat_folds": len(fold_returns) - len(positive_returns),
+        "positive_fold_ratio": len(positive_returns) / len(fold_returns),
+        "best_fold_total_return": max(fold_returns),
+        "worst_fold_total_return": min(fold_returns),
+        "max_positive_fold_share": max_positive_share,
+        "minimum_profitable_folds": minimum_profitable_folds,
+        "minimum_required_folds": _MIN_PROVISIONAL_FOLDS,
+        "maximum_allowed_positive_fold_share": _MAX_POSITIVE_FOLD_SHARE,
+        "passes": not reasons,
+        "failure_reasons": reasons,
+    }
+
+
+def _classify_robustness(
+    *,
+    aggregate: Mapping[str, float | int],
+    doubled_cost: Mapping[str, float | int],
+    perturbation_metrics: Mapping[str, Mapping[str, float | int]],
+    benchmark_assessment: Mapping[str, Any],
+    fold_stability: Mapping[str, Any],
+) -> str:
+    positive_variants = sum(
+        float(metrics["total_return"]) > 0.0
+        for metrics in perturbation_metrics.values()
+    )
+    if float(aggregate["total_return"]) <= 0 or float(aggregate["sharpe"]) <= 0:
+        return "reject: non-positive aggregate out-of-sample result"
+    if float(doubled_cost["total_return"]) <= 0:
+        return "reject: result does not survive at least 2x transaction costs"
+    if positive_variants < max(1, len(perturbation_metrics) - 1):
+        return "reject: result is unstable under modest parameter perturbations"
+    if not bool(fold_stability["passes"]):
+        return "reject: out-of-sample fold profits are too concentrated"
+    if (
+        benchmark_assessment["beats_all_benchmarks"]["total_return"]
+        and benchmark_assessment["beats_all_benchmarks"]["sharpe"]
+    ):
+        return (
+            "provisional alpha candidate: beats tested benchmarks on return and Sharpe"
+        )
+    if (
+        benchmark_assessment["beats_all_benchmarks"]["calmar"]
+        and benchmark_assessment["beats_all_benchmarks"]["max_drawdown"]
+    ):
+        return (
+            "provisional risk-control candidate: improves Calmar and drawdown, "
+            "but not benchmark return/Sharpe"
+        )
+    return "reject: no benchmark-relative return, Sharpe, or Calmar advantage"
 
 
 def run_walk_forward_research(
@@ -198,7 +284,8 @@ def run_walk_forward_research(
         trend_weights,
     )
     longest_lookback = max(
-        max(candidate.momentum_lookback, candidate.volatility_lookback) for candidate in candidates
+        max(candidate.momentum_lookback, candidate.volatility_lookback)
+        for candidate in candidates
     )
     if selection_bars <= longest_lookback:
         raise ValueError("selection_bars must exceed every candidate lookback")
@@ -243,14 +330,18 @@ def run_walk_forward_research(
             if np.isfinite(score):
                 ranked.append((score, candidate, metrics))
         if not ranked:
-            raise RuntimeError(f"fold {fold_number} produced no finite candidate scores")
+            raise RuntimeError(
+                f"fold {fold_number} produced no finite candidate scores"
+            )
         ranked.sort(key=lambda item: item[0], reverse=True)
         best_score, best, selection_metrics = ranked[0]
         parameters = best.to_dict()
         selected.append(parameters)
 
         test_history = clean.iloc[: test_end_index + 1]
-        base = _run_test_window(test_history, best, test_start, test_end, previous["base"])
+        base = _run_test_window(
+            test_history, best, test_start, test_end, previous["base"]
+        )
         base["fold"] = fold_number
         base["selected_momentum_lookback"] = best.momentum_lookback
         base["selected_reversal_lookback"] = best.reversal_lookback
@@ -280,14 +371,20 @@ def run_walk_forward_research(
                 "candidates_tested": len(ranked),
                 "selected_parameters": parameters,
                 "selection_score": best_score,
-                "runner_up_score_gap": best_score - ranked[1][0] if len(ranked) > 1 else None,
+                "runner_up_score_gap": best_score - ranked[1][0]
+                if len(ranked) > 1
+                else None,
                 "selection_metrics": selection_metrics,
-                "test_metrics": performance_metrics(base, annualization=base_config.annualization),
+                "test_metrics": performance_metrics(
+                    base, annualization=base_config.annualization
+                ),
             }
         )
 
     combined = _stitch(base_frames)
-    stitched_variants = {name: _stitch(frames) for name, frames in variant_frames.items()}
+    stitched_variants = {
+        name: _stitch(frames) for name, frames in variant_frames.items()
+    }
     aggregate = performance_metrics(combined, annualization=base_config.annualization)
     perturbation_metrics = {
         name: performance_metrics(frame, annualization=base_config.annualization)
@@ -302,7 +399,9 @@ def run_walk_forward_research(
     }
 
     start, end = combined.index[[0, -1]]
-    median_momentum = int(np.median([candidate.momentum_lookback for candidate in candidates]))
+    median_momentum = int(
+        np.median([candidate.momentum_lookback for candidate in candidates])
+    )
     benchmarks = {
         "buy_and_hold": buy_and_hold_frame(
             clean,
@@ -340,7 +439,8 @@ def run_walk_forward_research(
         for item in selected
     ]
     switches = sum(
-        left != right for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
+        left != right
+        for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
     )
     stability = {
         "selection_frequency": dict(Counter(parameter_keys).most_common()),
@@ -348,35 +448,19 @@ def run_walk_forward_research(
         "parameter_switch_rate": switches / max(1, len(parameter_keys) - 1),
         "unique_parameter_sets": len(set(parameter_keys)),
     }
+    fold_stability = _assess_fold_stability(folds)
 
     doubled = next(
         (metrics for key, metrics in cost_metrics.items() if float(key[:-1]) >= 2.0),
         cost_metrics[f"{multipliers[-1]:g}x"],
     )
-    positive_variants = sum(
-        float(metrics["total_return"]) > 0.0 for metrics in perturbation_metrics.values()
+    status = _classify_robustness(
+        aggregate=aggregate,
+        doubled_cost=doubled,
+        perturbation_metrics=perturbation_metrics,
+        benchmark_assessment=benchmark_assessment,
+        fold_stability=fold_stability,
     )
-    if float(aggregate["total_return"]) <= 0 or float(aggregate["sharpe"]) <= 0:
-        status = "reject: non-positive aggregate out-of-sample result"
-    elif float(doubled["total_return"]) <= 0:
-        status = "reject: result does not survive at least 2x transaction costs"
-    elif positive_variants < max(1, len(perturbation_metrics) - 1):
-        status = "reject: result is unstable under modest parameter perturbations"
-    elif (
-        benchmark_assessment["beats_all_benchmarks"]["total_return"]
-        and benchmark_assessment["beats_all_benchmarks"]["sharpe"]
-    ):
-        status = "provisional alpha candidate: beats tested benchmarks on return and Sharpe"
-    elif (
-        benchmark_assessment["beats_all_benchmarks"]["calmar"]
-        and benchmark_assessment["beats_all_benchmarks"]["max_drawdown"]
-    ):
-        status = (
-            "provisional risk-control candidate: improves Calmar and drawdown, "
-            "but not benchmark return/Sharpe"
-        )
-    else:
-        status = "reject: no benchmark-relative return, Sharpe, or Calmar advantage"
 
     evaluation_end_index = clean.index.get_loc(end)
     unscored_tail_bars = len(clean) - evaluation_end_index - 1
@@ -407,6 +491,7 @@ def run_walk_forward_research(
         cost_stress_metrics=cost_metrics,
         perturbation_metrics=perturbation_metrics,
         parameter_stability=stability,
+        fold_stability=fold_stability,
         robustness_status=status,
         combined_frame=combined,
         benchmark_frames=benchmarks,
