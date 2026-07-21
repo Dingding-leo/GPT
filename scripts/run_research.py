@@ -3,31 +3,38 @@ from __future__ import annotations
 
 import argparse
 import json
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
-from gpt_quant import (
-    StrategyConfig,
-    load_price_csv,
-    run_holdout_research,
-    write_research_report,
-)
+from gpt_quant import StrategyConfig, run_holdout_research, write_research_report
+from gpt_quant.verified_snapshot import load_verified_price_snapshot
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run validation/holdout research on an explicit real-market CSV."
+        description="Run validation/holdout research on a manifest-verified real-market CSV."
     )
     parser.add_argument("--config", default="config/research.json")
     parser.add_argument(
-        "--csv",
-        required=True,
-        help="Real-market timestamp/close CSV. Synthetic or generated inputs are not supported.",
+        "--snapshot-manifest",
+        help="JSON manifest binding the external real-market CSV to provenance and SHA-256.",
     )
-    parser.add_argument("--timestamp-col", default="timestamp")
-    parser.add_argument("--close-col", default="close")
+    parser.add_argument("--csv", help=argparse.SUPPRESS)
+    parser.add_argument("--timestamp-col", help=argparse.SUPPRESS)
+    parser.add_argument("--close-col", help=argparse.SUPPRESS)
     parser.add_argument("--output-dir", default="reports")
-    return parser.parse_args()
+    args = parser.parse_args(argv)
+    if args.csv is not None:
+        parser.error(
+            "--csv is no longer accepted for research; create a verified snapshot manifest "
+            "and use --snapshot-manifest"
+        )
+    if args.timestamp_col is not None or args.close_col is not None:
+        parser.error("timestamp and close columns must be declared in the snapshot manifest")
+    if args.snapshot_manifest is None:
+        parser.error("the following arguments are required: --snapshot-manifest")
+    return args
 
 
 def load_json(path: str | Path) -> dict[str, Any]:
@@ -36,19 +43,15 @@ def load_json(path: str | Path) -> dict[str, Any]:
         return json.load(handle)
 
 
-def main() -> int:
-    args = parse_args()
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parse_args(argv)
+    snapshot = load_verified_price_snapshot(args.snapshot_manifest)
     experiment = load_json(args.config)
-    prices = load_price_csv(
-        args.csv,
-        timestamp_col=args.timestamp_col,
-        close_col=args.close_col,
-    )
 
     base = StrategyConfig(**experiment.get("strategy", {}))
     search = experiment.get("search", {})
     result = run_holdout_research(
-        prices,
+        snapshot.prices,
         base_config=base,
         momentum_lookbacks=search.get("momentum_lookbacks", [21, 63, 126]),
         reversal_lookbacks=search.get("reversal_lookbacks", [3, 5, 10]),
@@ -59,7 +62,12 @@ def main() -> int:
     )
 
     json_path, markdown_path = write_research_report(result, args.output_dir)
-    print(f"data_source=csv:{args.csv}")
+    print(
+        "data_source=verified-snapshot:"
+        f"{snapshot.provider}:{snapshot.market_type}:{snapshot.instrument_id}:{snapshot.timeframe}"
+    )
+    print(f"snapshot_manifest={snapshot.manifest_path}")
+    print(f"data_sha256={snapshot.data_sha256}")
     print(f"selected_parameters={json.dumps(result.selected_parameters, sort_keys=True)}")
     print(f"validation_score={result.selection_score:.6f}")
     print(f"holdout_sharpe={result.holdout_metrics['sharpe']:.6f}")
