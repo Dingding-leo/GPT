@@ -2,7 +2,12 @@
 
 from .backtest import BacktestResult, run_backtest
 from .config import StrategyConfig
-from .data import load_price_csv, validate_prices
+from .data import (
+    VerifiedPriceSnapshot,
+    load_price_csv,
+    load_verified_price_snapshot,
+    validate_prices,
+)
 from .metrics import performance_metrics
 from .okx import (
     OKXCandleSnapshot,
@@ -26,6 +31,7 @@ __all__ = [
     "OKXCandleSnapshot",
     "ResearchResult",
     "StrategyConfig",
+    "VerifiedPriceSnapshot",
     "WalkForwardResult",
     "append_experiment_manifest",
     "build_experiment_manifest_entry",
@@ -33,6 +39,7 @@ __all__ = [
     "fetch_okx_history_candles",
     "file_sha256",
     "load_price_csv",
+    "load_verified_price_snapshot",
     "parse_okx_candle_rows",
     "performance_metrics",
     "resolve_git_commit",
