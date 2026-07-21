@@ -16,17 +16,12 @@ from gpt_quant.bootstrap import (
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures"
 _RETURNS_FIXTURE = _FIXTURE_DIR / "okx_btc_usdt_oos_returns_20200111_20200219.csv"
-_METADATA_FIXTURE = (
-    _FIXTURE_DIR / "okx_btc_usdt_oos_returns_20200111_20200219.metadata.json"
-)
+_METADATA_FIXTURE = _FIXTURE_DIR / "okx_btc_usdt_oos_returns_20200111_20200219.metadata.json"
 
 
 def _real_returns_frame() -> pd.DataFrame:
     metadata = json.loads(_METADATA_FIXTURE.read_text(encoding="utf-8"))
-    assert (
-        hashlib.sha256(_RETURNS_FIXTURE.read_bytes()).hexdigest()
-        == metadata["fixture_sha256"]
-    )
+    assert hashlib.sha256(_RETURNS_FIXTURE.read_bytes()).hexdigest() == metadata["fixture_sha256"]
     frame = pd.read_csv(_RETURNS_FIXTURE)
     assert len(frame) == metadata["rows"]
     assert frame["timestamp"].iloc[0] == metadata["start"]
@@ -71,23 +66,17 @@ def test_chronological_validation_parses_utc_and_daily_cadence() -> None:
     [
         (lambda frame: frame.drop(columns=["timestamp"]), "missing timestamp column"),
         (
-            lambda frame: frame.assign(
-                timestamp=frame["timestamp"].mask(frame.index == 3, "bad")
-            ),
+            lambda frame: frame.assign(timestamp=frame["timestamp"].mask(frame.index == 3, "bad")),
             "valid UTC-compatible timestamps",
         ),
         (
             lambda frame: frame.assign(
-                timestamp=frame["timestamp"].mask(
-                    frame.index == 3, frame.loc[2, "timestamp"]
-                )
+                timestamp=frame["timestamp"].mask(frame.index == 3, frame.loc[2, "timestamp"])
             ),
             "must not contain duplicates",
         ),
         (
-            lambda frame: pd.concat(
-                [frame.iloc[:3], frame.iloc[[4, 3]], frame.iloc[5:]]
-            ),
+            lambda frame: pd.concat([frame.iloc[:3], frame.iloc[[4, 3]], frame.iloc[5:]]),
             "must be strictly increasing",
         ),
         (
@@ -96,9 +85,7 @@ def test_chronological_validation_parses_utc_and_daily_cadence() -> None:
         ),
     ],
 )
-def test_chronological_validation_rejects_invalid_market_time(
-    mutator, message: str
-) -> None:
+def test_chronological_validation_rejects_invalid_market_time(mutator, message: str) -> None:
     with pytest.raises(ValueError, match=message):
         validate_chronological_returns_frame(
             mutator(_real_returns_frame()),
@@ -117,9 +104,7 @@ def test_moving_block_indices_are_contiguous_inside_each_block() -> None:
 
 def test_paired_bootstrap_is_deterministic_and_preserves_zero_delta() -> None:
     observed = _real_returns_frame()["strategy_return"]
-    frame = pd.DataFrame(
-        {"strategy_return": observed, "benchmark_return": observed.copy()}
-    )
+    frame = pd.DataFrame({"strategy_return": observed, "benchmark_return": observed.copy()})
     kwargs = {
         "strategy_column": "strategy_return",
         "benchmark_columns": {"benchmark": "benchmark_return"},
