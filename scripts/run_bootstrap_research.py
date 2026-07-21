@@ -9,7 +9,10 @@ from typing import Any
 
 import pandas as pd
 
-from gpt_quant.bootstrap import paired_moving_block_bootstrap
+from gpt_quant.bootstrap import (
+    paired_moving_block_bootstrap,
+    validate_chronological_returns_frame,
+)
 
 BENCHMARK_COLUMNS = {
     "buy_and_hold": "benchmark_buy_and_hold_return",
@@ -108,7 +111,11 @@ def _markdown(payload: dict[str, Any]) -> str:
 def main() -> int:
     args = parse_args()
     returns_path = Path(args.returns_csv)
-    frame = pd.read_csv(returns_path)
+    frame = validate_chronological_returns_frame(
+        pd.read_csv(returns_path),
+        timestamp_column="timestamp",
+        expected_frequency="1D",
+    )
     result = paired_moving_block_bootstrap(
         frame,
         strategy_column="strategy_return",
@@ -160,7 +167,9 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     json_path = output / "bootstrap.json"
     markdown_path = output / "bootstrap.md"
-    json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    json_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     markdown_path.write_text(_markdown(payload), encoding="utf-8")
 
     print(f"instrument={args.instrument}")
