@@ -58,9 +58,10 @@ def test_okx_pagination_drops_partial_candle_and_hashes_snapshot(tmp_path: Path)
     assert snapshot.candles.index.is_monotonic_increasing
 
     paths = write_okx_snapshot(snapshot, tmp_path)
-    assert hashlib.sha256(paths["candles"].read_bytes()).hexdigest() == snapshot.metadata[
-        "normalized_csv_sha256"
-    ]
+    assert (
+        hashlib.sha256(paths["candles"].read_bytes()).hexdigest()
+        == snapshot.metadata["normalized_csv_sha256"]
+    )
     metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
     assert metadata["instrument_id"] == "BTC-USDT"
     assert paths["raw"].exists()
