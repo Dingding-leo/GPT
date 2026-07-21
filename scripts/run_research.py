@@ -8,7 +8,6 @@ from typing import Any
 
 from gpt_quant import (
     StrategyConfig,
-    generate_regime_prices,
     load_price_csv,
     run_holdout_research,
     write_research_report,
@@ -17,10 +16,14 @@ from gpt_quant import (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run validation/holdout research and write JSON/Markdown reports."
+        description="Run validation/holdout research on an explicit real-market CSV."
     )
     parser.add_argument("--config", default="config/research.json")
-    parser.add_argument("--csv", help="Optional timestamp/close CSV; defaults to synthetic data")
+    parser.add_argument(
+        "--csv",
+        required=True,
+        help="Real-market timestamp/close CSV. Synthetic or generated inputs are not supported.",
+    )
     parser.add_argument("--timestamp-col", default="timestamp")
     parser.add_argument("--close-col", default="close")
     parser.add_argument("--output-dir", default="reports")
@@ -36,22 +39,11 @@ def load_json(path: str | Path) -> dict[str, Any]:
 def main() -> int:
     args = parse_args()
     experiment = load_json(args.config)
-
-    if args.csv:
-        prices = load_price_csv(
-            args.csv,
-            timestamp_col=args.timestamp_col,
-            close_col=args.close_col,
-        )
-        source = f"csv:{args.csv}"
-    else:
-        data_config = experiment.get("data", {})
-        prices = generate_regime_prices(
-            rows=int(data_config.get("rows", 3_000)),
-            seed=int(data_config.get("seed", 7)),
-            start_price=float(data_config.get("start_price", 100.0)),
-        )
-        source = "synthetic-regime-generator"
+    prices = load_price_csv(
+        args.csv,
+        timestamp_col=args.timestamp_col,
+        close_col=args.close_col,
+    )
 
     base = StrategyConfig(**experiment.get("strategy", {}))
     search = experiment.get("search", {})
@@ -67,7 +59,7 @@ def main() -> int:
     )
 
     json_path, markdown_path = write_research_report(result, args.output_dir)
-    print(f"data_source={source}")
+    print(f"data_source=csv:{args.csv}")
     print(f"selected_parameters={json.dumps(result.selected_parameters, sort_keys=True)}")
     print(f"validation_score={result.selection_score:.6f}")
     print(f"holdout_sharpe={result.holdout_metrics['sharpe']:.6f}")
