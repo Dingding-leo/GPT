@@ -1,0 +1,146 @@
+{
+  "acceptance": {
+    "condition_1_repository_nonreject": false,
+    "condition_2_vol_target_mdd_ci_lower_positive": true,
+    "joint_verdict": "rejected",
+    "rejection_reasons": [
+      "repository robustness classifier rejected non-positive aggregate out-of-sample result and Sharpe"
+    ]
+  },
+  "bootstrap": {
+    "block_length": 20,
+    "confidence": 0.95,
+    "resamples": 2000,
+    "seed": 20260722,
+    "volatility_targeted_long": {
+      "calmar": {
+        "ci_lower": -0.5362609510475477,
+        "ci_median": 0.1229757099192483,
+        "ci_upper": 0.6014193584431438,
+        "lower_bound_positive": false,
+        "observed_delta": 0.13382949052222007,
+        "probability_positive": 0.7325
+      },
+      "max_drawdown": {
+        "ci_lower": 0.21616559865588383,
+        "ci_median": 0.4793485071388187,
+        "ci_upper": 0.6870487838722603,
+        "lower_bound_positive": true,
+        "observed_delta": 0.4441569329317905,
+        "probability_positive": 0.9995
+      }
+    }
+  },
+  "canonical_signature": "sealed-market-v2-v1|provider=OKX|market_type=spot|market=LTC-USDT|bar=1Dutc|start=2017-01-01|code=29c28c1031bddda6c5e42f2672aaa6adaa004cad|config_sha256=992ed2f5ea53cd3704cdfc876c1f464b0c618590aface911d781421f672398c5|selection_bars=730|test_bars=90|grid=3x3x3|transaction_cost_bps=10|execution_delay=1bar|benchmark=volatility-targeted-long|metric=max_drawdown_delta|block=20|resamples=2000|confidence=0.95|seed=20260722|accept=repository_nonreject_and_ci_lower_gt_0",
+  "data": {
+    "bar": "1Dutc",
+    "duplicates_removed": 0,
+    "end": "2026-07-20T00:00:00+00:00",
+    "incomplete_rows_removed": 1,
+    "instrument_id": "LTC-USDT",
+    "market_type": "spot",
+    "missing_intervals": 0,
+    "normalized_csv_sha256": "1f9f6ccb8d3ccd798b0ce47956d39f44ae17b50bc1f5c13edee3c890a364e97c",
+    "observations": 2392,
+    "pages": 24,
+    "pagination_complete": true,
+    "provider": "OKX",
+    "raw_pages_sha256": "f7a3c279523e34a84b4a2241ebd6c26d4f6840a9d174151ad1529b418100d85d",
+    "requested_start": "2017-01-01T00:00:00+00:00",
+    "requested_start_reached": false,
+    "start": "2020-01-02T00:00:00+00:00",
+    "walk_forward_returns_sha256": "701d51bc0bd7217402c3910ccb84c23a71e479864a29f03227e0c6391b4ab87d"
+  },
+  "execution": {
+    "artifact_id": 8506548343,
+    "artifact_name": "quant-research-234",
+    "artifact_sha256": "ad863c515d657b1445c20d50293c49a3539b490f47e641feabf7420763944a03",
+    "tested_merge_sha": "1e5b0715f5b73ce36ca75ad23bd8fc1e9c08a2ad",
+    "workflow_run_id": 29859059348,
+    "workflow_run_number": 234
+  },
+  "frozen_base_commit": "29c28c1031bddda6c5e42f2672aaa6adaa004cad",
+  "protocol_commit": "7b9a8128539c10cc302f80602efd9f3973850592",
+  "schema_version": 1,
+  "search": {
+    "candidate_evaluations": 486,
+    "candidates_per_fold": 27,
+    "fold_count": 18,
+    "momentum_lookbacks": [30, 90, 180],
+    "reversal_lookbacks": [2, 5, 10],
+    "selected_frequency": {
+      "m=180|r=10|trend=0.7000": 3,
+      "m=180|r=10|trend=0.8500": 1,
+      "m=30|r=10|trend=0.5500": 4,
+      "m=90|r=10|trend=0.5500": 10
+    },
+    "selection_bars": 730,
+    "test_bars": 90,
+    "trend_weights": [0.55, 0.7, 0.85]
+  },
+  "walk_forward": {
+    "aggregate_metrics": {
+      "annualized_turnover": 13.500282203059792,
+      "annualized_volatility": 0.13857298340341243,
+      "average_abs_exposure": 0.10350781561391356,
+      "cagr": -0.020403416105005623,
+      "calmar": -0.10955202546655118,
+      "cost_drag_sum": 0.05991906073686812,
+      "hit_rate": 0.4517704517704518,
+      "max_drawdown": -0.1862440791771145,
+      "observations": 1620,
+      "sharpe": -0.07950037871249363,
+      "sortino": -0.11241024467716759,
+      "total_return": -0.08743342015690281
+    },
+    "benchmark_metrics": {
+      "buy_and_hold": {
+        "cagr": -0.24105712433517756,
+        "calmar": -0.33197235570509964,
+        "max_drawdown": -0.7261361381226434,
+        "sharpe": 0.01080818453980147,
+        "total_return": -0.7060149339082576
+      },
+      "simple_trend_long_cash": {
+        "cagr": -0.018950246997710862,
+        "calmar": -0.0341503645665682,
+        "max_drawdown": -0.5549061404826809,
+        "sharpe": 0.2177537841290287,
+        "total_return": -0.08140972334046648
+      },
+      "volatility_targeted_long": {
+        "cagr": -0.15342795400792253,
+        "calmar": -0.24338151598877258,
+        "max_drawdown": -0.6304010121089076,
+        "sharpe": -0.04391207158125478,
+        "total_return": -0.5225292952184681
+      }
+    },
+    "cost_stress_total_return": {
+      "1x": -0.08743342015690281,
+      "2x": -0.14052237413401125,
+      "4x": -0.23763466575508563
+    },
+    "evaluation_end": "2026-06-08T00:00:00+00:00",
+    "evaluation_start": "2022-01-01T00:00:00+00:00",
+    "fold_stability": {
+      "best_fold_total_return": 0.0689022277462783,
+      "failure_reasons": [],
+      "fold_count": 18,
+      "losing_or_flat_folds": 9,
+      "max_positive_fold_share": 0.2520005205603801,
+      "passes": true,
+      "positive_fold_ratio": 0.5,
+      "profitable_folds": 9,
+      "worst_fold_total_return": -0.0753860870117744
+    },
+    "oos_observations": 1620,
+    "perturbation_total_return": {
+      "less_trend_weight": -0.07938779288202291,
+      "longer_lookbacks": 0.1477033611454619,
+      "more_trend_weight": -0.07008109345422198,
+      "shorter_lookbacks": -0.03569020510503007
+    },
+    "robustness_status": "reject: non-positive aggregate out-of-sample result"
+  }
+}
