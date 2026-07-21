@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import json
 from dataclasses import dataclass
 from datetime import timedelta
@@ -128,6 +129,32 @@ def _load_manifest(path: str | Path) -> tuple[Path, dict[str, Any]]:
     return manifest_path, value
 
 
+def _load_strict_csv(data_path: Path, columns: list[str]) -> pd.DataFrame:
+    try:
+        with data_path.open("r", encoding="utf-8", newline="") as handle:
+            reader = csv.reader(handle, strict=True)
+            try:
+                actual_columns = next(reader)
+            except StopIteration as exc:
+                raise ValueError("snapshot CSV could not be parsed") from exc
+            if actual_columns != columns:
+                raise ValueError(
+                    f"CSV columns do not match manifest schema: expected {columns}, "
+                    f"actual {actual_columns}"
+                )
+            rows: list[list[str]] = []
+            for row_number, row in enumerate(reader, start=2):
+                if len(row) != len(columns):
+                    raise ValueError(
+                        f"CSV row {row_number} field count does not match manifest schema: "
+                        f"expected {len(columns)}, actual {len(row)}"
+                    )
+                rows.append(row)
+    except (csv.Error, UnicodeDecodeError) as exc:
+        raise ValueError("snapshot CSV could not be parsed") from exc
+    return pd.DataFrame(rows, columns=columns, dtype=str)
+
+
 def load_verified_price_snapshot(path: str | Path) -> VerifiedPriceSnapshot:
     """Load external CSV prices only after strict manifest and byte-level validation."""
 
@@ -175,15 +202,7 @@ def load_verified_price_snapshot(path: str | Path) -> VerifiedPriceSnapshot:
     if actual_hash != expected_hash:
         raise ValueError(f"data SHA-256 mismatch: expected {expected_hash}, actual {actual_hash}")
 
-    try:
-        frame = pd.read_csv(data_path, dtype=str, keep_default_na=False)
-    except (pd.errors.EmptyDataError, pd.errors.ParserError, UnicodeDecodeError) as exc:
-        raise ValueError("snapshot CSV could not be parsed") from exc
-    if list(frame.columns) != columns:
-        raise ValueError(
-            f"CSV columns do not match manifest schema: expected {columns}, "
-            f"actual {list(frame.columns)}"
-        )
+    frame = _load_strict_csv(data_path, columns)
     if len(frame) != observations:
         raise ValueError(
             f"CSV observation count mismatch: expected {observations}, actual {len(frame)}"
