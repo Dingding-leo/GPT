@@ -1,0 +1,174 @@
+{
+  "hypothesis_signature": "paired-mbb-v1|development-market|strategy-vs-three-benchmarks|metrics=calmar,max_drawdown|block=20|resamples=2000|seed=20260722",
+  "instrument": "BTC-USDT",
+  "interpretation": "The lower-drawdown result survives the paired block bootstrap against all tested benchmarks, but the Calmar advantage does not. The existing risk-control label is therefore only partially supported and must not be strengthened to a statistically confirmed Calmar advantage.",
+  "provenance": {
+    "returns_csv": "reports/okx/BTC-USDT/walk_forward_returns.csv",
+    "returns_csv_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+    "source_artifact_id": "8499721759",
+    "source_head_sha": "4c02eccac3d6d81139c73d0b64bb5067756dac93",
+    "source_run_id": "29841895366"
+  },
+  "result": {
+    "comparisons": {
+      "buy_and_hold": {
+        "cagr": {
+          "ci_lower": -0.9237263696920807,
+          "ci_median": -0.24222818356495435,
+          "ci_upper": 0.21355085219729802,
+          "lower_bound_positive": false,
+          "observed_delta": -0.22078994582897593,
+          "probability_positive": 0.181
+        },
+        "calmar": {
+          "ci_lower": -1.2908387533836487,
+          "ci_median": -0.09044634661324145,
+          "ci_upper": 0.8536791312738191,
+          "lower_bound_positive": false,
+          "observed_delta": 0.0415265239885797,
+          "probability_positive": 0.4125
+        },
+        "max_drawdown": {
+          "ci_lower": 0.11070358327751305,
+          "ci_median": 0.3290597430606027,
+          "ci_upper": 0.5613977633696288,
+          "lower_bound_positive": true,
+          "observed_delta": 0.47527370780172673,
+          "probability_positive": 0.998
+        },
+        "sharpe": {
+          "ci_lower": -0.7801953781611859,
+          "ci_median": -0.11920601116759544,
+          "ci_upper": 0.5621880148265408,
+          "lower_bound_positive": false,
+          "observed_delta": -0.10792399205790137,
+          "probability_positive": 0.352
+        }
+      },
+      "simple_trend_long_cash": {
+        "cagr": {
+          "ci_lower": -0.5646482884384874,
+          "ci_median": -0.11935416817966449,
+          "ci_upper": 0.18691103290387484,
+          "lower_bound_positive": false,
+          "observed_delta": -0.10330199479315016,
+          "probability_positive": 0.2525
+        },
+        "calmar": {
+          "ci_lower": -0.9855154733780904,
+          "ci_median": 0.01855924191186669,
+          "ci_upper": 0.7393837629935381,
+          "lower_bound_positive": false,
+          "observed_delta": 0.0827503496490391,
+          "probability_positive": 0.526
+        },
+        "max_drawdown": {
+          "ci_lower": 0.03612439476379098,
+          "ci_median": 0.261541956477099,
+          "ci_upper": 0.45002293358353457,
+          "lower_bound_positive": true,
+          "observed_delta": 0.2838549513304789,
+          "probability_positive": 0.988
+        },
+        "sharpe": {
+          "ci_lower": -0.5926882012953065,
+          "ci_median": -0.03243852063101722,
+          "ci_upper": 0.5207712518501475,
+          "lower_bound_positive": false,
+          "observed_delta": -0.014719076042127965,
+          "probability_positive": 0.457
+        }
+      },
+      "volatility_targeted_long": {
+        "cagr": {
+          "ci_lower": -0.6127725398368495,
+          "ci_median": -0.13749515442131188,
+          "ci_upper": 0.22187303257161933,
+          "lower_bound_positive": false,
+          "observed_delta": -0.11437057696542108,
+          "probability_positive": 0.266
+        },
+        "calmar": {
+          "ci_lower": -0.9438311044084147,
+          "ci_median": 0.02839509456004001,
+          "ci_upper": 0.9054044046383384,
+          "lower_bound_positive": false,
+          "observed_delta": 0.1581425712434001,
+          "probability_positive": 0.5385
+        },
+        "max_drawdown": {
+          "ci_lower": 0.0798062291617048,
+          "ci_median": 0.2903523075453254,
+          "ci_upper": 0.516768120898613,
+          "lower_bound_positive": true,
+          "observed_delta": 0.42957679151003003,
+          "probability_positive": 0.9955
+        },
+        "sharpe": {
+          "ci_lower": -0.6543563084421402,
+          "ci_median": -0.02738455890105576,
+          "ci_upper": 0.6464350070684957,
+          "lower_bound_positive": false,
+          "observed_delta": -0.007028502305444828,
+          "probability_positive": 0.4675
+        }
+      }
+    },
+    "hypothesis": {
+      "metric_support": {
+        "calmar": false,
+        "max_drawdown": true
+      },
+      "metrics": [
+        "calmar",
+        "max_drawdown"
+      ],
+      "supported_metrics": [
+        "max_drawdown"
+      ],
+      "verdict": "partially supported"
+    },
+    "point_estimates": {
+      "buy_and_hold": {
+        "cagr": 0.3754489259347429,
+        "calmar": 0.48997762474751805,
+        "max_drawdown": -0.7662572880306708,
+        "sharpe": 0.8338938388203889
+      },
+      "simple_trend_long_cash": {
+        "cagr": 0.2579609748989171,
+        "calmar": 0.44875379908705865,
+        "max_drawdown": -0.574838531559423,
+        "sharpe": 0.7406889228046155
+      },
+      "strategy": {
+        "cagr": 0.15465898010576695,
+        "calmar": 0.5315041487360977,
+        "max_drawdown": -0.2909835802289441,
+        "sharpe": 0.7259698467624875
+      },
+      "volatility_targeted_long": {
+        "cagr": 0.26902955707118803,
+        "calmar": 0.37336157749269766,
+        "max_drawdown": -0.7205603717389741,
+        "sharpe": 0.7329983490679324
+      }
+    },
+    "settings": {
+      "annualization": 365,
+      "benchmark_columns": {
+        "buy_and_hold": "benchmark_buy_and_hold_return",
+        "simple_trend_long_cash": "benchmark_simple_trend_long_cash_return",
+        "volatility_targeted_long": "benchmark_volatility_targeted_long_return"
+      },
+      "block_length": 20,
+      "confidence": 0.95,
+      "observations": 2340,
+      "paired_resampling": true,
+      "resamples": 2000,
+      "seed": 20260722,
+      "serial_dependence_method": "moving block bootstrap without circular wrapping",
+      "strategy_column": "strategy_return"
+    }
+  }
+}
