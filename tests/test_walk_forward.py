@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pandas as pd
 
-from gpt_quant import StrategyConfig, generate_regime_prices, run_walk_forward_research
+from gpt_quant import StrategyConfig, run_walk_forward_research
 from gpt_quant.walk_forward import _assess_fold_stability, _classify_robustness
 
 
@@ -23,8 +23,10 @@ def _run(prices: pd.Series):
     )
 
 
-def test_walk_forward_folds_are_non_overlapping_and_charge_boundary_turnover() -> None:
-    result = _run(generate_regime_prices(rows=700, seed=23))
+def test_walk_forward_folds_are_non_overlapping_and_charge_boundary_turnover(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    result = _run(btc_usdt_prices.iloc[:700])
 
     assert len(result.folds) == 4
     assert not result.combined_frame.index.duplicated().any()
@@ -45,18 +47,17 @@ def test_walk_forward_folds_are_non_overlapping_and_charge_boundary_turnover() -
     )
 
 
-def test_future_price_change_cannot_rewrite_prior_walk_forward_results() -> None:
-    prices = generate_regime_prices(rows=700, seed=29)
-    original = _run(prices)
-    changed_prices = prices.copy()
-    changed_prices.iloc[-1] *= 1.75
-    changed = _run(changed_prices)
-
-    cutoff = prices.index[-2]
+def test_future_observations_cannot_rewrite_prior_walk_forward_results(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    original = _run(btc_usdt_prices.iloc[:700])
+    extended = _run(btc_usdt_prices.iloc[:800])
+    cutoff = original.combined_frame.index[-1]
     columns = ["position", "turnover", "trading_cost", "strategy_return", "fold"]
+
     pd.testing.assert_frame_equal(
         original.combined_frame.loc[:cutoff, columns],
-        changed.combined_frame.loc[:cutoff, columns],
+        extended.combined_frame.loc[:cutoff, columns],
     )
 
 
