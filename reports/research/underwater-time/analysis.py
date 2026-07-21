@@ -68,9 +68,7 @@ def validate_returns(path: Path, expected_sha256: str) -> pd.DataFrame:
     if len(parsed) > 1 and not parsed.diff().iloc[1:].eq(pd.Timedelta(days=1)).all():
         raise ValueError("timestamps must have exact daily cadence")
 
-    returns = frame[[STRATEGY_COLUMN, BENCHMARK_COLUMN]].apply(
-        pd.to_numeric, errors="coerce"
-    )
+    returns = frame[[STRATEGY_COLUMN, BENCHMARK_COLUMN]].apply(pd.to_numeric, errors="coerce")
     values = returns.to_numpy(dtype=float)
     if returns.isna().any().any() or not np.isfinite(values).all():
         raise ValueError("return columns must contain only finite numeric values")
@@ -149,9 +147,7 @@ def analyze_metric(
         )
 
     alpha = 1.0 - CONFIDENCE
-    lower, median, upper = np.quantile(
-        reductions, [alpha / 2.0, 0.5, 1.0 - alpha / 2.0]
-    )
+    lower, median, upper = np.quantile(reductions, [alpha / 2.0, 0.5, 1.0 - alpha / 2.0])
     return {
         "point": {
             "strategy": strategy_value,
@@ -198,11 +194,7 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
         market_results[market] = result
 
     joint_supported = all(
-        bool(
-            result["metrics"]["underwater_fraction"]["bootstrap"][
-                "lower_bound_positive"
-            ]
-        )
+        bool(result["metrics"]["underwater_fraction"]["bootstrap"]["lower_bound_positive"])
         for result in market_results.values()
     )
     return {
