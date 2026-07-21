@@ -37,10 +37,14 @@ jobs:
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
-      - name: Test against public OKX data
-        env:
-          OKX_BASE_URL: https://www.okx.com
+      - name: Test with verified real-market fixture
         run: pytest
+
+      - name: Run verified real-data holdout smoke test
+        run: |
+          python scripts/run_research.py \
+            --snapshot-manifest tests/fixtures/okx/btc-usdt-1dutc-600/manifest.json \
+            --output-dir reports/real-data-smoke
 
       - name: Run OKX rolling out-of-sample research
         env:
