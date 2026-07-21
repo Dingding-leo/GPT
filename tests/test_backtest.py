@@ -5,6 +5,22 @@ import pandas as pd
 from gpt_quant import StrategyConfig, generate_regime_prices, run_backtest
 
 
+def test_default_position_floor_tracks_absolute_limit() -> None:
+    smaller = StrategyConfig(max_abs_position=0.5)
+    larger = StrategyConfig(max_abs_position=2.0)
+
+    assert smaller.min_position == -0.5
+    assert larger.min_position == -2.0
+
+
+def test_position_floor_override_remains_explicit() -> None:
+    long_only = StrategyConfig(max_abs_position=0.5, min_position=0.0)
+    resized_symmetric = StrategyConfig().with_overrides(max_abs_position=0.5)
+
+    assert long_only.min_position == 0.0
+    assert resized_symmetric.min_position == -0.5
+
+
 def test_final_price_cannot_change_already_executed_positions() -> None:
     prices = generate_regime_prices(rows=800, seed=11)
     config = StrategyConfig()
