@@ -1,0 +1,30 @@
+{
+  "bar": "1Dutc",
+  "base_url": "https://www.okx.com",
+  "columns": [
+    "timestamp",
+    "close"
+  ],
+  "completed_candles_only": true,
+  "derivation": "First 700 chronological timestamp/close rows from the source normalized snapshot; values are unmodified. The CSV is gzip-compressed with a deterministic header and then base64-encoded for repository transport.",
+  "end": "2019-12-11T00:00:00.000000Z",
+  "endpoint": "/api/v5/market/history-candles",
+  "fixture_compressed_sha256": "0594f96e3d399969693c45fd481a2396fc0aadedb67d740ee77f8e3b83755f40",
+  "fixture_csv_sha256": "28c684475dd9911dd232f7d64e0970f8cbe801f77ae25421f6220cc7c09b4833",
+  "instrument_id": "BTC-USDT",
+  "limitations": [
+    "Public exchange data may be revised by the provider.",
+    "Close-only fixtures do not model order-book liquidity or fills."
+  ],
+  "observations": 700,
+  "provider": "OKX",
+  "schema_version": 1,
+  "source_artifact_id": 8499721759,
+  "source_artifact_name": "quant-research-51",
+  "source_artifact_sha256": "dbe25282321fa1d1fdafa2945c1a45e6a6481060d693956fd5fb3225b03f3fd7",
+  "source_commit": "4c02eccac3d6d81139c73d0b64bb5067756dac93",
+  "source_raw_pages_sha256": "59877841d17d037f8dd5e848d202d4636fbe663b3d96b8300109fc3348597334",
+  "source_snapshot_sha256": "1cac0b30a6c7718a18f8fcdbd8503bbed497d9b528bf9859333b2249e8de1f1e",
+  "source_workflow_run_id": 29841895366,
+  "start": "2018-01-11T00:00:00.000000Z"
+}
