@@ -13,6 +13,11 @@ def _validate_transaction_cost_bps(transaction_cost_bps: float) -> None:
         raise ValueError("transaction_cost_bps must be finite and non-negative")
 
 
+def _validate_max_position(max_position: float) -> None:
+    if not math.isfinite(max_position) or max_position <= 0:
+        raise ValueError("max_position must be finite and positive")
+
+
 def _build_frame(
     prices: pd.Series,
     position: pd.Series,
@@ -88,6 +93,7 @@ def volatility_targeted_long_frame(
     start: pd.Timestamp | str | None = None,
     end: pd.Timestamp | str | None = None,
 ) -> pd.DataFrame:
+    _validate_max_position(max_position)
     clean = validate_prices(prices)
     log_returns = np.log(clean).diff()
     realized = log_returns.rolling(
