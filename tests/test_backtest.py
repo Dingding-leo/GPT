@@ -25,6 +25,13 @@ def test_position_floor_override_remains_explicit() -> None:
     assert fixed_short_floor.min_position == -1.0
 
 
+def test_implicit_position_floor_survives_non_position_override() -> None:
+    cloned = StrategyConfig().with_overrides(momentum_lookback=21)
+    resized = cloned.with_overrides(max_abs_position=0.5)
+
+    assert resized.min_position == -0.5
+
+
 def test_internal_position_floor_state_is_not_serialized() -> None:
     values = StrategyConfig().to_dict()
 
