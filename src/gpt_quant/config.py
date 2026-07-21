@@ -33,7 +33,11 @@ class StrategyConfig:
             raise ValueError("max_abs_position must be in (0, 10]")
 
         minimum_is_implicit = self.min_position is None
-        minimum = -self.max_abs_position if minimum_is_implicit else float(self.min_position)
+        minimum = (
+            -self.max_abs_position
+            if minimum_is_implicit
+            else float(self.min_position)
+        )
         object.__setattr__(self, "min_position", minimum)
         object.__setattr__(self, "_min_position_implicit", minimum_is_implicit)
         if not -self.max_abs_position <= minimum <= self.max_abs_position:
