@@ -22,15 +22,12 @@ def write_walk_forward_report(
         "returns": output / "walk_forward_returns.csv",
     }
     paths["json"].write_text(
-        json.dumps(result.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
-        + "\n",
+        json.dumps(result.to_dict(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     returns = result.combined_frame.copy()
     for name, frame in result.benchmark_frames.items():
-        returns[f"benchmark_{name}_return"] = frame["strategy_return"].reindex(
-            returns.index
-        )
+        returns[f"benchmark_{name}_return"] = frame["strategy_return"].reindex(returns.index)
     returns.reset_index(names="timestamp").to_csv(paths["returns"], index=False)
 
     provenance = result.data_summary.get("provenance", {})
@@ -126,10 +123,7 @@ def write_walk_forward_report(
     ]
     stress = {
         **{f"cost_{name}": value for name, value in result.cost_stress_metrics.items()},
-        **{
-            f"parameter_{name}": value
-            for name, value in result.perturbation_metrics.items()
-        },
+        **{f"parameter_{name}": value for name, value in result.perturbation_metrics.items()},
     }
     for name, metrics in stress.items():
         lines.append(
