@@ -9,10 +9,9 @@ from gpt_quant.benchmarks import buy_and_hold_frame
 def test_buy_and_hold_charges_entry_cost_at_evaluation_start(
     btc_usdt_prices: pd.Series,
 ) -> None:
-    prices = btc_usdt_prices.iloc[:700]
-    start = prices.index[500]
+    start = btc_usdt_prices.index[400]
     frame = buy_and_hold_frame(
-        prices,
+        btc_usdt_prices,
         transaction_cost_bps=10.0,
         start=start,
     )
