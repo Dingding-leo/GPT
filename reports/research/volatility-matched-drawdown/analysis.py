@@ -65,9 +65,7 @@ def validate_returns(path: Path, expected_sha256: str) -> pd.DataFrame:
     if len(parsed) > 1 and not parsed.diff().iloc[1:].eq(pd.Timedelta(days=1)).all():
         raise ValueError("timestamps must have exact daily cadence")
 
-    returns = frame[[STRATEGY_COLUMN, BENCHMARK_COLUMN]].apply(
-        pd.to_numeric, errors="coerce"
-    )
+    returns = frame[[STRATEGY_COLUMN, BENCHMARK_COLUMN]].apply(pd.to_numeric, errors="coerce")
     if returns.isna().any().any() or not np.isfinite(returns.to_numpy(dtype=float)).all():
         raise ValueError("return columns must contain only finite numeric values")
     if (returns <= -1.0).any().any():
@@ -137,9 +135,7 @@ def analyze_market(frame: pd.DataFrame, seed: int) -> dict[str, object]:
         scales[sample_number] = sample["scale"]
 
     alpha = 1.0 - CONFIDENCE
-    lower, median, upper = np.quantile(
-        drawdown_reductions, [alpha / 2.0, 0.5, 1.0 - alpha / 2.0]
-    )
+    lower, median, upper = np.quantile(drawdown_reductions, [alpha / 2.0, 0.5, 1.0 - alpha / 2.0])
     scale_lower, scale_median, scale_upper = np.quantile(
         scales, [alpha / 2.0, 0.5, 1.0 - alpha / 2.0]
     )
@@ -171,8 +167,7 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
         market_results[market] = result
 
     joint_supported = all(
-        bool(result["bootstrap"]["lower_bound_positive"])
-        for result in market_results.values()
+        bool(result["bootstrap"]["lower_bound_positive"]) for result in market_results.values()
     )
     return {
         "candidate_count": 0,
