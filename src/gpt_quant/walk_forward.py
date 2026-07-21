@@ -279,8 +279,8 @@ def run_walk_forward_research(
         raise ValueError("selection_bars must exceed every candidate lookback")
 
     multipliers = sorted({float(value) for value in cost_multipliers} | {1.0})
-    if any(value <= 0 for value in multipliers):
-        raise ValueError("cost multipliers must be positive")
+    if any(not math.isfinite(value) or value <= 0 for value in multipliers):
+        raise ValueError("cost multipliers must be finite and positive")
 
     folds: list[dict[str, Any]] = []
     base_frames: list[pd.DataFrame] = []
