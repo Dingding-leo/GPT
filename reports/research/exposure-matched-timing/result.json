@@ -1,0 +1,85 @@
+{
+  "candidate_count": 1,
+  "canonical_signature": "exposure-matched-timing-v1|markets=BTC-USDT,ETH-USDT|benchmark=ex-post-constant-exposure-buy-and-hold|exposure=mean-executed-oos-position|metric=annualized-arithmetic-mean-net-return-delta|entry-cost=10bps-pro-rata|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260722,ETH-USDT:20260723|candidate_count=1",
+  "claim_boundary": "This is one predeclared exploratory mechanism diagnostic on BTC-USDT and ETH-USDT development markets. The exposure-matched benchmark is constructed ex post and is not an independently deployable or untouched-holdout strategy.",
+  "hypothesis": "For both BTC-USDT and ETH-USDT, the strategy has a positive annualized arithmetic mean net-return delta versus a constant-exposure buy-and-hold benchmark whose exposure equals the strategy's average executed OOS position, with a positive 95% paired moving-block-bootstrap lower bound.",
+  "joint_supported": false,
+  "markets": {
+    "BTC-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.1127605916975122,
+        "ci_upper": 0.1997244614621928,
+        "lower_bound_positive": false,
+        "median": 0.03607902789443067,
+        "probability_positive": 0.669
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "annualized_mean_matched_return": 0.13949187843607389,
+        "annualized_mean_return_delta": 0.03219768738889673,
+        "annualized_mean_strategy_return": 0.17168956582497064,
+        "average_executed_exposure": 0.27381532420361376,
+        "matched_total_return": 1.2347420567577294,
+        "strategy_total_return": 1.5141335570323782
+      },
+      "report_sha256": "78b0f635114bad273054167ed7d552c32e707c019cd28fde04a268a131765a3f",
+      "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "start": "2020-01-11 00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.16689454439644402,
+        "ci_upper": 0.11724928728466272,
+        "lower_bound_positive": false,
+        "median": -0.0168184486212899,
+        "probability_positive": 0.409
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "annualized_mean_matched_return": 0.15726237279900676,
+        "annualized_mean_return_delta": -0.020221419834496993,
+        "annualized_mean_strategy_return": 0.13704095296450977,
+        "average_executed_exposure": 0.21706259125195182,
+        "matched_total_return": 1.475738850558368,
+        "strategy_total_return": 0.9560296204289283
+      },
+      "report_sha256": "dd2d2d870f302f893a752f8db9b1d5cdfdca41f39e824fa6299d5d95eab04b76",
+      "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "start": "2020-01-11 00:00:00+00:00"
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8510950190,
+    "source_artifact_name": "quant-research-328",
+    "source_artifact_sha256": "d997b795dffcb255c919f972d3364d2d8492b3bdd58f6e8ad7733f6ea5b0517a",
+    "source_base_commit": "5a76277db73c156f248d276f8722f18ad18eef57",
+    "source_persistent_head": "0e55db97fa397b2a1bc5aec63e19403251ced926",
+    "source_tested_commit": "d74842a43ff4b4eab3906a0dd2b09417378bec10",
+    "source_workflow_run_id": 29870506091
+  },
+  "settings": {
+    "annualization": 365,
+    "benchmark": "ex-post constant-exposure buy-and-hold",
+    "block_length": 20,
+    "candidate_count": 1,
+    "confidence": 0.95,
+    "development_market_screen": true,
+    "entry_cost_treatment": "one pro-rata 10 bps entry charge at the first observation of the original or resampled benchmark path",
+    "exposure_definition": "arithmetic mean of persisted executed OOS position",
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "primary_metric": "annualized_arithmetic_mean_net_return_delta",
+    "resamples": 2000,
+    "resampling": "paired moving block bootstrap without circular wrapping",
+    "seed_rule": "20260722 for BTC-USDT and 20260723 for ETH-USDT",
+    "transaction_cost_bps": 10.0
+  },
+  "verdict": "rejected"
+}
