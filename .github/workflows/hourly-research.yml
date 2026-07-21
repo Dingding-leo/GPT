@@ -37,9 +37,7 @@ jobs:
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
-      - name: Test against public OKX data
-        env:
-          OKX_BASE_URL: https://www.okx.com
+      - name: Test against immutable OKX fixture
         run: pytest
 
       - name: Run OKX rolling out-of-sample research
