@@ -37,11 +37,10 @@ jobs:
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
-      - name: Test
+      - name: Test against public OKX data
+        env:
+          OKX_BASE_URL: https://www.okx.com
         run: pytest
-
-      - name: Run synthetic sealed-holdout smoke test
-        run: python scripts/run_research.py --output-dir reports/synthetic
 
       - name: Run OKX rolling out-of-sample research
         env:

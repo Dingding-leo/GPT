@@ -2,7 +2,7 @@
 
 from .backtest import BacktestResult, run_backtest
 from .config import StrategyConfig
-from .data import generate_regime_prices, load_price_csv, validate_prices
+from .data import load_price_csv, validate_prices
 from .metrics import performance_metrics
 from .okx import (
     OKXCandleSnapshot,
@@ -21,7 +21,6 @@ __all__ = [
     "StrategyConfig",
     "WalkForwardResult",
     "fetch_okx_history_candles",
-    "generate_regime_prices",
     "load_price_csv",
     "parse_okx_candle_rows",
     "performance_metrics",

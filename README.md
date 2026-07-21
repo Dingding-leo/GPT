@@ -84,15 +84,9 @@ reports/okx/BTC-USDT/walk_forward_returns.csv
 
 研究参数位于 [`config/okx_research.json`](config/okx_research.json)。
 
-## 合成数据回归测试
+## 外部真实 CSV
 
-合成多状态数据仍然保留，用于 CI、未来函数测试和回测逻辑回归，不作为真实 alpha 证据：
-
-```bash
-python scripts/run_research.py --output-dir reports/synthetic
-```
-
-也可以使用自己的 `timestamp`、`close` CSV：
+验证/留出研究脚本只接受显式提供的外部真实市场 CSV，不再提供合成数据默认路径：
 
 ```bash
 python scripts/run_research.py \
@@ -102,23 +96,24 @@ python scripts/run_research.py \
   --output-dir reports/custom
 ```
 
+CSV 必须包含可解析的时间戳和严格为正的收盘价。调用者负责保留数据提供方、下载参数和文件哈希等来源证据；没有来源证据的 CSV 结果不能视为可审计研究结果。
+
 ## 每小时自动化
 
 `.github/workflows/hourly-research.yml` 在每小时第 17 分钟运行：
 
 - lint 与格式检查；
-- 单元测试和未来函数回归测试；
-- 合成数据管线检查；
-- BTC-USDT、ETH-USDT 公共日线下载与同参数滚动样本外研究；
+- 使用公开 OKX 历史数据执行单元测试和未来数据不变性回归；
+- 重新下载 BTC-USDT、ETH-USDT 公共日线并运行滚动样本外研究；
 - 报告和原始数据快照作为 GitHub Actions artifact 保存 14 天。
 
-工作流对仓库只有读取权限，不会自动提交代码，不包含 API key，也不会向 OKX 发送订单。
+工作流不会生成或上传合成研究结果。工作流对仓库只有读取权限，不会自动提交代码，不包含 API key，也不会向 OKX 发送订单。
 
 ## 研究纪律
 
 1. 不用测试 fold 的结果选择该 fold 的参数。
 2. 不展示未计成本的结果作为“净收益”。
-3. 不把合成数据或单次漂亮回测当成真实 alpha。
+3. 研究、CI 报告和可执行入口不使用合成数据。
 4. 不在完成仿真、纸面交易和风控验收前接入真实订单。
 5. 不用单条收益曲线替代跨时期、跨市场、参数扰动和容量测试。
 6. 任何数据下载都必须能由原始响应和 SHA-256 哈希追踪。

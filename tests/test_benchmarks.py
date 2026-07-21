@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import pandas as pd
 import pytest
 
-from gpt_quant import generate_regime_prices
 from gpt_quant.benchmarks import buy_and_hold_frame
 
 
-def test_buy_and_hold_charges_entry_cost_at_evaluation_start() -> None:
-    prices = generate_regime_prices(rows=700, seed=31)
+def test_buy_and_hold_charges_entry_cost_at_evaluation_start(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    prices = btc_usdt_prices.iloc[:700]
     start = prices.index[500]
     frame = buy_and_hold_frame(
         prices,
