@@ -43,6 +43,8 @@ class StrategyConfig:
         object.__setattr__(self, "_min_position_implicit", minimum_is_implicit)
         if not -self.max_abs_position <= minimum <= self.max_abs_position:
             raise ValueError("min_position must lie within the absolute position limit")
+        if not math.isfinite(self.trend_weight) or not math.isfinite(self.reversal_weight):
+            raise ValueError("signal weights must be finite")
         if self.trend_weight < 0 or self.reversal_weight < 0:
             raise ValueError("signal weights cannot be negative")
         if self.trend_weight + self.reversal_weight <= 0:
