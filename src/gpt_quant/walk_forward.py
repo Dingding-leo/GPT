@@ -46,9 +46,7 @@ class WalkForwardResult:
     def to_dict(self) -> dict[str, Any]:
         excluded = {"combined_frame", "benchmark_frames", "perturbation_frames"}
         return {
-            name: getattr(self, name)
-            for name in self.__dataclass_fields__
-            if name not in excluded
+            name: getattr(self, name) for name in self.__dataclass_fields__ if name not in excluded
         }
 
 
@@ -162,13 +160,11 @@ def _assess_benchmarks(
     )
     return {
         "beats_buy_and_hold": {
-            "total_return": float(strategy["total_return"])
-            > float(buy_and_hold["total_return"]),
+            "total_return": float(strategy["total_return"]) > float(buy_and_hold["total_return"]),
             "cagr": float(strategy["cagr"]) > float(buy_and_hold["cagr"]),
             "sharpe": float(strategy["sharpe"]) > float(buy_and_hold["sharpe"]),
             "calmar": float(strategy["calmar"]) > float(buy_and_hold["calmar"]),
-            "max_drawdown": float(strategy["max_drawdown"])
-            > float(buy_and_hold["max_drawdown"]),
+            "max_drawdown": float(strategy["max_drawdown"]) > float(buy_and_hold["max_drawdown"]),
         },
         "beats_all_benchmarks": {
             metric: float(strategy[metric]) > float(details["value"])
@@ -192,15 +188,11 @@ def _assess_fold_stability(folds: list[dict[str, Any]]) -> dict[str, Any]:
 
     positive_returns = [value for value in fold_returns if value > 0.0]
     positive_total = sum(positive_returns)
-    max_positive_share = (
-        max(positive_returns) / positive_total if positive_total > 0.0 else 1.0
-    )
+    max_positive_share = max(positive_returns) / positive_total if positive_total > 0.0 else 1.0
     minimum_profitable_folds = math.ceil(len(fold_returns) / 2)
     reasons: list[str] = []
     if len(fold_returns) < _MIN_PROVISIONAL_FOLDS:
-        reasons.append(
-            f"requires at least {_MIN_PROVISIONAL_FOLDS} out-of-sample folds"
-        )
+        reasons.append(f"requires at least {_MIN_PROVISIONAL_FOLDS} out-of-sample folds")
     if len(positive_returns) < minimum_profitable_folds:
         reasons.append("fewer than half of out-of-sample folds are profitable")
     if max_positive_share > _MAX_POSITIVE_FOLD_SHARE:
@@ -231,8 +223,7 @@ def _classify_robustness(
     fold_stability: Mapping[str, Any],
 ) -> str:
     positive_variants = sum(
-        float(metrics["total_return"]) > 0.0
-        for metrics in perturbation_metrics.values()
+        float(metrics["total_return"]) > 0.0 for metrics in perturbation_metrics.values()
     )
     if float(aggregate["total_return"]) <= 0 or float(aggregate["sharpe"]) <= 0:
         return "reject: non-positive aggregate out-of-sample result"
@@ -246,9 +237,7 @@ def _classify_robustness(
         benchmark_assessment["beats_all_benchmarks"]["total_return"]
         and benchmark_assessment["beats_all_benchmarks"]["sharpe"]
     ):
-        return (
-            "provisional alpha candidate: beats tested benchmarks on return and Sharpe"
-        )
+        return "provisional alpha candidate: beats tested benchmarks on return and Sharpe"
     if (
         benchmark_assessment["beats_all_benchmarks"]["calmar"]
         and benchmark_assessment["beats_all_benchmarks"]["max_drawdown"]
@@ -284,8 +273,7 @@ def run_walk_forward_research(
         trend_weights,
     )
     longest_lookback = max(
-        max(candidate.momentum_lookback, candidate.volatility_lookback)
-        for candidate in candidates
+        max(candidate.momentum_lookback, candidate.volatility_lookback) for candidate in candidates
     )
     if selection_bars <= longest_lookback:
         raise ValueError("selection_bars must exceed every candidate lookback")
@@ -330,18 +318,14 @@ def run_walk_forward_research(
             if np.isfinite(score):
                 ranked.append((score, candidate, metrics))
         if not ranked:
-            raise RuntimeError(
-                f"fold {fold_number} produced no finite candidate scores"
-            )
+            raise RuntimeError(f"fold {fold_number} produced no finite candidate scores")
         ranked.sort(key=lambda item: item[0], reverse=True)
         best_score, best, selection_metrics = ranked[0]
         parameters = best.to_dict()
         selected.append(parameters)
 
         test_history = clean.iloc[: test_end_index + 1]
-        base = _run_test_window(
-            test_history, best, test_start, test_end, previous["base"]
-        )
+        base = _run_test_window(test_history, best, test_start, test_end, previous["base"])
         base["fold"] = fold_number
         base["selected_momentum_lookback"] = best.momentum_lookback
         base["selected_reversal_lookback"] = best.reversal_lookback
@@ -371,20 +355,14 @@ def run_walk_forward_research(
                 "candidates_tested": len(ranked),
                 "selected_parameters": parameters,
                 "selection_score": best_score,
-                "runner_up_score_gap": best_score - ranked[1][0]
-                if len(ranked) > 1
-                else None,
+                "runner_up_score_gap": best_score - ranked[1][0] if len(ranked) > 1 else None,
                 "selection_metrics": selection_metrics,
-                "test_metrics": performance_metrics(
-                    base, annualization=base_config.annualization
-                ),
+                "test_metrics": performance_metrics(base, annualization=base_config.annualization),
             }
         )
 
     combined = _stitch(base_frames)
-    stitched_variants = {
-        name: _stitch(frames) for name, frames in variant_frames.items()
-    }
+    stitched_variants = {name: _stitch(frames) for name, frames in variant_frames.items()}
     aggregate = performance_metrics(combined, annualization=base_config.annualization)
     perturbation_metrics = {
         name: performance_metrics(frame, annualization=base_config.annualization)
@@ -399,9 +377,7 @@ def run_walk_forward_research(
     }
 
     start, end = combined.index[[0, -1]]
-    median_momentum = int(
-        np.median([candidate.momentum_lookback for candidate in candidates])
-    )
+    median_momentum = int(np.median([candidate.momentum_lookback for candidate in candidates]))
     benchmarks = {
         "buy_and_hold": buy_and_hold_frame(
             clean,
@@ -439,8 +415,7 @@ def run_walk_forward_research(
         for item in selected
     ]
     switches = sum(
-        left != right
-        for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
+        left != right for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
     )
     stability = {
         "selection_frequency": dict(Counter(parameter_keys).most_common()),
