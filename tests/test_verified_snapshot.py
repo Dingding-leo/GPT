@@ -104,6 +104,23 @@ def test_rejects_changed_csv_bytes_before_parsing(
         load_verified_price_snapshot(manifest_path)
 
 
+def test_rejects_undeclared_csv_fields(
+    tmp_path: Path,
+    btc_usdt_prices: pd.Series,
+) -> None:
+    manifest_path, data_path, manifest = _write_snapshot_bundle(tmp_path, btc_usdt_prices)
+    lines = data_path.read_text(encoding="utf-8").splitlines()
+    data_path.write_text(
+        "\n".join([lines[0], *(f"{line},undeclared" for line in lines[1:])]) + "\n",
+        encoding="utf-8",
+    )
+    manifest["data_sha256"] = file_sha256(data_path)
+    _write_manifest(manifest_path, manifest)
+
+    with pytest.raises(ValueError, match="field count does not match manifest schema"):
+        load_verified_price_snapshot(manifest_path)
+
+
 def test_rejects_timezone_naive_csv_timestamp(
     tmp_path: Path,
     btc_usdt_prices: pd.Series,
