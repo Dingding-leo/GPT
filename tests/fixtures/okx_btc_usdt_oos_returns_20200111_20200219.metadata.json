@@ -1,0 +1,24 @@
+{
+  "bar": "1Dutc",
+  "columns": [
+    "timestamp",
+    "strategy_return",
+    "benchmark_buy_and_hold_return"
+  ],
+  "end": "2020-02-19 00:00:00+00:00",
+  "endpoint": "/api/v5/market/history-candles",
+  "extract_method": "first 40 chronologically ordered OOS rows; selected columns only",
+  "fixture_sha256": "1fd5957d5aa334aa4414c860b653f96c0a20e2a9f7fa0d062ded36a9e62b1b21",
+  "instrument_id": "BTC-USDT",
+  "provider": "OKX",
+  "rows": 40,
+  "source_artifact_id": "8499721759",
+  "source_artifact_name": "quant-research-51",
+  "source_artifact_sha256": "dbe25282321fa1d1fdafa2945c1a45e6a6481060d693956fd5fb3225b03f3fd7",
+  "source_fetched_at_utc": "2026-07-21T15:01:16.374294+00:00",
+  "source_head_sha": "4c02eccac3d6d81139c73d0b64bb5067756dac93",
+  "source_returns_csv_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+  "source_snapshot_csv_sha256": "1cac0b30a6c7718a18f8fcdbd8503bbed497d9b528bf9859333b2249e8de1f1e",
+  "source_workflow_run_id": "29841895366",
+  "start": "2020-01-11 00:00:00+00:00"
+}
