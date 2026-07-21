@@ -80,9 +80,32 @@ reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.metadata.json
 reports/okx/BTC-USDT/walk_forward.json
 reports/okx/BTC-USDT/walk_forward.md
 reports/okx/BTC-USDT/walk_forward_returns.csv
+reports/okx/experiment-manifest.jsonl
 ```
 
 研究参数位于 [`config/okx_research.json`](config/okx_research.json)。
+
+## 实验清单与复现
+
+每次真实数据实验都会向 JSONL 清单追加一条规范化记录，包含：
+
+- 当前检出的 Git commit；
+- 应用命令行覆盖后的有效配置 SHA-256；
+- 规范化 CSV 与原始分页响应的 SHA-256；
+- 候选参数组合数量和最终结果分类；
+- 报告、收益序列、原始响应、数据快照及元数据的 SHA-256；
+- 内容寻址的 `experiment_id` 与唯一 `run_id`。
+
+多个品种可显式写入同一清单：
+
+```bash
+python scripts/run_okx_research.py \
+  --inst-id BTC-USDT \
+  --output-dir reports/okx/BTC-USDT \
+  --manifest-path reports/okx/experiment-manifest.jsonl
+```
+
+清单采用追加写入和规范化单行 JSON；重复写入完全相同的 `run_id` 不会制造重复记录，而冲突记录会直接失败。
 
 ## 合成数据回归测试
 
@@ -110,6 +133,7 @@ python scripts/run_research.py \
 - 单元测试和未来函数回归测试；
 - 合成数据管线检查；
 - BTC-USDT、ETH-USDT 公共日线下载与同参数滚动样本外研究；
+- 将两个品种的提交、配置、数据和报告哈希追加到同一个实验清单；
 - 报告和原始数据快照作为 GitHub Actions artifact 保存 14 天。
 
 工作流对仓库只有读取权限，不会自动提交代码，不包含 API key，也不会向 OKX 发送订单。
