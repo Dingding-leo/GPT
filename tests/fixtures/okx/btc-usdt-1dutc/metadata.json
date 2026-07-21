@@ -1,0 +1,22 @@
+{
+  "bar": "1Dutc",
+  "base_url": "https://www.okx.com",
+  "end": "2026-07-20T00:00:00+00:00",
+  "endpoint": "/api/v5/market/history-candles",
+  "fixture_normalized_csv_sha256": "4ed4cd0ee9b58694e3c470378525986077dde21d000ef77087a135011349d068",
+  "fixture_raw_json_sha256": "daa3f22b1db6945ff77254be4780d9334e92a310886e92a597aead47ae2eb011",
+  "instrument_id": "BTC-USDT",
+  "license_note": "Public exchange market data snapshot retained solely for deterministic tests and provenance verification.",
+  "observations": 5,
+  "provider": "OKX",
+  "retrieved_at_utc": "2026-07-21T15:01:16.374294+00:00",
+  "schema_version": 1,
+  "source_artifact_id": 8499721759,
+  "source_artifact_name": "quant-research-51",
+  "source_artifact_sha256": "dbe25282321fa1d1fdafa2945c1a45e6a6481060d693956fd5fb3225b03f3fd7",
+  "source_snapshot_normalized_csv_sha256": "1cac0b30a6c7718a18f8fcdbd8503bbed497d9b528bf9859333b2249e8de1f1e",
+  "source_snapshot_raw_pages_sha256": "59877841d17d037f8dd5e848d202d4636fbe663b3d96b8300109fc3348597334",
+  "source_workflow_run_id": 29841895366,
+  "start": "2026-07-16T00:00:00+00:00",
+  "timestamp_semantics": "UTC daily candles at 00:00:00; confirm=1 only"
+}
