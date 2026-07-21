@@ -1,0 +1,89 @@
+{
+  "candidate_count": 0,
+  "canonical_signature": "volatility-matched-drawdown-v1|markets=BTC-USDT,ETH-USDT|benchmark=volatility-targeted-long|metric=max-drawdown-reduction|scale=recomputed-per-resample|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260722,ETH-USDT:20260723|candidate_count=0",
+  "hypothesis": "After matching strategy daily volatility to the volatility-targeted-long benchmark within each paired moving-block sample, maximum drawdown reduction remains positive with a 95% lower confidence bound above zero for both BTC-USDT and ETH-USDT.",
+  "interpretation": {
+    "BTC-USDT": "The point estimate remains positive after volatility matching, but the 95% interval crosses zero.",
+    "ETH-USDT": "The point estimate remains positive on the original sequence, but the bootstrap median is negative and the 95% interval crosses zero.",
+    "claim_boundary": "The existing lower-drawdown evidence cannot be distinguished from a lower-realized-volatility explanation under this fixed diagnostic. This is not evidence of alpha, superior Sharpe, deployable leverage, or a tradable sizing rule."
+  },
+  "joint_supported": false,
+  "markets": {
+    "BTC-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.2224201803165619,
+        "ci_upper": 0.27205836079657886,
+        "lower_bound_positive": false,
+        "median": 0.025906008763252608,
+        "probability_positive": 0.5985,
+        "scale_ci_lower": 1.830013465708595,
+        "scale_ci_upper": 2.4415130453018974,
+        "scale_median": 2.0952400057700973
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "benchmark_mdd": -0.7205603717389741,
+        "benchmark_vol": 0.02601824747986436,
+        "drawdown_reduction": 0.18967178312958255,
+        "scale": 2.1018375798633504,
+        "scaled_strategy_mdd": -0.5308885886093916,
+        "strategy_vol": 0.012378809727798245
+      },
+      "sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "start": "2020-01-11 00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.30010945498748,
+        "ci_upper": 0.2137863145623272,
+        "lower_bound_positive": false,
+        "median": -0.0429738913758525,
+        "probability_positive": 0.3645,
+        "scale_ci_lower": 1.8871013781027235,
+        "scale_ci_upper": 2.3645475400319054,
+        "scale_median": 2.0907649000054955
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "benchmark_mdd": -0.6599169322189562,
+        "benchmark_vol": 0.028129340631149243,
+        "drawdown_reduction": 0.12220063393599734,
+        "scale": 2.1097302921921997,
+        "scaled_strategy_mdd": -0.5377162982829589,
+        "strategy_vol": 0.01333314534812899
+      },
+      "sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "start": "2020-01-11 00:00:00+00:00"
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8499721759,
+    "source_artifact_name": "quant-research-51",
+    "source_artifact_sha256": "dbe25282321fa1d1fdafa2945c1a45e6a6481060d693956fd5fb3225b03f3fd7",
+    "source_head_sha": "4c02eccac3d6d81139c73d0b64bb5067756dac93",
+    "source_workflow_run_id": 29841895366
+  },
+  "settings": {
+    "benchmark_column": "benchmark_volatility_targeted_long_return",
+    "block_length": 20,
+    "confidence": 0.95,
+    "market_status": "development",
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "metric": "absolute benchmark maximum drawdown minus absolute volatility-matched strategy maximum drawdown",
+    "resamples": 2000,
+    "resampling": "paired moving block bootstrap without circular wrapping",
+    "scale_definition": "benchmark population standard deviation divided by strategy population standard deviation",
+    "scale_recomputed_per_resample": true,
+    "seed_rule": "20260722 for BTC-USDT; 20260723 for ETH-USDT",
+    "strategy_column": "strategy_return"
+  },
+  "verdict": "rejected"
+}
