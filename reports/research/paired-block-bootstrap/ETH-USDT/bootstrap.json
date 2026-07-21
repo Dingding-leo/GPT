@@ -1,0 +1,172 @@
+{
+  "hypothesis_signature": "paired-mbb-v1|development-market|strategy-vs-three-benchmarks|metrics=calmar,max_drawdown|block=20|resamples=2000|seed=20260722",
+  "instrument": "ETH-USDT",
+  "interpretation": "The joint lower-drawdown and higher-Calmar hypothesis is not supported against every tested benchmark under the declared block-bootstrap specification.",
+  "provenance": {
+    "returns_csv": "reports/okx/ETH-USDT/walk_forward_returns.csv",
+    "returns_csv_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+    "source_artifact_id": "8499721759",
+    "source_head_sha": "4c02eccac3d6d81139c73d0b64bb5067756dac93",
+    "source_run_id": "29841895366"
+  },
+  "result": {
+    "comparisons": {
+      "buy_and_hold": {
+        "cagr": {
+          "ci_lower": -1.5529734147241985,
+          "ci_median": -0.365219197434889,
+          "ci_upper": 0.24868198918312023,
+          "lower_bound_positive": false,
+          "observed_delta": -0.3564728168520821,
+          "probability_positive": 0.1435
+        },
+        "calmar": {
+          "ci_lower": -2.0396480641676384,
+          "ci_median": -0.2842891179556871,
+          "ci_upper": 0.4795848102136692,
+          "lower_bound_positive": false,
+          "observed_delta": -0.19340742706533864,
+          "probability_positive": 0.2445
+        },
+        "max_drawdown": {
+          "ci_lower": 0.14455931187093518,
+          "ci_median": 0.3933683257784144,
+          "ci_upper": 0.6144469658338273,
+          "lower_bound_positive": true,
+          "observed_delta": 0.5139073114471756,
+          "probability_positive": 0.999
+        },
+        "sharpe": {
+          "ci_lower": -0.9980179854280476,
+          "ci_median": -0.37036627466821126,
+          "ci_upper": 0.26420253465060184,
+          "lower_bound_positive": false,
+          "observed_delta": -0.346428027756164,
+          "probability_positive": 0.123
+        }
+      },
+      "simple_trend_long_cash": {
+        "cagr": {
+          "ci_lower": -0.902950688189002,
+          "ci_median": -0.18799077473274745,
+          "ci_upper": 0.2459211234022655,
+          "lower_bound_positive": false,
+          "observed_delta": -0.1668554754650593,
+          "probability_positive": 0.234
+        },
+        "calmar": {
+          "ci_lower": -1.3374925721521032,
+          "ci_median": -0.09571295079471365,
+          "ci_upper": 0.49838932832549976,
+          "lower_bound_positive": false,
+          "observed_delta": 0.0069118106577932825,
+          "probability_positive": 0.3915
+        },
+        "max_drawdown": {
+          "ci_lower": 0.09776098239226214,
+          "ci_median": 0.33855876327950174,
+          "ci_upper": 0.5498139227184569,
+          "lower_bound_positive": true,
+          "observed_delta": 0.4347147507378686,
+          "probability_positive": 0.9955
+        },
+        "sharpe": {
+          "ci_lower": -0.8044846876872832,
+          "ci_median": -0.19766253042820214,
+          "ci_upper": 0.36049584957853137,
+          "lower_bound_positive": false,
+          "observed_delta": -0.1746587940927179,
+          "probability_positive": 0.2485
+        }
+      },
+      "volatility_targeted_long": {
+        "cagr": {
+          "ci_lower": -0.9829862886752861,
+          "ci_median": -0.30524231288629156,
+          "ci_upper": 0.1283855616959679,
+          "lower_bound_positive": false,
+          "observed_delta": -0.2908995861044803,
+          "probability_positive": 0.0835
+        },
+        "calmar": {
+          "ci_lower": -1.8486864782002266,
+          "ci_median": -0.33996534145680474,
+          "ci_upper": 0.38218895597095043,
+          "lower_bound_positive": false,
+          "observed_delta": -0.21281241327060885,
+          "probability_positive": 0.1775
+        },
+        "max_drawdown": {
+          "ci_lower": -0.026298934658097434,
+          "ci_median": 0.23362510703548023,
+          "ci_upper": 0.4933169967275068,
+          "lower_bound_positive": false,
+          "observed_delta": 0.38074244735331875,
+          "probability_positive": 0.9675
+        },
+        "sharpe": {
+          "ci_lower": -1.0386345353975193,
+          "ci_median": -0.39469843475013977,
+          "ci_upper": 0.2911059243042569,
+          "lower_bound_positive": false,
+          "observed_delta": -0.3584834790055037,
+          "probability_positive": 0.1215
+        }
+      }
+    },
+    "hypothesis": {
+      "metric_support": {
+        "calmar": false,
+        "max_drawdown": false
+      },
+      "metrics": [
+        "calmar",
+        "max_drawdown"
+      ],
+      "supported_metrics": [],
+      "verdict": "rejected"
+    },
+    "point_estimates": {
+      "buy_and_hold": {
+        "cagr": 0.46679645514567003,
+        "calmar": 0.5885855120063213,
+        "max_drawdown": -0.7930817963128131,
+        "sharpe": 0.8844144614392743
+      },
+      "simple_trend_long_cash": {
+        "cagr": 0.27717911375864723,
+        "calmar": 0.3882662742831893,
+        "max_drawdown": -0.713889235603506,
+        "sharpe": 0.7126452277758282
+      },
+      "strategy": {
+        "cagr": 0.11032363829358793,
+        "calmar": 0.3951780849409826,
+        "max_drawdown": -0.27917448486563745,
+        "sharpe": 0.5379864336831103
+      },
+      "volatility_targeted_long": {
+        "cagr": 0.40122322439806823,
+        "calmar": 0.6079904982115915,
+        "max_drawdown": -0.6599169322189562,
+        "sharpe": 0.896469912688614
+      }
+    },
+    "settings": {
+      "annualization": 365,
+      "benchmark_columns": {
+        "buy_and_hold": "benchmark_buy_and_hold_return",
+        "simple_trend_long_cash": "benchmark_simple_trend_long_cash_return",
+        "volatility_targeted_long": "benchmark_volatility_targeted_long_return"
+      },
+      "block_length": 20,
+      "confidence": 0.95,
+      "observations": 2340,
+      "paired_resampling": true,
+      "resamples": 2000,
+      "seed": 20260722,
+      "serial_dependence_method": "moving block bootstrap without circular wrapping",
+      "strategy_column": "strategy_return"
+    }
+  }
+}
