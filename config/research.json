@@ -1,0 +1,26 @@
+{
+  "data": {
+    "rows": 3000,
+    "seed": 7,
+    "start_price": 100.0
+  },
+  "strategy": {
+    "momentum_lookback": 63,
+    "reversal_lookback": 5,
+    "volatility_lookback": 20,
+    "target_volatility": 0.12,
+    "max_abs_position": 1.0,
+    "trend_weight": 0.7,
+    "reversal_weight": 0.3,
+    "transaction_cost_bps": 2.0,
+    "annualization": 252
+  },
+  "search": {
+    "momentum_lookbacks": [21, 63, 126],
+    "reversal_lookbacks": [3, 5, 10],
+    "trend_weights": [0.55, 0.7, 0.85],
+    "validation_fraction": 0.2,
+    "holdout_fraction": 0.2,
+    "top_candidates": 10
+  }
+}
