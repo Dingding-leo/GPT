@@ -1,23 +1,23 @@
 from __future__ import annotations
 
-import os
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
-from gpt_quant import fetch_okx_history_candles
+from gpt_quant import load_verified_price_snapshot
+
+_FIXTURE_MANIFEST = (
+    Path(__file__).parent
+    / "fixtures"
+    / "okx"
+    / "btc-usdt-1dutc-600"
+    / "manifest.json"
+)
 
 
 @pytest.fixture(scope="session")
 def btc_usdt_prices() -> pd.Series:
-    """Download completed public OKX BTC-USDT daily closes for regression tests."""
+    """Load the immutable, hash-verified OKX BTC-USDT regression snapshot."""
 
-    snapshot = fetch_okx_history_candles(
-        inst_id="BTC-USDT",
-        bar="1Dutc",
-        base_url=os.environ.get("OKX_BASE_URL", "https://www.okx.com"),
-        limit=100,
-        max_pages=12,
-        pause_seconds=0.0,
-    )
-    return snapshot.close
+    return load_verified_price_snapshot(_FIXTURE_MANIFEST).prices
