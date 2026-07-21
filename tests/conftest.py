@@ -21,18 +21,14 @@ def _load_btc_usdt_prices() -> pd.Series:
     metadata = json.loads(_METADATA_PATH.read_text(encoding="utf-8"))
     actual_hash = hashlib.sha256(encoded.encode("ascii")).hexdigest()
     if actual_hash != metadata["fixture_sha256"]:
-        raise RuntimeError(
-            "OKX regression fixture hash does not match its provenance metadata"
-        )
+        raise RuntimeError("OKX regression fixture hash does not match its provenance metadata")
     if (
         metadata["provider"] != "OKX"
         or metadata["instrument_id"] != "BTC-USDT"
         or metadata["bar"] != "1Dutc"
         or metadata["missing_intervals"] != 0
     ):
-        raise RuntimeError(
-            "OKX regression fixture metadata is incomplete or inconsistent"
-        )
+        raise RuntimeError("OKX regression fixture metadata is incomplete or inconsistent")
 
     payload = json.loads(zlib.decompress(base64.b64decode(encoded)).decode("utf-8"))
     closes = payload.get("close")
@@ -46,12 +42,8 @@ def _load_btc_usdt_prices() -> pd.Series:
         freq=pd.Timedelta(seconds=int(metadata["expected_step_seconds"])),
     )
     if index[-1] != pd.Timestamp(metadata["end"]):
-        raise RuntimeError(
-            "OKX regression fixture timestamps do not match the metadata boundary"
-        )
-    return validate_prices(
-        pd.Series(closes, index=index, name="close"), minimum_rows=observations
-    )
+        raise RuntimeError("OKX regression fixture timestamps do not match the metadata boundary")
+    return validate_prices(pd.Series(closes, index=index, name="close"), minimum_rows=observations)
 
 
 @pytest.fixture(scope="session")
