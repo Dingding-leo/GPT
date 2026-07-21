@@ -17,7 +17,7 @@ def _run(prices: pd.Series):
         momentum_lookbacks=[21, 63],
         reversal_lookbacks=[3],
         trend_weights=[0.6, 0.8],
-        selection_bars=300,
+        selection_bars=200,
         test_bars=100,
         cost_multipliers=[1.0, 2.0, 4.0],
     )
@@ -26,7 +26,7 @@ def _run(prices: pd.Series):
 def test_walk_forward_folds_are_non_overlapping_and_charge_boundary_turnover(
     btc_usdt_prices: pd.Series,
 ) -> None:
-    result = _run(btc_usdt_prices.iloc[:700])
+    result = _run(btc_usdt_prices)
 
     assert len(result.folds) == 4
     assert not result.combined_frame.index.duplicated().any()
@@ -50,8 +50,8 @@ def test_walk_forward_folds_are_non_overlapping_and_charge_boundary_turnover(
 def test_future_observations_cannot_rewrite_prior_walk_forward_results(
     btc_usdt_prices: pd.Series,
 ) -> None:
-    original = _run(btc_usdt_prices.iloc[:700])
-    extended = _run(btc_usdt_prices.iloc[:800])
+    original = _run(btc_usdt_prices.iloc[:500])
+    extended = _run(btc_usdt_prices)
     cutoff = original.combined_frame.index[-1]
     columns = ["position", "turnover", "trading_cost", "strategy_return", "fold"]
 
