@@ -51,14 +51,8 @@ def test_future_observation_cannot_change_prior_positions(btc_usdt_prices: pd.Se
 def test_transaction_costs_reduce_growth_for_identical_positions(
     btc_usdt_prices: pd.Series,
 ) -> None:
-    free = run_backtest(
-        btc_usdt_prices,
-        StrategyConfig(transaction_cost_bps=0.0),
-    ).frame
-    costly = run_backtest(
-        btc_usdt_prices,
-        StrategyConfig(transaction_cost_bps=20.0),
-    ).frame
+    free = run_backtest(btc_usdt_prices, StrategyConfig(transaction_cost_bps=0.0)).frame
+    costly = run_backtest(btc_usdt_prices, StrategyConfig(transaction_cost_bps=20.0)).frame
 
     pd.testing.assert_series_equal(free["position"], costly["position"])
     assert costly["nav"].iloc[-1] < free["nav"].iloc[-1]
