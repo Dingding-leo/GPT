@@ -97,8 +97,7 @@ def paired_moving_block_bootstrap(
 
     names = list(series_columns)
     point_estimates = {
-        name: _metric_values(values[:, index], annualization)
-        for index, name in enumerate(names)
+        name: _metric_values(values[:, index], annualization) for index, name in enumerate(names)
     }
     distributions = {
         benchmark: {metric: np.empty(resamples, dtype=float) for metric in _METRICS}
@@ -109,8 +108,7 @@ def paired_moving_block_bootstrap(
     for sample_number in range(resamples):
         indices = moving_block_indices(observations, block_length, rng)
         sampled_metrics = [
-            _metric_values(values[indices, index], annualization)
-            for index in range(len(names))
+            _metric_values(values[indices, index], annualization) for index in range(len(names))
         ]
         strategy_metrics = sampled_metrics[0]
         for benchmark_index, benchmark in enumerate(benchmark_columns, start=1):
@@ -148,9 +146,7 @@ def paired_moving_block_bootstrap(
         )
         for metric in hypothesis_metrics
     }
-    supported_metrics = [
-        metric for metric, supported in metric_support.items() if supported
-    ]
+    supported_metrics = [metric for metric, supported in metric_support.items() if supported]
     if all(metric_support.values()):
         verdict = "supported"
     elif supported_metrics:
