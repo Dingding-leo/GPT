@@ -53,3 +53,31 @@ def test_benchmark_builders_reject_invalid_transaction_costs(
         match="transaction_cost_bps must be finite and non-negative",
     ):
         builder(prices, transaction_cost_bps=transaction_cost_bps)
+
+
+@pytest.mark.parametrize(
+    "max_position",
+    [math.nan, math.inf, -math.inf, 0.0, -1.0],
+    ids=["nan", "positive-infinity", "negative-infinity", "zero", "negative"],
+)
+def test_volatility_targeted_benchmark_rejects_invalid_position_cap(
+    btc_usdt_prices: pd.Series,
+    max_position: float,
+) -> None:
+    prices = btc_usdt_prices.iloc[:250]
+
+    with pytest.raises(ValueError, match="max_position must be finite and positive"):
+        volatility_targeted_long_frame(prices, max_position=max_position)
+
+
+def test_volatility_targeted_benchmark_respects_finite_position_cap(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    max_position = 0.5
+    frame = volatility_targeted_long_frame(
+        btc_usdt_prices.iloc[:250],
+        max_position=max_position,
+    )
+
+    assert frame["position"].max() == pytest.approx(max_position)
+    assert frame["position"].between(0.0, max_position).all()
