@@ -87,6 +87,32 @@ def test_manifest_entry_rejects_data_hash_mismatch(tmp_path) -> None:
         )
 
 
+def test_manifest_entry_rejects_incomplete_data_path_mapping(tmp_path) -> None:
+    candles = tmp_path / "candles.csv"
+    raw = tmp_path / "raw.json"
+    artifact = tmp_path / "artifact.txt"
+    candles.write_text("timestamp,close\n2026-01-01,1\n", encoding="utf-8")
+    raw.write_text("[]\n", encoding="utf-8")
+    artifact.write_text("stable\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="data_paths keys must exactly match"):
+        build_experiment_manifest_entry(
+            effective_config={"a": 1},
+            data_hashes={
+                "normalized_csv": file_sha256(candles),
+                "raw_pages": file_sha256(raw),
+            },
+            data_paths={"normalized_csv": candles},
+            artifact_paths={"artifact": artifact},
+            candidate_count=1,
+            result_classification="reject",
+            instrument_id="ETH-USDT",
+            bar="1Dutc",
+            code_commit="e" * 40,
+            recorded_at_utc="2026-07-21T14:01:00+00:00",
+        )
+
+
 def test_manifest_append_is_canonical_and_idempotent(tmp_path) -> None:
     artifact = tmp_path / "artifact.txt"
     artifact.write_text("stable\n", encoding="utf-8")
