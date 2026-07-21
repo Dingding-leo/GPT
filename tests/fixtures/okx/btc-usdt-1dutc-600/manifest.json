@@ -1,0 +1,62 @@
+{
+  "bar": "1Dutc",
+  "close_col": "close",
+  "end": "2026-07-20T00:00:00.000000Z",
+  "files": [
+    {
+      "end": "2025-03-07T00:00:00.000000Z",
+      "observations": 100,
+      "path": "part-001.csv",
+      "sha256": "ec41fe464d3d337dbee71b1b67dd4814891e175e41a2d1717d7ad80e3bb0ab42",
+      "start": "2024-11-28T00:00:00.000000Z"
+    },
+    {
+      "end": "2025-06-15T00:00:00.000000Z",
+      "observations": 100,
+      "path": "part-002.csv",
+      "sha256": "247ab96d16e8946112e44264e30aefca408a7122d7b17ec71a173fe78f5663a4",
+      "start": "2025-03-08T00:00:00.000000Z"
+    },
+    {
+      "end": "2025-09-23T00:00:00.000000Z",
+      "observations": 100,
+      "path": "part-003.csv",
+      "sha256": "5e5ced102553a564c7556fbfee92b88531988444f974f44a2db0dc96be66daca",
+      "start": "2025-06-16T00:00:00.000000Z"
+    },
+    {
+      "end": "2026-01-01T00:00:00.000000Z",
+      "observations": 100,
+      "path": "part-004.csv",
+      "sha256": "9092d69fd4ea2f33fbe22b213cd9e6bf5ad9aa2df61b9914c2a7c5a0445ce53d",
+      "start": "2025-09-24T00:00:00.000000Z"
+    },
+    {
+      "end": "2026-04-11T00:00:00.000000Z",
+      "observations": 100,
+      "path": "part-005.csv",
+      "sha256": "0b66fcbc5d0f51e658ca76c55b0a1e9ee7fc50de3851e7da8b84ef6bf1105294",
+      "start": "2026-01-02T00:00:00.000000Z"
+    },
+    {
+      "end": "2026-07-20T00:00:00.000000Z",
+      "observations": 100,
+      "path": "part-006.csv",
+      "sha256": "4d153fc9bc37a0d34a052c0062f8ca28907cc6c54cf78773d8e0327643bd4ad5",
+      "start": "2026-04-12T00:00:00.000000Z"
+    }
+  ],
+  "instrument_id": "BTC-USDT",
+  "observations": 600,
+  "provider": "OKX",
+  "schema_version": 1,
+  "selection": "last 600 chronological completed candles; timestamp and close columns only",
+  "source": {
+    "artifact_id": 8499721759,
+    "artifact_sha256": "dbe25282321fa1d1fdafa2945c1a45e6a6481060d693956fd5fb3225b03f3fd7",
+    "snapshot_sha256": "1cac0b30a6c7718a18f8fcdbd8503bbed497d9b528bf9859333b2249e8de1f1e",
+    "workflow_run_id": 29841895366
+  },
+  "start": "2024-11-28T00:00:00.000000Z",
+  "timestamp_col": "timestamp"
+}
