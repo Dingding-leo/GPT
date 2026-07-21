@@ -76,9 +76,7 @@ def _validate_provenance(value: object) -> dict[str, Any]:
     if not has_retrieval_time and not has_workflow_source:
         raise ValueError("provenance must include retrieved_at_utc or source_workflow_run_id")
     if has_retrieval_time:
-        _parse_aware_timestamp(
-            provenance["retrieved_at_utc"], "retrieved_at_utc", require_utc=True
-        )
+        _parse_aware_timestamp(provenance["retrieved_at_utc"], "retrieved_at_utc", require_utc=True)
     for name in ("source_workflow_run_id", "source_artifact_id"):
         if name in provenance:
             item = provenance[name]
