@@ -4,13 +4,13 @@
 
 ## 当前研究对象
 
-默认真实数据实验使用 OKX 公共 REST API 的 `BTC-USDT` 现货日线：
+默认真实数据实验使用 OKX 公共 REST API 的 `BTC-USDT` 与 `ETH-USDT` 现货日线：
 
 - 接口：`GET /api/v5/market/history-candles`；
 - 周期：`1Dutc`，按 UTC 0 点划分日线；
 - 只接受 `confirm=1` 的完整 K 线；
 - 不需要 API key，不读取账户，不连接交易接口；
-- BTC-USDT 现货策略限制为 **长仓/现金**，不在现货回测中虚构卖空；
+- 现货策略限制为 **长仓/现金**，不在现货回测中虚构卖空；
 - 每次下载保存原始分页响应、规范化 OHLCV CSV、元数据及 SHA-256 哈希。
 
 OKX 的历史 K 线是交易所特定数据；收盘价回测不能复现盘口深度、延迟或保证成交。API 域名具有地区差异，可通过 `OKX_BASE_URL` 或 `--base-url` 覆盖。
@@ -44,7 +44,7 @@ python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e ".[dev]"
 pytest
-python scripts/run_okx_research.py --output-dir reports/okx
+python scripts/run_okx_research.py --inst-id BTC-USDT --output-dir reports/okx/BTC-USDT
 ```
 
 可覆盖默认品种、周期、日期和 API 域名：
@@ -55,7 +55,7 @@ python scripts/run_okx_research.py \
   --bar 1Dutc \
   --start 2018-01-01 \
   --base-url https://www.okx.com \
-  --output-dir reports/okx-eth
+  --output-dir reports/okx/ETH-USDT
 ```
 
 实验流程为：
@@ -64,21 +64,22 @@ python scripts/run_okx_research.py \
 2. 在随后 90 根 K 线上做一次非重叠样本外评估；
 3. fold 切换时按真实前一仓位重新计算换手与成本；
 4. 同期比较买入持有、波动率目标长仓和简单趋势长仓/现金；
-5. 将交易成本提高到 2 倍和 4 倍；
-6. 对回看期和信号权重做小幅扰动；
-7. 不通过稳健性条件时，报告直接标记为 `reject`。
+5. 所有基准从现金开始，并计入样本外起点的建仓成本；
+6. 将交易成本提高到 2 倍和 4 倍；
+7. 对回看期和信号权重做小幅扰动；
+8. 报告区分“alpha 候选”和“低回撤风险控制候选”，不通过稳健性条件则标记为 `reject`。
 
 默认成本假设为每单位换手 10 bps，是可配置的研究参数，不代表任何账户的实际 OKX 费率。
 
 报告会写入：
 
 ```text
-reports/okx/snapshot/okx-BTC-USDT-1Dutc.csv
-reports/okx/snapshot/okx-BTC-USDT-1Dutc.raw.json
-reports/okx/snapshot/okx-BTC-USDT-1Dutc.metadata.json
-reports/okx/walk_forward.json
-reports/okx/walk_forward.md
-reports/okx/walk_forward_returns.csv
+reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv
+reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.raw.json
+reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.metadata.json
+reports/okx/BTC-USDT/walk_forward.json
+reports/okx/BTC-USDT/walk_forward.md
+reports/okx/BTC-USDT/walk_forward_returns.csv
 ```
 
 研究参数位于 [`config/okx_research.json`](config/okx_research.json)。
@@ -108,7 +109,7 @@ python scripts/run_research.py \
 - lint 与格式检查；
 - 单元测试和未来函数回归测试；
 - 合成数据管线检查；
-- OKX 公共日线下载与滚动样本外研究；
+- BTC-USDT、ETH-USDT 公共日线下载与同参数滚动样本外研究；
 - 报告和原始数据快照作为 GitHub Actions artifact 保存 14 天。
 
 工作流对仓库只有读取权限，不会自动提交代码，不包含 API key，也不会向 OKX 发送订单。
@@ -124,7 +125,7 @@ python scripts/run_research.py \
 
 ## 后续阶段
 
-- 增加 ETH-USDT 等多品种的横截面及组合级测试；
+- 将 BTC-USDT、ETH-USDT 扩展为组合级和横截面测试；
 - 增加 block bootstrap 置信区间、Deflated Sharpe 与 PBO；
 - 使用盘口或成交数据建立滑点、冲击和容量模型；
 - 保存不可变数据快照并建立结果变更审计；
