@@ -31,7 +31,11 @@ class StrategyConfig:
         if not 0 < self.max_abs_position <= 10:
             raise ValueError("max_abs_position must be in (0, 10]")
 
-        minimum = -self.max_abs_position if self.min_position is None else float(self.min_position)
+        minimum = (
+            -self.max_abs_position
+            if self.min_position is None
+            else float(self.min_position)
+        )
         object.__setattr__(self, "min_position", minimum)
         if not -self.max_abs_position <= minimum <= self.max_abs_position:
             raise ValueError("min_position must lie within the absolute position limit")
