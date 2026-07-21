@@ -29,6 +29,54 @@ class BootstrapComparisonResult:
         }
 
 
+def validate_chronological_returns_frame(
+    frame: pd.DataFrame,
+    *,
+    timestamp_column: str = "timestamp",
+    expected_frequency: str | pd.Timedelta | None = None,
+) -> pd.DataFrame:
+    """Parse explicit-zone timestamps to UTC and fail closed on invalid market chronology."""
+
+    if timestamp_column not in frame:
+        raise ValueError(f"missing timestamp column: {timestamp_column}")
+
+    parsed_timestamps: list[pd.Timestamp] = []
+    for value in frame[timestamp_column]:
+        try:
+            timestamp = pd.Timestamp(value)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(
+                "timestamp column must contain only valid timezone-aware timestamps"
+            ) from exc
+        if pd.isna(timestamp):
+            raise ValueError("timestamp column must contain only valid timezone-aware timestamps")
+        if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+            raise ValueError("timestamp column must contain explicit timezone information")
+        parsed_timestamps.append(timestamp)
+
+    timestamps = pd.Series(
+        pd.to_datetime(parsed_timestamps, utc=True),
+        index=frame.index,
+        name=timestamp_column,
+    )
+    if timestamps.duplicated().any():
+        raise ValueError("timestamp column must not contain duplicates")
+    if not timestamps.is_monotonic_increasing:
+        raise ValueError("timestamp column must be strictly increasing")
+
+    if expected_frequency is not None and len(timestamps) > 1:
+        interval = pd.Timedelta(expected_frequency)
+        if interval <= pd.Timedelta(0):
+            raise ValueError("expected_frequency must be positive")
+        deltas = timestamps.diff().iloc[1:]
+        if not deltas.eq(interval).all():
+            raise ValueError(f"timestamp cadence must be exactly {interval}")
+
+    validated = frame.copy()
+    validated[timestamp_column] = timestamps
+    return validated
+
+
 def _metric_values(returns: np.ndarray, annualization: int) -> dict[str, float]:
     frame = pd.DataFrame({"strategy_return": returns})
     metrics = performance_metrics(frame, annualization=annualization)
