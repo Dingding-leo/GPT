@@ -34,8 +34,11 @@ jobs:
       - name: Install project
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
 
-      - name: Lint and formatting
-        run: ruff check . && ruff format --check .
+      - name: Lint
+        run: ruff check .
+
+      - name: Formatting
+        run: ruff format --check .
 
       - name: Test
         run: pytest
@@ -50,7 +53,8 @@ jobs:
           for instrument in BTC-USDT ETH-USDT; do
             python scripts/run_okx_research.py \
               --inst-id "$instrument" \
-              --output-dir "reports/okx/$instrument"
+              --output-dir "reports/okx/$instrument" \
+              --manifest-path reports/okx/experiment-manifest.jsonl
           done
 
       - name: Upload research reports and data snapshots

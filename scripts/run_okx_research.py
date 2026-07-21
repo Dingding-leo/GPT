@@ -9,7 +9,10 @@ from typing import Any
 
 from gpt_quant import (
     StrategyConfig,
+    append_experiment_manifest,
+    build_experiment_manifest_entry,
     fetch_okx_history_candles,
+    file_sha256,
     run_walk_forward_research,
     write_okx_snapshot,
     write_walk_forward_report,
@@ -28,6 +31,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--end")
     parser.add_argument("--max-pages", type=int)
     parser.add_argument("--output-dir", default="reports/okx")
+    parser.add_argument(
+        "--manifest-path",
+        help="Append provenance to JSONL; defaults beside the instrument output.",
+    )
     return parser.parse_args()
 
 
@@ -50,6 +57,9 @@ def main() -> int:
     start = args.start or data.get("start")
     end = args.end or data.get("end")
     max_pages = args.max_pages or int(data.get("max_pages", 40))
+    limit = int(data.get("limit", 100))
+    pause_seconds = float(data.get("pause_seconds", 0.12))
+    timeout = float(data.get("timeout", 20.0))
 
     snapshot = fetch_okx_history_candles(
         inst_id=inst_id,
@@ -57,10 +67,10 @@ def main() -> int:
         start=start,
         end=end,
         base_url=base_url,
-        limit=int(data.get("limit", 100)),
+        limit=limit,
         max_pages=max_pages,
-        pause_seconds=float(data.get("pause_seconds", 0.12)),
-        timeout=float(data.get("timeout", 20.0)),
+        pause_seconds=pause_seconds,
+        timeout=timeout,
     )
     output = Path(args.output_dir)
     snapshot_paths = write_okx_snapshot(snapshot, output / "snapshot")
@@ -68,18 +78,72 @@ def main() -> int:
     base_config = StrategyConfig(**experiment.get("strategy", {}))
     search = experiment.get("search", {})
     robustness = experiment.get("robustness", {})
+    momentum_lookbacks = [int(value) for value in search.get("momentum_lookbacks", [30, 90, 180])]
+    reversal_lookbacks = [int(value) for value in search.get("reversal_lookbacks", [2, 5, 10])]
+    trend_weights = [float(value) for value in search.get("trend_weights", [0.55, 0.70, 0.85])]
+    selection_bars = int(search.get("selection_bars", 730))
+    test_bars = int(search.get("test_bars", 90))
+    cost_multipliers = [
+        float(value) for value in robustness.get("cost_multipliers", [1.0, 2.0, 4.0])
+    ]
     result = run_walk_forward_research(
         snapshot.close,
         base_config=base_config,
-        momentum_lookbacks=search.get("momentum_lookbacks", [30, 90, 180]),
-        reversal_lookbacks=search.get("reversal_lookbacks", [2, 5, 10]),
-        trend_weights=search.get("trend_weights", [0.55, 0.70, 0.85]),
-        selection_bars=int(search.get("selection_bars", 730)),
-        test_bars=int(search.get("test_bars", 90)),
-        cost_multipliers=robustness.get("cost_multipliers", [1.0, 2.0, 4.0]),
+        momentum_lookbacks=momentum_lookbacks,
+        reversal_lookbacks=reversal_lookbacks,
+        trend_weights=trend_weights,
+        selection_bars=selection_bars,
+        test_bars=test_bars,
+        cost_multipliers=cost_multipliers,
         provenance=snapshot.metadata,
     )
     report_paths = write_walk_forward_report(result, output)
+
+    effective_config = {
+        "data": {
+            "inst_id": inst_id,
+            "bar": bar,
+            "base_url": base_url.rstrip("/"),
+            "start": start,
+            "end": end,
+            "limit": limit,
+            "max_pages": max_pages,
+            "pause_seconds": pause_seconds,
+            "timeout": timeout,
+        },
+        "strategy": base_config.to_dict(),
+        "search": {
+            "momentum_lookbacks": momentum_lookbacks,
+            "reversal_lookbacks": reversal_lookbacks,
+            "trend_weights": trend_weights,
+            "selection_bars": selection_bars,
+            "test_bars": test_bars,
+        },
+        "robustness": {"cost_multipliers": cost_multipliers},
+    }
+    artifacts = {**snapshot_paths, **report_paths}
+    manifest_entry = build_experiment_manifest_entry(
+        effective_config=effective_config,
+        data_hashes={
+            "normalized_csv": snapshot.metadata["normalized_csv_sha256"],
+            "raw_pages": snapshot.metadata["raw_pages_sha256"],
+        },
+        data_paths={
+            "normalized_csv": snapshot_paths["candles"],
+            "raw_pages": snapshot_paths["raw"],
+        },
+        artifact_paths=artifacts,
+        candidate_count=int(result.settings["candidate_count"]),
+        result_classification=result.robustness_status,
+        instrument_id=inst_id,
+        bar=bar,
+    )
+    manifest_path = (
+        Path(args.manifest_path)
+        if args.manifest_path
+        else output.parent / "experiment-manifest.jsonl"
+    )
+    manifest_path, manifest_appended = append_experiment_manifest(manifest_path, manifest_entry)
 
     print(f"okx_base_url={base_url}")
     print(f"instrument_id={inst_id}")
@@ -90,7 +154,12 @@ def main() -> int:
     print(f"aggregate_sharpe={result.aggregate_metrics['sharpe']:.6f}")
     print(f"aggregate_max_drawdown={result.aggregate_metrics['max_drawdown']:.6f}")
     print(f"robustness_status={result.robustness_status}")
-    for name, path in {**snapshot_paths, **report_paths}.items():
+    print(f"experiment_id={manifest_entry['experiment_id']}")
+    print(f"run_id={manifest_entry['run_id']}")
+    print(f"manifest_appended={str(manifest_appended).lower()}")
+    print(f"manifest_path={manifest_path}")
+    print(f"manifest_sha256={file_sha256(manifest_path)}")
+    for name, path in artifacts.items():
         print(f"{name}_path={path}")
     return 0
 
