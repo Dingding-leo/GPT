@@ -1,0 +1,20 @@
+{
+  "bar": "1Dutc",
+  "confirmed_only": true,
+  "end": "2020-06-28T00:00:00+00:00",
+  "extraction": "first 900 chronological confirmed timestamp/close observations from the source normalized snapshot",
+  "fixture_closes_sha256": "dbe7be9c50857808a4cb8bb9cdb52e4f20f6ccd05c27095eb589ded2b5b791df",
+  "fixture_timestamps_sha256": "c7fe4413b976aad8f63e2df327d070c6a7c7d786a2fe83e85d885bee376c2121",
+  "instrument_id": "BTC-USDT",
+  "observations": 900,
+  "provider": "OKX",
+  "source_artifact_id": 8499721759,
+  "source_artifact_name": "quant-research-51",
+  "source_artifact_sha256": "dbe25282321fa1d1fdafa2945c1a45e6a6481060d693956fd5fb3225b03f3fd7",
+  "source_head_sha": "4c02eccac3d6d81139c73d0b64bb5067756dac93",
+  "source_normalized_csv_sha256": "1cac0b30a6c7718a18f8fcdbd8503bbed497d9b528bf9859333b2249e8de1f1e",
+  "source_raw_pages_sha256": "59877841d17d037f8dd5e848d202d4636fbe663b3d96b8300109fc3348597334",
+  "source_workflow_run_id": 29841895366,
+  "start": "2018-01-11T00:00:00+00:00",
+  "usage": "software regression tests only; not independent alpha evidence"
+}
