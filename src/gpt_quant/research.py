@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 
 from .backtest import run_backtest
+from .benchmarks import buy_and_hold_frame
 from .config import StrategyConfig
 from .data import validate_prices
 from .metrics import performance_metrics
@@ -55,13 +56,24 @@ def _selection_score(metrics: dict[str, float | int]) -> float:
     return sharpe + 0.20 * calmar - 0.50 * drawdown - 0.01 * turnover
 
 
-def _benchmark_frame(prices: pd.Series, start: pd.Timestamp) -> pd.DataFrame:
-    returns = prices.pct_change().fillna(0.0).loc[start:]
-    frame = pd.DataFrame(index=returns.index)
-    frame["strategy_return"] = returns
-    frame["position"] = 1.0
-    frame["turnover"] = 0.0
-    frame["trading_cost"] = 0.0
+def _run_window_from_cash(
+    prices: pd.Series,
+    config: StrategyConfig,
+    *,
+    start: pd.Timestamp,
+    end: pd.Timestamp | None = None,
+) -> pd.DataFrame:
+    """Retain signal warmup while repricing the reported window from cash."""
+
+    frame = run_backtest(prices, config, start=start, end=end).frame.copy()
+    first = frame.index[0]
+    entry_turnover = abs(float(frame.at[first, "position"]))
+    frame.at[first, "turnover"] = entry_turnover
+    frame.at[first, "trading_cost"] = entry_turnover * config.transaction_cost_bps / 10_000.0
+    frame.at[first, "strategy_return"] = float(frame.at[first, "position"]) * float(
+        frame.at[first, "asset_return"]
+    ) - float(frame.at[first, "trading_cost"])
+    frame["nav"] = (1.0 + frame["strategy_return"]).cumprod()
     return frame
 
 
@@ -90,6 +102,7 @@ def run_holdout_research(
     holdout_start_idx = int(n * (1.0 - holdout_fraction))
     validation_start_idx = int(n * (1.0 - holdout_fraction - validation_fraction))
     validation_start = clean.index[validation_start_idx]
+    validation_end = clean.index[holdout_start_idx - 1]
     holdout_start = clean.index[holdout_start_idx]
 
     candidates: list[tuple[float, StrategyConfig, dict[str, float | int]]] = []
@@ -104,13 +117,13 @@ def run_holdout_research(
             trend_weight=float(trend_weight),
             reversal_weight=round(float(1.0 - trend_weight), 10),
         )
-        validation_result = run_backtest(
+        validation_frame = _run_window_from_cash(
             clean,
             config,
             start=validation_start,
-            end=clean.index[holdout_start_idx - 1],
+            end=validation_end,
         )
-        metrics = performance_metrics(validation_result)
+        metrics = performance_metrics(validation_frame, annualization=config.annualization)
         score = _selection_score(metrics)
         if np.isfinite(score):
             candidates.append((float(score), config, metrics))
@@ -121,11 +134,19 @@ def run_holdout_research(
     candidates.sort(key=lambda item: item[0], reverse=True)
     best_score, best_config, best_validation_metrics = candidates[0]
 
-    holdout_result = run_backtest(clean, best_config, start=holdout_start)
-    holdout_metrics = performance_metrics(holdout_result)
+    holdout_frame = _run_window_from_cash(clean, best_config, start=holdout_start)
+    holdout_metrics = performance_metrics(
+        holdout_frame,
+        annualization=best_config.annualization,
+    )
+    benchmark_frame = buy_and_hold_frame(
+        clean,
+        transaction_cost_bps=best_config.transaction_cost_bps,
+        start=holdout_start,
+    )
     benchmark_metrics = performance_metrics(
-        _benchmark_frame(clean, holdout_start),
-        annualization=base_config.annualization,
+        benchmark_frame,
+        annualization=best_config.annualization,
     )
 
     ranking = [
@@ -157,7 +178,7 @@ def run_holdout_research(
         benchmark_holdout_metrics=benchmark_metrics,
         split={
             "validation_start": validation_start.isoformat(),
-            "validation_end": clean.index[holdout_start_idx - 1].isoformat(),
+            "validation_end": validation_end.isoformat(),
             "holdout_start": holdout_start.isoformat(),
             "holdout_end": clean.index[-1].isoformat(),
         },
@@ -234,6 +255,8 @@ def write_research_report(result: ResearchResult, output_dir: str | Path) -> tup
             "",
             "- Signals are calculated with information available through close t.",
             "- Positions are delayed one bar before earning returns.",
+            "- Each reported validation and holdout window is repriced from cash at entry.",
+            "- Strategy and buy-and-hold benchmark use the same transaction-cost assumption.",
             "- Turnover incurs configurable linear transaction costs.",
             "- Candidate selection uses validation data only; the holdout block is reported once.",
             (
