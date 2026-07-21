@@ -67,7 +67,16 @@ def test_chronological_validation_parses_utc_and_daily_cadence() -> None:
         (lambda frame: frame.drop(columns=["timestamp"]), "missing timestamp column"),
         (
             lambda frame: frame.assign(timestamp=frame["timestamp"].mask(frame.index == 3, "bad")),
-            "valid UTC-compatible timestamps",
+            "valid timezone-aware timestamps",
+        ),
+        (
+            lambda frame: frame.assign(
+                timestamp=frame["timestamp"].mask(
+                    frame.index == 3,
+                    frame.loc[3, "timestamp"].removesuffix("+00:00"),
+                )
+            ),
+            "explicit timezone information",
         ),
         (
             lambda frame: frame.assign(
