@@ -72,6 +72,29 @@ def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _fixed_bar_step_seconds(bar: str) -> int | None:
+    """Return the declared cadence for fixed-width OKX bars.
+
+    Calendar-month bars are intentionally excluded because they do not have a
+    constant duration. The optional ``utc`` suffix changes the session anchor,
+    not the interval width.
+    """
+
+    normalized = bar.removesuffix("utc")
+    if len(normalized) < 2 or not normalized[:-1].isdigit():
+        return None
+    multiplier = {
+        "s": 1,
+        "m": 60,
+        "H": 60 * 60,
+        "D": 24 * 60 * 60,
+        "W": 7 * 24 * 60 * 60,
+    }.get(normalized[-1])
+    if multiplier is None:
+        return None
+    return int(normalized[:-1]) * multiplier
+
+
 def _default_json_getter(url: str, timeout: float) -> Mapping[str, Any]:
     request = Request(
         url,
@@ -177,12 +200,20 @@ def fetch_okx_history_candles(
     candle is excluded so repeated research runs cannot mix partial and complete bars.
     A requested ``start`` is a completeness boundary: exhausting ``max_pages`` before
     reaching it raises instead of silently returning a truncated research sample.
+    Fixed-width bars must also be continuous at the declared cadence. Calendar bars
+    fail closed until calendar-aware continuity validation is implemented.
     """
 
     if not inst_id or any(character.isspace() for character in inst_id):
         raise ValueError("inst_id must be a non-empty OKX instrument identifier")
     if not bar or any(character.isspace() for character in bar):
         raise ValueError("bar must be a non-empty OKX candle interval")
+    declared_step_seconds = _fixed_bar_step_seconds(bar)
+    if declared_step_seconds is None:
+        raise ValueError(
+            "bar must be a supported fixed-width OKX interval; calendar and unknown "
+            "intervals are rejected until calendar-aware continuity validation exists"
+        )
     if not 1 <= limit <= 100:
         raise ValueError("history-candles limit must be in [1, 100]")
     if max_pages < 1:
@@ -274,17 +305,25 @@ def fetch_okx_history_candles(
     if candles.empty:
         raise ValueError("OKX download contains no completed candles in the requested interval")
 
-    expected_step_seconds = None
+    expected_step_seconds = declared_step_seconds
     missing_intervals = None
     if len(candles) > 1:
         deltas = candles.index.to_series().diff().dropna().dt.total_seconds()
-        mode = deltas.mode()
-        if not mode.empty:
-            expected_step_seconds = int(mode.iloc[0])
-            if expected_step_seconds > 0:
-                missing_intervals = int(
-                    np.maximum(np.rint(deltas / expected_step_seconds).astype(int) - 1, 0).sum()
-                )
+        interval_multiples = deltas / declared_step_seconds
+        rounded_multiples = np.rint(interval_multiples).astype(int)
+        off_cadence = ~np.isclose(
+            interval_multiples.to_numpy(dtype=float),
+            rounded_multiples.to_numpy(dtype=float),
+            rtol=0.0,
+            atol=1e-9,
+        )
+        if off_cadence.any():
+            raise ValueError(f"OKX download contains off-cadence intervals for bar {bar!r}")
+        missing_intervals = int(np.maximum(rounded_multiples - 1, 0).sum())
+        if missing_intervals:
+            raise ValueError(
+                f"OKX download is missing {missing_intervals} expected intervals for bar {bar!r}"
+            )
 
     canonical_csv = _canonical_csv_bytes(candles)
     canonical_raw = _canonical_json_bytes(raw_pages)
