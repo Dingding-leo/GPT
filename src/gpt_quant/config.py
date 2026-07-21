@@ -18,7 +18,7 @@ class StrategyConfig:
     reversal_weight: float = 0.30
     transaction_cost_bps: float = 2.0
     annualization: int = 252
-    _min_position_implicit: bool = field(init=False, repr=False, compare=False)
+    _min_position_implicit: bool | None = field(default=None, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if self.momentum_lookback < 2:
@@ -32,9 +32,15 @@ class StrategyConfig:
         if not 0 < self.max_abs_position <= 10:
             raise ValueError("max_abs_position must be in (0, 10]")
 
-        minimum_is_implicit = self.min_position is None
+        minimum_is_implicit = (
+            self.min_position is None
+            if self._min_position_implicit is None
+            else self._min_position_implicit
+        )
         minimum = (
-            -self.max_abs_position if minimum_is_implicit else float(self.min_position)
+            -self.max_abs_position
+            if self.min_position is None
+            else float(self.min_position)
         )
         object.__setattr__(self, "min_position", minimum)
         object.__setattr__(self, "_min_position_implicit", minimum_is_implicit)
@@ -59,10 +65,8 @@ class StrategyConfig:
         return values
 
     def with_overrides(self, **kwargs: Any) -> StrategyConfig:
-        if (
-            "max_abs_position" in kwargs
-            and "min_position" not in kwargs
-            and self._min_position_implicit
-        ):
+        if "min_position" in kwargs:
+            kwargs["_min_position_implicit"] = kwargs["min_position"] is None
+        elif "max_abs_position" in kwargs and self._min_position_implicit:
             kwargs["min_position"] = None
         return replace(self, **kwargs)
