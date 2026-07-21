@@ -1,0 +1,22 @@
+{
+  "bar": "1Dutc",
+  "confirm": "1",
+  "end": "2019-09-02T00:00:00.000000Z",
+  "endpoint": "/api/v5/market/history-candles",
+  "expected_step_seconds": 86400,
+  "extraction": "first 600 chronological completed closes from the source snapshot",
+  "fixture_sha256": "daa132192c6417b7f9ee15fbe5084264f41d97ac4e3367e113d5387dafe20e58",
+  "instrument_id": "BTC-USDT",
+  "missing_intervals": 0,
+  "observations": 600,
+  "provider": "OKX",
+  "purpose": "immutable real-market regression fixture; not a new research result",
+  "source_artifact_id": 8499721759,
+  "source_artifact_name": "quant-research-51",
+  "source_artifact_sha256": "dbe25282321fa1d1fdafa2945c1a45e6a6481060d693956fd5fb3225b03f3fd7",
+  "source_commit": "4c02eccac3d6d81139c73d0b64bb5067756dac93",
+  "source_raw_pages_sha256": "59877841d17d037f8dd5e848d202d4636fbe663b3d96b8300109fc3348597334",
+  "source_snapshot_sha256": "1cac0b30a6c7718a18f8fcdbd8503bbed497d9b528bf9859333b2249e8de1f1e",
+  "source_workflow_run_id": 29841895366,
+  "start": "2018-01-11T00:00:00.000000Z"
+}
