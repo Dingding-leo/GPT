@@ -55,9 +55,7 @@ def _build_effective_config(
         "strategy": strategy,
         "search": search,
         "robustness": {
-            "cost_multipliers": [
-                float(value) for value in result_settings["cost_multipliers"]
-            ]
+            "cost_multipliers": [float(value) for value in result_settings["cost_multipliers"]]
         },
     }
 
