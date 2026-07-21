@@ -35,13 +35,30 @@ def validate_chronological_returns_frame(
     timestamp_column: str = "timestamp",
     expected_frequency: str | pd.Timedelta | None = None,
 ) -> pd.DataFrame:
-    """Parse UTC timestamps and fail closed when row order cannot represent market time."""
+    """Parse explicit-zone timestamps to UTC and fail closed on invalid market chronology."""
 
     if timestamp_column not in frame:
         raise ValueError(f"missing timestamp column: {timestamp_column}")
-    timestamps = pd.to_datetime(frame[timestamp_column], errors="coerce", utc=True)
-    if timestamps.isna().any():
-        raise ValueError("timestamp column must contain only valid UTC-compatible timestamps")
+
+    parsed_timestamps: list[pd.Timestamp] = []
+    for value in frame[timestamp_column]:
+        try:
+            timestamp = pd.Timestamp(value)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(
+                "timestamp column must contain only valid timezone-aware timestamps"
+            ) from exc
+        if pd.isna(timestamp):
+            raise ValueError("timestamp column must contain only valid timezone-aware timestamps")
+        if timestamp.tzinfo is None or timestamp.utcoffset() is None:
+            raise ValueError("timestamp column must contain explicit timezone information")
+        parsed_timestamps.append(timestamp)
+
+    timestamps = pd.Series(
+        pd.to_datetime(parsed_timestamps, utc=True),
+        index=frame.index,
+        name=timestamp_column,
+    )
     if timestamps.duplicated().any():
         raise ValueError("timestamp column must not contain duplicates")
     if not timestamps.is_monotonic_increasing:
