@@ -76,7 +76,9 @@ def _validate_provenance(value: object) -> dict[str, Any]:
     if not has_retrieval_time and not has_workflow_source:
         raise ValueError("provenance must include retrieved_at_utc or source_workflow_run_id")
     if has_retrieval_time:
-        _parse_aware_timestamp(provenance["retrieved_at_utc"], "retrieved_at_utc", require_utc=True)
+        _parse_aware_timestamp(
+            provenance["retrieved_at_utc"], "retrieved_at_utc", require_utc=True
+        )
     for name in ("source_workflow_run_id", "source_artifact_id"):
         if name in provenance:
             item = provenance[name]
@@ -132,7 +134,7 @@ def load_verified_price_snapshot(path: str | Path) -> VerifiedPriceSnapshot:
     """Load external CSV prices only after strict manifest and byte-level validation."""
 
     manifest_path, manifest = _load_manifest(path)
-    if manifest["schema_version"] != 1:
+    if isinstance(manifest["schema_version"], bool) or manifest["schema_version"] != 1:
         raise ValueError("snapshot manifest schema_version must equal 1")
 
     provider = _require_text(manifest["provider"], "provider")
