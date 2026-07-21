@@ -49,7 +49,8 @@ jobs:
           for instrument in BTC-USDT ETH-USDT; do
             python scripts/run_okx_research.py \
               --inst-id "$instrument" \
-              --output-dir "reports/okx/$instrument"
+              --output-dir "reports/okx/$instrument" \
+              --manifest-path reports/okx/experiment-manifest.jsonl
           done
 
       - name: Upload research reports and data snapshots
