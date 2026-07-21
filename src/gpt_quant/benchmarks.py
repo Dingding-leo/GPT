@@ -1,9 +1,16 @@
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pandas as pd
 
 from .data import validate_prices
+
+
+def _validate_transaction_cost_bps(transaction_cost_bps: float) -> None:
+    if not math.isfinite(transaction_cost_bps) or transaction_cost_bps < 0:
+        raise ValueError("transaction_cost_bps must be finite and non-negative")
 
 
 def _build_frame(
@@ -15,6 +22,7 @@ def _build_frame(
     end: pd.Timestamp | str | None,
     initial_position: float = 0.0,
 ) -> pd.DataFrame:
+    _validate_transaction_cost_bps(transaction_cost_bps)
     clean = validate_prices(prices)
     aligned_position = position.reindex(clean.index).fillna(0.0).astype(float)
     asset_return = clean.pct_change().fillna(0.0).rename("asset_return")
