@@ -12,17 +12,12 @@ from gpt_quant.bootstrap import moving_block_indices, paired_moving_block_bootst
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures"
 _RETURNS_FIXTURE = _FIXTURE_DIR / "okx_btc_usdt_oos_returns_20200111_20200219.csv"
-_METADATA_FIXTURE = (
-    _FIXTURE_DIR / "okx_btc_usdt_oos_returns_20200111_20200219.metadata.json"
-)
+_METADATA_FIXTURE = _FIXTURE_DIR / "okx_btc_usdt_oos_returns_20200111_20200219.metadata.json"
 
 
 def _real_returns_frame() -> pd.DataFrame:
     metadata = json.loads(_METADATA_FIXTURE.read_text(encoding="utf-8"))
-    assert (
-        hashlib.sha256(_RETURNS_FIXTURE.read_bytes()).hexdigest()
-        == metadata["fixture_sha256"]
-    )
+    assert hashlib.sha256(_RETURNS_FIXTURE.read_bytes()).hexdigest() == metadata["fixture_sha256"]
     frame = pd.read_csv(_RETURNS_FIXTURE)
     assert len(frame) == metadata["rows"]
     assert frame["timestamp"].iloc[0] == metadata["start"]
@@ -62,9 +57,7 @@ def test_moving_block_indices_are_contiguous_inside_each_block() -> None:
 
 def test_paired_bootstrap_is_deterministic_and_preserves_zero_delta() -> None:
     observed = _real_returns_frame()["strategy_return"]
-    frame = pd.DataFrame(
-        {"strategy_return": observed, "benchmark_return": observed.copy()}
-    )
+    frame = pd.DataFrame({"strategy_return": observed, "benchmark_return": observed.copy()})
     kwargs = {
         "strategy_column": "strategy_return",
         "benchmark_columns": {"benchmark": "benchmark_return"},
