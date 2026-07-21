@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+
 from gpt_quant import StrategyConfig, run_backtest
 
 _REPORT_DIR = Path(__file__).parents[1] / "reports" / "research" / "upside-participation"
