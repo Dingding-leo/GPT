@@ -13,7 +13,9 @@ _ANALYSIS_PATH = _REPORT_DIR / "analysis.py"
 
 
 def _load_analysis_module():
-    spec = importlib.util.spec_from_file_location("underwater_time_analysis", _ANALYSIS_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "underwater_time_analysis", _ANALYSIS_PATH
+    )
     if spec is None or spec.loader is None:
         raise RuntimeError("unable to load underwater-time analysis module")
     module = importlib.util.module_from_spec(spec)
