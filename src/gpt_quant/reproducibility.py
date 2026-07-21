@@ -14,8 +14,7 @@ _HEX_DIGITS = frozenset("0123456789abcdef")
 
 def _canonical_json_bytes(value: Any) -> bytes:
     return (
-        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-        + "\n"
+        json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
     ).encode("utf-8")
 
 
@@ -63,9 +62,7 @@ def resolve_git_commit(repository_root: str | Path = ".") -> str:
     github_sha = os.environ.get("GITHUB_SHA", "").strip().lower()
     if _valid_git_commit(github_sha):
         return github_sha
-    raise RuntimeError(
-        "unable to resolve an exact git commit from the checkout or GITHUB_SHA"
-    )
+    raise RuntimeError("unable to resolve an exact git commit from the checkout or GITHUB_SHA")
 
 
 def _validate_hashes(name: str, values: Mapping[str, str]) -> dict[str, str]:
@@ -73,9 +70,7 @@ def _validate_hashes(name: str, values: Mapping[str, str]) -> dict[str, str]:
     for key, value in sorted(values.items()):
         digest = str(value).strip().lower()
         if len(digest) != 64 or not set(digest) <= _HEX_DIGITS:
-            raise ValueError(
-                f"{name}[{key!r}] must be a lowercase-compatible SHA-256 digest"
-            )
+            raise ValueError(f"{name}[{key!r}] must be a lowercase-compatible SHA-256 digest")
         normalized[str(key)] = digest
     if not normalized:
         raise ValueError(f"{name} cannot be empty")
@@ -132,9 +127,7 @@ def build_experiment_manifest_entry(
 
     commit = (code_commit or resolve_git_commit(repository_root)).strip().lower()
     if not _valid_git_commit(commit):
-        raise ValueError(
-            "code_commit must be a 40- or 64-character hexadecimal commit id"
-        )
+        raise ValueError("code_commit must be a 40- or 64-character hexadecimal commit id")
 
     normalized_data_hashes = (
         _verify_file_hashes(data_hashes, data_paths)
@@ -195,9 +188,7 @@ def append_experiment_manifest(
                         f"manifest contains invalid JSON on line {line_number}"
                     ) from exc
                 if not isinstance(existing, dict):
-                    raise ValueError(
-                        f"manifest line {line_number} is not a JSON object"
-                    )
+                    raise ValueError(f"manifest line {line_number} is not a JSON object")
                 if existing.get("run_id") == run_id:
                     if dict(existing) != dict(entry):
                         raise ValueError(f"manifest run_id collision for {run_id}")
