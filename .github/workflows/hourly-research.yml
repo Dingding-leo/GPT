@@ -19,7 +19,7 @@ concurrency:
 jobs:
   research:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Check out repository
@@ -40,10 +40,15 @@ jobs:
       - name: Test
         run: pytest
 
-      - name: Run sealed-holdout research
-        run: python scripts/run_research.py --output-dir reports
+      - name: Run synthetic sealed-holdout smoke test
+        run: python scripts/run_research.py --output-dir reports/synthetic
 
-      - name: Upload research report
+      - name: Run OKX rolling out-of-sample research
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: python scripts/run_okx_research.py --output-dir reports/okx
+
+      - name: Upload research reports and data snapshots
         uses: actions/upload-artifact@v4
         with:
           name: quant-research-${{ github.run_number }}
