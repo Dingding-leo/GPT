@@ -37,10 +37,24 @@ jobs:
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
-      - name: Test against public OKX data
-        env:
-          OKX_BASE_URL: https://www.okx.com
+      - name: Test against immutable public OKX fixture
         run: pytest
+
+      - name: Run real-data sealed-holdout smoke test
+        run: |
+          python - <<'PY'
+          import base64
+          from pathlib import Path
+
+          source = Path(
+              "tests/fixtures/okx/btc_usdt_1dutc_20180111_20191211.csv.gz.b64"
+          )
+          target = Path("/tmp/btc_usdt_1dutc_20180111_20191211.csv.gz")
+          target.write_bytes(base64.b64decode(source.read_text(encoding="ascii"), validate=True))
+          PY
+          python scripts/run_research.py \
+            --csv /tmp/btc_usdt_1dutc_20180111_20191211.csv.gz \
+            --output-dir reports/fixture/BTC-USDT
 
       - name: Run OKX rolling out-of-sample research
         env:
