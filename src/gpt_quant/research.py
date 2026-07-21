@@ -188,8 +188,8 @@ def write_research_report(result: ResearchResult, output_dir: str | Path) -> tup
         f"Generated at: `{result.generated_at_utc}`",
         "",
         (
-            "> Research-only output. Synthetic/default data results are pipeline checks, "
-            "not live alpha evidence."
+            "> Research-only output. The executable pipeline requires explicit external "
+            "market data; provenance must be retained separately."
         ),
         "",
         "## Data and split",
