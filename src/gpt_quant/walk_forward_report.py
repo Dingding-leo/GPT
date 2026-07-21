@@ -22,16 +22,20 @@ def write_walk_forward_report(
         "returns": output / "walk_forward_returns.csv",
     }
     paths["json"].write_text(
-        json.dumps(result.to_dict(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        json.dumps(result.to_dict(), ensure_ascii=False, indent=2, sort_keys=True)
+        + "\n",
         encoding="utf-8",
     )
     returns = result.combined_frame.copy()
     for name, frame in result.benchmark_frames.items():
-        returns[f"benchmark_{name}_return"] = frame["strategy_return"].reindex(returns.index)
+        returns[f"benchmark_{name}_return"] = frame["strategy_return"].reindex(
+            returns.index
+        )
     returns.reset_index(names="timestamp").to_csv(paths["returns"], index=False)
 
     provenance = result.data_summary.get("provenance", {})
     assessment = result.benchmark_assessment
+    fold_stability = result.fold_stability
     buy_hold_flags = assessment["beats_buy_and_hold"]
     buy_hold_differences = assessment["strategy_minus_buy_and_hold"]
     instrument = str(provenance.get("instrument_id", "Instrument"))
@@ -55,6 +59,27 @@ def write_walk_forward_report(
         f"- Relative drawdown reduction vs buy-and-hold: "
         f"`{assessment['relative_drawdown_reduction_vs_buy_and_hold']:.2%}`",
         f"- CAGR difference vs buy-and-hold: `{buy_hold_differences['cagr']:.2%}`",
+        "",
+        "## OOS fold concentration",
+        "",
+        f"- Passes fold-stability gate: `{fold_stability['passes']}`",
+        f"- Profitable folds: `{fold_stability['profitable_folds']}` / "
+        f"`{fold_stability['fold_count']}`",
+        f"- Positive-fold ratio: `{fold_stability['positive_fold_ratio']:.2%}`",
+        f"- Largest share of positive fold return: "
+        f"`{fold_stability['max_positive_fold_share']:.2%}`",
+        f"- Allowed maximum positive-fold share: "
+        f"`{fold_stability['maximum_allowed_positive_fold_share']:.2%}`",
+        f"- Best fold total return: `{fold_stability['best_fold_total_return']:.2%}`",
+        f"- Worst fold total return: `{fold_stability['worst_fold_total_return']:.2%}`",
+    ]
+    if fold_stability["failure_reasons"]:
+        lines.append(
+            "- Failure reasons: "
+            + "; ".join(str(item) for item in fold_stability["failure_reasons"])
+        )
+
+    lines += [
         "",
         "## Data",
         "",
@@ -101,7 +126,10 @@ def write_walk_forward_report(
     ]
     stress = {
         **{f"cost_{name}": value for name, value in result.cost_stress_metrics.items()},
-        **{f"parameter_{name}": value for name, value in result.perturbation_metrics.items()},
+        **{
+            f"parameter_{name}": value
+            for name, value in result.perturbation_metrics.items()
+        },
     }
     for name, metrics in stress.items():
         lines.append(
@@ -116,6 +144,7 @@ def write_walk_forward_report(
         "- Only completed OKX candles (`confirm=1`) are used.",
         "- Every fold selects parameters using data ending before its test period.",
         "- Test folds do not overlap; model switches incur boundary turnover costs.",
+        "- OOS fold results are used only as a post-evaluation robustness gate, not for selection.",
         f"- {instrument} is tested long/cash only, with no leverage or synthetic shorting.",
         "- Close-price tests do not reproduce order-book liquidity or guaranteed fills.",
         "",
