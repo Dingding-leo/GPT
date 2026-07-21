@@ -75,7 +75,10 @@ def _markdown(payload: dict[str, Any]) -> str:
         "",
         "## Benchmark-relative uncertainty",
         "",
-        "| Benchmark | Metric | Observed delta | CI lower | CI upper | P(delta > 0) | Supported |",
+        (
+            "| Benchmark | Metric | Observed delta | CI lower | CI upper | "
+            "P(delta > 0) | Supported |"
+        ),
         "|---|---:|---:|---:|---:|---:|:---:|",
     ]
     comparisons = payload["result"]["comparisons"]
@@ -98,8 +101,10 @@ def _markdown(payload: dict[str, Any]) -> str:
             "",
             payload["interpretation"],
             "",
-            "BTC-USDT and ETH-USDT are development markets. This analysis quantifies uncertainty "
-            "for existing evidence and does not restore untouched-holdout status.",
+            (
+                "BTC-USDT and ETH-USDT are development markets. This analysis quantifies "
+                "uncertainty for existing evidence and does not restore untouched-holdout status."
+            ),
         ]
     )
     return "\n".join(lines) + "\n"
@@ -160,7 +165,10 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     json_path = output / "bootstrap.json"
     markdown_path = output / "bootstrap.md"
-    json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    json_path.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     markdown_path.write_text(_markdown(payload), encoding="utf-8")
 
     print(f"instrument={args.instrument}")
