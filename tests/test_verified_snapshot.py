@@ -8,12 +8,7 @@ import pytest
 
 from gpt_quant import load_verified_price_snapshot
 
-_FIXTURE_DIR = (
-    Path(__file__).parent
-    / "fixtures"
-    / "okx"
-    / "btc-usdt-1dutc-600"
-)
+_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-600"
 
 
 def test_verified_snapshot_loads_expected_real_market_window() -> None:
