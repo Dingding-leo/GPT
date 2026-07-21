@@ -175,6 +175,8 @@ def fetch_okx_history_candles(
 
     Pagination always moves backward in exchange time. The current, unconfirmed
     candle is excluded so repeated research runs cannot mix partial and complete bars.
+    A requested ``start`` is a completeness boundary: exhausting ``max_pages`` before
+    reaching it raises instead of silently returning a truncated research sample.
     """
 
     if not inst_id or any(character.isspace() for character in inst_id):
@@ -206,6 +208,7 @@ def fetch_okx_history_candles(
     cursor: str | None = None
     previous_oldest: int | None = None
     start_ms = int(start_timestamp.timestamp() * 1_000) if start_timestamp is not None else None
+    pagination_termination = "max_pages"
 
     for page_number in range(max_pages):
         parameters = {"instId": inst_id, "bar": bar, "limit": str(limit)}
@@ -223,6 +226,7 @@ def fetch_okx_history_candles(
 
         raw_pages.append(payload)
         if not page_data:
+            pagination_termination = "empty_page"
             break
         raw_rows.extend(page_data)
 
@@ -241,11 +245,21 @@ def fetch_okx_history_candles(
         cursor = str(oldest)
 
         if start_ms is not None and oldest <= start_ms:
+            pagination_termination = "requested_start"
             break
         if len(page_data) < limit:
+            pagination_termination = "short_page"
             break
         if page_number + 1 < max_pages and pause_seconds:
             time.sleep(pause_seconds)
+
+    if (
+        pagination_termination == "max_pages"
+        and start_ms is not None
+        and previous_oldest is not None
+        and previous_oldest > start_ms
+    ):
+        raise RuntimeError("OKX pagination exhausted max_pages before reaching the requested start")
 
     parsed = parse_okx_candle_rows(raw_rows)
     raw_observations = len(parsed)
@@ -283,7 +297,14 @@ def fetch_okx_history_candles(
         "fetched_at_utc": datetime.now(UTC).isoformat(),
         "requested_start": start_timestamp.isoformat() if start_timestamp is not None else None,
         "requested_end": end_timestamp.isoformat() if end_timestamp is not None else None,
+        "limit": limit,
+        "max_pages": max_pages,
         "pages": len(raw_pages),
+        "pagination_termination": pagination_termination,
+        "pagination_complete": pagination_termination != "max_pages",
+        "requested_start_reached": (
+            start_ms is not None and previous_oldest is not None and previous_oldest <= start_ms
+        ),
         "raw_rows": len(raw_rows),
         "parsed_rows": raw_observations,
         "duplicates_removed": duplicates_removed,

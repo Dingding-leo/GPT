@@ -28,7 +28,9 @@ def _row(timestamp_ms: int, close: float, *, confirm: str = "1") -> list[str]:
     ]
 
 
-def test_okx_pagination_drops_partial_candle_and_hashes_snapshot(tmp_path: Path) -> None:
+def test_okx_pagination_drops_partial_candle_and_hashes_snapshot(
+    tmp_path: Path,
+) -> None:
     day = 86_400_000
     pages = {
         None: [_row(4 * day, 104.0, confirm="0"), _row(3 * day, 103.0)],
@@ -55,6 +57,10 @@ def test_okx_pagination_drops_partial_candle_and_hashes_snapshot(tmp_path: Path)
     assert list(snapshot.candles["close"]) == [101.0, 102.0, 103.0]
     assert snapshot.metadata["incomplete_rows_removed"] == 1
     assert snapshot.metadata["missing_intervals"] == 0
+    assert snapshot.metadata["pagination_termination"] == "empty_page"
+    assert snapshot.metadata["pagination_complete"] is True
+    assert snapshot.metadata["limit"] == 2
+    assert snapshot.metadata["max_pages"] == 5
     assert snapshot.candles.index.is_monotonic_increasing
 
     paths = write_okx_snapshot(snapshot, tmp_path)
@@ -65,6 +71,49 @@ def test_okx_pagination_drops_partial_candle_and_hashes_snapshot(tmp_path: Path)
     metadata = json.loads(paths["metadata"].read_text(encoding="utf-8"))
     assert metadata["instrument_id"] == "BTC-USDT"
     assert paths["raw"].exists()
+
+
+def test_okx_rejects_max_pages_truncation_before_requested_start() -> None:
+    day = 86_400_000
+
+    def fake_getter(url: str, timeout: float) -> dict[str, object]:
+        return {
+            "code": "0",
+            "msg": "",
+            "data": [_row(5 * day, 105.0), _row(4 * day, 104.0)],
+        }
+
+    with pytest.raises(RuntimeError, match="max_pages.*requested start"):
+        fetch_okx_history_candles(
+            start="1970-01-02",
+            limit=2,
+            max_pages=1,
+            pause_seconds=0.0,
+            get_json=fake_getter,
+        )
+
+
+def test_okx_marks_latest_window_when_max_pages_is_intentional() -> None:
+    day = 86_400_000
+
+    def fake_getter(url: str, timeout: float) -> dict[str, object]:
+        return {
+            "code": "0",
+            "msg": "",
+            "data": [_row(2 * day, 102.0), _row(day, 101.0)],
+        }
+
+    snapshot = fetch_okx_history_candles(
+        limit=2,
+        max_pages=1,
+        pause_seconds=0.0,
+        get_json=fake_getter,
+    )
+
+    assert snapshot.metadata["pagination_termination"] == "max_pages"
+    assert snapshot.metadata["pagination_complete"] is False
+    assert snapshot.metadata["requested_start_reached"] is False
+    assert snapshot.metadata["observations"] == 2
 
 
 def test_okx_parser_rejects_invalid_ohlc() -> None:
