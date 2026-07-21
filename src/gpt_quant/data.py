@@ -129,9 +129,7 @@ def load_verified_price_snapshot(manifest_path: str | Path) -> VerifiedPriceSnap
         raise ValueError(
             f"snapshot observation mismatch: expected {expected_rows}, actual {len(prices)}"
         )
-    expected_start = pd.Timestamp(
-        _required_text(metadata, "start", context="snapshot manifest")
-    )
+    expected_start = pd.Timestamp(_required_text(metadata, "start", context="snapshot manifest"))
     expected_end = pd.Timestamp(_required_text(metadata, "end", context="snapshot manifest"))
     if prices.index[0] != expected_start or prices.index[-1] != expected_end:
         raise ValueError("snapshot timestamps do not match manifest start/end")
