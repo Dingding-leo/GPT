@@ -55,6 +55,29 @@ jobs:
               --manifest-path reports/okx/experiment-manifest.jsonl
           done
 
+      - name: Run predeclared sealed LTC-USDT validation
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.head_ref == 'auto/research/20260722-04-sealed-ltc-validation'
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: |
+          python scripts/run_okx_research.py \
+            --inst-id LTC-USDT \
+            --output-dir reports/research/sealed-ltc-validation/LTC-USDT \
+            --manifest-path reports/research/sealed-ltc-validation/experiment-manifest.jsonl
+          python scripts/run_bootstrap_research.py \
+            --returns-csv reports/research/sealed-ltc-validation/LTC-USDT/walk_forward_returns.csv \
+            --instrument LTC-USDT \
+            --output-dir reports/research/sealed-ltc-validation/bootstrap \
+            --block-length 20 \
+            --resamples 2000 \
+            --confidence 0.95 \
+            --annualization 365 \
+            --seed 20260722 \
+            --source-run-id "${{ github.run_id }}" \
+            --source-head-sha "${{ github.sha }}"
+
       - name: Upload research reports and data snapshots
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
