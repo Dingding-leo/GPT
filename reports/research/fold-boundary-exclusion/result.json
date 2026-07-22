@@ -1,0 +1,93 @@
+{
+  "candidate_accounting": {
+    "candidate_count": 1,
+    "candidates_passed": 0,
+    "candidates_rejected": 1,
+    "searched_alternatives": []
+  },
+  "canonical_signature": "fold-boundary-exclusion-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|stress=exclude-first-observation-each-fold|metric=annualized-arithmetic-mean-net-return|annualization=365|resampling=within-fold-noncircular-moving-block|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260722,ETH-USDT:20260723|candidate_count=1",
+  "data_provenance": {
+    "development_evidence": true,
+    "evaluation_end": "2026-06-07T00:00:00+00:00",
+    "evaluation_start": "2020-01-11T00:00:00+00:00",
+    "market_type": "spot",
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "observations_per_market": 2340,
+    "provider": "OKX",
+    "report_sha256": {
+      "BTC-USDT": "36c13d611e09ddeb65788ea2f597979e763aa797ef79b0fd341ef9aba33b3eca",
+      "ETH-USDT": "d51ee25fe582da2ffd1a234372758b8eee5c05bdfdce3a4021716bc9e781628e"
+    },
+    "returns_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "source_artifact_id": 8516824262,
+    "source_artifact_name": "quant-research-484",
+    "source_artifact_sha256": "b1f271e4267cc1c1007bbccd11c53c1a59d3f1e3fe3f1e3f07423c6907b83605",
+    "source_base_sha": "a57edb6838271e1ee86f901575cd13bcba895b9a",
+    "source_head_sha": "cfc0a08048ac584a375f15e4ed146c00266e2e17",
+    "source_workflow_run_id": 29886881484,
+    "timeframe": "1Dutc"
+  },
+  "economic_rationale": "A credible return process should persist inside each OOS fold rather than depend on the one-day parameter-reselection boundary where position carry and transaction-cost accounting are most implementation-sensitive.",
+  "failure_reasons": [
+    "ETH-USDT fold-interior annualized mean lower confidence bound is not positive"
+  ],
+  "hypothesis": "Net rolling OOS strategy returns retain a positive annualized arithmetic mean in both BTC-USDT and ETH-USDT after excluding the first observation of every fold.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "The fixed one-observation exclusion tests only the immediate fold boundary.",
+    "Resampling preserves within-fold serial order but does not model market impact, spread, liquidity, capacity, latency, or partial fills.",
+    "Observed real returns are resampled; no artificial market-price path is generated."
+  ],
+  "markets": {
+    "BTC-USDT": {
+      "boundary_annualized_mean": 1.9465550380113426,
+      "boundary_observations_removed": 26,
+      "confidence_interval": {
+        "lower": 0.0024915278723356906,
+        "upper": 0.3411888017885551
+      },
+      "folds": 26,
+      "full_annualized_mean": 0.17168956582497064,
+      "full_observations": 2340,
+      "interior_annualized_mean": 0.15174725714871926,
+      "interior_observations": 2314,
+      "passes": true,
+      "probability_mean_positive": 0.977,
+      "seed": 20260722
+    },
+    "ETH-USDT": {
+      "boundary_annualized_mean": 1.572936679467162,
+      "boundary_observations_removed": 26,
+      "confidence_interval": {
+        "lower": -0.036988347345318535,
+        "upper": 0.32418142937846284
+      },
+      "folds": 26,
+      "full_annualized_mean": 0.13704095296450977,
+      "full_observations": 2340,
+      "interior_annualized_mean": 0.12090729311616533,
+      "interior_observations": 2314,
+      "passes": false,
+      "probability_mean_positive": 0.933,
+      "seed": 20260723
+    }
+  },
+  "specification": {
+    "annualization": 365,
+    "block_length": 20,
+    "confidence": 0.95,
+    "excluded_observations_per_fold": 1,
+    "fold_count": 26,
+    "pass_rule": "both market-specific confidence-interval lower bounds must be greater than zero",
+    "resamples": 2000,
+    "resampling": "within-fold non-circular moving blocks",
+    "test_bars_per_fold": 90
+  },
+  "verdict": "rejected"
+}
