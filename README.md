@@ -2,6 +2,12 @@
 
 一个从零构建、可复现、可审计的量化研究工程。当前目标不是宣称“发现了西蒙斯策略”，而是先把最容易造假的环节做对：**时点一致、无未来函数、交易成本、风险约束、滚动样本外测试和数据来源追踪**。
 
+## 可执行复现指南
+
+从干净检出开始的环境安装、真实 OKX 数据下载、rolling OOS、验证/留出研究、paired block bootstrap、跨平台 SHA-256 核验、CI artifact 审计和故障排查，见 [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md)。
+
+指南只接受真实交易所数据作为研究或绩效证据，并明确区分入口自动强制的 chronology 条件、selection/OOS 的初始仓位记账边界，以及仍需调用者独立核验的 provenance 边界。
+
 ## 当前研究对象
 
 默认真实数据实验使用 OKX 公共 REST API 的 `BTC-USDT` 与 `ETH-USDT` 现货日线：
@@ -47,7 +53,7 @@ pytest
 python scripts/run_okx_research.py --inst-id BTC-USDT --output-dir reports/okx/BTC-USDT
 ```
 
-可覆盖默认品种、周期、日期和 API 域名：
+可覆盖默认品种、固定宽度周期、日期和 API 域名：
 
 ```bash
 python scripts/run_okx_research.py \
@@ -58,16 +64,19 @@ python scripts/run_okx_research.py \
   --output-dir reports/okx/ETH-USDT
 ```
 
+当前连续性验证只覆盖秒、分钟、小时、日和周的固定宽度周期，例如 `1s`、`1m`、`2H`、`3Dutc` 和 `1Wutc`。`1M`、`3Mutc` 等日历月周期及未知格式会在网络请求前失败。更改周期不会自动缩放年化参数、lookback 或 fold 长度；完整边界和自检命令见 [`docs/OKX_INTERVALS.md`](docs/OKX_INTERVALS.md)。
+
 实验流程为：
 
 1. 每个 fold 只用测试期之前的 730 根 K 线选择参数；
-2. 在随后 90 根 K 线上做一次非重叠样本外评估；
-3. fold 切换时按真实前一仓位重新计算换手与成本；
-4. 同期比较买入持有、波动率目标长仓和简单趋势长仓/现金；
-5. 所有基准从现金开始，并计入样本外起点的建仓成本；
-6. 将交易成本提高到 2 倍和 4 倍；
-7. 对回看期和信号权重做小幅扰动；
-8. 报告区分“alpha 候选”和“低回撤风险控制候选”，不通过稳健性条件则标记为 `reject`。
+2. 每个候选的 selection 窗口独立从现金开始，首行换手与建仓成本按 `previous_position=0.0` 计入；
+3. 在随后 90 根 K 线上做一次非重叠样本外评估；
+4. OOS fold 切换时按真实前一 OOS 仓位重新计算换手与成本，不在每折重置为现金；
+5. 同期比较买入持有、波动率目标长仓和简单趋势长仓/现金；
+6. 所有基准从现金开始，并计入样本外起点的建仓成本；
+7. 将交易成本提高到 2 倍和 4 倍；
+8. 对回看期和信号权重做小幅扰动；
+9. 报告区分“alpha 候选”和“低回撤风险控制候选”，不通过稳健性条件则标记为 `reject`。
 
 默认成本假设为每单位换手 10 bps，是可配置的研究参数，不代表任何账户的实际 OKX 费率。
 
@@ -84,26 +93,38 @@ reports/okx/BTC-USDT/walk_forward_returns.csv
 
 研究参数位于 [`config/okx_research.json`](config/okx_research.json)。
 
-## 外部真实 CSV
+## 外部真实快照
 
-验证/留出研究脚本只接受显式提供的外部真实市场 CSV，不再提供合成数据默认路径：
+验证/留出入口不再接受裸 `--csv`。CSV 必须由同目录的 schema-v1 JSON manifest 绑定到精确字节、字段顺序、时间边界、provider、market type、instrument、timeframe 和来源声明。
+
+先从本仓库生成的 OKX snapshot 创建 manifest：
+
+```bash
+python scripts/create_verified_snapshot_manifest.py \
+  --metadata reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.metadata.json \
+  --csv reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv \
+  --output reports/okx/BTC-USDT/snapshot/verified-snapshot.json
+```
+
+Windows PowerShell 等价命令、创建前校验和剩余证据边界见 [`docs/VERIFIED_SNAPSHOT_MANIFEST.md`](docs/VERIFIED_SNAPSHOT_MANIFEST.md)。随后运行：
 
 ```bash
 python scripts/run_research.py \
-  --csv data/prices.csv \
-  --timestamp-col timestamp \
-  --close-col close \
-  --output-dir reports/custom
+  --snapshot-manifest reports/okx/BTC-USDT/snapshot/verified-snapshot.json \
+  --config config/okx_holdout.json \
+  --output-dir reports/holdout/BTC-USDT
 ```
 
-CSV 必须包含可解析的时间戳和严格为正的收盘价。调用者负责保留数据提供方、下载参数和文件哈希等来源证据；没有来源证据的 CSV 结果不能视为可审计研究结果。
+此示例使用 `config/okx_holdout.json`。其中 strategy 参数、365 日年化、每单位换手 10 bps 成本及候选参数族与 `config/okx_research.json` 保持一致；但它使用固定 validation/holdout 比例，而 rolling OOS 使用 730/90 bar folds，因此两类报告不是同一种样本外证据，指标不应直接横向比较。
+
+加载器会在研究开始前核对相对路径约束、SHA-256、精确 header 与每行字段数、观测数、显式时区、唯一且严格递增的时间戳、首尾边界，以及有限且严格为正的 close。旧的 `--csv`、`--timestamp-col` 和 `--close-col` 会直接失败。manifest 的 provenance 标识和 timeframe 目前只做结构/声明校验，不会联网证明标识真实性，也不会从 timeframe 推导 cadence；完整字段说明和证据边界见 [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md)。
 
 ## 每小时自动化
 
 `.github/workflows/hourly-research.yml` 在每小时第 17 分钟运行：
 
 - lint 与格式检查；
-- 使用公开 OKX 历史数据执行单元测试和未来数据不变性回归；
+- 使用仓库内带 SHA-256 与来源元数据的不可变 OKX fixture 执行单元测试和未来数据不变性回归；
 - 重新下载 BTC-USDT、ETH-USDT 公共日线并运行滚动样本外研究；
 - 报告和原始数据快照作为 GitHub Actions artifact 保存 14 天。
 
