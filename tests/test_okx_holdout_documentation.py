@@ -53,7 +53,7 @@ def test_manifest_backed_okx_examples_use_the_compatible_holdout_config() -> Non
     assert "okx_holdout_config=verified" in reproduction
 
 
-def test_documented_okx_holdout_command_runs_on_verified_real_fixture(
+def test_documented_okx_manifest_and_holdout_commands_run_on_verified_real_fixture(
     tmp_path: Path,
     btc_usdt_prices: pd.Series,
 ) -> None:
@@ -68,34 +68,45 @@ def test_documented_okx_holdout_command_runs_on_verified_real_fixture(
     ).to_csv(csv_path, index=False, lineterminator="\n")
 
     source = _load_json(_FIXTURE_METADATA_PATH)
-    manifest = {
-        "schema_version": 1,
-        "provider": source["provider"],
-        "market_type": "spot",
-        "instrument_id": source["instrument_id"],
-        "timeframe": source["bar"],
-        "schema": {
-            "columns": ["timestamp", "close"],
-            "timestamp_column": "timestamp",
-            "close_column": "close",
-        },
-        "observations": len(btc_usdt_prices),
-        "start": btc_usdt_prices.index[0].isoformat(),
-        "end": btc_usdt_prices.index[-1].isoformat(),
-        "data_path": csv_path.name,
-        "data_sha256": hashlib.sha256(csv_path.read_bytes()).hexdigest(),
-        "provenance": {
-            "source_workflow_run_id": source["source_workflow_run_id"],
-            "source_artifact_id": source["source_artifact_id"],
-            "source_artifact_sha256": source["source_artifact_sha256"],
-            "source_head_sha": source["source_head_sha"],
-        },
-    }
-    manifest_path = snapshot_dir / "verified-snapshot.json"
-    manifest_path.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+    metadata = dict(source)
+    metadata["normalized_csv_sha256"] = hashlib.sha256(csv_path.read_bytes()).hexdigest()
+    metadata_path = snapshot_dir / "okx-BTC-USDT-1Dutc.metadata.json"
+    metadata_path.write_text(
+        json.dumps(metadata, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+
+    manifest_path = snapshot_dir / "verified-snapshot.json"
+    manifest_completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/create_verified_snapshot_manifest.py",
+            "--metadata",
+            str(metadata_path),
+            "--csv",
+            str(csv_path),
+            "--output",
+            str(manifest_path),
+        ],
+        cwd=_REPOSITORY_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+
+    assert manifest_completed.returncode == 0, (
+        manifest_completed.stdout + manifest_completed.stderr
+    )
+    manifest = _load_json(manifest_path)
+    assert manifest["provider"] == source["provider"]
+    assert manifest["instrument_id"] == source["instrument_id"]
+    assert manifest["timeframe"] == source["bar"]
+    assert manifest["observations"] == len(btc_usdt_prices)
+    assert manifest["data_sha256"] == metadata["normalized_csv_sha256"]
+    assert manifest["provenance"]["source_workflow_run_id"] == source[
+        "source_workflow_run_id"
+    ]
 
     output_dir = tmp_path / "holdout"
     completed = subprocess.run(
