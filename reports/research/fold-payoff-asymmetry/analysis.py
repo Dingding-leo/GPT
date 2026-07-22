@@ -54,9 +54,10 @@ def load_fold_returns(path: str | Path) -> tuple[pd.DataFrame, np.ndarray]:
 
     folds = pd.to_numeric(frame["fold"], errors="raise")
     numeric_folds = folds.to_numpy(dtype=float)
-    if not np.isfinite(numeric_folds).all() or not np.equal(
-        numeric_folds, np.floor(numeric_folds)
-    ).all():
+    if (
+        not np.isfinite(numeric_folds).all()
+        or not np.equal(numeric_folds, np.floor(numeric_folds)).all()
+    ):
         raise ValueError("fold identifiers must be finite integers")
 
     returns = pd.to_numeric(frame["strategy_return"], errors="raise").astype(float)
