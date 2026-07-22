@@ -4,7 +4,8 @@ import hashlib
 import json
 import time
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -38,6 +39,26 @@ class OKXCandleSnapshot:
     candles: pd.DataFrame
     raw_pages: tuple[dict[str, Any], ...]
     metadata: dict[str, Any]
+    _source_normalized_csv_sha256: str = field(init=False, repr=False, compare=False)
+    _source_raw_pages_sha256: str = field(init=False, repr=False, compare=False)
+    _source_metadata_sha256: str = field(init=False, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "_source_normalized_csv_sha256",
+            _sha256(_canonical_csv_bytes(self.candles)),
+        )
+        object.__setattr__(
+            self,
+            "_source_raw_pages_sha256",
+            _sha256(_canonical_json_bytes(self.raw_pages)),
+        )
+        object.__setattr__(
+            self,
+            "_source_metadata_sha256",
+            _sha256(_canonical_json_bytes(self.metadata)),
+        )
 
     @property
     def close(self) -> pd.Series:
@@ -409,26 +430,54 @@ def fetch_okx_history_candles(
     return OKXCandleSnapshot(candles=candles, raw_pages=tuple(raw_pages), metadata=metadata)
 
 
+def _verified_snapshot_bytes(
+    snapshot: OKXCandleSnapshot,
+) -> tuple[bytes, bytes, bytes, str, str]:
+    canonical_csv = _canonical_csv_bytes(snapshot.candles)
+    canonical_raw = _canonical_json_bytes(snapshot.raw_pages)
+    metadata = deepcopy(snapshot.metadata)
+    canonical_metadata = _canonical_json_bytes(metadata)
+    csv_sha256 = _sha256(canonical_csv)
+    raw_sha256 = _sha256(canonical_raw)
+    metadata_sha256 = _sha256(canonical_metadata)
+
+    if csv_sha256 != snapshot._source_normalized_csv_sha256:
+        raise ValueError("OKX snapshot candles changed after download")
+    if raw_sha256 != snapshot._source_raw_pages_sha256:
+        raise ValueError("OKX snapshot raw pages changed after download")
+    if metadata_sha256 != snapshot._source_metadata_sha256:
+        raise ValueError("OKX snapshot metadata changed after download")
+    if metadata.get("normalized_csv_sha256") != csv_sha256:
+        raise ValueError("OKX snapshot metadata normalized CSV hash does not match source bytes")
+    if metadata.get("raw_pages_sha256") != raw_sha256:
+        raise ValueError("OKX snapshot metadata raw-pages hash does not match source bytes")
+
+    instrument = str(metadata["instrument_id"]).replace("/", "-")
+    bar = str(metadata["bar"]).replace("/", "-")
+    metadata_bytes = (
+        json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode()
+    return canonical_csv, canonical_raw, metadata_bytes, instrument, bar
+
+
 def write_okx_snapshot(
     snapshot: OKXCandleSnapshot,
     output_dir: str | Path,
 ) -> dict[str, Path]:
     """Persist normalized candles, raw responses, and provenance metadata."""
 
+    canonical_csv, canonical_raw, metadata_bytes, instrument, bar = _verified_snapshot_bytes(
+        snapshot
+    )
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
-    instrument = str(snapshot.metadata["instrument_id"]).replace("/", "-")
-    bar = str(snapshot.metadata["bar"]).replace("/", "-")
     stem = f"okx-{instrument}-{bar}"
     paths = {
         "candles": output / f"{stem}.csv",
         "raw": output / f"{stem}.raw.json",
         "metadata": output / f"{stem}.metadata.json",
     }
-    paths["candles"].write_bytes(_canonical_csv_bytes(snapshot.candles))
-    paths["raw"].write_bytes(_canonical_json_bytes(snapshot.raw_pages))
-    paths["metadata"].write_text(
-        json.dumps(snapshot.metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    paths["candles"].write_bytes(canonical_csv)
+    paths["raw"].write_bytes(canonical_raw)
+    paths["metadata"].write_bytes(metadata_bytes)
     return paths
