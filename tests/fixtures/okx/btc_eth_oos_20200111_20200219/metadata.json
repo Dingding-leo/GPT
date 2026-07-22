@@ -1,0 +1,31 @@
+{
+  "extraction": "first 40 aligned out-of-sample strategy-return observations",
+  "instruments": {
+    "BTC-USDT": {
+      "end": "2020-02-19 00:00:00+00:00",
+      "fixture_path": "tests/fixtures/okx/btc_eth_oos_20200111_20200219/btc_usdt_returns.csv",
+      "fixture_sha256": "417ff56ee3e71d8e2e8545ee4eb79091bd6f173bde29c79371aae96b65b12587",
+      "observations": 40,
+      "source_file_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "source_path": "okx/BTC-USDT/walk_forward_returns.csv",
+      "start": "2020-01-11 00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "end": "2020-02-19 00:00:00+00:00",
+      "fixture_path": "tests/fixtures/okx/btc_eth_oos_20200111_20200219/eth_usdt_returns.csv",
+      "fixture_sha256": "552401a2e90368ac675915b067a575287d993b46bd355ff17e8a68ff847d8db8",
+      "observations": 40,
+      "source_file_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "source_path": "okx/ETH-USDT/walk_forward_returns.csv",
+      "start": "2020-01-11 00:00:00+00:00"
+    }
+  },
+  "market_type": "spot",
+  "provider": "OKX",
+  "source_artifact_id": 8499721759,
+  "source_artifact_name": "quant-research-51",
+  "source_artifact_sha256": "dbe25282321fa1d1fdafa2945c1a45e6a6481060d693956fd5fb3225b03f3fd7",
+  "source_head_sha": "4c02eccac3d6d81139c73d0b64bb5067756dac93",
+  "source_workflow_run_id": 29841895366,
+  "timeframe": "1Dutc"
+}
