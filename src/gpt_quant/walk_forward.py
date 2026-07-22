@@ -4,6 +4,7 @@ import itertools
 import math
 from collections import Counter
 from collections.abc import Iterable, Mapping
+from copy import deepcopy
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from numbers import Integral, Real
@@ -46,9 +47,16 @@ class WalkForwardResult:
 
     def to_dict(self) -> dict[str, Any]:
         excluded = {"combined_frame", "benchmark_frames", "perturbation_frames"}
-        return {
-            name: getattr(self, name) for name in self.__dataclass_fields__ if name not in excluded
+        payload = {
+            name: deepcopy(getattr(self, name))
+            for name in self.__dataclass_fields__
+            if name not in excluded
         }
+        payload["parameter_stability"] = _validated_parameter_stability_payload(
+            self.folds,
+            self.parameter_stability,
+        )
+        return payload
 
 
 def _score(metrics: Mapping[str, float | int]) -> float:
@@ -165,6 +173,88 @@ def _parameter_stability(selected: Iterable[Mapping[str, Any]]) -> dict[str, Any
         "parameter_switch_rate": switches / max(1, len(identities) - 1),
         "unique_parameter_sets": len(set(identities)),
     }
+
+
+def _selected_parameter_identity(
+    fold: Mapping[str, Any],
+    *,
+    fold_number: int,
+) -> tuple[int, int, float]:
+    if not isinstance(fold, Mapping):
+        raise ValueError(f"fold {fold_number} must be a mapping")
+    parameters = fold.get("selected_parameters")
+    if not isinstance(parameters, Mapping):
+        raise ValueError(f"fold {fold_number} must contain selected_parameters")
+
+    momentum = parameters.get("momentum_lookback")
+    reversal = parameters.get("reversal_lookback")
+    trend_weight = parameters.get("trend_weight")
+    if isinstance(momentum, bool) or not isinstance(momentum, Integral):
+        raise ValueError(f"fold {fold_number} momentum_lookback must be an integer")
+    if isinstance(reversal, bool) or not isinstance(reversal, Integral):
+        raise ValueError(f"fold {fold_number} reversal_lookback must be an integer")
+    if (
+        isinstance(trend_weight, bool)
+        or not isinstance(trend_weight, Real)
+        or not math.isfinite(float(trend_weight))
+    ):
+        raise ValueError(f"fold {fold_number} trend_weight must be a finite real number")
+    return int(momentum), int(reversal), float(trend_weight)
+
+
+def _selected_parameter_records(
+    folds: Iterable[Mapping[str, Any]],
+) -> list[dict[str, float | int]]:
+    return [
+        {
+            "momentum_lookback": identity[0],
+            "reversal_lookback": identity[1],
+            "trend_weight": identity[2],
+        }
+        for fold_number, fold in enumerate(folds, start=1)
+        for identity in [_selected_parameter_identity(fold, fold_number=fold_number)]
+    ]
+
+
+def _selection_frequency_records(
+    folds: Iterable[Mapping[str, Any]],
+) -> list[dict[str, float | int]]:
+    identities = [
+        (
+            int(parameters["momentum_lookback"]),
+            int(parameters["reversal_lookback"]),
+            float(parameters["trend_weight"]),
+        )
+        for parameters in _selected_parameter_records(folds)
+    ]
+    return [
+        {
+            "momentum_lookback": identity[0],
+            "reversal_lookback": identity[1],
+            "trend_weight": identity[2],
+            "selections": count,
+        }
+        for identity, count in Counter(identities).most_common()
+    ]
+
+
+def _validated_parameter_stability_payload(
+    folds: Iterable[Mapping[str, Any]],
+    parameter_stability: Mapping[str, Any],
+) -> dict[str, Any]:
+    if not isinstance(parameter_stability, Mapping):
+        raise ValueError("parameter_stability must be a mapping")
+
+    fold_list = list(folds)
+    selected = _selected_parameter_records(fold_list)
+    expected = _parameter_stability(selected)
+    for key, expected_value in expected.items():
+        if parameter_stability.get(key) != expected_value:
+            raise ValueError(f"parameter_stability {key} does not match selected fold parameters")
+
+    payload = deepcopy(dict(parameter_stability))
+    payload["selection_frequency_records"] = _selection_frequency_records(fold_list)
+    return payload
 
 
 def _run_test_window(
