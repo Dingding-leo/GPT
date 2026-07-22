@@ -66,9 +66,7 @@ def regime_labels(timestamps: pd.Series | pd.DatetimeIndex) -> np.ndarray:
     return np.where(weekdays >= 5, "weekend", "weekday")
 
 
-def moving_block_indices(
-    n: int, *, block_length: int, resamples: int, seed: int
-) -> np.ndarray:
+def moving_block_indices(n: int, *, block_length: int, resamples: int, seed: int) -> np.ndarray:
     if n < block_length:
         raise ValueError("block length cannot exceed observation count")
     rng = np.random.default_rng(seed)
@@ -79,9 +77,7 @@ def moving_block_indices(
     return indices.reshape(resamples, -1)[:, :n]
 
 
-def conditional_annualized_means(
-    returns: np.ndarray, labels: np.ndarray
-) -> dict[str, float]:
+def conditional_annualized_means(returns: np.ndarray, labels: np.ndarray) -> dict[str, float]:
     output: dict[str, float] = {}
     for regime in ("weekday", "weekend"):
         selected = returns[labels == regime]
