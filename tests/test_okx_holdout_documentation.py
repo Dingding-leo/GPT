@@ -69,7 +69,9 @@ def test_documented_okx_manifest_and_holdout_commands_run_on_verified_real_fixtu
 
     source = _load_json(_FIXTURE_METADATA_PATH)
     metadata = dict(source)
-    metadata["normalized_csv_sha256"] = hashlib.sha256(csv_path.read_bytes()).hexdigest()
+    metadata["normalized_csv_sha256"] = hashlib.sha256(
+        csv_path.read_bytes()
+    ).hexdigest()
     metadata_path = snapshot_dir / "okx-BTC-USDT-1Dutc.metadata.json"
     metadata_path.write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n",
