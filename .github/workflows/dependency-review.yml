@@ -19,6 +19,7 @@ jobs:
     env:
       PIP_BOOTSTRAP_VERSION: "26.1.2"
       PIP_AUDIT_VERSION: "2.10.1"
+      PIP_CONFIG_FILE: /dev/null
       PYPI_INDEX_URL: https://pypi.org/simple
       AUDIT_PYTHON_VERSION: ${{ matrix.python-version }}
       TARGET_NAME: ${{ matrix.target.name }}
@@ -130,7 +131,7 @@ jobs:
       - name: Resolve proposed dependencies without installation
         run: |
           python -m venv .resolver-venv
-          .resolver-venv/bin/python -m pip install --quiet \
+          .resolver-venv/bin/python -m pip --isolated install --quiet \
             --index-url "${PYPI_INDEX_URL}" \
             --no-cache-dir \
             --only-binary=:all: \
@@ -156,7 +157,7 @@ jobs:
             target_args+=(--platform "${TARGET_PLATFORM}")
           fi
           for dependency_set in build project; do
-            .resolver-venv/bin/python -m pip install \
+            .resolver-venv/bin/python -m pip --isolated install \
               --dry-run \
               --ignore-installed \
               --index-url "${PYPI_INDEX_URL}" \
@@ -168,7 +169,7 @@ jobs:
             python scripts/dependency_audit_transitive.py collect \
               "reports/security/${dependency_set}-initial-resolution.json" \
               "reports/security/${dependency_set}-platform-requirements.in"
-            .resolver-venv/bin/python -m pip install \
+            .resolver-venv/bin/python -m pip --isolated install \
               --dry-run \
               --ignore-installed \
               --index-url "${PYPI_INDEX_URL}" \
@@ -190,12 +191,12 @@ jobs:
       - name: Install isolated auditor
         run: |
           python -m venv .audit-venv
-          .audit-venv/bin/python -m pip install --quiet \
+          .audit-venv/bin/python -m pip --isolated install --quiet \
             --index-url "${PYPI_INDEX_URL}" \
             --no-cache-dir \
             --only-binary=:all: \
             "pip==${PIP_BOOTSTRAP_VERSION}"
-          .audit-venv/bin/python -m pip install --quiet \
+          .audit-venv/bin/python -m pip --isolated install --quiet \
             --index-url "${PYPI_INDEX_URL}" \
             --no-cache-dir \
             --only-binary=:all: \
