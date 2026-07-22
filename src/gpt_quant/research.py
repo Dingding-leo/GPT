@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import itertools
 import json
+import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from numbers import Integral, Real
 from pathlib import Path
 from typing import Any
 
@@ -77,6 +79,67 @@ def _run_window_from_cash(
     return frame
 
 
+def _validated_candidate_lookback(
+    value: object,
+    *,
+    label: str,
+    minimum: int,
+) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{label} candidates must be integers")
+    parsed = int(value)
+    if parsed < minimum:
+        raise ValueError(f"{label} candidates must be at least {minimum}")
+    return parsed
+
+
+def _validated_trend_weight(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("trend weight candidates must be finite real numbers")
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError("trend weight candidates must be finite real numbers")
+    if not 0.0 <= parsed <= 1.0:
+        raise ValueError("trend weights must be in [0, 1]")
+    return parsed
+
+
+def _validated_candidate_grid(
+    momentum_lookbacks: Iterable[int],
+    reversal_lookbacks: Iterable[int],
+    trend_weights: Iterable[float],
+) -> tuple[list[int], list[int], list[float]]:
+    momentum = [
+        _validated_candidate_lookback(
+            value,
+            label="momentum lookback",
+            minimum=2,
+        )
+        for value in momentum_lookbacks
+    ]
+    reversal = [
+        _validated_candidate_lookback(
+            value,
+            label="reversal lookback",
+            minimum=1,
+        )
+        for value in reversal_lookbacks
+    ]
+    weights = [_validated_trend_weight(value) for value in trend_weights]
+    if not momentum or not reversal or not weights:
+        raise ValueError("candidate grid cannot be empty")
+    return momentum, reversal, weights
+
+
+def _validated_top_candidates(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError("top_candidates must be a positive integer")
+    parsed = int(value)
+    if parsed < 1:
+        raise ValueError("top_candidates must be a positive integer")
+    return parsed
+
+
 def run_holdout_research(
     prices: pd.Series,
     *,
@@ -90,6 +153,7 @@ def run_holdout_research(
 ) -> ResearchResult:
     """Select on a validation block and evaluate once on a sealed holdout block."""
 
+    validated_top_candidates = _validated_top_candidates(top_candidates)
     clean = validate_prices(prices, minimum_rows=600)
     if not 0.05 <= validation_fraction <= 0.40:
         raise ValueError("validation_fraction must be in [0.05, 0.40]")
@@ -97,6 +161,12 @@ def run_holdout_research(
         raise ValueError("holdout_fraction must be in [0.05, 0.40]")
     if validation_fraction + holdout_fraction >= 0.80:
         raise ValueError("validation and holdout fractions leave too little history")
+
+    validated_momentum, validated_reversal, validated_weights = _validated_candidate_grid(
+        momentum_lookbacks,
+        reversal_lookbacks,
+        trend_weights,
+    )
 
     n = len(clean)
     holdout_start_idx = int(n * (1.0 - holdout_fraction))
@@ -107,15 +177,15 @@ def run_holdout_research(
 
     candidates: list[tuple[float, StrategyConfig, dict[str, float | int]]] = []
     for momentum, reversal, trend_weight in itertools.product(
-        momentum_lookbacks,
-        reversal_lookbacks,
-        trend_weights,
+        validated_momentum,
+        validated_reversal,
+        validated_weights,
     ):
         config = base_config.with_overrides(
-            momentum_lookback=int(momentum),
-            reversal_lookback=int(reversal),
-            trend_weight=float(trend_weight),
-            reversal_weight=round(float(1.0 - trend_weight), 10),
+            momentum_lookback=momentum,
+            reversal_lookback=reversal,
+            trend_weight=trend_weight,
+            reversal_weight=round(1.0 - trend_weight, 10),
         )
         validation_frame = _run_window_from_cash(
             clean,
@@ -157,7 +227,7 @@ def run_holdout_research(
             "validation_metrics": metrics,
         }
         for rank, (score, config, metrics) in enumerate(
-            candidates[: max(1, top_candidates)],
+            candidates[:validated_top_candidates],
             start=1,
         )
     ]
