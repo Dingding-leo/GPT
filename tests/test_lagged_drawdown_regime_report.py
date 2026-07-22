@@ -9,9 +9,7 @@ import numpy as np
 import pandas as pd
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-ANALYSIS_PATH = (
-    REPOSITORY_ROOT / "reports" / "research" / "lagged-drawdown-regimes" / "analysis.py"
-)
+ANALYSIS_PATH = REPOSITORY_ROOT / "reports" / "research" / "lagged-drawdown-regimes" / "analysis.py"
 RESULT_PATH = ANALYSIS_PATH.with_name("result.json")
 FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
 SPEC = importlib.util.spec_from_file_location("lagged_drawdown_regimes", ANALYSIS_PATH)
