@@ -153,9 +153,11 @@ def parse_okx_candle_rows(rows: Sequence[Sequence[Any]]) -> pd.DataFrame:
     for row_number, row in enumerate(rows, start=1):
         if not isinstance(row, Sequence) or isinstance(row, (str, bytes)):
             raise ValueError(f"OKX candle row {row_number} is not an array")
-        if len(row) < len(_COLUMNS):
-            raise ValueError(f"OKX candle row {row_number} has fewer than 9 fields")
-        normalized.append(list(row[: len(_COLUMNS)]))
+        if len(row) != len(_COLUMNS):
+            raise ValueError(
+                f"OKX candle row {row_number} must contain exactly {len(_COLUMNS)} fields"
+            )
+        normalized.append(list(row))
 
     if not normalized:
         return pd.DataFrame(columns=_COLUMNS[1:]).rename_axis("timestamp")
