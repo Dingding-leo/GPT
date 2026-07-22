@@ -77,9 +77,7 @@ def test_okx_research_rejects_conflicting_duplicate_before_writing_or_backtestin
     monkeypatch.setattr(
         module,
         "fetch_okx_history_candles",
-        lambda **_kwargs: SimpleNamespace(
-            raw_pages=tuple(_duplicate_real_pages(conflicting=True))
-        ),
+        lambda **_kwargs: SimpleNamespace(raw_pages=tuple(_duplicate_real_pages(conflicting=True))),
     )
     monkeypatch.setattr(
         module,
