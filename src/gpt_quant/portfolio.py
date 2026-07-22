@@ -44,6 +44,7 @@ class _PortfolioBuildSpec:
     annualization: int
     max_sleeve_weight: float
     max_variance_contribution: float
+    max_pairwise_correlation: float
     provenance_json: str
     return_bindings: tuple[_VerifiedReturnBinding, ...]
 
@@ -400,6 +401,7 @@ def build_buy_and_hold_sleeve_portfolio(
     annualization: int = 365,
     max_sleeve_weight: float = 0.75,
     max_variance_contribution: float = 0.75,
+    max_pairwise_correlation: float = 0.90,
 ) -> PortfolioRiskResult:
     """Aggregate net sleeve returns without same-sample weight optimisation or rebalancing."""
 
@@ -425,6 +427,14 @@ def build_buy_and_hold_sleeve_portfolio(
     ):
         raise ValueError("max_variance_contribution must be a finite real number in (0, 1)")
     max_variance_contribution = float(max_variance_contribution)
+    if (
+        isinstance(max_pairwise_correlation, bool)
+        or not isinstance(max_pairwise_correlation, Real)
+        or not math.isfinite(float(max_pairwise_correlation))
+        or not 0.0 < float(max_pairwise_correlation) < 1.0
+    ):
+        raise ValueError("max_pairwise_correlation must be a finite real number in (0, 1)")
+    max_pairwise_correlation = float(max_pairwise_correlation)
 
     returns, weights = _validate_sleeves(sleeve_returns, initial_weights)
     bindings = _validate_return_source_bindings(
@@ -474,6 +484,29 @@ def build_buy_and_hold_sleeve_portfolio(
         sleeve_metrics[name] = metrics
 
     correlation = returns.corr()
+    pairwise_correlations: list[tuple[tuple[str, str], float]] = []
+    unavailable_correlation_pairs: list[list[str]] = []
+    for row_index, row in enumerate(returns.columns):
+        for column in returns.columns[row_index + 1 :]:
+            value = _finite_float_or_none(correlation.loc[row, column])
+            if value is None:
+                unavailable_correlation_pairs.append([row, column])
+            else:
+                pairwise_correlations.append(((row, column), value))
+    if pairwise_correlations:
+        maximum_correlation_pair, maximum_observed_pairwise_correlation = max(
+            pairwise_correlations,
+            key=lambda item: item[1],
+        )
+        maximum_correlation_pair_value: list[str] | None = list(maximum_correlation_pair)
+    else:
+        maximum_observed_pairwise_correlation = None
+        maximum_correlation_pair_value = None
+    correlation_breaches = [
+        list(pair) for pair, value in pairwise_correlations if value > max_pairwise_correlation
+    ]
+    correlation_control_passes = not correlation_breaches and not unavailable_correlation_pairs
+
     covariance = np.cov(returns.to_numpy(), rowvar=False, ddof=0) * annualization
     weight_vector = weights.to_numpy()
     marginal_variance = covariance @ weight_vector
@@ -510,7 +543,11 @@ def build_buy_and_hold_sleeve_portfolio(
         "maximum_variance_contributor": maximum_variance_contributor,
         "variance_contribution_breaches": variance_contribution_breaches,
         "variance_contribution_passes": variance_contribution_passes,
-        "passes": weight_concentration_passes and variance_contribution_passes,
+        "passes": (
+            weight_concentration_passes
+            and variance_contribution_passes
+            and correlation_control_passes
+        ),
         "worst_portfolio_day": {
             "timestamp": worst_timestamp.isoformat(),
             "portfolio_return": float(portfolio_return.loc[worst_timestamp]),
@@ -519,15 +556,20 @@ def build_buy_and_hold_sleeve_portfolio(
             },
         },
     }
-    failed_controls: list[str] = []
+    failure_reasons: list[str] = []
     if not weight_concentration_passes:
-        failed_controls.append("buy-and-hold sleeve-weight drift")
+        failure_reasons.append("buy-and-hold sleeve-weight drift breaches the declared limit")
     if not variance_contribution_passes:
-        failed_controls.append("initial-weight variance contribution")
+        failure_reasons.append("initial-weight variance contribution breaches the declared limit")
+    if correlation_breaches:
+        failure_reasons.append("pairwise return correlation breaches the declared limit")
+    if unavailable_correlation_pairs:
+        failure_reasons.append("pairwise return correlation is unavailable")
     risk_status = (
-        "pass: sleeve weights and variance contributions remain within declared limits"
-        if not failed_controls
-        else f"reject: {' and '.join(failed_controls)} breaches the declared limit"
+        "pass: sleeve weights, variance contributions, and pairwise correlations "
+        "remain within declared limits"
+        if not failure_reasons
+        else f"reject: {' and '.join(failure_reasons)}"
     )
     generated_at_utc = datetime.now(UTC).isoformat()
     build_spec = _PortfolioBuildSpec(
@@ -536,6 +578,7 @@ def build_buy_and_hold_sleeve_portfolio(
         annualization=annualization,
         max_sleeve_weight=max_sleeve_weight,
         max_variance_contribution=max_variance_contribution,
+        max_pairwise_correlation=max_pairwise_correlation,
         provenance_json=_canonical_json(validated_provenance),
         return_bindings=bindings,
     )
@@ -556,6 +599,7 @@ def build_buy_and_hold_sleeve_portfolio(
             "incremental_portfolio_rebalancing_cost": 0.0,
             "max_sleeve_weight": max_sleeve_weight,
             "max_variance_contribution": max_variance_contribution,
+            "max_pairwise_correlation": max_pairwise_correlation,
         },
         portfolio_metrics=portfolio_metrics,
         sleeve_metrics=sleeve_metrics,
@@ -567,6 +611,12 @@ def build_buy_and_hold_sleeve_portfolio(
                 }
                 for row in correlation
             },
+            "maximum_allowed_pairwise_correlation": max_pairwise_correlation,
+            "maximum_observed_pairwise_correlation": maximum_observed_pairwise_correlation,
+            "maximum_correlation_pair": maximum_correlation_pair_value,
+            "correlation_breaches": correlation_breaches,
+            "unavailable_correlation_pairs": unavailable_correlation_pairs,
+            "correlation_control_passes": correlation_control_passes,
             "both_negative_ratio": float((returns < 0.0).all(axis=1).mean()),
             "annualized_covariance": {
                 row: {
@@ -619,6 +669,7 @@ def _validate_result_against_verified_sources(result: PortfolioRiskResult) -> No
         annualization=spec.annualization,
         max_sleeve_weight=spec.max_sleeve_weight,
         max_variance_contribution=spec.max_variance_contribution,
+        max_pairwise_correlation=spec.max_pairwise_correlation,
     )
     expected_payload = expected.to_dict()
     expected_payload["generated_at_utc"] = spec.generated_at_utc
@@ -719,6 +770,25 @@ def write_portfolio_risk_report(
     for name, value in result.risk_contributions.items():
         lines.append(f"- {name}: {value:.2%}")
     lines.extend(["", "## Return dependence", ""])
+    lines.append(
+        "- Maximum allowed pairwise correlation: "
+        f"{result.dependence['maximum_allowed_pairwise_correlation']:.6f}"
+    )
+    maximum_pair = result.dependence["maximum_correlation_pair"]
+    maximum_correlation = result.dependence["maximum_observed_pairwise_correlation"]
+    if maximum_pair is None or maximum_correlation is None:
+        lines.append("- Maximum observed pairwise correlation: unavailable")
+    else:
+        lines.append(
+            "- Maximum observed pairwise correlation: "
+            f"{maximum_pair[0]} / {maximum_pair[1]} ({maximum_correlation:.6f})"
+        )
+    if result.dependence["unavailable_correlation_pairs"]:
+        unavailable = ", ".join(
+            f"{left} / {right}"
+            for left, right in result.dependence["unavailable_correlation_pairs"]
+        )
+        lines.append(f"- Unavailable correlation pairs: {unavailable}")
     for row, values in result.dependence["return_correlation"].items():
         for column, value in values.items():
             if row < column:

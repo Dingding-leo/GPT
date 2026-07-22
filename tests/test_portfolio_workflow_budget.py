@@ -9,6 +9,8 @@ def test_hourly_portfolio_declares_variance_contribution_budget() -> None:
 
     declaration = 'MAX_VARIANCE_CONTRIBUTION: "0.75"'
     argument = '--max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION"'
+    correlation_declaration = 'MAX_PAIRWISE_CORRELATION: "0.90"'
+    correlation_argument = '--max-pairwise-correlation "$MAX_PAIRWISE_CORRELATION"'
     portfolio_start = workflow.index("- name: Generate verified portfolio risk report")
     portfolio_upload = workflow.index("- name: Upload verified portfolio risk artifact")
     portfolio_block = workflow[portfolio_start:portfolio_upload]
@@ -17,3 +19,7 @@ def test_hourly_portfolio_declares_variance_contribution_budget() -> None:
     assert workflow.count(argument) == 1
     assert workflow.index(declaration) < portfolio_start
     assert argument in portfolio_block
+    assert workflow.count(correlation_declaration) == 1
+    assert workflow.count(correlation_argument) == 1
+    assert workflow.index(correlation_declaration) < portfolio_start
+    assert correlation_argument in portfolio_block
