@@ -114,10 +114,7 @@ def test_simultaneous_concentration_failures_are_all_reported() -> None:
     assert result.dependence["correlation_control_passes"] is False
     assert result.concentration["passes"] is False
     assert "buy-and-hold sleeve-weight drift breaches the declared limit" in result.risk_status
-    assert (
-        "initial-weight variance contribution breaches the declared limit"
-        in result.risk_status
-    )
+    assert "initial-weight variance contribution breaches the declared limit" in result.risk_status
     assert "pairwise return correlation breaches the declared limit" in result.risk_status
 
 
