@@ -66,6 +66,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def _validated_provenance(args: argparse.Namespace) -> dict[str, object]:
+    if args.btc_sha256 == args.eth_sha256:
+        raise ValueError("BTC-USDT and ETH-USDT return files must have distinct SHA-256 digests")
     return validate_portfolio_provenance(
         {
             "provider": args.provider,
