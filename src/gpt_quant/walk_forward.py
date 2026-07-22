@@ -135,6 +135,30 @@ def _candidates(
     return list(unique.values())
 
 
+def _parameter_stability_key(parameters: Mapping[str, Any]) -> str:
+    trend_weight = float(parameters["trend_weight"])
+    displayed_weight = f"{trend_weight:.4f}"
+    if float(displayed_weight) != trend_weight:
+        displayed_weight = repr(trend_weight)
+    return (
+        f"m={parameters['momentum_lookback']}|r={parameters['reversal_lookback']}|"
+        f"trend={displayed_weight}"
+    )
+
+
+def _parameter_stability(selected: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+    parameter_keys = [_parameter_stability_key(item) for item in selected]
+    switches = sum(
+        left != right for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
+    )
+    return {
+        "selection_frequency": dict(Counter(parameter_keys).most_common()),
+        "parameter_switches": switches,
+        "parameter_switch_rate": switches / max(1, len(parameter_keys) - 1),
+        "unique_parameter_sets": len(set(parameter_keys)),
+    }
+
+
 def _run_test_window(
     history: pd.Series,
     config: StrategyConfig,
@@ -473,20 +497,7 @@ def run_walk_forward_research(
     }
     benchmark_assessment = _assess_benchmarks(aggregate, benchmark_metrics)
 
-    parameter_keys = [
-        f"m={item['momentum_lookback']}|r={item['reversal_lookback']}|"
-        f"trend={float(item['trend_weight']):.4f}"
-        for item in selected
-    ]
-    switches = sum(
-        left != right for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
-    )
-    stability = {
-        "selection_frequency": dict(Counter(parameter_keys).most_common()),
-        "parameter_switches": switches,
-        "parameter_switch_rate": switches / max(1, len(parameter_keys) - 1),
-        "unique_parameter_sets": len(set(parameter_keys)),
-    }
+    stability = _parameter_stability(selected)
     fold_stability = _assess_fold_stability(folds)
 
     status = _classify_robustness(
