@@ -140,17 +140,6 @@ def _validated_top_candidates(value: object) -> int:
     return parsed
 
 
-def _validated_fraction(value: object, *, label: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
-        raise ValueError(f"{label} must be a finite real number")
-    parsed = float(value)
-    if not math.isfinite(parsed):
-        raise ValueError(f"{label} must be a finite real number")
-    if not 0.05 <= parsed <= 0.40:
-        raise ValueError(f"{label} must be in [0.05, 0.40]")
-    return parsed
-
-
 def run_holdout_research(
     prices: pd.Series,
     *,
@@ -165,18 +154,14 @@ def run_holdout_research(
     """Select on a validation block and evaluate once on a sealed holdout block."""
 
     validated_top_candidates = _validated_top_candidates(top_candidates)
-    validated_validation_fraction = _validated_fraction(
-        validation_fraction,
-        label="validation_fraction",
-    )
-    validated_holdout_fraction = _validated_fraction(
-        holdout_fraction,
-        label="holdout_fraction",
-    )
-    if validated_validation_fraction + validated_holdout_fraction >= 0.80:
+    clean = validate_prices(prices, minimum_rows=600)
+    if not 0.05 <= validation_fraction <= 0.40:
+        raise ValueError("validation_fraction must be in [0.05, 0.40]")
+    if not 0.05 <= holdout_fraction <= 0.40:
+        raise ValueError("holdout_fraction must be in [0.05, 0.40]")
+    if validation_fraction + holdout_fraction >= 0.80:
         raise ValueError("validation and holdout fractions leave too little history")
 
-    clean = validate_prices(prices, minimum_rows=600)
     validated_momentum, validated_reversal, validated_weights = _validated_candidate_grid(
         momentum_lookbacks,
         reversal_lookbacks,
@@ -184,10 +169,8 @@ def run_holdout_research(
     )
 
     n = len(clean)
-    holdout_start_idx = int(n * (1.0 - validated_holdout_fraction))
-    validation_start_idx = int(
-        n * (1.0 - validated_holdout_fraction - validated_validation_fraction)
-    )
+    holdout_start_idx = int(n * (1.0 - holdout_fraction))
+    validation_start_idx = int(n * (1.0 - holdout_fraction - validation_fraction))
     validation_start = clean.index[validation_start_idx]
     validation_end = clean.index[holdout_start_idx - 1]
     holdout_start = clean.index[holdout_start_idx]
