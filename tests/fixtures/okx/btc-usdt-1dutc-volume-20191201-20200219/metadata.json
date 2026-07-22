@@ -1,0 +1,20 @@
+{
+  "bar": "1Dutc",
+  "end": "2020-02-19T00:00:00+00:00",
+  "extraction": "inclusive timestamp slice preserving normalized OKX timestamp and volume_quote observations",
+  "field": "volume_quote",
+  "fixture_canonical_sha256": "cb09a4df3091a5ec7c09afdf376218a50a3e5d57879d7fa16ea9fe716616293c",
+  "fixture_csv_sha256": "e3e7e9d43fd809474b469e11e3aed85447ee415e8470b4b72f70a00c116c6681",
+  "instrument_id": "BTC-USDT",
+  "observations": 81,
+  "provider": "OKX",
+  "source_artifact_id": 8523312240,
+  "source_artifact_name": "quant-research-source-780-attempt-1",
+  "source_artifact_sha256": "5e8578dcc2aed7edbbc30b02b25cdb62ef7c01614305afeb09a940184c8d70a4",
+  "source_code_commit": "b383df39c2df12f5f11f059b8a2a2c463061f8e3",
+  "source_member": "BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv",
+  "source_member_sha256": "b0bd7c6c7e30fcc095073169f60bde24559f481b24cc6f4bdfb85349f57974bb",
+  "source_workflow_run_id": 29904635219,
+  "start": "2019-12-01T00:00:00+00:00",
+  "usage": "software regression tests only; values are unchanged real exchange observations"
+}
