@@ -69,9 +69,7 @@ def test_documented_okx_manifest_and_holdout_commands_run_on_verified_real_fixtu
 
     source = _load_json(_FIXTURE_METADATA_PATH)
     metadata = dict(source)
-    metadata["normalized_csv_sha256"] = hashlib.sha256(
-        csv_path.read_bytes()
-    ).hexdigest()
+    metadata["normalized_csv_sha256"] = hashlib.sha256(csv_path.read_bytes()).hexdigest()
     metadata_path = snapshot_dir / "okx-BTC-USDT-1Dutc.metadata.json"
     metadata_path.write_text(
         json.dumps(metadata, indent=2, sort_keys=True) + "\n",
@@ -97,18 +95,14 @@ def test_documented_okx_manifest_and_holdout_commands_run_on_verified_real_fixtu
         timeout=120,
     )
 
-    assert manifest_completed.returncode == 0, (
-        manifest_completed.stdout + manifest_completed.stderr
-    )
+    assert manifest_completed.returncode == 0, manifest_completed.stdout + manifest_completed.stderr
     manifest = _load_json(manifest_path)
     assert manifest["provider"] == source["provider"]
     assert manifest["instrument_id"] == source["instrument_id"]
     assert manifest["timeframe"] == source["bar"]
     assert manifest["observations"] == len(btc_usdt_prices)
     assert manifest["data_sha256"] == metadata["normalized_csv_sha256"]
-    assert manifest["provenance"]["source_workflow_run_id"] == source[
-        "source_workflow_run_id"
-    ]
+    assert manifest["provenance"]["source_workflow_run_id"] == source["source_workflow_run_id"]
 
     output_dir = tmp_path / "holdout"
     completed = subprocess.run(
