@@ -39,3 +39,29 @@ def test_walk_forward_preserves_distinct_high_precision_weights(
 
     assert result.settings["candidate_count"] == 2
     assert result.folds[0]["candidates_tested"] == 2
+
+
+def test_parameter_stability_preserves_exact_weight_identity() -> None:
+    selected = [
+        {"momentum_lookback": 21, "reversal_lookback": 3, "trend_weight": 0.7},
+        {
+            "momentum_lookback": 21,
+            "reversal_lookback": 3,
+            "trend_weight": 0.70000000001,
+        },
+    ]
+
+    stability = walk_forward._parameter_stability(selected)
+
+    assert stability == {
+        "selection_frequency": {
+            "m=21|r=3|trend=0.7": 1,
+            "m=21|r=3|trend=0.70000000001": 1,
+        },
+        "parameter_switches": 1,
+        "parameter_switch_rate": 1.0,
+        "unique_parameter_sets": 2,
+    }
+    assert walk_forward._parameter_stability(selected[:1])["selection_frequency"] == {
+        "m=21|r=3|trend=0.7000": 1
+    }
