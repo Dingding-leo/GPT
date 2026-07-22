@@ -1,6 +1,11 @@
 name: Hourly Quant Research
 
 on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -8,13 +13,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: docs-artifact-sync-${{ github.ref }}
+  group: hourly-quant-research-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   research:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    env:
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+      SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+      PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+
     steps:
       - name: Check out repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
@@ -25,118 +35,87 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
+          cache: pip
 
-      - name: Install formatter
-        run: python -m pip install "ruff==0.14.10"
+      - name: Install project
+        run: |
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e ".[dev]"
 
-      - name: Stage synchronized artifact documentation
+      - name: Lint and formatting
+        run: ruff check . && ruff format --check .
+
+      - name: Test against public OKX data
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: pytest
+
+      - name: Run OKX rolling out-of-sample research
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: |
+          for instrument in BTC-USDT ETH-USDT; do
+            python scripts/run_okx_research.py \
+              --inst-id "$instrument" \
+              --output-dir "reports/okx/$instrument" \
+              --manifest-path reports/okx/experiment-manifest.jsonl
+          done
+
+      - name: Hash portfolio return inputs
+        id: return-hashes
         shell: bash
         run: |
-          python - <<'PY'
-          from pathlib import Path
+          set -euo pipefail
+          btc_returns="reports/okx/BTC-USDT/walk_forward_returns.csv"
+          eth_returns="reports/okx/ETH-USDT/walk_forward_returns.csv"
+          test -s "$btc_returns"
+          test -s "$eth_returns"
+          printf 'btc_sha256=%s\n' "$(sha256sum "$btc_returns" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          printf 'eth_sha256=%s\n' "$(sha256sum "$eth_returns" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
-          guide_path = Path("docs/REPRODUCTION.md")
-          guide = guide_path.read_text(encoding="utf-8")
-          old = '''## 8. 与 GitHub Actions 对齐
-
-          `.github/workflows/hourly-research.yml` 在 pull request、`main` push、手动触发及每小时第 17 分钟执行：
-
-          1. 安装项目；
-          2. Ruff lint 与 format check；
-          3. 使用仓库内不可变 OKX fixture 运行 pytest；该步骤不下载行情；
-          4. 通过公共 OKX 接口重新下载 BTC-USDT 与 ETH-USDT 日线；该步骤需要网络；
-          5. 运行 rolling OOS 研究并写 experiment manifest；
-          6. 上传 `reports/` artifact，保留 14 天。
-
-          复现 CI 时，至少保存：
-
-          - workflow run ID；
-          - exact head commit SHA；
-          - artifact ID 和下载包哈希；
-          - experiment manifest；
-          - 两个品种的 snapshot metadata、raw response、normalized CSV 和 reports。
-
-          历史绿色 workflow 只对其确切 commit、配置和数据 artifact 有效，不能自动替代当前 head 的验证。
-          '''
-          new = '''## 8. 与 GitHub Actions 对齐
-
-          `.github/workflows/hourly-research.yml` 在 pull request、`main` push、手动触发及每小时第 17 分钟执行：
-
-          1. 安装固定版本的 pip bootstrap 和项目；
-          2. 执行 Ruff lint 与 format check；
-          3. 使用仓库内不可变 OKX fixture 运行 pytest；该步骤不下载行情；
-          4. 通过公共 OKX 接口重新下载 BTC-USDT 与 ETH-USDT 日线，运行 rolling OOS 研究并写 experiment manifest；
-          5. 核对两份 `walk_forward_returns.csv` 存在且非空，并计算各自的 SHA-256；
-          6. 先将完整 `reports/okx/` 上传为 `quant-research-source-<run-number>-attempt-<run-attempt>` 不可变来源 artifact，保留 14 天；
-          7. 使用该来源 artifact 的 ID、digest、workflow run ID、exact head SHA 和两份 return 文件哈希生成固定初始权重、无再平衡的 BTC/ETH portfolio-risk 报告；
-          8. 将 `reports/portfolio/` 单独上传为 `quant-portfolio-risk-<run-number>-attempt-<run-attempt>` artifact，同样保留 14 天。
-
-          attempt 后缀是 artifact 身份的一部分；workflow rerun 会生成新的 source 和 portfolio artifact，不会覆盖上一尝试。组合报告是 development-market 风险诊断，不是新的 alpha 或 untouched-holdout 证据。
-
-          复现 CI 时，至少保存：
-
-          - workflow run ID、run attempt 与 exact head commit SHA；
-          - source artifact 的 ID、名称、下载包 SHA-256 digest；
-          - portfolio artifact 的 ID、名称、下载包 SHA-256 digest；
-          - 两份 `walk_forward_returns.csv` 的 SHA-256；
-          - experiment manifest；
-          - 两个品种的 snapshot metadata、raw response、normalized CSV 和 rolling reports；
-          - `portfolio_risk.json`、`portfolio_risk.md` 与 `portfolio_returns.csv`。
-
-          历史绿色 workflow 只对其确切 commit、配置和两个对应 artifact 有效，不能自动替代当前 head 的验证。portfolio artifact 必须能追溯到同一运行先上传的 source artifact；不能把不同 run 或 attempt 的证据拼接在一起。
-          '''
-          if guide.count(old) != 1:
-              raise SystemExit("expected exactly one stale GitHub Actions section")
-          guide_path.write_text(guide.replace(old, new), encoding="utf-8")
-
-          test_path = Path("tests/test_readme_workflow_documentation.py")
-          test_text = test_path.read_text(encoding="utf-8")
-          marker = "def test_reproduction_guide_matches_hourly_portfolio_artifact_pipeline()"
-          if marker in test_text:
-              raise SystemExit("artifact-guide regression already exists")
-          test_text += '''
-
-
-def test_reproduction_guide_matches_hourly_portfolio_artifact_pipeline() -> None:
-    guide = (_REPOSITORY_ROOT / "docs" / "REPRODUCTION.md").read_text(encoding="utf-8")
-    workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
-
-    source_pattern = "quant-research-source-<run-number>-attempt-<run-attempt>"
-    portfolio_pattern = "quant-portfolio-risk-<run-number>-attempt-<run-attempt>"
-    assert guide.count(source_pattern) == 1
-    assert guide.count(portfolio_pattern) == 1
-
-    for output in (
-        "portfolio_risk.json",
-        "portfolio_risk.md",
-        "portfolio_returns.csv",
-    ):
-        assert guide.count(output) == 1
-
-    assert "`reports/okx/`" in guide
-    assert "`reports/portfolio/`" in guide
-    assert "source artifact 的 ID、名称、下载包 SHA-256 digest" in guide
-    assert "portfolio artifact 的 ID、名称、下载包 SHA-256 digest" in guide
-    assert "不能把不同 run 或 attempt 的证据拼接在一起" in guide
-    assert "上传 `reports/` artifact，保留 14 天" not in guide
-
-    research_step = workflow.index("- name: Run OKX rolling out-of-sample research")
-    source_upload = workflow.index("- name: Upload immutable sleeve research source")
-    portfolio_step = workflow.index("- name: Generate verified portfolio risk report")
-    portfolio_upload = workflow.index("- name: Upload verified portfolio risk artifact")
-    assert research_step < source_upload < portfolio_step < portfolio_upload
-    assert workflow.count("retention-days: 14") == 2
-'''
-          test_path.write_text(test_text, encoding="utf-8")
-          PY
-          ruff format tests/test_readme_workflow_documentation.py
-
-      - name: Upload synchronized files
+      - name: Upload immutable sleeve research source
+        id: source-artifact
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: docs-artifact-sync-${{ github.run_number }}-attempt-${{ github.run_attempt }}
-          path: |
-            docs/REPRODUCTION.md
-            tests/test_readme_workflow_documentation.py
+          name: ${{ env.SOURCE_ARTIFACT_NAME }}
+          path: reports/okx/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 14
+
+      - name: Generate verified portfolio risk report
+        shell: bash
+        env:
+          BTC_RETURN_SHA256: ${{ steps.return-hashes.outputs.btc_sha256 }}
+          ETH_RETURN_SHA256: ${{ steps.return-hashes.outputs.eth_sha256 }}
+          SOURCE_ARTIFACT_ID: ${{ steps.source-artifact.outputs.artifact-id }}
+          SOURCE_ARTIFACT_DIGEST: ${{ steps.source-artifact.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          source_artifact_digest="${SOURCE_ARTIFACT_DIGEST#sha256:}"
+          source_artifact_digest="${source_artifact_digest,,}"
+          [[ "$SOURCE_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$source_artifact_digest" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$BTC_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$ETH_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          python scripts/run_portfolio_risk.py \
+            --btc-returns reports/okx/BTC-USDT/walk_forward_returns.csv \
+            --eth-returns reports/okx/ETH-USDT/walk_forward_returns.csv \
+            --btc-sha256 "$BTC_RETURN_SHA256" \
+            --eth-sha256 "$ETH_RETURN_SHA256" \
+            --provider OKX \
+            --market-type spot \
+            --timeframe 1Dutc \
+            --source-workflow-run "$GITHUB_RUN_ID" \
+            --source-artifact-id "$SOURCE_ARTIFACT_ID" \
+            --source-artifact-name "$SOURCE_ARTIFACT_NAME" \
+            --source-artifact-sha256 "$source_artifact_digest" \
+            --source-head-sha "$GITHUB_SHA" \
+            --output-dir reports/portfolio
+
+      - name: Upload verified portfolio risk artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ env.PORTFOLIO_ARTIFACT_NAME }}
+          path: reports/portfolio/
+          if-no-files-found: error
+          retention-days: 14
