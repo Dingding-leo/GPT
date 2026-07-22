@@ -9,20 +9,8 @@ import pandas as pd
 import pytest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-ANALYSIS_PATH = (
-    REPOSITORY_ROOT
-    / "reports"
-    / "research"
-    / "fold-drawdown-breadth"
-    / "analysis.py"
-)
-RESULT_PATH = (
-    REPOSITORY_ROOT
-    / "reports"
-    / "research"
-    / "fold-drawdown-breadth"
-    / "result.json"
-)
+ANALYSIS_PATH = REPOSITORY_ROOT / "reports" / "research" / "fold-drawdown-breadth" / "analysis.py"
+RESULT_PATH = REPOSITORY_ROOT / "reports" / "research" / "fold-drawdown-breadth" / "result.json"
 FIXTURE_PATH = (
     REPOSITORY_ROOT
     / "tests"

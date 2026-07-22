@@ -80,12 +80,12 @@ def load_fold_drawdown_reductions(
         {
             "timestamp": timestamps,
             "fold": folds.astype(int).to_numpy(),
-            "strategy_return": pd.to_numeric(
-                frame["strategy_return"], errors="raise"
-            ).to_numpy(dtype=float),
-            BENCHMARK_COLUMN: pd.to_numeric(
-                frame[BENCHMARK_COLUMN], errors="raise"
-            ).to_numpy(dtype=float),
+            "strategy_return": pd.to_numeric(frame["strategy_return"], errors="raise").to_numpy(
+                dtype=float
+            ),
+            BENCHMARK_COLUMN: pd.to_numeric(frame[BENCHMARK_COLUMN], errors="raise").to_numpy(
+                dtype=float
+            ),
         }
     )
     return_columns = ["strategy_return", BENCHMARK_COLUMN]
@@ -166,8 +166,8 @@ def analyze(artifact_dir: str | Path) -> dict[str, object]:
 
     for market in MARKETS:
         returns_path = root / market / "walk_forward_returns.csv"
-        frame, strategy_drawdowns, benchmark_drawdowns, reductions = (
-            load_fold_drawdown_reductions(returns_path)
+        frame, strategy_drawdowns, benchmark_drawdowns, reductions = load_fold_drawdown_reductions(
+            returns_path
         )
         fold_sizes = frame.groupby("fold", sort=True, observed=True).size().to_numpy(dtype=int)
         if len(reductions) != EXPECTED_FOLDS:
@@ -187,19 +187,13 @@ def analyze(artifact_dir: str | Path) -> dict[str, object]:
         )
         statistics["start"] = frame["timestamp"].iloc[0].isoformat()
         statistics["end"] = frame["timestamp"].iloc[-1].isoformat()
-        statistics["strategy_fold_max_drawdowns"] = [
-            float(value) for value in strategy_drawdowns
-        ]
-        statistics["benchmark_fold_max_drawdowns"] = [
-            float(value) for value in benchmark_drawdowns
-        ]
+        statistics["strategy_fold_max_drawdowns"] = [float(value) for value in strategy_drawdowns]
+        statistics["benchmark_fold_max_drawdowns"] = [float(value) for value in benchmark_drawdowns]
         statistics["fold_drawdown_reductions"] = [float(value) for value in reductions]
         market_results[market] = statistics
         return_hashes[market] = file_sha256(returns_path)
 
-    passed = all(
-        float(market_results[market]["confidence_lower"]) > 0.0 for market in MARKETS
-    )
+    passed = all(float(market_results[market]["confidence_lower"]) > 0.0 for market in MARKETS)
     rejection_reasons = []
     if not passed:
         for market in MARKETS:
