@@ -257,6 +257,28 @@ def _validated_parameter_stability_payload(
     return payload
 
 
+def _rebase_test_window(
+    frame: pd.DataFrame,
+    config: StrategyConfig,
+    previous_position: float,
+) -> pd.DataFrame:
+    frame = frame.copy()
+    if frame.empty:
+        raise ValueError("requested backtest window is empty")
+
+    position = frame["position"].to_numpy(copy=False)
+    turnover = frame["turnover"].to_numpy(copy=False)
+    trading_cost = frame["trading_cost"].to_numpy(copy=False)
+    asset_return = frame["asset_return"].to_numpy(copy=False)
+    strategy_return = frame["strategy_return"].to_numpy(copy=False)
+
+    turnover[0] = abs(float(position[0]) - previous_position)
+    trading_cost[0] = turnover[0] * config.transaction_cost_bps / 10_000.0
+    strategy_return[0] = position[0] * asset_return[0] - trading_cost[0]
+    frame["nav"] = np.cumprod(1.0 + strategy_return)
+    return frame
+
+
 def _run_test_window(
     history: pd.Series,
     config: StrategyConfig,
@@ -264,16 +286,27 @@ def _run_test_window(
     end: pd.Timestamp,
     previous_position: float,
 ) -> pd.DataFrame:
-    frame = run_backtest(history, config, start=start, end=end).frame.copy()
-    first = frame.index[0]
-    turnover = abs(float(frame.at[first, "position"]) - previous_position)
-    frame.at[first, "turnover"] = turnover
-    frame.at[first, "trading_cost"] = turnover * config.transaction_cost_bps / 10_000.0
-    frame.at[first, "strategy_return"] = float(frame.at[first, "position"]) * float(
-        frame.at[first, "asset_return"]
-    ) - float(frame.at[first, "trading_cost"])
-    frame["nav"] = (1.0 + frame["strategy_return"]).cumprod()
-    return frame
+    frame = run_backtest(history, config, start=start, end=end).frame
+    return _rebase_test_window(frame, config, previous_position)
+
+
+def _run_cached_candidate_window(
+    point_in_time_history: pd.Series,
+    complete_history: pd.Series,
+    cache: dict[StrategyConfig, pd.DataFrame],
+    config: StrategyConfig,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    previous_position: float,
+) -> pd.DataFrame:
+    """Reuse one causal full-history backtest for repeated candidate windows."""
+
+    del point_in_time_history  # Retained for exact legacy benchmark substitution.
+    template = cache.get(config)
+    if template is None:
+        template = run_backtest(complete_history, config).frame
+        cache[config] = template
+    return _rebase_test_window(template.loc[start:end], config, previous_position)
 
 
 def _perturb(config: StrategyConfig) -> dict[str, StrategyConfig]:
@@ -459,6 +492,7 @@ def run_walk_forward_research(
         reversal_lookbacks,
         trend_weights,
     )
+    candidate_frame_cache: dict[StrategyConfig, pd.DataFrame] = {}
     longest_lookback = max(
         max(candidate.momentum_lookback, candidate.volatility_lookback) for candidate in candidates
     )
@@ -489,8 +523,10 @@ def run_walk_forward_research(
 
         ranked: list[tuple[float, StrategyConfig, dict[str, float | int]]] = []
         for candidate in candidates:
-            selection_frame = _run_test_window(
+            selection_frame = _run_cached_candidate_window(
                 selection_history,
+                clean,
+                candidate_frame_cache,
                 candidate,
                 selection_start,
                 selection_end,
@@ -511,7 +547,15 @@ def run_walk_forward_research(
         selected.append(parameters)
 
         test_history = clean.iloc[: test_end_index + 1]
-        base = _run_test_window(test_history, best, test_start, test_end, previous["base"])
+        base = _run_cached_candidate_window(
+            test_history,
+            clean,
+            candidate_frame_cache,
+            best,
+            test_start,
+            test_end,
+            previous["base"],
+        )
         base["fold"] = fold_number
         base["selected_momentum_lookback"] = best.momentum_lookback
         base["selected_reversal_lookback"] = best.reversal_lookback
@@ -520,8 +564,10 @@ def run_walk_forward_research(
         base_frames.append(base)
 
         for name, variant in _perturb(best).items():
-            frame = _run_test_window(
+            frame = _run_cached_candidate_window(
                 test_history,
+                clean,
+                candidate_frame_cache,
                 variant,
                 test_start,
                 test_end,
