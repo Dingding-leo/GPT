@@ -1,0 +1,104 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "lagged-asset-return-skewness-regime-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns-and-OKX-close|regime-statistic=fisher-pearson-adjusted-skewness-of-prior-60-asset-returns|current-session-excluded=true|threshold=zero|regimes=positive,nonpositive|metric=conditional-annualized-arithmetic-mean-net-return|annualization=365|resampling=paired-noncircular-moving-block-over-observed-regime-return-rows|block=20|resamples=2000|confidence=0.95|seeds=BTC:20260722,ETH:20260723|candidate_count=1",
+  "failure_reason": "At least one market/regime 95% lower confidence bound is non-positive.",
+  "hypothesis": "BTC-USDT and ETH-USDT net rolling OOS returns have positive annualized arithmetic means in both positive and non-positive prior 60-session asset-return skewness regimes.",
+  "markets": {
+    "BTC-USDT": {
+      "regimes": {
+        "nonpositive": {
+          "annualized_arithmetic_mean": 0.10872258066408742,
+          "confidence_interval": {
+            "lower": -0.11096347254708372,
+            "upper": 0.3538871308418866
+          },
+          "observations": 902,
+          "passes": false,
+          "probability_mean_positive": 0.814
+        },
+        "positive": {
+          "annualized_arithmetic_mean": 0.21118624219153292,
+          "confidence_interval": {
+            "lower": -0.061759258855698836,
+            "upper": 0.5552621225591563
+          },
+          "observations": 1438,
+          "passes": false,
+          "probability_mean_positive": 0.939
+        }
+      }
+    },
+    "ETH-USDT": {
+      "regimes": {
+        "nonpositive": {
+          "annualized_arithmetic_mean": 0.11179526349655251,
+          "confidence_interval": {
+            "lower": -0.1309070485258151,
+            "upper": 0.3705374658857709
+          },
+          "observations": 1006,
+          "passes": false,
+          "probability_mean_positive": 0.802
+        },
+        "positive": {
+          "annualized_arithmetic_mean": 0.15607930649132007,
+          "confidence_interval": {
+            "lower": -0.09982348664880047,
+            "upper": 0.45049783156026435
+          },
+          "observations": 1334,
+          "passes": false,
+          "probability_mean_positive": 0.871
+        }
+      }
+    }
+  },
+  "method": {
+    "annualization": 365,
+    "block_length": 20,
+    "candidate_count": 1,
+    "confidence": 0.95,
+    "current_session_excluded": true,
+    "development_markets": true,
+    "regime_threshold": 0.0,
+    "regimes": [
+      "positive",
+      "nonpositive"
+    ],
+    "resamples": 2000,
+    "skewness_estimator": "Fisher-Pearson adjusted sample skewness (pandas rolling skew)",
+    "skewness_lookback": 60
+  },
+  "provenance": {
+    "market_type": "spot",
+    "markets": {
+      "BTC-USDT": {
+        "report_sha256": "3627839318ff92086cf45ab460499fba64d1a3a9ae4198e941d4181f0d0825fe",
+        "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+        "seed": 20260722,
+        "snapshot_sha256": "b0bd7c6c7e30fcc095073169f60bde24559f481b24cc6f4bdfb85349f57974bb"
+      },
+      "ETH-USDT": {
+        "report_sha256": "569c23d3e78dbdc20014a9e3376874f7ec85a4679aa10d548bbb2ad75ba1093b",
+        "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+        "seed": 20260723,
+        "snapshot_sha256": "78f3bf81d3983e6c894066a1c298fbf14ae06a5eff9ca7326554b0a8933c0df5"
+      }
+    },
+    "oos_end": "2026-06-07T00:00:00+00:00",
+    "oos_observations_per_market": 2340,
+    "oos_start": "2020-01-11T00:00:00+00:00",
+    "provider": "OKX",
+    "source_artifact_id": 8525728688,
+    "source_artifact_name": "quant-research-source-875-attempt-1",
+    "source_artifact_sha256": "cc313c8d00910bcaea869c75c32ce4c4c62794b4d2362d9ac01c5dff63fb6327",
+    "source_code_commit": "b0de1618e26855228789ea7af15a7ef0e62d522f",
+    "source_workflow_run_id": 29910622011,
+    "timeframe": "1Dutc"
+  },
+  "verdict": "rejected"
+}
