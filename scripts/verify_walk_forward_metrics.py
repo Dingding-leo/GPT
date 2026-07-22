@@ -45,6 +45,10 @@ def _reject_duplicate_object_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any
     return result
 
 
+def _reject_nonstandard_json_constant(value: str) -> None:
+    raise ValueError(f"report JSON contains non-standard numeric constant {value!r}")
+
+
 def _json_integer(value: object, name: str, *, minimum: int) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
         raise ValueError(f"{name} must be an integer of at least {minimum}")
@@ -149,6 +153,7 @@ def verify_walk_forward_metrics(
         json.loads(
             report_path.read_text(encoding="utf-8"),
             object_pairs_hook=_reject_duplicate_object_keys,
+            parse_constant=_reject_nonstandard_json_constant,
         ),
         "report",
     )
