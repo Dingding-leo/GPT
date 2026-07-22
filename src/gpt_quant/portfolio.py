@@ -3,13 +3,16 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 from collections.abc import Iterable, Mapping
+from contextlib import suppress
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from io import BytesIO
 from numbers import Real
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 
 import numpy as np
@@ -20,6 +23,11 @@ from .metrics import performance_metrics
 _DAILY_INTERVAL = pd.Timedelta(days=1)
 _HEX_DIGITS = frozenset("0123456789abcdef")
 _VERIFIED_RETURN_SOURCE_ATTR = "_gpt_quant_verified_return_source"
+_PORTFOLIO_REPORT_FILENAMES = {
+    "json": "portfolio_risk.json",
+    "markdown": "portfolio_risk.md",
+    "returns": "portfolio_returns.csv",
+}
 _REQUIRED_PROVENANCE_LITERALS = {
     "provider": "OKX",
     "market_type": "spot",
@@ -701,6 +709,61 @@ def _validate_result_against_verified_sources(result: PortfolioRiskResult) -> No
         ) from exc
 
 
+def _publish_portfolio_report_payloads(
+    output: Path,
+    payloads: Mapping[str, bytes],
+) -> dict[str, Path]:
+    paths = {name: output / filename for name, filename in _PORTFOLIO_REPORT_FILENAMES.items()}
+    if set(payloads) != set(paths):
+        raise ValueError("portfolio report payloads must exactly match the report file set")
+
+    output_preexisted = output.exists()
+    output.mkdir(parents=True, exist_ok=True)
+    previous_payloads = {
+        name: path.read_bytes() if path.exists() else None for name, path in paths.items()
+    }
+
+    try:
+        with TemporaryDirectory(prefix=".portfolio-risk-", dir=output) as staging_name:
+            staging = Path(staging_name)
+            staged_paths = {name: staging / path.name for name, path in paths.items()}
+            for name, staged_path in staged_paths.items():
+                staged_path.write_bytes(payloads[name])
+
+            replaced: list[str] = []
+            try:
+                for name in ("json", "returns", "markdown"):
+                    os.replace(staged_paths[name], paths[name])
+                    replaced.append(name)
+            except BaseException as commit_error:
+                rollback_errors: list[str] = []
+                for name in reversed(replaced):
+                    destination = paths[name]
+                    previous_payload = previous_payloads[name]
+                    try:
+                        if previous_payload is None:
+                            destination.unlink(missing_ok=True)
+                        else:
+                            restore_path = staging / f"restore-{destination.name}"
+                            restore_path.write_bytes(previous_payload)
+                            os.replace(restore_path, destination)
+                    except OSError as rollback_error:
+                        rollback_errors.append(f"{name}: {rollback_error}")
+                if rollback_errors:
+                    details = "; ".join(rollback_errors)
+                    raise RuntimeError(
+                        f"portfolio report commit failed and rollback was incomplete: {details}"
+                    ) from commit_error
+                raise
+    except BaseException:
+        if not output_preexisted:
+            with suppress(OSError):
+                output.rmdir()
+        raise
+
+    return paths
+
+
 def write_portfolio_risk_report(
     result: PortfolioRiskResult,
     output_dir: str | Path,
@@ -715,12 +778,7 @@ def write_portfolio_risk_report(
     _validate_result_against_verified_sources(result)
 
     output = Path(output_dir)
-    output.mkdir(parents=True, exist_ok=True)
-    json_path = output / "portfolio_risk.json"
-    markdown_path = output / "portfolio_risk.md"
-    returns_path = output / "portfolio_returns.csv"
-
-    json_path.write_text(
+    json_payload = (
         json.dumps(
             result.to_dict(),
             ensure_ascii=False,
@@ -728,10 +786,11 @@ def write_portfolio_risk_report(
             sort_keys=True,
             allow_nan=False,
         )
-        + "\n",
-        encoding="utf-8",
+        + "\n"
+    ).encode("utf-8")
+    returns_payload = (
+        result.frame.rename_axis("timestamp").reset_index().to_csv(index=False).encode("utf-8")
     )
-    result.frame.rename_axis("timestamp").reset_index().to_csv(returns_path, index=False)
 
     lines = [
         "# Two-Sleeve Portfolio Risk Report",
@@ -821,5 +880,12 @@ def write_portfolio_risk_report(
     for name, value in worst["sleeve_return_contributions"].items():
         lines.append(f"- {name} contribution: {value:.6f}")
     lines.append("")
-    markdown_path.write_text("\n".join(lines), encoding="utf-8")
-    return {"json": json_path, "markdown": markdown_path, "returns": returns_path}
+    markdown_payload = "\n".join(lines).encode("utf-8")
+    return _publish_portfolio_report_payloads(
+        output,
+        {
+            "json": json_payload,
+            "markdown": markdown_payload,
+            "returns": returns_payload,
+        },
+    )
