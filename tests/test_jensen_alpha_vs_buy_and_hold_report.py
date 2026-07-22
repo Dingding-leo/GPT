@@ -9,15 +9,9 @@ import pandas as pd
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-ANALYSIS_PATH = (
-    ROOT / "reports" / "research" / "jensen-alpha-vs-buy-and-hold" / "analysis.py"
-)
-RESULT_PATH = (
-    ROOT / "reports" / "research" / "jensen-alpha-vs-buy-and-hold" / "result.json"
-)
-FIXTURE_PATH = (
-    ROOT / "tests" / "fixtures" / "okx_btc_usdt_oos_returns_20200111_20200219.csv"
-)
+ANALYSIS_PATH = ROOT / "reports" / "research" / "jensen-alpha-vs-buy-and-hold" / "analysis.py"
+RESULT_PATH = ROOT / "reports" / "research" / "jensen-alpha-vs-buy-and-hold" / "result.json"
+FIXTURE_PATH = ROOT / "tests" / "fixtures" / "okx_btc_usdt_oos_returns_20200111_20200219.csv"
 
 SPEC = importlib.util.spec_from_file_location("jensen_alpha_analysis", ANALYSIS_PATH)
 assert SPEC is not None and SPEC.loader is not None
@@ -66,9 +60,7 @@ def test_committed_result_records_single_rejected_candidate_and_provenance() -> 
     assert result["source"]["artifact_sha256"] == (
         "e5654461e56bd76f7b61133a4eb9b00b7e98974fc8a09449185614250d462344"
     )
-    assert result["source"]["merged_main_sha"] == (
-        "2a8b0ada66a5b2271ebaf1a92f520caa211bf619"
-    )
+    assert result["source"]["merged_main_sha"] == ("2a8b0ada66a5b2271ebaf1a92f520caa211bf619")
 
     for market, expected_hash in {
         "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
