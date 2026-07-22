@@ -35,8 +35,5 @@ def test_verifier_rejects_nonstandard_json_constants_before_returns_io(
     )
 
     assert completed.returncode == 1
-    assert (
-        f"report JSON contains non-standard numeric constant '{constant}'"
-        in completed.stderr
-    )
+    assert f"report JSON contains non-standard numeric constant '{constant}'" in completed.stderr
     assert not returns_path.exists()
