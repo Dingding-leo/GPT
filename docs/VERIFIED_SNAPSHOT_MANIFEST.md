@@ -56,7 +56,9 @@ helper 会在写文件前验证：
 - 每行字段数与 header 一致；
 - metadata 观测数及首尾时间戳与 CSV 一致；
 - provenance 至少包含真实 retrieval time 或正整数 workflow run ID；
-- 所有记录的 SHA-256 字段格式有效。
+- `raw_pages_sha256`（存在时）是格式有效的 SHA-256。
+
+`source_artifact_id`、`source_artifact_name`、`source_artifact_sha256` 和 `source_head_sha` 等可选来源字段会按 metadata 声明复制到 manifest。helper 当前不会校验这些字段的格式，也不会证明它们与 workflow、artifact、commit 或本地 CSV 互相对应。
 
 任何校验失败都会返回非零状态，并且不会创建目标 manifest。
 
