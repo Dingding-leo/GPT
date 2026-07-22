@@ -221,8 +221,7 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
         market_results[market] = result
 
     joint_supported = all(
-        bool(result["bootstrap"]["lower_bound_positive"])
-        for result in market_results.values()
+        bool(result["bootstrap"]["lower_bound_positive"]) for result in market_results.values()
     )
     failure_reasons = [
         f"{market} stressed-mean lower confidence bound is not positive"
