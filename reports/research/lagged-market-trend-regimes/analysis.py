@@ -57,9 +57,8 @@ def load_returns(path: Path, *, expected_sha256: str) -> pd.DataFrame:
     if timestamps.duplicated().any() or not timestamps.is_monotonic_increasing:
         raise ValueError("timestamps must be unique and strictly increasing")
     if len(timestamps) > 1:
-        intervals = (
-            timestamps.iloc[1:].reset_index(drop=True)
-            - timestamps.iloc[:-1].reset_index(drop=True)
+        intervals = timestamps.iloc[1:].reset_index(drop=True) - timestamps.iloc[:-1].reset_index(
+            drop=True
         )
         if not bool((intervals == pd.Timedelta(days=1)).all()):
             raise ValueError("timestamps must have exact daily cadence")
