@@ -133,11 +133,13 @@ def main() -> int:
     momentum_lookbacks = _json_array(search, "momentum_lookbacks", [30, 90, 180])
     reversal_lookbacks = _json_array(search, "reversal_lookbacks", [2, 5, 10])
     trend_weights = _json_array(search, "trend_weights", [0.55, 0.70, 0.85])
-    selection_bars = int(search.get("selection_bars", 730))
-    test_bars = int(search.get("test_bars", 90))
-    cost_multipliers = [
-        float(value) for value in robustness.get("cost_multipliers", [1.0, 2.0, 4.0])
-    ]
+    selection_bars = search.get("selection_bars", 730)
+    test_bars = search.get("test_bars", 90)
+    cost_multipliers = _json_array(
+        robustness,
+        "cost_multipliers",
+        [1.0, 2.0, 4.0],
+    )
     result = run_walk_forward_research(
         snapshot.close,
         base_config=base_config,

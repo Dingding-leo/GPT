@@ -85,6 +85,24 @@ def _validated_trend_weight(value: object) -> float:
     return round(parsed, 10)
 
 
+def _validated_window_bars(value: object, *, label: str, minimum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{label} must be an integer")
+    parsed = int(value)
+    if parsed < minimum:
+        raise ValueError(f"{label} must be >= {minimum}")
+    return parsed
+
+
+def _validated_cost_multiplier(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("cost multipliers must be finite and positive")
+    parsed = float(value)
+    if not math.isfinite(parsed) or parsed <= 0.0:
+        raise ValueError("cost multipliers must be finite and positive")
+    return parsed
+
+
 def _candidates(
     base: StrategyConfig,
     momentum: Iterable[int],
@@ -299,8 +317,19 @@ def run_walk_forward_research(
 ) -> WalkForwardResult:
     """Select parameters before each non-overlapping out-of-sample test fold."""
 
-    if selection_bars < 100 or test_bars < 20:
-        raise ValueError("selection_bars must be >=100 and test_bars must be >=20")
+    selection_bars = _validated_window_bars(
+        selection_bars,
+        label="selection_bars",
+        minimum=100,
+    )
+    test_bars = _validated_window_bars(
+        test_bars,
+        label="test_bars",
+        minimum=20,
+    )
+    multipliers = sorted(
+        {_validated_cost_multiplier(value) for value in cost_multipliers} | {1.0, 2.0}
+    )
     clean = validate_prices(prices, minimum_rows=selection_bars + test_bars)
     candidates = _candidates(
         base_config,
@@ -313,10 +342,6 @@ def run_walk_forward_research(
     )
     if selection_bars <= longest_lookback:
         raise ValueError("selection_bars must exceed every candidate lookback")
-
-    multipliers = sorted({float(value) for value in cost_multipliers} | {1.0, 2.0})
-    if any(not math.isfinite(value) or value <= 0 for value in multipliers):
-        raise ValueError("cost multipliers must be finite and positive")
 
     folds: list[dict[str, Any]] = []
     base_frames: list[pd.DataFrame] = []
