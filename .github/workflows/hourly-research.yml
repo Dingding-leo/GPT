@@ -114,9 +114,11 @@ jobs:
             --source-head-sha "$GITHUB_SHA" \
             --max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION" \
             --max-pairwise-correlation "$MAX_PAIRWISE_CORRELATION" \
+            --fail-on-reject \
             --output-dir reports/portfolio
 
       - name: Upload verified portfolio risk artifact
+        if: ${{ always() && hashFiles('reports/portfolio/portfolio_risk.json') != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.PORTFOLIO_ARTIFACT_NAME }}
