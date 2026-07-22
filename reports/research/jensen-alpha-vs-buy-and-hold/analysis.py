@@ -27,15 +27,11 @@ CANONICAL_SIGNATURE = (
 MARKETS = {
     "BTC-USDT": {
         "seed": 20260723,
-        "returns_sha256": (
-            "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73"
-        ),
+        "returns_sha256": ("539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73"),
     },
     "ETH-USDT": {
         "seed": 20260724,
-        "returns_sha256": (
-            "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
-        ),
+        "returns_sha256": ("027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"),
     },
 }
 SOURCE = {
@@ -45,9 +41,7 @@ SOURCE = {
     "workflow_run_id": 29964427149,
     "artifact_id": 8547282774,
     "artifact_name": "quant-research-source-193",
-    "artifact_sha256": (
-        "e5654461e56bd76f7b61133a4eb9b00b7e98974fc8a09449185614250d462344"
-    ),
+    "artifact_sha256": ("e5654461e56bd76f7b61133a4eb9b00b7e98974fc8a09449185614250d462344"),
     "source_head_sha": "e09b3588c9491d2139a52edd5bd2a21c619e9b51",
     "merged_main_sha": "2a8b0ada66a5b2271ebaf1a92f520caa211bf619",
 }
@@ -65,8 +59,7 @@ def validate_returns(path: Path, expected_sha256: str) -> pd.DataFrame:
     actual_sha256 = file_sha256(path)
     if actual_sha256 != expected_sha256:
         raise RuntimeError(
-            f"returns hash mismatch for {path}: expected {expected_sha256}, "
-            f"got {actual_sha256}"
+            f"returns hash mismatch for {path}: expected {expected_sha256}, got {actual_sha256}"
         )
 
     frame = pd.read_csv(path)
