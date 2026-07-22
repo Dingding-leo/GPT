@@ -123,6 +123,11 @@ class StrategyConfig:
         object.__setattr__(self, "reversal_weight", reversal_weight)
         object.__setattr__(self, "transaction_cost_bps", transaction_cost_bps)
 
+        if not 0 < target_volatility <= 2:
+            raise ValueError("target_volatility must be in (0, 2]")
+        if not 0 < max_abs_position <= 10:
+            raise ValueError("max_abs_position must be in (0, 10]")
+
         minimum_is_implicit = (
             self.min_position is None
             if self._min_position_implicit is None

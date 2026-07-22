@@ -50,7 +50,9 @@ def test_strategy_config_rejects_non_real_risk_and_cost_controls(
     ("field", "value"),
     [
         ("target_volatility", Decimal("2.000000000000000000000001")),
+        ("target_volatility", Decimal("1e-1000")),
         ("max_abs_position", Decimal("10.000000000000000000000001")),
+        ("max_abs_position", Decimal("1e-1000")),
         ("min_position", Decimal("1.000000000000000000000001")),
         ("trend_weight", Decimal("-1e-1000")),
         ("transaction_cost_bps", Decimal("-1e-1000")),
