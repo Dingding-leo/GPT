@@ -9,9 +9,7 @@ import pytest
 
 from gpt_quant import StrategyConfig, run_backtest
 
-_REPORT_DIR = (
-    Path(__file__).parents[1] / "reports" / "research" / "chronological-half-consistency"
-)
+_REPORT_DIR = Path(__file__).parents[1] / "reports" / "research" / "chronological-half-consistency"
 _RESULT_PATH = _REPORT_DIR / "result.json"
 _ANALYSIS_PATH = _REPORT_DIR / "analysis.py"
 
