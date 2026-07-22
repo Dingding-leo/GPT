@@ -1,0 +1,18 @@
+{
+  "bar": "1Dutc",
+  "end": "2020-02-19 00:00:00+00:00",
+  "extraction": "first 40 aligned OOS rows; strategy columns copied from persisted returns; volatility-targeted benchmark turnover independently reconstructed from immutable snapshot with 30-session log-return volatility, 50% annual target, one-session delay, max position 1, 10 bps turnover cost, and cash entry at the OOS boundary",
+  "fixture_sha256": "403146c54277b10d0b0a03fc9663259050869d973f0a0f92c2468afb70d7933d",
+  "instrument_id": "BTC-USDT",
+  "market_type": "spot",
+  "provider": "OKX",
+  "rows": 40,
+  "source_artifact_id": 8543136580,
+  "source_artifact_name": "quant-research-source-1333-attempt-1",
+  "source_artifact_sha256": "88f5457a66e756384386a9f9712b029bcefbb2335f881f17a75200180b071414",
+  "source_head_sha": "4c484bddb670ca58c131ff55fbf1b176389abe62",
+  "source_returns_csv_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+  "source_snapshot_csv_sha256": "b0bd7c6c7e30fcc095073169f60bde24559f481b24cc6f4bdfb85349f57974bb",
+  "source_workflow_run_id": 29953609625,
+  "start": "2020-01-11 00:00:00+00:00"
+}

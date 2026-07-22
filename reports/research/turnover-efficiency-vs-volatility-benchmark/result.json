@@ -1,0 +1,88 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "turnover-efficiency-vs-volatility-benchmark-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns-and-turnover-plus-immutable-snapshot|benchmark=volatility-targeted-long-reconstructed-from-snapshot|metric=net-arithmetic-return-sum/absolute-position-turnover-sum|claim=strategy-minus-benchmark-return-per-turnover>0-in-both-markets|resampling=paired-four-column-noncircular-moving-block-bootstrap|block-length=20-sessions|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072311,ETH-USDT:2026072312|candidate_count=1",
+  "claim_scope": "Development-market execution-efficiency diagnostic only; no alpha, capacity, or deployable strategy improvement is claimed.",
+  "hypothesis": "The adaptive strategy has higher net arithmetic return per unit of absolute position turnover than volatility-targeted long in both BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "benchmark_return_maximum_reconstruction_error": 9.974659986866641e-17,
+      "benchmark_return_per_turnover": 0.09164581568169201,
+      "benchmark_total_net_arithmetic_return": 2.335879643562005,
+      "benchmark_total_turnover": 25.488121047174452,
+      "ci_lower": -0.19359130689305623,
+      "ci_upper": 0.010991118458694972,
+      "observations": 2340,
+      "observed_delta": -0.08075635648624524,
+      "passed": false,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.042,
+      "return_file_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "snapshot_file_sha256": "b0bd7c6c7e30fcc095073169f60bde24559f481b24cc6f4bdfb85349f57974bb",
+      "strategy_return_per_turnover": 0.010889459195446769,
+      "strategy_total_net_arithmetic_return": 1.100694750768305,
+      "strategy_total_turnover": 101.07891778762902
+    },
+    "ETH-USDT": {
+      "benchmark_return_maximum_reconstruction_error": 9.974659986866641e-17,
+      "benchmark_return_per_turnover": 0.09164398884624972,
+      "benchmark_total_net_arithmetic_return": 3.0886215386724127,
+      "benchmark_total_turnover": 33.7023909320901,
+      "ci_lower": -0.179028130455462,
+      "ci_upper": -0.00963774912338122,
+      "observations": 2340,
+      "observed_delta": -0.08321746286124174,
+      "passed": false,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.0145,
+      "return_file_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "snapshot_file_sha256": "78f3bf81d3983e6c894066a1c298fbf14ae06a5eff9ca7326554b0a8933c0df5",
+      "strategy_return_per_turnover": 0.008426525985007986,
+      "strategy_total_net_arithmetic_return": 0.8785639176354872,
+      "strategy_total_turnover": 104.26169921015851
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "market_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8543136580,
+    "source_artifact_name": "quant-research-source-1333-attempt-1",
+    "source_artifact_sha256": "88f5457a66e756384386a9f9712b029bcefbb2335f881f17a75200180b071414",
+    "source_head_sha": "4c484bddb670ca58c131ff55fbf1b176389abe62",
+    "source_workflow_run": 29953609625,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reason": "The 95% paired moving-block-bootstrap lower bound for strategy-minus-benchmark net return per unit turnover was non-positive in: BTC-USDT, ETH-USDT",
+  "settings": {
+    "benchmark": "volatility-targeted-long",
+    "benchmark_reconstruction": {
+      "annualization": 365,
+      "evaluation_entry_state": "cash",
+      "execution_delay_sessions": 1,
+      "max_position": 1.0,
+      "persisted_return_match_tolerance": 5e-15,
+      "target_volatility": 0.5,
+      "transaction_cost_bps": 10.0,
+      "volatility_lookback": 30
+    },
+    "block_length_sessions": 20,
+    "confidence": 0.95,
+    "reduction_definition": "strategy_return_per_turnover - benchmark_return_per_turnover",
+    "resamples": 2000,
+    "return_per_turnover_definition": "sum(net daily arithmetic returns) / sum(absolute position turnover)",
+    "seeds": {
+      "BTC-USDT": 2026072311,
+      "ETH-USDT": 2026072312
+    }
+  },
+  "verdict": "rejected"
+}
