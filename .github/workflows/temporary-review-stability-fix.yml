@@ -1,0 +1,153 @@
+name: Temporary Review Stability Fix
+
+on:
+  push:
+    branches:
+      - auto/review/20260722-22-preserve-stability-weight-identity
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: auto/review/20260722-22-preserve-stability-weight-identity
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install "pip==26.1.2"
+          python -m pip install -e ".[dev]"
+      - name: Apply review fix and regression
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source_path = Path("src/gpt_quant/walk_forward.py")
+          source = source_path.read_text(encoding="utf-8")
+          anchor = "\ndef _classify_robustness(\n"
+          helper = '''
+
+def _parameter_stability(selected: list[Mapping[str, Any]]) -> dict[str, Any]:
+    identities = [
+        (
+            int(item["momentum_lookback"]),
+            int(item["reversal_lookback"]),
+            float(item["trend_weight"]),
+        )
+        for item in selected
+    ]
+    switches = sum(
+        left != right for left, right in zip(identities, identities[1:], strict=False)
+    )
+    counts = Counter(identities)
+
+    identities_by_display: dict[str, list[tuple[int, int, float]]] = {}
+    for identity in counts:
+        momentum, reversal, trend_weight = identity
+        display = f"m={momentum}|r={reversal}|trend={trend_weight:.4f}"
+        identities_by_display.setdefault(display, []).append(identity)
+
+    labels: dict[tuple[int, int, float], str] = {}
+    for display, matching_identities in identities_by_display.items():
+        if len(matching_identities) == 1:
+            labels[matching_identities[0]] = display
+            continue
+        for identity in matching_identities:
+            labels[identity] = f"{display}|exact={identity[2]!r}"
+
+    return {
+        "selection_frequency": {
+            labels[identity]: count for identity, count in counts.most_common()
+        },
+        "parameter_switches": switches,
+        "parameter_switch_rate": switches / max(1, len(identities) - 1),
+        "unique_parameter_sets": len(counts),
+    }
+'''
+          if anchor not in source:
+              raise SystemExit("classification anchor not found")
+          source = source.replace(anchor, helper + anchor, 1)
+
+          old = '''    parameter_keys = [
+        f"m={item['momentum_lookback']}|r={item['reversal_lookback']}|"
+        f"trend={float(item['trend_weight']):.4f}"
+        for item in selected
+    ]
+    switches = sum(
+        left != right for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
+    )
+    stability = {
+        "selection_frequency": dict(Counter(parameter_keys).most_common()),
+        "parameter_switches": switches,
+        "parameter_switch_rate": switches / max(1, len(parameter_keys) - 1),
+        "unique_parameter_sets": len(set(parameter_keys)),
+    }
+'''
+          new = '''    stability = _parameter_stability(selected)
+'''
+          if old not in source:
+              raise SystemExit("parameter stability block not found")
+          source_path.write_text(source.replace(old, new, 1), encoding="utf-8")
+
+          test_path = Path("tests/test_walk_forward_stability_identity.py")
+          test_path.write_text(
+              '''from __future__ import annotations
+
+import gpt_quant.walk_forward as walk_forward
+
+
+def _parameters(weight: float) -> dict[str, object]:
+    return {
+        "momentum_lookback": 21,
+        "reversal_lookback": 3,
+        "trend_weight": weight,
+    }
+
+
+def test_parameter_stability_preserves_high_precision_weight_identity() -> None:
+    stability = walk_forward._parameter_stability(
+        [_parameters(0.7), _parameters(0.70000000001), _parameters(0.7)]
+    )
+
+    assert stability["unique_parameter_sets"] == 2
+    assert stability["parameter_switches"] == 2
+    assert stability["parameter_switch_rate"] == 1.0
+    assert stability["selection_frequency"] == {
+        "m=21|r=3|trend=0.7000|exact=0.7": 2,
+        "m=21|r=3|trend=0.7000|exact=0.70000000001": 1,
+    }
+
+
+def test_parameter_stability_preserves_legacy_label_without_collision() -> None:
+    stability = walk_forward._parameter_stability([_parameters(0.7), _parameters(0.7)])
+
+    assert stability["selection_frequency"] == {"m=21|r=3|trend=0.7000": 2}
+    assert stability["unique_parameter_sets"] == 1
+    assert stability["parameter_switches"] == 0
+''',
+              encoding="utf-8",
+          )
+          PY
+      - name: Verify focused change
+        run: |
+          ruff format src/gpt_quant/walk_forward.py tests/test_walk_forward_stability_identity.py
+          ruff check src/gpt_quant/walk_forward.py tests/test_walk_forward_stability_identity.py
+          ruff format --check src/gpt_quant/walk_forward.py tests/test_walk_forward_stability_identity.py
+          pytest -q tests/test_walk_forward_stability_identity.py tests/test_walk_forward_weight_identity.py
+      - name: Commit review fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temporary-review-stability-fix.yml
+          git add src/gpt_quant/walk_forward.py tests/test_walk_forward_stability_identity.py
+          git commit -m "fix(review): preserve parameter stability identity"
+          git push origin HEAD:auto/review/20260722-22-preserve-stability-weight-identity
