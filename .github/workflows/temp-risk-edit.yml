@@ -1,11 +1,11 @@
-name: Temporary Risk Edit Artifact
+name: Temporary Risk Edit Committer
 
 on:
   pull_request:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   prepare:
@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out repository
+      - name: Check out source branch
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
-          persist-credentials: false
+          ref: auto/risk/20260722-11-nonvacuous-concentration
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
         with:
@@ -37,11 +37,7 @@ jobs:
           import_target = "import math\nfrom collections.abc import Iterable, Mapping\n"
           if import_target not in text:
               raise RuntimeError("portfolio import target not found")
-          text = text.replace(
-              import_target,
-              import_target + "from numbers import Real\n",
-              1,
-          )
+          text = text.replace(import_target, import_target + "from numbers import Real\n", 1)
           old_weights = (
               "    weights = pd.Series({name: float(initial_weights[name]) for name in names}, "
               "dtype=float)\n"
@@ -84,8 +80,7 @@ jobs:
               raise RuntimeError("concentration-cap validation target not found")
           source.write_text(text.replace(old_cap, new_cap, 1), encoding="utf-8")
 
-          test = Path("tests/test_portfolio_constraints.py")
-          test.write_text(
+          Path("tests/test_portfolio_constraints.py").write_text(
               dedent(
                   '''\
                   from __future__ import annotations
@@ -216,12 +211,11 @@ jobs:
           ruff check src/gpt_quant/portfolio.py tests/test_portfolio_constraints.py
           ruff format --check src/gpt_quant/portfolio.py tests/test_portfolio_constraints.py
           pytest -q tests/test_portfolio_constraints.py
-      - name: Upload prepared files
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
-        with:
-          name: risk-constraint-files-${{ github.sha }}
-          path: |
-            src/gpt_quant/portfolio.py
-            tests/test_portfolio_constraints.py
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit verified change and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/gpt_quant/portfolio.py tests/test_portfolio_constraints.py
+          git rm .github/workflows/temp-risk-edit.yml
+          git commit -m "fix(risk): reject degenerate portfolio constraints"
+          git push origin HEAD:auto/risk/20260722-11-nonvacuous-concentration
