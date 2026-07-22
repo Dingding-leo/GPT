@@ -61,6 +61,7 @@ def test_reproduction_guide_uses_manifest_helper_in_bash_and_powershell() -> Non
 
     helper = "python scripts/create_verified_snapshot_manifest.py"
     assert section.count(helper) == 2
+    assert "Windows PowerShell：" in section
     assert section.count("```bash") == 1
     assert section.count("```powershell") == 1
     for argument in ("--metadata", "--csv", "--output"):
