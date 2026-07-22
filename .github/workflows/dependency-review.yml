@@ -131,7 +131,7 @@ jobs:
       - name: Resolve proposed dependencies without installation
         run: |
           python -m venv .resolver-venv
-          .resolver-venv/bin/python -m pip --isolated install --quiet \
+          .resolver-venv/bin/python -m pip install --isolated --quiet \
             --index-url "${PYPI_INDEX_URL}" \
             --no-cache-dir \
             --only-binary=:all: \
@@ -157,7 +157,7 @@ jobs:
             target_args+=(--platform "${TARGET_PLATFORM}")
           fi
           for dependency_set in build project; do
-            .resolver-venv/bin/python -m pip --isolated install \
+            .resolver-venv/bin/python -m pip install --isolated \
               --dry-run \
               --ignore-installed \
               --index-url "${PYPI_INDEX_URL}" \
@@ -169,7 +169,7 @@ jobs:
             python scripts/dependency_audit_transitive.py collect \
               "reports/security/${dependency_set}-initial-resolution.json" \
               "reports/security/${dependency_set}-platform-requirements.in"
-            .resolver-venv/bin/python -m pip --isolated install \
+            .resolver-venv/bin/python -m pip install --isolated \
               --dry-run \
               --ignore-installed \
               --index-url "${PYPI_INDEX_URL}" \
@@ -191,12 +191,12 @@ jobs:
       - name: Install isolated auditor
         run: |
           python -m venv .audit-venv
-          .audit-venv/bin/python -m pip --isolated install --quiet \
+          .audit-venv/bin/python -m pip install --isolated --quiet \
             --index-url "${PYPI_INDEX_URL}" \
             --no-cache-dir \
             --only-binary=:all: \
             "pip==${PIP_BOOTSTRAP_VERSION}"
-          .audit-venv/bin/python -m pip --isolated install --quiet \
+          .audit-venv/bin/python -m pip install --isolated --quiet \
             --index-url "${PYPI_INDEX_URL}" \
             --no-cache-dir \
             --only-binary=:all: \
