@@ -1,0 +1,40 @@
+name: Temporary Risk Formatter
+
+on:
+  push:
+    branches:
+      - auto/risk/20260723-03-distinct-source-bindings
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: auto/risk/20260723-03-distinct-source-bindings
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Install formatter
+        run: |
+          python -m pip install "pip==26.1.2"
+          python -m pip install "ruff==0.15.22"
+      - name: Format target
+        run: |
+          ruff format src/gpt_quant/portfolio.py
+          git diff --check
+          if git diff --quiet; then
+            echo "No formatting changes required."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/gpt_quant/portfolio.py
+          git commit -m "style(risk): format source binding validation"
+          git push origin HEAD:auto/risk/20260723-03-distinct-source-bindings
