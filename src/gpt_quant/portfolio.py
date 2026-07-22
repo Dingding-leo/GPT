@@ -6,6 +6,7 @@ from collections.abc import Iterable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from numbers import Real
 from pathlib import Path
 from typing import Any
 
@@ -352,9 +353,12 @@ def _validate_sleeves(
     if set(initial_weights) != set(names):
         raise ValueError("initial_weights keys must exactly match sleeve return keys")
 
+    raw_weights = [initial_weights[name] for name in names]
+    if any(isinstance(value, bool) or not isinstance(value, Real) for value in raw_weights):
+        raise ValueError("initial weights must be strictly positive real numbers")
     weights = pd.Series({name: float(initial_weights[name]) for name in names}, dtype=float)
-    if not np.isfinite(weights.to_numpy()).all() or (weights < 0.0).any():
-        raise ValueError("initial weights must be finite and non-negative")
+    if not np.isfinite(weights.to_numpy()).all() or (weights <= 0.0).any():
+        raise ValueError("initial weights must be strictly positive real numbers")
     if not math.isclose(float(weights.sum()), 1.0, rel_tol=0.0, abs_tol=1e-12):
         raise ValueError("initial weights must sum to one")
 
@@ -401,8 +405,14 @@ def build_buy_and_hold_sleeve_portfolio(
     )
     if isinstance(annualization, bool) or not isinstance(annualization, int) or annualization < 2:
         raise ValueError("annualization must be an integer of at least 2")
-    if not math.isfinite(float(max_sleeve_weight)) or not 0.0 < max_sleeve_weight <= 1.0:
-        raise ValueError("max_sleeve_weight must be finite and in (0, 1]")
+    if (
+        isinstance(max_sleeve_weight, bool)
+        or not isinstance(max_sleeve_weight, Real)
+        or not math.isfinite(float(max_sleeve_weight))
+        or not 0.0 < float(max_sleeve_weight) < 1.0
+    ):
+        raise ValueError("max_sleeve_weight must be a finite real number in (0, 1)")
+    max_sleeve_weight = float(max_sleeve_weight)
 
     returns, weights = _validate_sleeves(sleeve_returns, initial_weights)
     bindings = _validate_return_source_bindings(
