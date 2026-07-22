@@ -10,5 +10,5 @@ def test_dependency_audit_ignores_external_pip_configuration() -> None:
 
     assert "PIP_CONFIG_FILE: /dev/null" in workflow
     assert len(pip_commands) == 5
-    assert all("-m pip install --isolated" in command for command in pip_commands)
     assert all("-m pip install" in command for command in pip_commands)
+    assert all("--isolated" in command for command in pip_commands)
