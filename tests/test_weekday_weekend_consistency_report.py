@@ -27,9 +27,7 @@ def test_conditional_means_match_independent_real_fixture_calculation() -> None:
     analysis = _load_analysis()
     frame = analysis.load_returns(FIXTURE, expected_sha256=FIXTURE_SHA256)
     labels = analysis.regime_labels(frame["timestamp"])
-    actual = analysis.conditional_annualized_means(
-        frame["strategy_return"].to_numpy(), labels
-    )
+    actual = analysis.conditional_annualized_means(frame["strategy_return"].to_numpy(), labels)
 
     independent = frame.assign(
         regime=np.where(frame["timestamp"].dt.weekday >= 5, "weekend", "weekday")
@@ -49,9 +47,7 @@ def test_moving_blocks_are_deterministic_and_keep_observed_pairs() -> None:
     np.testing.assert_array_equal(first, second)
     original = dict(zip(frame["timestamp"], frame["strategy_return"], strict=True))
     sampled = frame.iloc[first[0]]
-    for timestamp, value in zip(
-        sampled["timestamp"], sampled["strategy_return"], strict=True
-    ):
+    for timestamp, value in zip(sampled["timestamp"], sampled["strategy_return"], strict=True):
         assert value == original[timestamp]
 
 
