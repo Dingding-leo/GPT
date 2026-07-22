@@ -28,6 +28,7 @@ _COLUMNS = (
     "volume_quote_alt",
     "confirm",
 )
+_MILLISECONDS_PER_DAY = 86_400_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -138,6 +139,11 @@ def _coerce_okx_timestamp_ms(value: Any) -> int:
     if isinstance(value, str) and value.isascii() and value.isdecimal():
         return int(value)
     raise ValueError("timestamp must be an integer millisecond value")
+
+
+def _validate_okx_bar_anchor(timestamp_ms: int, *, bar: str) -> None:
+    if bar == "1Dutc" and timestamp_ms % _MILLISECONDS_PER_DAY != 0:
+        raise ValueError("OKX 1Dutc candle timestamps must be aligned to midnight UTC")
 
 
 def parse_okx_candle_rows(rows: Sequence[Sequence[Any]]) -> pd.DataFrame:
@@ -295,6 +301,7 @@ def fetch_okx_history_candles(
                 timestamp = _coerce_okx_timestamp_ms(row[0])
             except (TypeError, ValueError) as exc:
                 raise ValueError("OKX candle response contains an invalid timestamp") from exc
+            _validate_okx_bar_anchor(timestamp, bar=bar)
             normalized_row = tuple(row)
             previous = seen_rows_by_timestamp.get(timestamp)
             if previous is not None and normalized_row != previous:
