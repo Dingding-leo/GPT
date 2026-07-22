@@ -1,0 +1,140 @@
+{
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "failure_reasons": [
+        "BTC-USDT previous_positive current-fold mean 95% lower bound is non-positive: -0.133355511986",
+        "BTC-USDT previous_nonpositive current-fold mean 95% lower bound is non-positive: -0.074669357906",
+        "ETH-USDT previous_positive current-fold mean 95% lower bound is non-positive: -0.185310268995",
+        "ETH-USDT previous_nonpositive current-fold mean 95% lower bound is non-positive: -0.057386368138"
+      ],
+      "name": "prior-fold-performance-regime-consistency",
+      "verdict": "reject"
+    }
+  ],
+  "canonical_signature": "prior-fold-performance-regime-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-fold-returns|regimes=previous-fold-compounded-return-positive-vs-nonpositive|exclude=fold1-no-prior-performance|metric=conditional-annualized-arithmetic-mean-net-return|annualization=365|resampling=paired-noncircular-moving-block-over-complete-fold-records-with-regimes-recomputed|fold-block=3|resamples=2000|confidence=0.95|seeds=BTC:20260722,ETH:20260723|candidate_count=1",
+  "economic_rationale": "A credible adaptive research process should not require exclusively favorable or unfavorable immediately preceding OOS performance. This prior-only regime diagnostic tests whether current-fold returns persist after both observed operating states.",
+  "failure_reasons": [
+    "BTC-USDT previous_positive current-fold mean 95% lower bound is non-positive: -0.133355511986",
+    "BTC-USDT previous_nonpositive current-fold mean 95% lower bound is non-positive: -0.074669357906",
+    "ETH-USDT previous_positive current-fold mean 95% lower bound is non-positive: -0.185310268995",
+    "ETH-USDT previous_nonpositive current-fold mean 95% lower bound is non-positive: -0.057386368138"
+  ],
+  "hypothesis": "For both BTC-USDT and ETH-USDT, net rolling OOS returns have a positive annualized arithmetic mean after both a positive and a non-positive immediately preceding OOS fold, with all four 95% moving-block-bootstrap lower bounds above zero.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "Only 25 current folds per market have an immediately preceding OOS fold.",
+    "Moving-block concatenation creates artificial fold joins, although prior-fold performance labels are recomputed after each join.",
+    "The experiment diagnoses dependence on recent OOS performance; it does not introduce a trading rule or retune any strategy parameter.",
+    "The analysis does not model spread, impact, capacity, latency, or partial fills."
+  ],
+  "markets": {
+    "BTC-USDT": {
+      "classified_folds": 25,
+      "complete_folds": 26,
+      "excluded_folds": 1,
+      "passes": false,
+      "regimes": {
+        "previous_nonpositive": {
+          "annualized_arithmetic_mean": 0.12601205404662638,
+          "confidence_interval": {
+            "lower": -0.07466935790600893,
+            "upper": 0.5988515648293318
+          },
+          "folds": 13,
+          "observations": 1170,
+          "passes": false,
+          "probability_mean_positive": 0.894
+        },
+        "previous_positive": {
+          "annualized_arithmetic_mean": 0.32338822052025645,
+          "confidence_interval": {
+            "lower": -0.13335551198574916,
+            "upper": 0.7489896408764546
+          },
+          "folds": 12,
+          "observations": 1080,
+          "passes": false,
+          "probability_mean_positive": 0.8665
+        }
+      },
+      "seed": 20260722
+    },
+    "ETH-USDT": {
+      "classified_folds": 25,
+      "complete_folds": 26,
+      "excluded_folds": 1,
+      "passes": false,
+      "regimes": {
+        "previous_nonpositive": {
+          "annualized_arithmetic_mean": 0.17478001852512096,
+          "confidence_interval": {
+            "lower": -0.057386368138460035,
+            "upper": 0.523579038969212
+          },
+          "folds": 9,
+          "observations": 810,
+          "passes": false,
+          "probability_mean_positive": 0.935
+        },
+        "previous_positive": {
+          "annualized_arithmetic_mean": 0.17476437412891274,
+          "confidence_interval": {
+            "lower": -0.18531026899526623,
+            "upper": 0.4813743520954213
+          },
+          "folds": 16,
+          "observations": 1440,
+          "passes": false,
+          "probability_mean_positive": 0.835
+        }
+      },
+      "seed": 20260723
+    }
+  },
+  "method": {
+    "annualization": 365,
+    "candidate_count": 1,
+    "confidence": 0.95,
+    "first_fold_handling": "excluded because no prior OOS fold exists",
+    "fold_block_length": 3,
+    "fold_block_rationale": "three adjacent 90-day folds preserve roughly nine months of local OOS dependence while retaining 24 admissible non-circular block starts",
+    "metric": "conditional daily net-return arithmetic mean multiplied by 365",
+    "previous_fold_metric": "compounded net strategy return",
+    "regimes": [
+      "previous_positive",
+      "previous_nonpositive"
+    ],
+    "resamples": 2000,
+    "resampling": "paired non-circular moving blocks over complete observed 90-day fold records; previous-fold performance labels are recomputed after block concatenation"
+  },
+  "provenance": {
+    "candidate_grid_size": 27,
+    "evaluation_end": "2026-06-07T00:00:00+00:00",
+    "evaluation_start": "2020-01-11T00:00:00+00:00",
+    "execution_delay_bars": 1,
+    "market_type": "spot",
+    "observations_per_market": 2340,
+    "provider": "OKX",
+    "return_file_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "selection_bars": 730,
+    "source_artifact_id": 8522613577,
+    "source_artifact_name": "quant-research-source-755-attempt-1",
+    "source_artifact_sha256": "9955cfa0f2faefeddf8cb63e3fcf4765e0ccbd32c4c866824733c93ed4160e9c",
+    "source_head_sha": "ef8f0f88df3aa38dfa9992028ba8a75f404f120a",
+    "source_workflow_run_attempt": 1,
+    "source_workflow_run_id": 29902829833,
+    "test_bars": 90,
+    "tested_base_sha": "aa594f8cca0769aa7004ac14593025d007d7a537",
+    "timeframe": "1Dutc",
+    "transaction_cost_bps": 10.0,
+    "walk_forward_report_sha256": {
+      "BTC-USDT": "13b3434bec93f015aa72403be6f959588d2607d16c05956edafc61520aa768b1",
+      "ETH-USDT": "576ad57dda5d10f987cf63b6fe5fb578bc77ed9d4ec980dc4b3da2a854dde824"
+    }
+  },
+  "verdict": "reject"
+}
