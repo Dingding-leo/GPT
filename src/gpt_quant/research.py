@@ -128,7 +128,11 @@ def _validated_candidate_grid(
     weights = [_validated_trend_weight(value) for value in trend_weights]
     if not momentum or not reversal or not weights:
         raise ValueError("candidate grid cannot be empty")
-    return momentum, reversal, weights
+    return (
+        list(dict.fromkeys(momentum)),
+        list(dict.fromkeys(reversal)),
+        list(dict.fromkeys(weights)),
+    )
 
 
 def _validated_top_candidates(value: object) -> int:

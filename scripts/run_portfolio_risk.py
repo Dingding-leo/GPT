@@ -63,6 +63,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--source-artifact-sha256", required=True, type=_sha256)
     parser.add_argument("--source-head-sha", required=True, type=_git_commit)
     parser.add_argument("--output-dir", default="reports/portfolio")
+    parser.add_argument(
+        "--fail-on-reject",
+        action="store_true",
+        help="return a non-zero exit status after persisting a rejected risk report",
+    )
     return parser.parse_args(argv)
 
 
@@ -105,14 +110,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         provenance=provenance,
     )
     paths = write_portfolio_risk_report(result, args.output_dir)
+    risk_gate_passes = bool(result.concentration["passes"])
     print(f"risk_status={result.risk_status}")
+    print(f"risk_gate_passes={str(risk_gate_passes).lower()}")
     print(f"observations={result.data_summary['observations']}")
     print(f"portfolio_total_return={result.portfolio_metrics['total_return']:.6f}")
     print(f"portfolio_sharpe={result.portfolio_metrics['sharpe']:.6f}")
     print(f"portfolio_max_drawdown={result.portfolio_metrics['max_drawdown']:.6f}")
     for name, path in paths.items():
         print(f"{name}_path={path}")
-    return 0
+    return 1 if args.fail_on_reject and not risk_gate_passes else 0
 
 
 if __name__ == "__main__":
