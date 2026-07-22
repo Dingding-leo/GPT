@@ -123,6 +123,23 @@ def _default_json_getter(url: str, timeout: float) -> Mapping[str, Any]:
     raise RuntimeError("OKX request failed") from last_error
 
 
+def _coerce_okx_timestamp_ms(value: Any) -> int:
+    """Return an exact integer millisecond timestamp without truncation."""
+
+    if isinstance(value, (bool, np.bool_)):
+        raise ValueError("timestamp must be an integer millisecond value")
+    if isinstance(value, (int, np.integer)):
+        return int(value)
+    if isinstance(value, (float, np.floating)):
+        numeric = float(value)
+        if not np.isfinite(numeric) or not numeric.is_integer():
+            raise ValueError("timestamp must be an integer millisecond value")
+        return int(numeric)
+    if isinstance(value, str) and value.isascii() and value.isdecimal():
+        return int(value)
+    raise ValueError("timestamp must be an integer millisecond value")
+
+
 def parse_okx_candle_rows(rows: Sequence[Sequence[Any]]) -> pd.DataFrame:
     """Parse and strictly validate raw OKX candle rows."""
 
@@ -140,7 +157,7 @@ def parse_okx_candle_rows(rows: Sequence[Sequence[Any]]) -> pd.DataFrame:
     frame = pd.DataFrame(normalized, columns=_COLUMNS)
     try:
         timestamp = pd.to_datetime(
-            pd.to_numeric(frame.pop("ts"), errors="coerce"),
+            frame.pop("ts").map(_coerce_okx_timestamp_ms),
             unit="ms",
             utc=True,
             errors="coerce",
@@ -275,7 +292,7 @@ def fetch_okx_history_candles(
                     f"must contain exactly {len(_COLUMNS)} fields"
                 )
             try:
-                timestamp = int(row[0])
+                timestamp = _coerce_okx_timestamp_ms(row[0])
             except (TypeError, ValueError) as exc:
                 raise ValueError("OKX candle response contains an invalid timestamp") from exc
             normalized_row = tuple(row)
