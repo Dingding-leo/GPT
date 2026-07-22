@@ -36,6 +36,12 @@ def _mapping(value: object, name: str) -> Mapping[str, Any]:
     return value
 
 
+def _json_integer(value: object, name: str, *, minimum: int) -> int:
+    if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
+        raise ValueError(f"{name} must be an integer of at least {minimum}")
+    return value
+
+
 def _utc_timestamp(value: object, name: str) -> pd.Timestamp:
     try:
         timestamp = pd.Timestamp(value)
@@ -65,19 +71,63 @@ def _explicit_utc_timestamp_series(values: pd.Series) -> pd.Series:
     )
 
 
+def _declared_provenance(data_summary: Mapping[str, Any]) -> Mapping[str, Any] | None:
+    provenance_value = data_summary.get("provenance")
+    if provenance_value is None:
+        return None
+    return _mapping(provenance_value, "data_summary.provenance")
+
+
 def _validate_declared_timestamp_cadence(
     timestamps: pd.Series,
     data_summary: Mapping[str, Any],
 ) -> None:
-    provenance_value = data_summary.get("provenance")
-    if provenance_value is None:
-        return
-    provenance = _mapping(provenance_value, "data_summary.provenance")
-    if provenance.get("bar") != "1Dutc":
+    provenance = _declared_provenance(data_summary)
+    if provenance is None or provenance.get("bar") != "1Dutc":
         return
     intervals = timestamps.diff().iloc[1:]
     if not intervals.eq(pd.Timedelta(days=1)).all():
         raise ValueError("returns CSV timestamps must have exact 1Dutc cadence")
+
+
+def _validate_declared_data_coverage(
+    timestamps: pd.Series,
+    data_summary: Mapping[str, Any],
+    settings: Mapping[str, Any],
+) -> None:
+    provenance = _declared_provenance(data_summary)
+    if provenance is None or provenance.get("bar") != "1Dutc":
+        return
+
+    selection_bars = _json_integer(
+        settings.get("selection_bars"),
+        "settings.selection_bars",
+        minimum=1,
+    )
+    observations = _json_integer(
+        data_summary.get("observations"),
+        "data_summary.observations",
+        minimum=1,
+    )
+    unscored_tail_bars = _json_integer(
+        data_summary.get("unscored_tail_bars"),
+        "data_summary.unscored_tail_bars",
+        minimum=0,
+    )
+    source_start = _utc_timestamp(data_summary.get("start"), "data_summary.start")
+    source_end = _utc_timestamp(data_summary.get("end"), "data_summary.end")
+
+    expected_observations = selection_bars + len(timestamps) + unscored_tail_bars
+    if observations != expected_observations:
+        raise ValueError(
+            "data_summary.observations does not match selection, evaluation, and tail bars"
+        )
+
+    step = pd.Timedelta(days=1)
+    expected_source_start = timestamps.iloc[0] - selection_bars * step
+    expected_source_end = timestamps.iloc[-1] + unscored_tail_bars * step
+    if source_start != expected_source_start or source_end != expected_source_end:
+        raise ValueError("data_summary source boundaries do not match declared 1Dutc coverage")
 
 
 def verify_walk_forward_metrics(
@@ -113,6 +163,7 @@ def verify_walk_forward_metrics(
     expected_end = _utc_timestamp(data_summary.get("evaluation_end"), "evaluation_end")
     if timestamps.iloc[0] != expected_start or timestamps.iloc[-1] != expected_end:
         raise ValueError("returns CSV boundaries do not match report evaluation boundaries")
+    _validate_declared_data_coverage(timestamps, data_summary, settings)
 
     numeric = frame.copy()
     for column in ("nav", *_METRIC_COLUMNS):
