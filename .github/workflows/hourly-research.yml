@@ -36,25 +36,6 @@ jobs:
       - name: Install project
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
 
-      - name: Capture PR98 Ruff diagnostics
-        run: |
-          mkdir -p reports/diagnostics
-          ruff format \
-            reports/research/portfolio-expected-shortfall-diversification/analysis.py \
-            tests/test_portfolio_expected_shortfall_diversification_report.py
-          ruff check . --output-format=json > reports/diagnostics/ruff-check.json || true
-
-      - name: Upload PR98 Ruff diagnostics
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: pr98-ruff-${{ github.run_number }}
-          path: |
-            reports/diagnostics/ruff-check.json
-            reports/research/portfolio-expected-shortfall-diversification/analysis.py
-            tests/test_portfolio_expected_shortfall_diversification_report.py
-          if-no-files-found: error
-          retention-days: 1
-
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
