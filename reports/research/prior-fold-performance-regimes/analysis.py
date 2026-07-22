@@ -253,9 +253,7 @@ def analyze_market(records: list[dict[str, object]], *, seed: int) -> dict[str, 
     for positive, regime in ((True, "previous_positive"), (False, "previous_nonpositive")):
         distribution = distributions[regime]
         lower, upper = np.quantile(distribution, [alpha, 1.0 - alpha])
-        selected = [
-            record for record in classified if record["previous_fold_positive"] == positive
-        ]
+        selected = [record for record in classified if record["previous_fold_positive"] == positive]
         regimes[regime] = {
             "folds": len(selected),
             "observations": len(selected) * EXPECTED_TEST_BARS,

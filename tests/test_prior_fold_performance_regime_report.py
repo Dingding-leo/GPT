@@ -71,8 +71,7 @@ def test_conditional_means_match_independent_real_return_calculation(
                 np.asarray(current["strategy_returns"], dtype=float)
                 for previous, current in zip(records[:-1], records[1:], strict=True)
                 if (
-                    np.prod(1.0 + np.asarray(previous["strategy_returns"], dtype=float)) - 1.0
-                    > 0.0
+                    np.prod(1.0 + np.asarray(previous["strategy_returns"], dtype=float)) - 1.0 > 0.0
                 )
                 == positive
             ]
