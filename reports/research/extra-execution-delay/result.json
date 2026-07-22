@@ -1,0 +1,77 @@
+{
+  "candidate_count": 1,
+  "canonical_signature": "extra-execution-delay-resilience-v1|markets=BTC-USDT,ETH-USDT|source=persisted-walk-forward-oos-executed-position|stress=shift-executed-position-by-one-additional-bar-from-cash|turnover=absolute-change-in-delayed-position|transaction_cost_bps=10|metric=annualized-arithmetic-mean-net-return|annualization=365|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260722,ETH-USDT:20260723|candidate_count=1",
+  "claim_boundary": "This is one predeclared execution-latency stress on BTC-USDT and ETH-USDT development evidence. It shifts the persisted executed OOS position by one additional daily bar, recomputes turnover and 10 bps costs from cash, and does not retune signals, candidates, folds, fees, or holdout rules. It is not a fill, spread, order-book, capacity, or live-execution model.",
+  "failure_reasons": [
+    "BTC-USDT delayed-return mean lower confidence bound is not positive",
+    "ETH-USDT delayed-return mean lower confidence bound is not positive"
+  ],
+  "hypothesis": "For both BTC-USDT and ETH-USDT, net OOS strategy returns retain a positive annualized arithmetic mean after the persisted executed position is delayed by one additional daily bar, with both 95% moving-block-bootstrap lower bounds above zero.",
+  "joint_supported": false,
+  "markets": {
+    "BTC-USDT": {
+      "annualized_mean": 0.15681837632870427,
+      "average_abs_exposure": 0.27375403729837333,
+      "bootstrap": {
+        "ci_lower": -0.030123464816100204,
+        "ci_upper": 0.4037836935649311,
+        "lower_bound_positive": false,
+        "median": 0.16633511372009852,
+        "probability_positive": 0.947
+      },
+      "cost_drag_sum": 0.10104969220407904,
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "original_annualized_mean": 0.17168956582497064,
+      "report_sha256": "eadade3fd883744d6bf9edeb798a0c8ca2bd62b621d936c70717a4e38e11fd9a",
+      "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "seed": 20260722,
+      "start": "2020-01-11 00:00:00+00:00",
+      "total_return": 1.2660643660939415
+    },
+    "ETH-USDT": {
+      "annualized_mean": 0.16778888568199307,
+      "average_abs_exposure": 0.21706259125195182,
+      "bootstrap": {
+        "ci_lower": -0.01481680822337768,
+        "ci_upper": 0.36670905318717684,
+        "lower_bound_positive": false,
+        "median": 0.16881726504900132,
+        "probability_positive": 0.9615
+      },
+      "cost_drag_sum": 0.10426169921015857,
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "original_annualized_mean": 0.13704095296450977,
+      "report_sha256": "b2bf91d7ed00e016931ffe4d892827d769a44fb0dae8af58bc1d6785a0207067",
+      "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "seed": 20260723,
+      "start": "2020-01-11 00:00:00+00:00",
+      "total_return": 1.3751779648607303
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8515639605,
+    "source_artifact_name": "quant-research-426",
+    "source_artifact_sha256": "396903281f1ef4ec71edbe0dded7c091c4c3545ffbaa7a502cc15bda4880b478",
+    "source_base_commit": "006df4340a2f0cf73a716255e5148e56856a31cc",
+    "source_persistent_head": "43d4f8b10d8f654b5fbcf974793493a967e125e4",
+    "source_tested_merge_commit": "8b1003c8b680664f5e96ff6818694c9d30fe1b7f",
+    "source_workflow_run_id": 29883451981
+  },
+  "settings": {
+    "additional_execution_delay_bars": 1,
+    "annualization": 365,
+    "block_length": 20,
+    "candidate_count": 1,
+    "confidence": 0.95,
+    "development_market_screen": true,
+    "position_source": "persisted executed OOS position",
+    "resamples_per_market": 2000,
+    "transaction_cost_bps": 10.0
+  },
+  "verdict": "rejected"
+}
