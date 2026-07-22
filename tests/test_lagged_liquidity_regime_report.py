@@ -9,11 +9,7 @@ import numpy as np
 import pandas as pd
 
 _ANALYSIS_PATH = (
-    Path(__file__).parents[1]
-    / "reports"
-    / "research"
-    / "lagged-liquidity-regimes"
-    / "analysis.py"
+    Path(__file__).parents[1] / "reports" / "research" / "lagged-liquidity-regimes" / "analysis.py"
 )
 _SPEC = importlib.util.spec_from_file_location("lagged_liquidity_regime_analysis", _ANALYSIS_PATH)
 if _SPEC is None or _SPEC.loader is None:
@@ -22,10 +18,7 @@ analysis = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(analysis)
 
 _VOLUME_FIXTURE_DIR = (
-    Path(__file__).parent
-    / "fixtures"
-    / "okx"
-    / "btc-usdt-1dutc-volume-20191201-20200219"
+    Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-volume-20191201-20200219"
 )
 _RETURNS_PATH = (
     Path(__file__).parent
@@ -69,9 +62,9 @@ def _load_fixture_inputs() -> tuple[pd.Series, pd.DataFrame]:
     return_frame = pd.DataFrame(
         {
             "fold": np.ones(len(returns), dtype=int),
-            "strategy_return": pd.to_numeric(
-                returns["strategy_return"], errors="raise"
-            ).to_numpy(dtype=float),
+            "strategy_return": pd.to_numeric(returns["strategy_return"], errors="raise").to_numpy(
+                dtype=float
+            ),
         },
         index=return_index,
     )
@@ -99,7 +92,7 @@ def test_real_volume_fixture_drives_prior_only_fold_threshold() -> None:
         }
     ]
     expected_threshold = float(
-        volume.shift(1).rolling(10, min_periods=10).median().loc[: "2020-01-10"].tail(30).median()
+        volume.shift(1).rolling(10, min_periods=10).median().loc[:"2020-01-10"].tail(30).median()
     )
     assert thresholds[0]["threshold_volume_quote"] == expected_threshold
 

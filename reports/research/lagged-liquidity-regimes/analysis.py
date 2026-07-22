@@ -133,9 +133,9 @@ def load_market_inputs(
     return_index = explicit_daily_utc_index(returns["timestamp"], label="return")
     volume = pd.to_numeric(snapshot["volume_quote"], errors="raise").to_numpy(dtype=float)
     confirmations = pd.to_numeric(snapshot["confirm"], errors="raise").to_numpy(dtype=float)
-    strategy_returns = pd.to_numeric(
-        returns["strategy_return"], errors="raise"
-    ).to_numpy(dtype=float)
+    strategy_returns = pd.to_numeric(returns["strategy_return"], errors="raise").to_numpy(
+        dtype=float
+    )
     numeric_folds = pd.to_numeric(returns["fold"], errors="raise").to_numpy(dtype=float)
     if not np.isfinite(volume).all() or (volume <= 0.0).any():
         raise ValueError("snapshot quote volume must be finite and positive")
@@ -197,9 +197,7 @@ def classify_liquidity_regimes(
         raise TypeError("return frame must use a DatetimeIndex")
 
     lagged_liquidity = (
-        volume_quote.shift(1)
-        .rolling(liquidity_lookback, min_periods=liquidity_lookback)
-        .median()
+        volume_quote.shift(1).rolling(liquidity_lookback, min_periods=liquidity_lookback).median()
     )
     classified = returns_frame.copy()
     classified["lagged_liquidity"] = lagged_liquidity.reindex(classified.index)
@@ -316,10 +314,7 @@ def analyze_market(
                 thresholds[0]["valid_liquidity_observations"]
             ),
             "later_fold_valid_selection_observations": int(
-                min(
-                    threshold["valid_liquidity_observations"]
-                    for threshold in thresholds[1:]
-                )
+                min(threshold["valid_liquidity_observations"] for threshold in thresholds[1:])
             ),
         },
         "regimes": regimes,
@@ -400,12 +395,10 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
                 for market, specification in MARKETS.items()
             },
             "returns_sha256": {
-                market: specification["returns_sha256"]
-                for market, specification in MARKETS.items()
+                market: specification["returns_sha256"] for market, specification in MARKETS.items()
             },
             "report_sha256": {
-                market: specification["report_sha256"]
-                for market, specification in MARKETS.items()
+                market: specification["report_sha256"] for market, specification in MARKETS.items()
             },
             "observations_per_market": EXPECTED_OBSERVATIONS,
             "oos_start": "2020-01-11T00:00:00+00:00",
