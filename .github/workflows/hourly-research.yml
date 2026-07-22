@@ -101,7 +101,7 @@ jobs:
             --btc-returns reports/okx/BTC-USDT/walk_forward_returns.csv \
             --eth-returns reports/okx/ETH-USDT/walk_forward_returns.csv \
             --btc-sha256 "$BTC_RETURN_SHA256" \
-            --eth-sh256 "$ETH_RETURN_SHA256" \
+            --eth-sha256 "$ETH_RETURN_SHA256" \
             --provider OKX \
             --market-type spot \
             --timeframe 1Dutc \
