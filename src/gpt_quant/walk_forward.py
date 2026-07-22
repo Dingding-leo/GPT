@@ -6,6 +6,7 @@ from collections import Counter
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from numbers import Integral, Real
 from typing import Any
 
 import numpy as np
@@ -59,6 +60,31 @@ def _score(metrics: Mapping[str, float | int]) -> float:
     )
 
 
+def _validated_candidate_lookback(
+    value: object,
+    *,
+    label: str,
+    minimum: int,
+) -> int:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{label} candidates must be integers")
+    parsed = int(value)
+    if parsed < minimum:
+        raise ValueError(f"{label} candidates must be at least {minimum}")
+    return parsed
+
+
+def _validated_trend_weight(value: object) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError("trend weight candidates must be finite real numbers")
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError("trend weight candidates must be finite real numbers")
+    if not 0.0 <= parsed <= 1.0:
+        raise ValueError("trend weights must be in [0, 1]")
+    return round(parsed, 10)
+
+
 def _candidates(
     base: StrategyConfig,
     momentum: Iterable[int],
@@ -67,9 +93,19 @@ def _candidates(
 ) -> list[StrategyConfig]:
     unique: dict[tuple[int, int, float], StrategyConfig] = {}
     for m, r, weight in itertools.product(momentum, reversal, trend_weights):
-        key = (int(m), int(r), round(float(weight), 10))
-        if not 0.0 <= key[2] <= 1.0:
-            raise ValueError("trend weights must be in [0, 1]")
+        key = (
+            _validated_candidate_lookback(
+                m,
+                label="momentum lookback",
+                minimum=2,
+            ),
+            _validated_candidate_lookback(
+                r,
+                label="reversal lookback",
+                minimum=1,
+            ),
+            _validated_trend_weight(weight),
+        )
         unique[key] = base.with_overrides(
             momentum_lookback=key[0],
             reversal_lookback=key[1],
