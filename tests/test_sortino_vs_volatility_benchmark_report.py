@@ -11,17 +11,11 @@ import pandas as pd
 import pytest
 
 _ROOT = Path(__file__).parents[1]
-_ANALYSIS_PATH = (
-    _ROOT / "reports" / "research" / "sortino-vs-volatility-benchmark" / "analysis.py"
-)
-_RESULT_PATH = (
-    _ROOT / "reports" / "research" / "sortino-vs-volatility-benchmark" / "result.json"
-)
+_ANALYSIS_PATH = _ROOT / "reports" / "research" / "sortino-vs-volatility-benchmark" / "analysis.py"
+_RESULT_PATH = _ROOT / "reports" / "research" / "sortino-vs-volatility-benchmark" / "result.json"
 _FIXTURE_DIR = Path(__file__).parent / "fixtures"
 _RETURNS_FIXTURE = _FIXTURE_DIR / "okx_btc_usdt_oos_returns_20200111_20200219.csv"
-_METADATA_FIXTURE = (
-    _FIXTURE_DIR / "okx_btc_usdt_oos_returns_20200111_20200219.metadata.json"
-)
+_METADATA_FIXTURE = _FIXTURE_DIR / "okx_btc_usdt_oos_returns_20200111_20200219.metadata.json"
 
 _SPEC = importlib.util.spec_from_file_location("sortino_benchmark_analysis", _ANALYSIS_PATH)
 assert _SPEC is not None and _SPEC.loader is not None
