@@ -14,6 +14,8 @@ def write_walk_forward_report(
     result: WalkForwardResult,
     output_dir: str | Path,
 ) -> dict[str, Path]:
+    payload = result.to_dict()
+
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     paths = {
@@ -22,7 +24,7 @@ def write_walk_forward_report(
         "returns": output / "walk_forward_returns.csv",
     }
     paths["json"].write_text(
-        json.dumps(result.to_dict(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     returns = result.combined_frame.copy()
