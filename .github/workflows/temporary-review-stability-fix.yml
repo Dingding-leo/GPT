@@ -148,6 +148,7 @@ def test_parameter_stability_preserves_legacy_label_without_collision() -> None:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/temporary-review-stability-fix.yml
+          git rm -f tmp/review-trigger.txt
           git add src/gpt_quant/walk_forward.py tests/test_walk_forward_stability_identity.py
           git commit -m "fix(review): preserve parameter stability identity"
           git push origin HEAD:auto/review/20260722-22-preserve-stability-weight-identity
