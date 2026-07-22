@@ -58,7 +58,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         trend_weights=search.get("trend_weights", [0.55, 0.70, 0.85]),
         validation_fraction=float(search.get("validation_fraction", 0.20)),
         holdout_fraction=float(search.get("holdout_fraction", 0.20)),
-        top_candidates=int(search.get("top_candidates", 10)),
+        top_candidates=search.get("top_candidates", 10),
     )
 
     json_path, markdown_path = write_research_report(result, args.output_dir)
