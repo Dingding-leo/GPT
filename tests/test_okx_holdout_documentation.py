@@ -53,6 +53,22 @@ def test_manifest_backed_okx_examples_use_the_compatible_holdout_config() -> Non
     assert "okx_holdout_config=verified" in reproduction
 
 
+def test_reproduction_guide_uses_manifest_helper_in_bash_and_powershell() -> None:
+    reproduction = (_REPOSITORY_ROOT / "docs/REPRODUCTION.md").read_text(encoding="utf-8")
+    section = reproduction.split(
+        "### 从本仓库生成的 OKX 快照创建 manifest", maxsplit=1
+    )[1].split("BTC-USDT `1Dutc`", maxsplit=1)[0]
+
+    helper = "python scripts/create_verified_snapshot_manifest.py"
+    assert section.count(helper) == 2
+    assert section.count("```bash") == 1
+    assert section.count("```powershell") == 1
+    for argument in ("--metadata", "--csv", "--output"):
+        assert section.count(argument) == 2
+    assert 'python -c "import csv,hashlib,json,pathlib' not in reproduction
+    assert "PowerShell 可直接运行同一条 `python -c` 命令" not in reproduction
+
+
 def test_documented_okx_manifest_and_holdout_commands_run_on_verified_real_fixture(
     tmp_path: Path,
     btc_usdt_prices: pd.Series,

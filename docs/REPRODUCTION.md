@@ -178,13 +178,27 @@ python -c "import hashlib,pathlib; files=['reports/okx/BTC-USDT/snapshot/okx-BTC
 
 ### 从本仓库生成的 OKX 快照创建 manifest
 
-先运行第 3 节的 BTC 命令。然后在仓库根目录执行以下跨平台 Python 命令：
+先运行第 3 节的 BTC 命令，然后使用仓库内经过测试的 helper。helper 会在写入前核对 metadata、CSV SHA-256、header、每行字段数、观测数、首尾时间戳和 provenance。
+
+macOS / Linux：
 
 ```bash
-python -c "import csv,hashlib,json,pathlib; d=pathlib.Path('reports/okx/BTC-USDT/snapshot'); c=d/'okx-BTC-USDT-1Dutc.csv'; mp=d/'okx-BTC-USDT-1Dutc.metadata.json'; m=json.loads(mp.read_text(encoding='utf-8')); h=hashlib.sha256(c.read_bytes()).hexdigest(); assert h==m['normalized_csv_sha256']; cols=next(csv.reader(c.open(encoding='utf-8',newline=''))); x={'schema_version':1,'provider':m['provider'],'market_type':'spot','instrument_id':m['instrument_id'],'timeframe':m['bar'],'schema':{'columns':cols,'timestamp_column':'timestamp','close_column':'close'},'observations':m['observations'],'start':m['start'],'end':m['end'],'data_path':c.name,'data_sha256':h,'provenance':{'retrieved_at_utc':m['fetched_at_utc'],'source_metadata_path':mp.name,'raw_pages_sha256':m['raw_pages_sha256']}}; (d/'verified-snapshot.json').write_text(json.dumps(x,indent=2,sort_keys=True)+'\n',encoding='utf-8')"
+python scripts/create_verified_snapshot_manifest.py \
+  --metadata reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.metadata.json \
+  --csv reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv \
+  --output reports/okx/BTC-USDT/snapshot/verified-snapshot.json
 ```
 
-该命令先重新计算 CSV SHA-256，并要求它等于 OKX metadata 中的 `normalized_csv_sha256`，随后把 manifest 写入与 CSV 相同的目录。
+Windows PowerShell：
+
+```powershell
+python scripts/create_verified_snapshot_manifest.py `
+  --metadata reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.metadata.json `
+  --csv reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv `
+  --output reports/okx/BTC-USDT/snapshot/verified-snapshot.json
+```
+
+成功时，helper 会打印 manifest 路径、CSV SHA-256、观测数和首尾时间戳。完整校验规则见 [`VERIFIED_SNAPSHOT_MANIFEST.md`](VERIFIED_SNAPSHOT_MANIFEST.md)。
 
 BTC-USDT `1Dutc` 的验证/留出示例使用 `config/okx_holdout.json`。该配置与 rolling 基线共享完整 strategy、365 日年化、每单位换手 10 bps 成本和候选参数族。运行前可执行以下跨平台断言，防止文档命令与 rolling OKX 市场假设发生静默漂移：
 
@@ -201,7 +215,7 @@ python scripts/run_research.py \
   --output-dir reports/holdout/BTC-USDT
 ```
 
-PowerShell 可直接运行同一条 `python -c` 命令；研究命令的等价写法为：
+PowerShell 的研究命令等价写法为：
 
 ```powershell
 python scripts/run_research.py `
