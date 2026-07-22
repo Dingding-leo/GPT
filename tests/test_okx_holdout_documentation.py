@@ -72,7 +72,8 @@ def test_reproduction_guide_uses_manifest_helper_in_bash_and_powershell() -> Non
         "reports/okx/BTC-USDT/snapshot/verified-snapshot.json",
     ):
         assert section.count(path) == 2
-    assert section.count("VERIFIED_SNAPSHOT_MANIFEST.md") == 1
+    helper_reference = "[`VERIFIED_SNAPSHOT_MANIFEST.md`](VERIFIED_SNAPSHOT_MANIFEST.md)"
+    assert section.count(helper_reference) == 1
     assert 'python -c "import csv,hashlib,json,pathlib' not in reproduction
     assert "PowerShell 可直接运行同一条 `python -c` 命令" not in reproduction
 
