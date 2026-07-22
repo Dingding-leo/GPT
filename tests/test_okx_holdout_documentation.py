@@ -55,9 +55,9 @@ def test_manifest_backed_okx_examples_use_the_compatible_holdout_config() -> Non
 
 def test_reproduction_guide_uses_manifest_helper_in_bash_and_powershell() -> None:
     reproduction = (_REPOSITORY_ROOT / "docs/REPRODUCTION.md").read_text(encoding="utf-8")
-    section = reproduction.split(
-        "### 从本仓库生成的 OKX 快照创建 manifest", maxsplit=1
-    )[1].split("BTC-USDT `1Dutc`", maxsplit=1)[0]
+    section = reproduction.split("### 从本仓库生成的 OKX 快照创建 manifest", maxsplit=1)[1].split(
+        "BTC-USDT `1Dutc`", maxsplit=1
+    )[0]
 
     helper = "python scripts/create_verified_snapshot_manifest.py"
     assert section.count(helper) == 2
