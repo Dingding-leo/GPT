@@ -18,6 +18,8 @@ from gpt_quant import (
     write_walk_forward_report,
 )
 
+_OKX_CANDLE_FIELD_COUNT = 9
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -41,6 +43,21 @@ def parse_args() -> argparse.Namespace:
 def load_json(path: str | Path) -> dict[str, Any]:
     with Path(path).open("r", encoding="utf-8") as handle:
         return json.load(handle)
+
+
+def _validate_okx_raw_page_schema(raw_pages: tuple[dict[str, Any], ...]) -> None:
+    """Fail closed when the exchange candle-row schema drifts from nine fields."""
+
+    for page_index, page in enumerate(raw_pages):
+        rows = page.get("data")
+        if not isinstance(rows, list):
+            raise ValueError(f"OKX raw page {page_index} is missing a list-valued data field")
+        for row_index, row in enumerate(rows):
+            if not isinstance(row, list) or len(row) != _OKX_CANDLE_FIELD_COUNT:
+                raise ValueError(
+                    f"OKX raw page {page_index} row {row_index} must contain exactly "
+                    f"{_OKX_CANDLE_FIELD_COUNT} fields"
+                )
 
 
 def _build_effective_config(
@@ -89,6 +106,7 @@ def main() -> int:
         pause_seconds=pause_seconds,
         timeout=timeout,
     )
+    _validate_okx_raw_page_schema(snapshot.raw_pages)
     output = Path(args.output_dir)
     snapshot_paths = write_okx_snapshot(snapshot, output / "snapshot")
 
