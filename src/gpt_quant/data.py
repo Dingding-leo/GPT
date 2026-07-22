@@ -7,25 +7,31 @@ import pandas as pd
 
 
 def validate_prices(prices: pd.Series, *, minimum_rows: int = 50) -> pd.Series:
-    """Return a clean, strictly positive, time-ordered price series."""
+    """Return a validated, strictly positive, chronologically ordered price series."""
 
     if not isinstance(prices, pd.Series):
         raise TypeError("prices must be a pandas Series")
     if len(prices) < minimum_rows:
         raise ValueError(f"prices must contain at least {minimum_rows} rows")
 
-    clean = pd.to_numeric(prices, errors="coerce").dropna().astype(float)
+    numeric = pd.to_numeric(prices, errors="coerce")
+    if numeric.isna().any():
+        raise ValueError("prices must contain only finite numeric values")
+    clean = numeric.astype(float)
+    if not np.isfinite(clean.to_numpy()).all():
+        raise ValueError("prices must contain only finite numeric values")
+
     if not isinstance(clean.index, pd.DatetimeIndex):
         try:
-            clean.index = pd.to_datetime(clean.index, utc=True)
+            clean.index = pd.to_datetime(clean.index, utc=True, errors="raise")
         except (TypeError, ValueError) as exc:
             raise ValueError("price index must be datetime-like") from exc
-
-    clean = clean[~clean.index.duplicated(keep="last")].sort_index()
-    if len(clean) < minimum_rows:
-        raise ValueError(f"prices must contain at least {minimum_rows} valid rows")
-    if not np.isfinite(clean.to_numpy()).all():
-        raise ValueError("prices contain non-finite values")
+    if clean.index.hasnans:
+        raise ValueError("price index must not contain missing timestamps")
+    if clean.index.has_duplicates:
+        raise ValueError("price index must not contain duplicates")
+    if not clean.index.is_monotonic_increasing:
+        raise ValueError("price index must be strictly increasing")
     if (clean <= 0).any():
         raise ValueError("prices must be strictly positive")
 
@@ -51,6 +57,7 @@ def load_price_csv(
         raise ValueError(f"CSV is missing required columns: {sorted(missing)}")
 
     index = pd.to_datetime(frame[timestamp_col], utc=True, errors="coerce")
+    if index.isna().any():
+        raise ValueError("timestamp column must contain only valid timestamps")
     series = pd.Series(frame[close_col].to_numpy(), index=index, name="close")
-    series = series[~series.index.isna()]
     return validate_prices(series)
