@@ -7,7 +7,10 @@ import os
 from pathlib import Path
 from typing import Any
 
+import pandas as pd
+
 from gpt_quant import (
+    OKXCandleSnapshot,
     StrategyConfig,
     append_experiment_manifest,
     build_experiment_manifest_entry,
@@ -70,6 +73,42 @@ def _validate_okx_raw_page_schema(raw_pages: tuple[dict[str, Any], ...]) -> None
             seen_rows_by_timestamp.setdefault(timestamp, normalized_row)
 
 
+def _validate_requested_end_coverage(
+    snapshot: OKXCandleSnapshot,
+    *,
+    requested_end: Any,
+) -> None:
+    """Require an explicit end boundary to be covered by a completed candle."""
+
+    if requested_end is None:
+        return
+    try:
+        end_timestamp = pd.Timestamp(requested_end)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("requested end must be a valid timestamp") from exc
+    if pd.isna(end_timestamp):
+        raise ValueError("requested end must be a valid timestamp")
+    if end_timestamp.tzinfo is None:
+        end_timestamp = end_timestamp.tz_localize("UTC")
+    else:
+        end_timestamp = end_timestamp.tz_convert("UTC")
+
+    expected_step_seconds = snapshot.metadata.get("expected_step_seconds")
+    if (
+        isinstance(expected_step_seconds, bool)
+        or not isinstance(expected_step_seconds, int)
+        or expected_step_seconds <= 0
+    ):
+        raise ValueError("OKX snapshot is missing a valid expected bar cadence")
+
+    latest = snapshot.candles.index[-1]
+    gap = end_timestamp - latest
+    if gap < pd.Timedelta(0):
+        raise ValueError("OKX snapshot contains a completed candle after the requested end")
+    if gap >= pd.Timedelta(seconds=expected_step_seconds):
+        raise ValueError("OKX download does not cover the requested end boundary")
+
+
 def _json_array(mapping: dict[str, Any], key: str, default: list[Any]) -> list[Any]:
     value = mapping.get(key, default)
     if not isinstance(value, list):
@@ -124,6 +163,7 @@ def main() -> int:
         timeout=timeout,
     )
     _validate_okx_raw_page_schema(snapshot.raw_pages)
+    _validate_requested_end_coverage(snapshot, requested_end=end)
     output = Path(args.output_dir)
     snapshot_paths = write_okx_snapshot(snapshot, output / "snapshot")
 
