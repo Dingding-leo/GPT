@@ -79,7 +79,7 @@ def test_load_price_csv_rejects_duplicate_instants_after_utc_normalization(
 ) -> None:
     prices = _real_price_window(btc_usdt_prices)
     frame = prices.rename_axis("timestamp").reset_index()
-    frame["timestamp"] = frame["timestamp"].astype(str)
+    frame["timestamp"] = [timestamp.isoformat() for timestamp in prices.index]
     duplicate_instant = prices.index[9].tz_convert("Australia/Adelaide").isoformat()
     frame.loc[10, "timestamp"] = duplicate_instant
 
