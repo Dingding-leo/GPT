@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -35,6 +36,40 @@ def _real_data_paths() -> dict[str, Path]:
     return {"normalized_csv": _CANDLES, "raw_pages": _RAW}
 
 
+def _manifest_entry(**overrides: object) -> dict[str, object]:
+    arguments: dict[str, object] = {
+        "effective_config": {
+            "data": {"provider": "OKX", "instrument_id": "BTC-USDT", "bar": "1Dutc"},
+            "search": {"candidate_count": 27},
+        },
+        "data_hashes": _real_data_hashes(),
+        "data_paths": _real_data_paths(),
+        "artifact_paths": {"fixture_metadata": _METADATA},
+        "candidate_count": 27,
+        "result_classification": "fixture-only provenance test; no performance claim",
+        "instrument_id": "BTC-USDT",
+        "bar": "1Dutc",
+        "code_commit": "c" * 40,
+        "recorded_at_utc": "2026-07-21T15:01:16.374294+00:00",
+    }
+    arguments.update(overrides)
+    return build_experiment_manifest_entry(**arguments)  # type: ignore[arg-type]
+
+
+def _write_pull_request_event(path: Path, *, head: str, base: str) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "pull_request": {
+                    "head": {"sha": head},
+                    "base": {"sha": base},
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
 def test_real_okx_fixture_has_hash_verified_provenance() -> None:
     metadata = _fixture_metadata()
 
@@ -56,25 +91,11 @@ def test_canonical_json_hash_is_independent_of_mapping_order() -> None:
 
 
 def test_manifest_entry_records_config_data_and_artifact_hashes() -> None:
-    timestamp = "2026-07-21T15:01:16.374294+00:00"
+    entry = _manifest_entry()
 
-    entry = build_experiment_manifest_entry(
-        effective_config={
-            "data": {"provider": "OKX", "instrument_id": "BTC-USDT", "bar": "1Dutc"},
-            "search": {"candidate_count": 27},
-        },
-        data_hashes=_real_data_hashes(),
-        data_paths=_real_data_paths(),
-        artifact_paths={"fixture_metadata": _METADATA},
-        candidate_count=27,
-        result_classification="fixture-only provenance test; no performance claim",
-        instrument_id="BTC-USDT",
-        bar="1Dutc",
-        code_commit="c" * 40,
-        recorded_at_utc=timestamp,
-    )
-
+    assert entry["schema_version"] == 2
     assert entry["code_commit"] == "c" * 40
+    assert entry["code_provenance"] == {"checkout_commit": "c" * 40}
     assert entry["config_sha256"] == canonical_json_sha256(
         {
             "data": {"provider": "OKX", "instrument_id": "BTC-USDT", "bar": "1Dutc"},
@@ -88,7 +109,126 @@ def test_manifest_entry_records_config_data_and_artifact_hashes() -> None:
     assert entry["run_id"].startswith("run-")
 
 
-def test_manifest_entry_rejects_data_hash_mismatch(tmp_path) -> None:
+def _git(repository: Path, *arguments: str) -> str:
+    return subprocess.run(
+        ["git", *arguments],
+        cwd=repository,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+
+def _build_shallow_merge_checkout(tmp_path: Path) -> tuple[Path, str, str, str, str]:
+    source = tmp_path / "source"
+    source.mkdir()
+    _git(source, "init", "-b", "main")
+    _git(source, "config", "user.name", "reproducibility-test")
+    _git(source, "config", "user.email", "reproducibility@example.invalid")
+    (source / "base.txt").write_text("base\n", encoding="utf-8")
+    _git(source, "add", "base.txt")
+    _git(source, "commit", "-m", "base")
+    event_base = _git(source, "rev-parse", "HEAD")
+
+    _git(source, "checkout", "-b", "feature")
+    (source / "feature.txt").write_text("feature\n", encoding="utf-8")
+    _git(source, "add", "feature.txt")
+    _git(source, "commit", "-m", "feature")
+    feature_head = _git(source, "rev-parse", "HEAD")
+
+    _git(source, "checkout", "main")
+    (source / "advanced-base.txt").write_text("advanced\n", encoding="utf-8")
+    _git(source, "add", "advanced-base.txt")
+    _git(source, "commit", "-m", "advance base")
+    tested_base = _git(source, "rev-parse", "HEAD")
+    _git(source, "merge", "--no-ff", "feature", "-m", "test merge")
+    merge_commit = _git(source, "rev-parse", "HEAD")
+
+    bare = tmp_path / "source.git"
+    subprocess.run(
+        ["git", "clone", "--bare", str(source), str(bare)],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    _git(checkout, "init")
+    _git(checkout, "remote", "add", "origin", bare.as_uri())
+    _git(checkout, "fetch", "--depth=1", "origin", merge_commit)
+    _git(checkout, "checkout", "FETCH_HEAD")
+    return checkout, event_base, tested_base, feature_head, merge_commit
+
+
+def test_pull_request_manifest_uses_tested_merge_base_not_stale_event_base(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    checkout, event_base, tested_base, feature_head, merge_commit = _build_shallow_merge_checkout(
+        tmp_path
+    )
+    event_path = tmp_path / "event.json"
+    _write_pull_request_event(event_path, head=feature_head, base=event_base)
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    monkeypatch.setenv("GITHUB_SHA", merge_commit)
+
+    entry = _manifest_entry(code_commit=None, repository_root=checkout)
+
+    assert event_base != tested_base
+    assert entry["code_commit"] == merge_commit
+    assert entry["code_provenance"] == {
+        "checkout_commit": merge_commit,
+        "pull_request_head_commit": feature_head,
+        "pull_request_base_commit": tested_base,
+    }
+
+
+def test_pull_request_manifest_rejects_merge_head_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event_path = tmp_path / "event.json"
+    _write_pull_request_event(event_path, head="a" * 40, base="b" * 40)
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    monkeypatch.setenv("GITHUB_SHA", "c" * 40)
+    monkeypatch.setattr(
+        "gpt_quant.reproducibility._resolve_pull_request_merge_parents",
+        lambda _: ("b" * 40, "d" * 40),
+    )
+
+    with pytest.raises(RuntimeError, match="merge head does not match"):
+        _manifest_entry(
+            code_commit=None,
+            repository_root=tmp_path / "missing-checkout",
+        )
+
+
+def test_pull_request_manifest_fails_closed_without_persistent_revisions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    event_path = tmp_path / "event.json"
+    event_path.write_text(
+        json.dumps({"pull_request": {"head": {"sha": "a" * 40}}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
+    monkeypatch.setenv("GITHUB_EVENT_PATH", str(event_path))
+    monkeypatch.setenv("GITHUB_SHA", "c" * 40)
+
+    with pytest.raises(
+        RuntimeError,
+        match="unable to resolve pull-request head/base commits",
+    ):
+        _manifest_entry(
+            code_commit=None,
+            repository_root=tmp_path / "missing-checkout",
+        )
+
+
+def test_manifest_entry_rejects_data_hash_mismatch(tmp_path: Path) -> None:
     corrupted = tmp_path / "candles.csv"
     shutil.copyfile(_CANDLES, corrupted)
     corrupted.write_text(
@@ -97,48 +237,33 @@ def test_manifest_entry_rejects_data_hash_mismatch(tmp_path) -> None:
     )
 
     with pytest.raises(ValueError, match="data hash mismatch for 'normalized_csv'"):
-        build_experiment_manifest_entry(
+        _manifest_entry(
             effective_config={"data": {"provider": "OKX"}},
             data_hashes={"normalized_csv": _real_data_hashes()["normalized_csv"]},
             data_paths={"normalized_csv": corrupted},
-            artifact_paths={"fixture_metadata": _METADATA},
             candidate_count=1,
             result_classification="fixture-only rejection test; no performance claim",
-            instrument_id="BTC-USDT",
-            bar="1Dutc",
             code_commit="e" * 40,
-            recorded_at_utc="2026-07-21T15:01:16.374294+00:00",
         )
 
 
 def test_manifest_entry_rejects_incomplete_data_path_mapping() -> None:
     with pytest.raises(ValueError, match="data_paths keys must exactly match"):
-        build_experiment_manifest_entry(
+        _manifest_entry(
             effective_config={"data": {"provider": "OKX"}},
-            data_hashes=_real_data_hashes(),
             data_paths={"normalized_csv": _CANDLES},
-            artifact_paths={"fixture_metadata": _METADATA},
             candidate_count=1,
             result_classification="fixture-only rejection test; no performance claim",
-            instrument_id="BTC-USDT",
-            bar="1Dutc",
             code_commit="e" * 40,
-            recorded_at_utc="2026-07-21T15:01:16.374294+00:00",
         )
 
 
-def test_manifest_append_is_canonical_and_idempotent(tmp_path) -> None:
-    entry = build_experiment_manifest_entry(
+def test_manifest_append_is_canonical_and_idempotent(tmp_path: Path) -> None:
+    entry = _manifest_entry(
         effective_config={"data": {"provider": "OKX"}},
-        data_hashes=_real_data_hashes(),
-        data_paths=_real_data_paths(),
-        artifact_paths={"fixture_metadata": _METADATA},
         candidate_count=1,
         result_classification="fixture-only append test; no performance claim",
-        instrument_id="BTC-USDT",
-        bar="1Dutc",
         code_commit="e" * 40,
-        recorded_at_utc="2026-07-21T15:01:16.374294+00:00",
     )
     manifest = tmp_path / "experiment-manifest.jsonl"
 
