@@ -44,9 +44,7 @@ def load_returns(path: str | Path) -> pd.DataFrame:
     if missing:
         raise ValueError(f"returns file is missing required columns: {sorted(missing)}")
 
-    timestamps = pd.DatetimeIndex(
-        pd.to_datetime(frame["timestamp"], utc=True, errors="raise")
-    )
+    timestamps = pd.DatetimeIndex(pd.to_datetime(frame["timestamp"], utc=True, errors="raise"))
     if timestamps.duplicated().any() or not timestamps.is_monotonic_increasing:
         raise ValueError("returns timestamps must be unique and strictly increasing")
     if len(timestamps) > 1:
