@@ -49,7 +49,7 @@ def test_okx_parser_rejects_invalid_values_in_real_exchange_row(
 
 @pytest.mark.parametrize(
     "replacement",
-    ["not-a-timestamp", "nan", None, "999999999999999999999999999999"],
+    ["not-a-timestamp", "nan", None, True, "999999999999999999999999999999"],
 )
 def test_okx_parser_rejects_invalid_timestamp_in_real_exchange_row(replacement: object) -> None:
     corrupted: list[object] = _real_confirmed_okx_row()
