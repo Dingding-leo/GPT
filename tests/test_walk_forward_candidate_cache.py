@@ -101,15 +101,28 @@ def _assert_results_equal(
 
 def test_candidate_cache_preserves_complete_walk_forward_result(
     btc_usdt_prices: pd.Series,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     prices = btc_usdt_prices.iloc[:600]
 
     baseline = _run_with_candidate_window(prices, _legacy_candidate_window)
+    calls: dict[StrategyConfig, int] = {}
+    original = walk_forward.run_backtest
+
+    def counted_run_backtest(*args: object, **kwargs: object) -> BacktestResult:
+        config = args[1]
+        assert isinstance(config, StrategyConfig)
+        calls[config] = calls.get(config, 0) + 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(walk_forward, "run_backtest", counted_run_backtest)
     optimized = _run_with_candidate_window(prices, walk_forward._run_cached_candidate_window)
 
     assert len(baseline.folds) == 3
     assert len(optimized.folds) == 3
     _assert_results_equal(baseline, optimized)
+    assert calls
+    assert set(calls.values()) == {1}
 
 
 def test_candidate_cache_runs_each_configuration_once_and_ignores_later_real_bars(
@@ -169,25 +182,3 @@ def test_candidate_cache_runs_each_configuration_once_and_ignores_later_real_bar
     assert len(cache) == 1
     pd.testing.assert_frame_equal(first, expected, check_exact=True)
     pd.testing.assert_frame_equal(second, expected, check_exact=True)
-
-
-def test_candidate_cache_reuses_perturbation_configurations(
-    btc_usdt_prices: pd.Series,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    prices = btc_usdt_prices.iloc[:600]
-    calls: dict[StrategyConfig, int] = {}
-    original = walk_forward.run_backtest
-
-    def counted_run_backtest(*args: object, **kwargs: object) -> BacktestResult:
-        config = args[1]
-        assert isinstance(config, StrategyConfig)
-        calls[config] = calls.get(config, 0) + 1
-        return original(*args, **kwargs)
-
-    monkeypatch.setattr(walk_forward, "run_backtest", counted_run_backtest)
-    result = walk_forward.run_walk_forward_research(prices, **_settings())
-
-    assert len(result.folds) == 3
-    assert calls
-    assert set(calls.values()) == {1}
