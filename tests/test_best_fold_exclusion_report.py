@@ -9,12 +9,8 @@ import numpy as np
 import pandas as pd
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-ANALYSIS_PATH = (
-    REPOSITORY_ROOT / "reports" / "research" / "best-fold-exclusion" / "analysis.py"
-)
-RESULT_PATH = (
-    REPOSITORY_ROOT / "reports" / "research" / "best-fold-exclusion" / "result.json"
-)
+ANALYSIS_PATH = REPOSITORY_ROOT / "reports" / "research" / "best-fold-exclusion" / "analysis.py"
+RESULT_PATH = REPOSITORY_ROOT / "reports" / "research" / "best-fold-exclusion" / "result.json"
 FIXTURE_PATH = (
     Path(__file__).parent
     / "fixtures"
