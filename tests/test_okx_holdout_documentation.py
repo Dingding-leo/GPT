@@ -65,6 +65,13 @@ def test_reproduction_guide_uses_manifest_helper_in_bash_and_powershell() -> Non
     assert section.count("```powershell") == 1
     for argument in ("--metadata", "--csv", "--output"):
         assert section.count(argument) == 2
+    for path in (
+        "reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.metadata.json",
+        "reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv",
+        "reports/okx/BTC-USDT/snapshot/verified-snapshot.json",
+    ):
+        assert section.count(path) == 2
+    assert section.count("VERIFIED_SNAPSHOT_MANIFEST.md") == 1
     assert 'python -c "import csv,hashlib,json,pathlib' not in reproduction
     assert "PowerShell 可直接运行同一条 `python -c` 命令" not in reproduction
 
