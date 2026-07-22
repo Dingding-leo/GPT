@@ -51,6 +51,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--btc-weight", type=float, default=0.5)
     parser.add_argument("--eth-weight", type=float, default=0.5)
     parser.add_argument("--max-sleeve-weight", type=float, default=0.75)
+    parser.add_argument("--max-variance-contribution", type=float, default=0.75)
     parser.add_argument("--annualization", type=int, default=365)
     parser.add_argument("--provider", required=True, choices=("OKX",))
     parser.add_argument("--market-type", required=True, choices=("spot",))
@@ -96,6 +97,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         initial_weights={"BTC-USDT": args.btc_weight, "ETH-USDT": args.eth_weight},
         annualization=args.annualization,
         max_sleeve_weight=args.max_sleeve_weight,
+        max_variance_contribution=args.max_variance_contribution,
         provenance=provenance,
     )
     paths = write_portfolio_risk_report(result, args.output_dir)
