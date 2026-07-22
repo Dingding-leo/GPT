@@ -44,26 +44,8 @@ jobs:
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
 
-      - name: Capture exact Ruff output
-        run: |
-          ruff check --fix \
-            reports/research/ulcer-index-vs-volatility-benchmark/analysis.py \
-            tests/test_ulcer_index_vs_volatility_benchmark_report.py
-          ruff format \
-            reports/research/ulcer-index-vs-volatility-benchmark/analysis.py \
-            tests/test_ulcer_index_vs_volatility_benchmark_report.py
-          mkdir -p formatted/reports/research/ulcer-index-vs-volatility-benchmark formatted/tests
-          cp reports/research/ulcer-index-vs-volatility-benchmark/analysis.py \
-            formatted/reports/research/ulcer-index-vs-volatility-benchmark/analysis.py
-          cp tests/test_ulcer_index_vs_volatility_benchmark_report.py formatted/tests/
-
-      - name: Upload exact Ruff output
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: formatted-ulcer-index-files
-          path: formatted/
-          if-no-files-found: error
-          retention-days: 1
+      - name: Lint and formatting
+        run: ruff check . && ruff format --check .
 
       - name: Test against public OKX data
         env:
