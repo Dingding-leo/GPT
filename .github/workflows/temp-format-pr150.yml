@@ -32,6 +32,6 @@ jobs:
           name: pr150-formatted-${{ github.sha }}
           path: |
             reports/research/best-fold-exclusion/analysis.py
-            tests/test_best-fold-exclusion-report.py
-          if-no-files-found: warn
+            tests/test_best_fold_exclusion_report.py
+          if-no-files-found: error
           retention-days: 1
