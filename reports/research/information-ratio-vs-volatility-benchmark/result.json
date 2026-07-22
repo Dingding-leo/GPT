@@ -1,0 +1,61 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "information-ratio-vs-volatility-benchmark-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=volatility-targeted-long|active-return=strategy-return-minus-benchmark-return|metric=annualized-information-ratio-mean-active-return-over-sample-tracking-error|annualization=365|claim=information-ratio>0-in-both-markets|resampling=paired-noncircular-moving-block-bootstrap|block-length=20-sessions|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072315,ETH-USDT:2026072316|candidate_count=1",
+  "hypothesis": "The adaptive strategy has a positive annualized information ratio versus volatility-targeted long in both BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "annualized_active_return": -0.19266772900414506,
+      "annualized_tracking_error": 0.3805596348719263,
+      "ci_lower": -1.3927489581558032,
+      "ci_upper": 0.28426435616932827,
+      "information_ratio": -0.5062747368595345,
+      "observations": 2340,
+      "passed": false,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_information_ratio_positive": 0.1045,
+      "return_file_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73"
+    },
+    "ETH-USDT": {
+      "annualized_active_return": -0.34473121011900704,
+      "annualized_tracking_error": 0.4064466879724869,
+      "ci_lower": -1.7722202894359498,
+      "ci_upper": -0.044162362323167656,
+      "information_ratio": -0.8481584924179343,
+      "observations": 2340,
+      "passed": false,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_information_ratio_positive": 0.019,
+      "return_file_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    }
+  },
+  "provenance": {
+    "market_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8544795485,
+    "source_artifact_name": "quant-research-source-1374-attempt-1",
+    "source_artifact_sha256": "a4177288bba8a1599576688d8481546149512e96ad149c7b91f2e6f00d71fd31",
+    "source_head_sha": "160fb816405deebbd142289f5fbefb8e5d403646",
+    "source_workflow_run_id": 29957899078,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reason": "The 95% paired moving-block-bootstrap lower bound for the annualized information ratio was non-positive in: BTC-USDT, ETH-USDT",
+  "settings": {
+    "annualization": 365,
+    "benchmark": "volatility-targeted-long",
+    "block_length_sessions": 20,
+    "confidence": 0.95,
+    "information_ratio_definition": "sqrt(365) * mean(strategy_return - benchmark_return) / sample_std(strategy_return - benchmark_return)",
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072315,
+      "ETH-USDT": 2026072316
+    }
+  },
+  "verdict": "rejected"
+}
