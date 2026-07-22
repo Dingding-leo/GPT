@@ -178,3 +178,24 @@ def test_verifier_rejects_persisted_metric_drift(tmp_path: Path) -> None:
 
     assert completed.returncode == 1
     assert "aggregate_metrics.sharpe mismatch" in completed.stderr
+
+
+@pytest.mark.parametrize("invalid_value", [False, "0.0"])
+def test_verifier_rejects_coerced_aggregate_metric_scalars(
+    tmp_path: Path,
+    invalid_value: object,
+) -> None:
+    report_path, frame = _persist_cash_only_real_fixture_result(tmp_path)
+    returns_path = tmp_path / "walk_forward_returns.csv"
+    frame.to_csv(returns_path, index=False)
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    report["aggregate_metrics"]["sharpe"] = invalid_value
+    report_path.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    completed = _run_verifier(report_path, returns_path)
+
+    assert completed.returncode == 1
+    assert "aggregate_metrics.sharpe must be a JSON number" in completed.stderr
