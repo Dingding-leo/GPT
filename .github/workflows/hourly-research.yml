@@ -42,6 +42,19 @@ jobs:
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
 
+      - name: Temporarily format CSCV research files
+        run: ruff format reports/research/cscv-pbo-candidate-grid/analysis.py tests/test_cscv_pbo_candidate_grid.py
+
+      - name: Upload formatted CSCV research files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: cscv-pbo-formatted-${{ github.sha }}
+          path: |
+            reports/research/cscv-pbo-candidate-grid/analysis.py
+            tests/test_cscv_pbo_candidate_grid.py
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
