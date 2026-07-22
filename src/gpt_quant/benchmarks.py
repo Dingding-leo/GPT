@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from numbers import Integral, Real
 
 import numpy as np
 import pandas as pd
@@ -16,6 +17,39 @@ def _validate_transaction_cost_bps(transaction_cost_bps: float) -> None:
 def _validate_max_position(max_position: float) -> None:
     if not math.isfinite(max_position) or max_position <= 0:
         raise ValueError("max_position must be finite and positive")
+
+
+def _validate_volatility_lookback(volatility_lookback: int) -> None:
+    if (
+        isinstance(volatility_lookback, bool)
+        or not isinstance(volatility_lookback, Integral)
+        or volatility_lookback < 2
+    ):
+        raise ValueError("volatility_lookback must be an integer at least 2")
+
+
+def _validate_trend_lookback(lookback: int) -> None:
+    if isinstance(lookback, bool) or not isinstance(lookback, Integral) or lookback < 1:
+        raise ValueError("lookback must be an integer at least 1")
+
+
+def _validate_target_volatility(target_volatility: float) -> None:
+    if (
+        isinstance(target_volatility, bool)
+        or not isinstance(target_volatility, Real)
+        or not math.isfinite(target_volatility)
+        or target_volatility <= 0
+    ):
+        raise ValueError("target_volatility must be finite and positive")
+
+
+def _validate_annualization(annualization: int) -> None:
+    if (
+        isinstance(annualization, bool)
+        or not isinstance(annualization, Integral)
+        or annualization < 2
+    ):
+        raise ValueError("annualization must be an integer at least 2")
 
 
 def _build_frame(
@@ -93,7 +127,10 @@ def volatility_targeted_long_frame(
     start: pd.Timestamp | str | None = None,
     end: pd.Timestamp | str | None = None,
 ) -> pd.DataFrame:
+    _validate_volatility_lookback(volatility_lookback)
+    _validate_target_volatility(target_volatility)
     _validate_max_position(max_position)
+    _validate_annualization(annualization)
     clean = validate_prices(prices)
     log_returns = np.log(clean).diff()
     realized = log_returns.rolling(
@@ -119,6 +156,7 @@ def simple_trend_long_cash_frame(
     start: pd.Timestamp | str | None = None,
     end: pd.Timestamp | str | None = None,
 ) -> pd.DataFrame:
+    _validate_trend_lookback(lookback)
     clean = validate_prices(prices)
     trailing_return = clean.pct_change(lookback)
     target = (trailing_return > 0.0).astype(float)
