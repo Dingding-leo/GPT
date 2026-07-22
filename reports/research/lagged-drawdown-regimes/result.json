@@ -1,0 +1,118 @@
+{
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "failure_reasons": [
+        "BTC-USDT at_high lower confidence bound is not positive",
+        "BTC-USDT underwater lower confidence bound is not positive",
+        "ETH-USDT at_high lower confidence bound is not positive",
+        "ETH-USDT underwater lower confidence bound is not positive"
+      ],
+      "name": "fixed_lagged_drawdown_state_regimes",
+      "verdict": "reject"
+    }
+  ],
+  "canonical_signature": "lagged-drawdown-state-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns-and-OKX-close|regime-statistic=prior-60-session-close-drawdown-from-prior-60-session-high|current-session-excluded=true|threshold=zero|regimes=at-prior-60-session-high,underwater|metric=conditional-annualized-arithmetic-mean-net-return|annualization=365|resampling=paired-noncircular-moving-block-over-observed-regime-return-rows|block=20|resamples=2000|confidence=0.95|seeds=BTC:20260722,ETH:20260723|candidate_count=1",
+  "hypothesis": "BTC-USDT and ETH-USDT net rolling OOS returns have positive annualized arithmetic means both at prior 60-session highs and while underwater.",
+  "markets": {
+    "BTC-USDT": {
+      "observations": 2340,
+      "regime_statistic_summary": {
+        "maximum": 0.0,
+        "median": -0.08970884041147054,
+        "minimum": -0.5414105424475283
+      },
+      "regimes": {
+        "at_high": {
+          "annualized_arithmetic_mean": 0.6138917051849927,
+          "confidence_interval": {
+            "lower": -0.5739776513103071,
+            "upper": 1.782002810638407
+          },
+          "observations": 227,
+          "passes": false,
+          "probability_mean_positive": 0.8435
+        },
+        "underwater": {
+          "annualized_arithmetic_mean": 0.12418370418998484,
+          "confidence_interval": {
+            "lower": -0.034029664254640817,
+            "upper": 0.3285382807247266
+          },
+          "observations": 2113,
+          "passes": false,
+          "probability_mean_positive": 0.938
+        }
+      },
+      "seed": 20260722
+    },
+    "ETH-USDT": {
+      "observations": 2340,
+      "regime_statistic_summary": {
+        "maximum": 0.0,
+        "median": -0.12657337823330828,
+        "minimum": -0.6765291894052908
+      },
+      "regimes": {
+        "at_high": {
+          "annualized_arithmetic_mean": 0.6620914106125819,
+          "confidence_interval": {
+            "lower": -0.23696813368735495,
+            "upper": 1.5369559446648244
+          },
+          "observations": 224,
+          "passes": false,
+          "probability_mean_positive": 0.92
+        },
+        "underwater": {
+          "annualized_arithmetic_mean": 0.08145905196584807,
+          "confidence_interval": {
+            "lower": -0.1061228102668857,
+            "upper": 0.28931560767062664
+          },
+          "observations": 2116,
+          "passes": false,
+          "probability_mean_positive": 0.8
+        }
+      },
+      "seed": 20260723
+    }
+  },
+  "method": {
+    "acceptance_rule": "all four lower confidence bounds must be strictly positive",
+    "annualization": 365,
+    "block_length": 20,
+    "confidence": 0.95,
+    "drawdown_lookback": 60,
+    "regime_threshold": 0.0,
+    "resamples": 2000,
+    "test_bars": 90
+  },
+  "source": {
+    "artifact_id": 8524820348,
+    "artifact_name": "quant-research-source-821-attempt-1",
+    "artifact_sha256": "a3afb910142939e7d17d92c947957ea0b965b9411f057d96854fdccb96779401",
+    "development_markets": true,
+    "file_sha256": {
+      "BTC-USDT": {
+        "report": "84fdba156cbd87b9f3bcd0be017039cdf9d3489bbb23333bd4961318c7bf9aad",
+        "returns": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+        "snapshot": "b0bd7c6c7e30fcc095073169f60bde24559f481b24cc6f4bdfb85349f57974bb"
+      },
+      "ETH-USDT": {
+        "report": "149e7ebf6f4192298828536d17685a09884da8ae699e0af22655bd6d5543f2bc",
+        "returns": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+        "snapshot": "78f3bf81d3983e6c894066a1c298fbf14ae06a5eff9ca7326554b0a8933c0df5"
+      }
+    },
+    "market_type": "spot",
+    "observations_per_market": 2340,
+    "oos_end": "2026-06-07T00:00:00+00:00",
+    "oos_start": "2020-01-11T00:00:00+00:00",
+    "provider": "OKX",
+    "source_code_commit": "513cdf4051f504ea7f833713911cd55ff7754881",
+    "timeframe": "1Dutc",
+    "workflow_run_id": 29908375375
+  },
+  "verdict": "rejected"
+}
