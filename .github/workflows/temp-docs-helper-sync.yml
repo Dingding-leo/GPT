@@ -1,0 +1,107 @@
+name: Temporary Docs Helper Sync
+
+on:
+  push:
+    branches:
+      - auto/docs/20260722-01-reproduction-guide
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[docs-helper-sync]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: auto/docs/20260722-01-reproduction-guide
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+      - name: Replace inline manifest recipe with tested helper
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          doc_path = Path("docs/REPRODUCTION.md")
+          text = doc_path.read_text(encoding="utf-8")
+          old = '''先运行第 3 节的 BTC 命令。然后在仓库根目录执行以下跨平台 Python 命令：
+
+          ```bash
+          python -c "import csv,hashlib,json,pathlib; d=pathlib.Path('reports/okx/BTC-USDT/snapshot'); c=d/'okx-BTC-USDT-1Dutc.csv'; mp=d/'okx-BTC-USDT-1Dutc.metadata.json'; m=json.loads(mp.read_text(encoding='utf-8')); h=hashlib.sha256(c.read_bytes()).hexdigest(); assert h==m['normalized_csv_sha256']; cols=next(csv.reader(c.open(encoding='utf-8',newline=''))); x={'schema_version':1,'provider':m['provider'],'market_type':'spot','instrument_id':m['instrument_id'],'timeframe':m['bar'],'schema':{'columns':cols,'timestamp_column':'timestamp','close_column':'close'},'observations':m['observations'],'start':m['start'],'end':m['end'],'data_path':c.name,'data_sha256':h,'provenance':{'retrieved_at_utc':m['fetched_at_utc'],'source_metadata_path':mp.name,'raw_pages_sha256':m['raw_pages_sha256']}}; (d/'verified-snapshot.json').write_text(json.dumps(x,indent=2,sort_keys=True)+'\\n',encoding='utf-8')"
+          ```
+
+          该命令先重新计算 CSV SHA-256，并要求它等于 OKX metadata 中的 `normalized_csv_sha256`，随后把 manifest 写入与 CSV 相同的目录。
+          '''
+          new = '''先运行第 3 节的 BTC 命令，然后使用仓库内经过测试的 helper。helper 会在写入前核对 metadata、CSV SHA-256、header、每行字段数、观测数、首尾时间戳和 provenance。
+
+          macOS / Linux：
+
+          ```bash
+          python scripts/create_verified_snapshot_manifest.py \\
+            --metadata reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.metadata.json \\
+            --csv reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv \\
+            --output reports/okx/BTC-USDT/snapshot/verified-snapshot.json
+          ```
+
+          Windows PowerShell：
+
+          ```powershell
+          python scripts/create_verified_snapshot_manifest.py `
+            --metadata reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.metadata.json `
+            --csv reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv `
+            --output reports/okx/BTC-USDT/snapshot/verified-snapshot.json
+          ```
+
+          成功时，helper 会打印 manifest 路径、CSV SHA-256、观测数和首尾时间戳。完整校验规则见 [`VERIFIED_SNAPSHOT_MANIFEST.md`](VERIFIED_SNAPSHOT_MANIFEST.md)。
+          '''
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one inline manifest recipe, found {text.count(old)}")
+          text = text.replace(old, new)
+          stale = "PowerShell 可直接运行同一条 `python -c` 命令；研究命令的等价写法为："
+          if text.count(stale) != 1:
+              raise SystemExit(f"expected one stale PowerShell sentence, found {text.count(stale)}")
+          text = text.replace(stale, "PowerShell 的研究命令等价写法为：")
+          doc_path.write_text(text, encoding="utf-8")
+
+          test_path = Path("tests/test_okx_holdout_documentation.py")
+          tests = test_path.read_text(encoding="utf-8")
+          marker = '''def test_documented_okx_manifest_and_holdout_commands_run_on_verified_real_fixture(
+          '''
+          addition = '''def test_reproduction_guide_uses_manifest_helper_in_bash_and_powershell() -> None:
+              reproduction = (_REPOSITORY_ROOT / "docs/REPRODUCTION.md").read_text(encoding="utf-8")
+              section = reproduction.split(
+                  "### 从本仓库生成的 OKX 快照创建 manifest", maxsplit=1
+              )[1].split("BTC-USDT `1Dutc`", maxsplit=1)[0]
+
+              helper = "python scripts/create_verified_snapshot_manifest.py"
+              assert section.count(helper) == 2
+              assert section.count("```bash") == 1
+              assert section.count("```powershell") == 1
+              for argument in ("--metadata", "--csv", "--output"):
+                  assert section.count(argument) == 2
+              assert 'python -c "import csv,hashlib,json,pathlib' not in reproduction
+              assert "PowerShell 可直接运行同一条 `python -c` 命令" not in reproduction
+
+
+          '''
+          if tests.count(marker) != 1:
+              raise SystemExit(f"expected one test insertion marker, found {tests.count(marker)}")
+          if "test_reproduction_guide_uses_manifest_helper_in_bash_and_powershell" in tests:
+              raise SystemExit("helper documentation regression already exists")
+          tests = tests.replace(marker, addition + marker)
+          test_path.write_text(tests, encoding="utf-8")
+
+          Path(".github/workflows/temp-docs-helper-sync.yml").unlink()
+          PY
+      - name: Commit focused documentation update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/REPRODUCTION.md tests/test_okx_holdout_documentation.py .github/workflows/temp-docs-helper-sync.yml
+          git commit -m "docs: use verified manifest helper [docs-helper-sync]"
+          git push origin HEAD:auto/docs/20260722-01-reproduction-guide
