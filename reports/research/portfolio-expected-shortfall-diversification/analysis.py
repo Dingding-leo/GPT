@@ -202,8 +202,7 @@ def analyze_expected_shortfall_diversification(
     portfolio_returns = no_rebalance_portfolio_returns(sleeve_returns)
     portfolio_expected_shortfall = expected_shortfall(portfolio_returns)
     sleeve_expected_shortfalls = {
-        market: expected_shortfall(sleeve_returns[:, index])
-        for index, market in enumerate(MARKETS)
+        market: expected_shortfall(sleeve_returns[:, index]) for index, market in enumerate(MARKETS)
     }
     point_reductions = {
         market: portfolio_expected_shortfall - sleeve_expected_shortfalls[market]
@@ -359,12 +358,12 @@ def write_report(result: dict[str, object], path: Path) -> None:
         f"- Verdict: **{result['verdict']}**",
         f"- Observations: {portfolio['observations']}",
         f"- Tail observations: {portfolio['tail_observations']}",
-        (
-            "- Portfolio 5% expected shortfall: "
-            f"{portfolio['portfolio_expected_shortfall']:.6%}"
-        ),
+        (f"- Portfolio 5% expected shortfall: {portfolio['portfolio_expected_shortfall']:.6%}"),
         "",
-        "| Sleeve comparison | Sleeve ES | Portfolio minus sleeve ES | 95% interval | P(reduction > 0) |",
+        (
+            "| Sleeve comparison | Sleeve ES | Portfolio minus sleeve ES | "
+            "95% interval | P(reduction > 0) |"
+        ),
         "|---|---:|---:|---:|---:|",
     ]
     for market in MARKETS:

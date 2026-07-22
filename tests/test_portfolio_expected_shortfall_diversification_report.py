@@ -16,7 +16,9 @@ _MODULE_PATH = (
     / "portfolio-expected-shortfall-diversification"
     / "analysis.py"
 )
-_SPEC = importlib.util.spec_from_file_location("portfolio_expected_shortfall_analysis", _MODULE_PATH)
+_SPEC = importlib.util.spec_from_file_location(
+    "portfolio_expected_shortfall_analysis", _MODULE_PATH
+)
 if _SPEC is None or _SPEC.loader is None:
     raise RuntimeError(f"unable to load {_MODULE_PATH}")
 analysis = importlib.util.module_from_spec(_SPEC)
