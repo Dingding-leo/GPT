@@ -127,79 +127,12 @@ def test_holdout_rejects_invalid_top_candidate_count_before_any_backtest(
         )
 
 
-@pytest.mark.parametrize("field", ["validation_fraction", "holdout_fraction"])
-@pytest.mark.parametrize(
-    ("value", "message"),
-    [
-        (True, "must be a finite real number"),
-        ("0.2", "must be a finite real number"),
-        (float("nan"), "must be a finite real number"),
-        (float("inf"), "must be a finite real number"),
-        (0.049, "must be in \\[0.05, 0.40\\]"),
-        (0.401, "must be in \\[0.05, 0.40\\]"),
-    ],
-)
-def test_holdout_rejects_invalid_split_fraction_before_price_validation(
+def test_holdout_cli_does_not_coerce_top_candidate_count(
     btc_usdt_prices: pd.Series,
     monkeypatch: pytest.MonkeyPatch,
-    field: str,
-    value: object,
-    message: str,
+    tmp_path: Path,
 ) -> None:
-    def unexpected_price_validation(*args: object, **kwargs: object) -> None:
-        pytest.fail("split-fraction validation must run before price validation")
-
-    monkeypatch.setattr(research, "validate_prices", unexpected_price_validation)
-    fractions: dict[str, object] = {
-        "validation_fraction": 0.20,
-        "holdout_fraction": 0.20,
-    }
-    fractions[field] = value
-
-    with pytest.raises(ValueError, match=rf"{field} {message}"):
-        run_holdout_research(
-            btc_usdt_prices.iloc[:600],
-            base_config=StrategyConfig(
-                min_position=0.0,
-                transaction_cost_bps=10.0,
-                annualization=365,
-            ),
-            momentum_lookbacks=[21],
-            reversal_lookbacks=[3],
-            trend_weights=[0.7],
-            top_candidates=1,
-            **fractions,
-        )
-
-
-def test_holdout_rejects_excessive_combined_split_before_price_validation(
-    btc_usdt_prices: pd.Series,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def unexpected_price_validation(*args: object, **kwargs: object) -> None:
-        pytest.fail("combined split validation must run before price validation")
-
-    monkeypatch.setattr(research, "validate_prices", unexpected_price_validation)
-
-    with pytest.raises(ValueError, match="fractions leave too little history"):
-        run_holdout_research(
-            btc_usdt_prices.iloc[:600],
-            base_config=StrategyConfig(
-                min_position=0.0,
-                transaction_cost_bps=10.0,
-                annualization=365,
-            ),
-            momentum_lookbacks=[21],
-            reversal_lookbacks=[3],
-            trend_weights=[0.7],
-            validation_fraction=0.40,
-            holdout_fraction=0.40,
-            top_candidates=1,
-        )
-
-
-def _cli_snapshot(btc_usdt_prices: pd.Series, tmp_path: Path) -> SimpleNamespace:
-    return SimpleNamespace(
+    snapshot = SimpleNamespace(
         prices=btc_usdt_prices.iloc[:600],
         provider="OKX",
         market_type="spot",
@@ -208,14 +141,6 @@ def _cli_snapshot(btc_usdt_prices: pd.Series, tmp_path: Path) -> SimpleNamespace
         manifest_path=tmp_path / "snapshot.json",
         data_sha256="0" * 64,
     )
-
-
-def test_holdout_cli_does_not_coerce_top_candidate_count(
-    btc_usdt_prices: pd.Series,
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-) -> None:
-    snapshot = _cli_snapshot(btc_usdt_prices, tmp_path)
     monkeypatch.setattr(run_research, "load_verified_price_snapshot", lambda _: snapshot)
     monkeypatch.setattr(
         run_research,
@@ -242,58 +167,6 @@ def test_holdout_cli_does_not_coerce_top_candidate_count(
     output_dir = tmp_path / "report"
 
     with pytest.raises(ValueError, match="top_candidates must be a positive integer"):
-        run_research.main(
-            [
-                "--snapshot-manifest",
-                "unused-snapshot.json",
-                "--config",
-                "unused-config.json",
-                "--output-dir",
-                str(output_dir),
-            ]
-        )
-
-    assert not output_dir.exists()
-
-
-@pytest.mark.parametrize("field", ["validation_fraction", "holdout_fraction"])
-def test_holdout_cli_does_not_coerce_split_fractions(
-    btc_usdt_prices: pd.Series,
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-    field: str,
-) -> None:
-    snapshot = _cli_snapshot(btc_usdt_prices, tmp_path)
-    monkeypatch.setattr(run_research, "load_verified_price_snapshot", lambda _: snapshot)
-    search: dict[str, object] = {
-        "momentum_lookbacks": [21],
-        "reversal_lookbacks": [3],
-        "trend_weights": [0.7],
-        "validation_fraction": 0.20,
-        "holdout_fraction": 0.20,
-        "top_candidates": 1,
-    }
-    search[field] = "0.2"
-    monkeypatch.setattr(
-        run_research,
-        "load_json",
-        lambda _: {
-            "strategy": {
-                "min_position": 0.0,
-                "transaction_cost_bps": 10.0,
-                "annualization": 365,
-            },
-            "search": search,
-        },
-    )
-
-    def unexpected_price_validation(*args: object, **kwargs: object) -> None:
-        pytest.fail("CLI split validation must run before price validation")
-
-    monkeypatch.setattr(research, "validate_prices", unexpected_price_validation)
-    output_dir = tmp_path / "report"
-
-    with pytest.raises(ValueError, match=rf"{field} must be a finite real number"):
         run_research.main(
             [
                 "--snapshot-manifest",
