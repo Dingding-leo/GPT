@@ -43,34 +43,8 @@ jobs:
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
 
-      - name: Temporarily format fold breadth targets
-        run: |
-          ruff check --fix reports/research/fold-positive-breadth/analysis.py tests/test_fold_positive_breadth_report.py
-          ruff format reports/research/fold-positive-breadth/analysis.py tests/test_fold_positive_breadth_report.py
-
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
-
-      - name: Capture focused test diagnostic
-        shell: bash
-        run: |
-          set +e
-          pytest -q tests/test_fold_positive_breadth_report.py > focused-test.log 2>&1
-          status=$?
-          printf '%s\n' "$status" > focused-test.status
-          exit 0
-
-      - name: Upload formatted diagnostic
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: fold-positive-breadth-diagnostic-${{ github.sha }}
-          path: |
-            reports/research/fold-positive-breadth/analysis.py
-            tests/test_fold_positive_breadth_report.py
-            focused-test.log
-            focused-test.status
-          if-no-files-found: error
-          retention-days: 1
 
       - name: Test against public OKX data
         env:
