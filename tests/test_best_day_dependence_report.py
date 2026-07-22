@@ -88,9 +88,7 @@ def test_best_day_dependence_report_records_rejection() -> None:
     assert result["candidate_count"] == 1
     assert result["settings"]["candidate_count"] == 1
     assert result["settings"]["best_return_fraction"] == pytest.approx(0.01, abs=0.0)
-    assert result["settings"]["removal_count_rule"] == (
-        "ceil(observations * best_return_fraction)"
-    )
+    assert result["settings"]["removal_count_rule"] == ("ceil(observations * best_return_fraction)")
     assert result["settings"]["development_market_screen"] is True
     assert result["verdict"] == "rejected"
     assert result["joint_supported"] is False
