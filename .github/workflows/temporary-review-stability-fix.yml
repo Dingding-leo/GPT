@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - auto/review/20260722-22-preserve-stability-weight-identity
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
