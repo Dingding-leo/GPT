@@ -1,0 +1,139 @@
+{
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "failure_reasons": [
+        "BTC-USDT positive-autocorrelation mean 95% lower bound is non-positive: -0.070748981923",
+        "BTC-USDT nonpositive-autocorrelation mean 95% lower bound is non-positive: -0.006471835651",
+        "ETH-USDT positive-autocorrelation mean 95% lower bound is non-positive: -0.305102487835"
+      ],
+      "name": "lagged-asset-autocorrelation-regime-consistency",
+      "verdict": "reject"
+    }
+  ],
+  "canonical_signature": "lagged-asset-autocorrelation-regime-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-asset-and-strategy-returns|regime-statistic=lag1-pearson-autocorrelation-of-prior-60-asset-returns|current-session-excluded=true|threshold=zero|regimes=positive,nonpositive|metric=conditional-annualized-arithmetic-mean-net-return|annualization=365|resampling=paired-noncircular-moving-block-over-observed-regime-return-rows|block=20|resamples=2000|confidence=0.95|seeds=BTC:20260722,ETH:20260723|candidate_count=1",
+  "economic_rationale": "The strategy combines trend and reversal signals. A credible composite should not require only persistent or only mean-reverting recent market dynamics to produce positive net returns.",
+  "failure_reasons": [
+    "BTC-USDT positive-autocorrelation mean 95% lower bound is non-positive: -0.070748981923",
+    "BTC-USDT nonpositive-autocorrelation mean 95% lower bound is non-positive: -0.006471835651",
+    "ETH-USDT positive-autocorrelation mean 95% lower bound is non-positive: -0.305102487835"
+  ],
+  "hypothesis": "BTC-USDT and ETH-USDT net rolling OOS returns have positive annualized arithmetic means in both positive and non-positive prior asset-return autocorrelation regimes.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "Observed regime labels are treated as fixed during resampling, so regime-estimation uncertainty is not separately modeled.",
+    "Moving-block concatenation introduces artificial joins between observed blocks.",
+    "The analysis does not model spread, impact, capacity, latency, or partial fills."
+  ],
+  "markets": {
+    "BTC-USDT": {
+      "autocorrelation_summary": {
+        "maximum": 0.3522932162706224,
+        "median": -0.0540984331118501,
+        "minimum": -0.5202623222833339
+      },
+      "excluded_warmup_observations": 60,
+      "observations": 2280,
+      "passes": false,
+      "regimes": {
+        "nonpositive": {
+          "annualized_arithmetic_mean": 0.21504079822404842,
+          "confidence_interval": {
+            "lower": -0.006471835650812473,
+            "upper": 0.5031130323434267
+          },
+          "observations": 1535,
+          "passes": false,
+          "probability_mean_positive": 0.969
+        },
+        "positive": {
+          "annualized_arithmetic_mean": 0.1625138955145855,
+          "confidence_interval": {
+            "lower": -0.07074898192287843,
+            "upper": 0.5654294430339438
+          },
+          "observations": 745,
+          "passes": false,
+          "probability_mean_positive": 0.92
+        }
+      },
+      "seed": 20260722
+    },
+    "ETH-USDT": {
+      "autocorrelation_summary": {
+        "maximum": 0.3183708311999894,
+        "median": -0.05722018044623742,
+        "minimum": -0.5040129403344888
+      },
+      "excluded_warmup_observations": 60,
+      "observations": 2280,
+      "passes": false,
+      "regimes": {
+        "nonpositive": {
+          "annualized_arithmetic_mean": 0.19841737618182625,
+          "confidence_interval": {
+            "lower": 0.0006877258859115125,
+            "upper": 0.4178481990196895
+          },
+          "observations": 1623,
+          "passes": true,
+          "probability_mean_positive": 0.976
+        },
+        "positive": {
+          "annualized_arithmetic_mean": 0.04709553053004559,
+          "confidence_interval": {
+            "lower": -0.30510248783537924,
+            "upper": 0.5055248257023547
+          },
+          "observations": 657,
+          "passes": false,
+          "probability_mean_positive": 0.7085
+        }
+      },
+      "seed": 20260723
+    }
+  },
+  "method": {
+    "acceptance_rule": "all four 95% lower bounds must be strictly positive",
+    "annualization": 365,
+    "autocorrelation_statistic": "Pearson lag-1 autocorrelation within the prior 60 asset returns",
+    "block_length_observations": 20,
+    "confidence": 0.95,
+    "current_session_excluded": true,
+    "nonpositive_regime_rule": "lagged autocorrelation is less than or equal to zero",
+    "positive_regime_rule": "lagged autocorrelation is greater than zero",
+    "resamples": 2000,
+    "resampling": "paired non-circular moving blocks over observed regime and net-return rows"
+  },
+  "source": {
+    "artifact_id": 8523312240,
+    "artifact_name": "quant-research-source-780-attempt-1",
+    "artifact_sha256": "5e8578dcc2aed7edbbc30b02b25cdb62ef7c01614305afeb09a940184c8d70a4",
+    "code_commit": "b383df39c2df12f5f11f059b8a2a2c463061f8e3",
+    "development_markets": true,
+    "market_type": "spot",
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "observations_per_market": 2340,
+    "oos_end": "2026-06-07T00:00:00+00:00",
+    "oos_start": "2020-01-11T00:00:00+00:00",
+    "provider": "OKX",
+    "report_sha256": {
+      "BTC-USDT": "93f5e00a3252bae08c3b5ee3f66036df36cc061a965c152dbfdfee3f523d20c4",
+      "ETH-USDT": "bd46b5f17470b8680155e2659575fad5ffcc623da751ab51982ad347cd0a2f0e"
+    },
+    "returns_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "snapshot_sha256": {
+      "BTC-USDT": "b0bd7c6c7e30fcc095073169f60bde24559f481b24cc6f4bdfb85349f57974bb",
+      "ETH-USDT": "78f3bf81d3983e6c894066a1c298fbf14ae06a5eff9ca7326554b0a8933c0df5"
+    },
+    "timeframe": "1Dutc",
+    "workflow_run_id": 29904635219
+  },
+  "verdict": "rejected"
+}
