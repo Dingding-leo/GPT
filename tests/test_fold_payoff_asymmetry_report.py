@@ -9,15 +9,9 @@ import pandas as pd
 import pytest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-ANALYSIS_PATH = (
-    REPOSITORY_ROOT / "reports" / "research" / "fold-payoff-asymmetry" / "analysis.py"
-)
-RESULT_PATH = (
-    REPOSITORY_ROOT / "reports" / "research" / "fold-payoff-asymmetry" / "result.json"
-)
-FIXTURE_DIR = (
-    REPOSITORY_ROOT / "tests" / "fixtures" / "okx" / "btc_eth_oos_20200111_20200219"
-)
+ANALYSIS_PATH = REPOSITORY_ROOT / "reports" / "research" / "fold-payoff-asymmetry" / "analysis.py"
+RESULT_PATH = REPOSITORY_ROOT / "reports" / "research" / "fold-payoff-asymmetry" / "result.json"
+FIXTURE_DIR = REPOSITORY_ROOT / "tests" / "fixtures" / "okx" / "btc_eth_oos_20200111_20200219"
 
 SPEC = importlib.util.spec_from_file_location("fold_payoff_asymmetry_analysis", ANALYSIS_PATH)
 if SPEC is None or SPEC.loader is None:
