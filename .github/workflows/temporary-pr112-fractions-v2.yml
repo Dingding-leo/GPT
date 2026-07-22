@@ -1,0 +1,249 @@
+name: Temporary PR112 Fraction Repair V2
+
+on:
+  push:
+    branches:
+      - auto/testing/20260722-17-holdout-candidate-validation
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ !contains(github.event.head_commit.message, '[pr112-fractions-v2]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install "pip==26.1.2"
+          python -m pip install -e ".[dev]"
+      - name: Apply strict fraction validation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source_path = Path("src/gpt_quant/research.py")
+          source = source_path.read_text(encoding="utf-8")
+          old_helper_anchor = '''def run_holdout_research(
+          '''
+          new_helper = '''def _validated_fraction(value: object, *, label: str) -> float:
+              if isinstance(value, bool) or not isinstance(value, Real):
+                  raise ValueError(f"{label} must be a finite real number")
+              parsed = float(value)
+              if not math.isfinite(parsed):
+                  raise ValueError(f"{label} must be a finite real number")
+              if not 0.05 <= parsed <= 0.40:
+                  raise ValueError(f"{label} must be in [0.05, 0.40]")
+              return parsed
+
+
+          def run_holdout_research(
+          '''
+          if "def _validated_fraction" in source:
+              raise SystemExit("fraction helper already exists")
+          if old_helper_anchor not in source:
+              raise SystemExit("run_holdout_research anchor missing")
+          source = source.replace(old_helper_anchor, new_helper, 1)
+
+          old_block = '''    validated_top_candidates = _validated_top_candidates(top_candidates)
+              clean = validate_prices(prices, minimum_rows=600)
+              if not 0.05 <= validation_fraction <= 0.40:
+                  raise ValueError("validation_fraction must be in [0.05, 0.40]")
+              if not 0.05 <= holdout_fraction <= 0.40:
+                  raise ValueError("holdout_fraction must be in [0.05, 0.40]")
+              if validation_fraction + holdout_fraction >= 0.80:
+                  raise ValueError("validation and holdout fractions leave too little history")
+
+          '''
+          new_block = '''    validated_top_candidates = _validated_top_candidates(top_candidates)
+              validated_validation_fraction = _validated_fraction(
+                  validation_fraction,
+                  label="validation_fraction",
+              )
+              validated_holdout_fraction = _validated_fraction(
+                  holdout_fraction,
+                  label="holdout_fraction",
+              )
+              if validated_validation_fraction + validated_holdout_fraction >= 0.80:
+                  raise ValueError("validation and holdout fractions leave too little history")
+
+              clean = validate_prices(prices, minimum_rows=600)
+          '''
+          if old_block not in source:
+              raise SystemExit("fraction validation block missing")
+          source = source.replace(old_block, new_block, 1)
+
+          old_indexes = '''    holdout_start_idx = int(n * (1.0 - holdout_fraction))
+              validation_start_idx = int(n * (1.0 - holdout_fraction - validation_fraction))
+          '''
+          new_indexes = '''    holdout_start_idx = int(n * (1.0 - validated_holdout_fraction))
+              validation_start_idx = int(
+                  n * (1.0 - validated_holdout_fraction - validated_validation_fraction)
+              )
+          '''
+          if old_indexes not in source:
+              raise SystemExit("fraction index block missing")
+          source_path.write_text(source.replace(old_indexes, new_indexes, 1), encoding="utf-8")
+
+          test_path = Path("tests/test_holdout_candidate_validation.py")
+          test = test_path.read_text(encoding="utf-8")
+          if "test_holdout_rejects_invalid_split_fraction_before_price_validation" in test:
+              raise SystemExit("fraction tests already exist")
+          addition = r'''
+
+          @pytest.mark.parametrize("field", ["validation_fraction", "holdout_fraction"])
+          @pytest.mark.parametrize(
+              ("value", "message"),
+              [
+                  (True, "must be a finite real number"),
+                  ("0.2", "must be a finite real number"),
+                  (float("nan"), "must be a finite real number"),
+                  (float("inf"), "must be a finite real number"),
+                  (0.049, "must be in \\[0.05, 0.40\\]"),
+                  (0.401, "must be in \\[0.05, 0.40\\]"),
+              ],
+          )
+          def test_holdout_rejects_invalid_split_fraction_before_price_validation(
+              btc_usdt_prices: pd.Series,
+              monkeypatch: pytest.MonkeyPatch,
+              field: str,
+              value: object,
+              message: str,
+          ) -> None:
+              def unexpected_price_validation(*args: object, **kwargs: object) -> None:
+                  pytest.fail("split-fraction validation must run before price validation")
+
+              monkeypatch.setattr(research, "validate_prices", unexpected_price_validation)
+              fractions: dict[str, object] = {
+                  "validation_fraction": 0.20,
+                  "holdout_fraction": 0.20,
+              }
+              fractions[field] = value
+
+              with pytest.raises(ValueError, match=rf"{field} {message}"):
+                  run_holdout_research(
+                      btc_usdt_prices.iloc[:600],
+                      base_config=StrategyConfig(
+                          min_position=0.0,
+                          transaction_cost_bps=10.0,
+                          annualization=365,
+                      ),
+                      momentum_lookbacks=[21],
+                      reversal_lookbacks=[3],
+                      trend_weights=[0.7],
+                      top_candidates=1,
+                      **fractions,
+                  )
+
+
+          def test_holdout_rejects_excessive_combined_split_before_price_validation(
+              btc_usdt_prices: pd.Series,
+              monkeypatch: pytest.MonkeyPatch,
+          ) -> None:
+              def unexpected_price_validation(*args: object, **kwargs: object) -> None:
+                  pytest.fail("combined split validation must run before price validation")
+
+              monkeypatch.setattr(research, "validate_prices", unexpected_price_validation)
+
+              with pytest.raises(ValueError, match="fractions leave too little history"):
+                  run_holdout_research(
+                      btc_usdt_prices.iloc[:600],
+                      base_config=StrategyConfig(
+                          min_position=0.0,
+                          transaction_cost_bps=10.0,
+                          annualization=365,
+                      ),
+                      momentum_lookbacks=[21],
+                      reversal_lookbacks=[3],
+                      trend_weights=[0.7],
+                      validation_fraction=0.40,
+                      holdout_fraction=0.40,
+                      top_candidates=1,
+                  )
+
+
+          @pytest.mark.parametrize("field", ["validation_fraction", "holdout_fraction"])
+          def test_holdout_cli_does_not_coerce_split_fractions(
+              btc_usdt_prices: pd.Series,
+              monkeypatch: pytest.MonkeyPatch,
+              tmp_path: Path,
+              field: str,
+          ) -> None:
+              snapshot = SimpleNamespace(
+                  prices=btc_usdt_prices.iloc[:600],
+                  provider="OKX",
+                  market_type="spot",
+                  instrument_id="BTC-USDT",
+                  timeframe="1Dutc",
+                  manifest_path=tmp_path / "snapshot.json",
+                  data_sha256="0" * 64,
+              )
+              monkeypatch.setattr(run_research, "load_verified_price_snapshot", lambda _: snapshot)
+              search: dict[str, object] = {
+                  "momentum_lookbacks": [21],
+                  "reversal_lookbacks": [3],
+                  "trend_weights": [0.7],
+                  "validation_fraction": 0.20,
+                  "holdout_fraction": 0.20,
+                  "top_candidates": 1,
+              }
+              search[field] = "0.2"
+              monkeypatch.setattr(
+                  run_research,
+                  "load_json",
+                  lambda _: {
+                      "strategy": {
+                          "min_position": 0.0,
+                          "transaction_cost_bps": 10.0,
+                          "annualization": 365,
+                      },
+                      "search": search,
+                  },
+              )
+
+              def unexpected_price_validation(*args: object, **kwargs: object) -> None:
+                  pytest.fail("CLI split validation must run before price validation")
+
+              monkeypatch.setattr(research, "validate_prices", unexpected_price_validation)
+              output_dir = tmp_path / "report"
+
+              with pytest.raises(ValueError, match=rf"{field} must be a finite real number"):
+                  run_research.main(
+                      [
+                          "--snapshot-manifest",
+                          "unused-snapshot.json",
+                          "--config",
+                          "unused-config.json",
+                          "--output-dir",
+                          str(output_dir),
+                      ]
+                  )
+
+              assert not output_dir.exists()
+          '''
+          test_path.write_text(test + addition, encoding="utf-8")
+          PY
+      - name: Validate focused change
+        run: |
+          ruff format src/gpt_quant/research.py scripts/run_research.py tests/test_holdout_candidate_validation.py
+          ruff check src/gpt_quant/research.py scripts/run_research.py tests/test_holdout_candidate_validation.py
+          ruff format --check src/gpt_quant/research.py scripts/run_research.py tests/test_holdout_candidate_validation.py
+          pytest -q tests/test_holdout_candidate_validation.py
+      - name: Commit repaired branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/temporary-pr112-fractions-v2.yml
+          git add src/gpt_quant/research.py scripts/run_research.py tests/test_holdout_candidate_validation.py
+          git commit -m "fix(research): reject coerced holdout fractions [pr112-fractions-v2]"
+          git push origin HEAD:auto/testing/20260722-17-holdout-candidate-validation
