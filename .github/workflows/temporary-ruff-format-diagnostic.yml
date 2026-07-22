@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - auto/research/20260723-03-fold-drawdown-breadth
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
