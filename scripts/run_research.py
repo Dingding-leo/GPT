@@ -56,8 +56,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         momentum_lookbacks=search.get("momentum_lookbacks", [21, 63, 126]),
         reversal_lookbacks=search.get("reversal_lookbacks", [3, 5, 10]),
         trend_weights=search.get("trend_weights", [0.55, 0.70, 0.85]),
-        validation_fraction=search.get("validation_fraction", 0.20),
-        holdout_fraction=search.get("holdout_fraction", 0.20),
+        validation_fraction=float(search.get("validation_fraction", 0.20)),
+        holdout_fraction=float(search.get("holdout_fraction", 0.20)),
         top_candidates=search.get("top_candidates", 10),
     )
 
