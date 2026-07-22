@@ -138,12 +138,15 @@ def parse_okx_candle_rows(rows: Sequence[Sequence[Any]]) -> pd.DataFrame:
         return pd.DataFrame(columns=_COLUMNS[1:]).rename_axis("timestamp")
 
     frame = pd.DataFrame(normalized, columns=_COLUMNS)
-    timestamp = pd.to_datetime(
-        pd.to_numeric(frame.pop("ts"), errors="coerce"),
-        unit="ms",
-        utc=True,
-        errors="coerce",
-    )
+    try:
+        timestamp = pd.to_datetime(
+            pd.to_numeric(frame.pop("ts"), errors="coerce"),
+            unit="ms",
+            utc=True,
+            errors="coerce",
+        )
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError("OKX candle payload contains an invalid timestamp") from exc
     if timestamp.isna().any():
         raise ValueError("OKX candle payload contains an invalid timestamp")
 
