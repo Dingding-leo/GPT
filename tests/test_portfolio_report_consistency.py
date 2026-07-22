@@ -121,6 +121,9 @@ def test_portfolio_report_artifacts_reconcile_to_one_equity_curve(tmp_path: Path
         name: f"{value:.6f}" if isinstance(value, float) else str(value)
         for name, value in payload["portfolio_metrics"].items()
     }
+    generated_line = f"Generated at: `{payload['generated_at_utc']}`"
+    status_line = f"Risk status: **{payload['risk_status']}**"
+    assert markdown.count("## Portfolio metrics\n\n") == 1
     assert _markdown_metric_rows(markdown) == expected_metrics
-    assert f"Generated at: `{payload['generated_at_utc']}`" in markdown
-    assert f"Risk status: **{payload['risk_status']}**" in markdown
+    assert markdown.count(generated_line) == 1
+    assert markdown.count(status_line) == 1
