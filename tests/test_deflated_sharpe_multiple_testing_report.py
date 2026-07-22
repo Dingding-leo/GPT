@@ -20,15 +20,9 @@ if _SPEC is None or _SPEC.loader is None:
 analysis = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(analysis)
 
-_FIXTURE_DIR = (
-    _REPOSITORY_ROOT / "tests" / "fixtures" / "okx" / "btc_eth_oos_20200111_20200219"
-)
+_FIXTURE_DIR = _REPOSITORY_ROOT / "tests" / "fixtures" / "okx" / "btc_eth_oos_20200111_20200219"
 _RESULT_PATH = (
-    _REPOSITORY_ROOT
-    / "reports"
-    / "research"
-    / "deflated-sharpe-multiple-testing"
-    / "result.json"
+    _REPOSITORY_ROOT / "reports" / "research" / "deflated-sharpe-multiple-testing" / "result.json"
 )
 
 
@@ -53,14 +47,11 @@ def test_deflated_sharpe_matches_reference_on_real_okx_returns() -> None:
     skewness = float(returns.skew())
     raw_kurtosis = float(returns.kurt() + 3.0)
     normal = NormalDist()
-    expected_maximum_z = (
-        (1.0 - analysis.EULER_MASCHERONI) * normal.inv_cdf(1.0 - 1.0 / 27.0)
-        + analysis.EULER_MASCHERONI * normal.inv_cdf(1.0 - 1.0 / (27.0 * math.e))
-    )
+    expected_maximum_z = (1.0 - analysis.EULER_MASCHERONI) * normal.inv_cdf(
+        1.0 - 1.0 / 27.0
+    ) + analysis.EULER_MASCHERONI * normal.inv_cdf(1.0 - 1.0 / (27.0 * math.e))
     benchmark = expected_maximum_z / math.sqrt(len(values) - 1)
-    denominator = math.sqrt(
-        1.0 - skewness * observed + ((raw_kurtosis - 1.0) / 4.0) * observed**2
-    )
+    denominator = math.sqrt(1.0 - skewness * observed + ((raw_kurtosis - 1.0) / 4.0) * observed**2)
     expected_z = (observed - benchmark) * math.sqrt(len(values) - 1) / denominator
 
     assert result["observed_daily_sharpe"] == pytest.approx(observed, abs=1e-15)
@@ -68,9 +59,7 @@ def test_deflated_sharpe_matches_reference_on_real_okx_returns() -> None:
     assert result["sample_raw_kurtosis"] == pytest.approx(raw_kurtosis, abs=1e-15)
     assert result["expected_maximum_null_z"] == pytest.approx(expected_maximum_z, abs=1e-15)
     assert result["deflated_sharpe_z"] == pytest.approx(expected_z, abs=1e-15)
-    assert result["deflated_sharpe_probability"] == pytest.approx(
-        normal.cdf(expected_z), abs=1e-15
-    )
+    assert result["deflated_sharpe_probability"] == pytest.approx(normal.cdf(expected_z), abs=1e-15)
 
 
 def test_multiple_testing_penalty_increases_on_real_okx_returns() -> None:
@@ -78,12 +67,14 @@ def test_multiple_testing_penalty_increases_on_real_okx_returns() -> None:
     two_trials = analysis.deflated_sharpe_statistics(returns, effective_trials=2)
     twenty_seven_trials = analysis.deflated_sharpe_statistics(returns, effective_trials=27)
 
-    assert twenty_seven_trials["deflated_benchmark_daily_sharpe"] > two_trials[
-        "deflated_benchmark_daily_sharpe"
-    ]
-    assert twenty_seven_trials["deflated_sharpe_probability"] < two_trials[
-        "deflated_sharpe_probability"
-    ]
+    assert (
+        twenty_seven_trials["deflated_benchmark_daily_sharpe"]
+        > two_trials["deflated_benchmark_daily_sharpe"]
+    )
+    assert (
+        twenty_seven_trials["deflated_sharpe_probability"]
+        < two_trials["deflated_sharpe_probability"]
+    )
 
 
 def test_committed_result_records_complete_rejection() -> None:

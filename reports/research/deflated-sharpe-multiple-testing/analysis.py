@@ -121,9 +121,7 @@ def deflated_sharpe_statistics(
 
     denominator = math.sqrt(denominator_squared)
     sample_scale = math.sqrt(sample_size - 1)
-    deflated_z = (
-        (observed_daily_sharpe - benchmark_daily_sharpe) * sample_scale / denominator
-    )
+    deflated_z = (observed_daily_sharpe - benchmark_daily_sharpe) * sample_scale / denominator
     probabilistic_z = observed_daily_sharpe * sample_scale / denominator
     normal = NormalDist()
     deflated_probability = normal.cdf(deflated_z)
@@ -139,8 +137,7 @@ def deflated_sharpe_statistics(
         "sample_raw_kurtosis": sample_raw_kurtosis,
         "expected_maximum_null_z": expected_null_z,
         "deflated_benchmark_daily_sharpe": benchmark_daily_sharpe,
-        "deflated_benchmark_annualized_sharpe": benchmark_daily_sharpe
-        * annualization_scale,
+        "deflated_benchmark_annualized_sharpe": benchmark_daily_sharpe * annualization_scale,
         "probabilistic_sharpe_probability_vs_zero": probabilistic_probability,
         "deflated_sharpe_z": deflated_z,
         "deflated_sharpe_probability": deflated_probability,
@@ -194,9 +191,7 @@ def load_market_returns(
     if len(frame) != EXPECTED_OBSERVATIONS:
         raise ValueError(f"return file must contain exactly {EXPECTED_OBSERVATIONS} observations")
     index = explicit_daily_utc_index(frame["timestamp"], label="return")
-    strategy_returns = pd.to_numeric(frame["strategy_return"], errors="raise").to_numpy(
-        dtype=float
-    )
+    strategy_returns = pd.to_numeric(frame["strategy_return"], errors="raise").to_numpy(dtype=float)
     folds = pd.to_numeric(frame["fold"], errors="raise").to_numpy(dtype=float)
     if not np.isfinite(strategy_returns).all() or (strategy_returns <= -1.0).any():
         raise ValueError("strategy returns must be finite and greater than -100%")
@@ -231,9 +226,7 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
 
     passes = all(bool(result["passes"]) for result in market_results.values())
     failure_reason = (
-        None
-        if passes
-        else "At least one market has a deflated Sharpe probability below 95%."
+        None if passes else "At least one market has a deflated Sharpe probability below 95%."
     )
     return {
         "hypothesis": (
