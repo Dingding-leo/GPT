@@ -11,9 +11,7 @@ from gpt_quant.metrics import performance_metrics
 
 _REPOSITORY_ROOT = Path(__file__).parents[1]
 _VERIFIER = _REPOSITORY_ROOT / "scripts" / "verify_walk_forward_metrics.py"
-_FIXTURE = (
-    Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc" / "candles.csv"
-)
+_FIXTURE = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc" / "candles.csv"
 
 
 def test_verifier_rejects_duplicate_report_object_keys(tmp_path: Path) -> None:
