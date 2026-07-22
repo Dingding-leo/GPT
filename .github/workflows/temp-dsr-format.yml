@@ -1,0 +1,42 @@
+name: Temporary DSR Formatter
+
+on:
+  push:
+    branches:
+      - auto/research/20260722-20-deflated-sharpe-multiple-testing
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install "pip==26.1.2"
+          python -m pip install -e ".[dev]"
+      - name: Format DSR files
+        run: |
+          ruff format \
+            reports/research/deflated-sharpe-multiple-testing/analysis.py \
+            tests/test_deflated_sharpe_multiple_testing_report.py
+      - name: Upload formatted files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: dsr-formatted-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: |
+            reports/research/deflated-sharpe-multiple-testing/analysis.py
+            tests/test_deflated_sharpe_multiple_testing_report.py
+          if-no-files-found: error
+          retention-days: 1
