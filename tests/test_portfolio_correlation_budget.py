@@ -95,6 +95,32 @@ def test_tighter_correlation_budget_rejects_real_sleeve_dependence() -> None:
     assert "pairwise return correlation breaches the declared limit" in result.risk_status
 
 
+def test_simultaneous_concentration_failures_are_all_reported() -> None:
+    btc, eth, metadata = _load_fixture_returns()
+
+    result = build_buy_and_hold_sleeve_portfolio(
+        {"BTC-USDT": btc, "ETH-USDT": eth},
+        initial_weights={"BTC-USDT": 0.8, "ETH-USDT": 0.2},
+        max_sleeve_weight=0.75,
+        max_variance_contribution=0.70,
+        max_pairwise_correlation=0.75,
+        provenance=_fixture_provenance(metadata),
+    )
+
+    assert result.concentration["weight_concentration_passes"] is False
+    assert result.concentration["variance_contribution_breaches"] == ["BTC-USDT"]
+    assert result.concentration["variance_contribution_passes"] is False
+    assert result.dependence["correlation_breaches"] == [["BTC-USDT", "ETH-USDT"]]
+    assert result.dependence["correlation_control_passes"] is False
+    assert result.concentration["passes"] is False
+    assert "buy-and-hold sleeve-weight drift breaches the declared limit" in result.risk_status
+    assert (
+        "initial-weight variance contribution breaches the declared limit"
+        in result.risk_status
+    )
+    assert "pairwise return correlation breaches the declared limit" in result.risk_status
+
+
 def test_zero_variance_pair_fails_closed_as_unavailable() -> None:
     btc, eth, metadata = _load_fixture_returns()
     btc = btc.iloc[:20]
