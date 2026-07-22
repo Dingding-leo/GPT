@@ -72,9 +72,7 @@ def load_observations(path: Path, *, expected_sha256: str) -> pd.DataFrame:
         raise ValueError("turnover must be finite and non-negative")
     if not np.isfinite(returns).all() or (returns <= -1.0).any():
         raise ValueError("strategy returns must be finite and greater than -100%")
-    return pd.DataFrame(
-        {"timestamp": timestamps, "turnover": turnover, "strategy_return": returns}
-    )
+    return pd.DataFrame({"timestamp": timestamps, "turnover": turnover, "strategy_return": returns})
 
 
 def moving_block_indices(n: int, *, block_length: int, resamples: int, seed: int) -> np.ndarray:
