@@ -36,11 +36,6 @@ jobs:
       - name: Install project
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
 
-      - name: Temporarily format portfolio research files
-        run: |
-          ruff format reports/research/portfolio-drawdown-diversification/analysis.py
-          ruff format tests/test_portfolio_drawdown_diversification_report.py
-
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
@@ -64,8 +59,6 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: quant-research-${{ github.run_number }}
-          path: |
-            reports/
-            tests/test_portfolio_drawdown_diversification_report.py
+          path: reports/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 14
