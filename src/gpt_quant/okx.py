@@ -168,6 +168,24 @@ def _validate_okx_bar_anchor(timestamp_ms: int, *, bar: str) -> None:
         raise ValueError("OKX 1Dutc candle timestamps must be aligned to midnight UTC")
 
 
+def _validate_requested_end_coverage(
+    candles: pd.DataFrame,
+    *,
+    requested_end: pd.Timestamp | None,
+    expected_step_seconds: int,
+) -> None:
+    """Require an explicit end boundary to be covered by a completed candle."""
+
+    if requested_end is None:
+        return
+    latest = candles.index[-1]
+    gap = requested_end - latest
+    if gap < pd.Timedelta(0):
+        raise ValueError("OKX download contains a completed candle after the requested end")
+    if gap >= pd.Timedelta(seconds=expected_step_seconds):
+        raise ValueError("OKX download does not cover the requested end boundary")
+
+
 def parse_okx_candle_rows(rows: Sequence[Sequence[Any]]) -> pd.DataFrame:
     """Parse and strictly validate raw OKX candle rows."""
 
@@ -378,6 +396,11 @@ def fetch_okx_history_candles(
         candles = candles.loc[candles.index <= end_timestamp]
     if candles.empty:
         raise ValueError("OKX download contains no completed candles in the requested interval")
+    _validate_requested_end_coverage(
+        candles,
+        requested_end=end_timestamp,
+        expected_step_seconds=declared_step_seconds,
+    )
 
     expected_step_seconds = declared_step_seconds
     missing_intervals = None
