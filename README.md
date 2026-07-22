@@ -121,12 +121,16 @@ python scripts/run_research.py \
 
 ## 每小时自动化
 
-`.github/workflows/hourly-research.yml` 在每小时第 17 分钟运行：
+`.github/workflows/hourly-research.yml` 在 pull request、`main` push、手动触发及每小时第 17 分钟运行：
 
 - lint 与格式检查；
 - 使用仓库内带 SHA-256 与来源元数据的不可变 OKX fixture 执行单元测试和未来数据不变性回归；
 - 重新下载 BTC-USDT、ETH-USDT 公共日线并运行滚动样本外研究；
-- 报告和原始数据快照作为 GitHub Actions artifact 保存 14 天。
+- 对两份 `walk_forward_returns.csv` 计算 SHA-256，并先把完整 `reports/okx/` 上传为 `quant-research-source-<run-number>-attempt-<run-attempt>` 不可变来源 artifact；
+- 使用该来源 artifact 的 ID、SHA-256 digest、workflow run ID、实际检出 commit 及两份 return 文件哈希生成固定初始权重、无再平衡的 BTC/ETH 风险诊断；
+- 将 `portfolio_risk.json`、`portfolio_risk.md` 和 `portfolio_returns.csv` 单独上传为 `quant-portfolio-risk-<run-number>-attempt-<run-attempt>` artifact。
+
+两个 artifact 都保留 14 天，并在 workflow rerun 时使用新的 attempt 后缀，避免把不同尝试写入同一身份。组合报告是 development-market 风险诊断，不是新的 alpha 或 untouched-holdout 证据。
 
 工作流不会生成或上传合成研究结果。工作流对仓库只有读取权限，不会自动提交代码，不包含 API key，也不会向 OKX 发送订单。
 
@@ -141,7 +145,7 @@ python scripts/run_research.py \
 
 ## 后续阶段
 
-- 将 BTC-USDT、ETH-USDT 扩展为组合级和横截面测试；
+- 在现有固定初始权重 BTC/ETH 风险诊断之上增加更完整的组合约束、流动性和容量测试；
 - 增加 block bootstrap 置信区间、Deflated Sharpe 与 PBO；
 - 使用盘口或成交数据建立滑点、冲击和容量模型；
 - 保存不可变数据快照并建立结果变更审计；
