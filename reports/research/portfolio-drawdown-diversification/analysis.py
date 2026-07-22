@@ -124,10 +124,7 @@ def align_sleeves(frames: dict[str, pd.DataFrame]) -> pd.DataFrame:
     if not frames["ETH-USDT"]["timestamp"].equals(reference):
         raise ValueError("BTC-USDT and ETH-USDT timestamps must align exactly")
     return pd.DataFrame(
-        {
-            market: frames[market]["strategy_return"].to_numpy(dtype=float)
-            for market in MARKETS
-        },
+        {market: frames[market]["strategy_return"].to_numpy(dtype=float) for market in MARKETS},
         index=pd.DatetimeIndex(reference),
     )
 
@@ -201,16 +198,11 @@ def analyze_drawdown_diversification(sleeve_returns: np.ndarray) -> dict[str, ob
     portfolio_returns = no_rebalance_portfolio_returns(sleeve_returns)
     portfolio_drawdown = max_drawdown(portfolio_returns)
     sleeve_drawdowns = {
-        market: max_drawdown(sleeve_returns[:, index])
-        for index, market in enumerate(MARKETS)
+        market: max_drawdown(sleeve_returns[:, index]) for index, market in enumerate(MARKETS)
     }
-    point_reductions = {
-        market: portfolio_drawdown - sleeve_drawdowns[market] for market in MARKETS
-    }
+    point_reductions = {market: portfolio_drawdown - sleeve_drawdowns[market] for market in MARKETS}
 
-    bootstrap_reductions = {
-        market: np.empty(RESAMPLES, dtype=float) for market in MARKETS
-    }
+    bootstrap_reductions = {market: np.empty(RESAMPLES, dtype=float) for market in MARKETS}
     rng = np.random.default_rng(SEED)
     for sample_number in range(RESAMPLES):
         indices = moving_block_indices(len(sleeve_returns), BLOCK_LENGTH, rng)
@@ -269,8 +261,7 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
     analysis = analyze_drawdown_diversification(aligned.to_numpy(dtype=float))
     comparisons = analysis["comparisons"]
     joint_supported = all(
-        bool(comparisons[market]["bootstrap"]["lower_bound_positive"])
-        for market in MARKETS
+        bool(comparisons[market]["bootstrap"]["lower_bound_positive"]) for market in MARKETS
     )
     failure_reasons = [
         f"portfolio drawdown reduction versus {market} lower confidence bound is not positive"
@@ -311,12 +302,10 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
             "source_persistent_head": "43d4f8b10d8f654b5fbcf974793493a967e125e4",
             "source_workflow_run_id": 29883451981,
             "walk_forward_report_sha256": {
-                market: str(metadata["report_sha256"])
-                for market, metadata in MARKETS.items()
+                market: str(metadata["report_sha256"]) for market, metadata in MARKETS.items()
             },
             "walk_forward_returns_sha256": {
-                market: str(metadata["returns_sha256"])
-                for market, metadata in MARKETS.items()
+                market: str(metadata["returns_sha256"]) for market, metadata in MARKETS.items()
             },
         },
         "specification": {
