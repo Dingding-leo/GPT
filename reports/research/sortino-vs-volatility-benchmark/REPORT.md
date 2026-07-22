@@ -1,4 +1,4 @@
-# Sortino Ratio Versus Volotility-Targeted Benchmark
+# Sortino Ratio Versus Volatility-Targeted Benchmark
 
 ## Hypothesis
 
