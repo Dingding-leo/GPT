@@ -46,8 +46,9 @@ def load_json(path: str | Path) -> dict[str, Any]:
 
 
 def _validate_okx_raw_page_schema(raw_pages: tuple[dict[str, Any], ...]) -> None:
-    """Fail closed when the exchange candle-row schema drifts from nine fields."""
+    """Fail closed on candle-row schema drift or conflicting duplicate bars."""
 
+    seen_rows_by_timestamp: dict[str, tuple[Any, ...]] = {}
     for page_index, page in enumerate(raw_pages):
         rows = page.get("data")
         if not isinstance(rows, list):
@@ -58,6 +59,15 @@ def _validate_okx_raw_page_schema(raw_pages: tuple[dict[str, Any], ...]) -> None
                     f"OKX raw page {page_index} row {row_index} must contain exactly "
                     f"{_OKX_CANDLE_FIELD_COUNT} fields"
                 )
+            timestamp = str(row[0])
+            normalized_row = tuple(row)
+            previous = seen_rows_by_timestamp.get(timestamp)
+            if previous is not None and normalized_row != previous:
+                raise ValueError(
+                    f"OKX raw page {page_index} row {row_index} conflicts with an earlier "
+                    f"row for timestamp {timestamp!r}"
+                )
+            seen_rows_by_timestamp.setdefault(timestamp, normalized_row)
 
 
 def _build_effective_config(

@@ -30,6 +30,16 @@ def _changed_real_pages() -> list[dict[str, object]]:
     return changed_pages
 
 
+def _duplicate_real_pages(*, conflicting: bool) -> list[dict[str, object]]:
+    source_pages = json.loads(_FIXTURE.read_text(encoding="utf-8"))
+    changed_pages = copy.deepcopy(source_pages)
+    duplicate = copy.deepcopy(changed_pages[0]["data"][0])
+    if conflicting:
+        duplicate[4] = f"{duplicate[4]}0"
+    changed_pages.append({"code": "0", "msg": "", "data": [duplicate]})
+    return changed_pages
+
+
 def test_okx_research_rejects_raw_candle_schema_drift() -> None:
     module = _load_run_okx_research_module()
     source_pages = json.loads(_FIXTURE.read_text(encoding="utf-8"))
@@ -39,7 +49,15 @@ def test_okx_research_rejects_raw_candle_schema_drift() -> None:
         module._validate_okx_raw_page_schema(tuple(_changed_real_pages()))
 
 
-def test_okx_research_rejects_schema_drift_before_writing_or_backtesting(
+def test_okx_research_allows_exact_overlap_but_rejects_conflicting_duplicate() -> None:
+    module = _load_run_okx_research_module()
+    module._validate_okx_raw_page_schema(tuple(_duplicate_real_pages(conflicting=False)))
+
+    with pytest.raises(ValueError, match=r"conflicts with an earlier row for timestamp"):
+        module._validate_okx_raw_page_schema(tuple(_duplicate_real_pages(conflicting=True)))
+
+
+def test_okx_research_rejects_conflicting_duplicate_before_writing_or_backtesting(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     module = _load_run_okx_research_module()
@@ -59,18 +77,18 @@ def test_okx_research_rejects_schema_drift_before_writing_or_backtesting(
     monkeypatch.setattr(
         module,
         "fetch_okx_history_candles",
-        lambda **_kwargs: SimpleNamespace(raw_pages=tuple(_changed_real_pages())),
+        lambda **_kwargs: SimpleNamespace(raw_pages=tuple(_duplicate_real_pages(conflicting=True))),
     )
     monkeypatch.setattr(
         module,
         "write_okx_snapshot",
-        lambda *_args, **_kwargs: pytest.fail("schema drift reached snapshot writing"),
+        lambda *_args, **_kwargs: pytest.fail("conflicting duplicate reached snapshot writing"),
     )
     monkeypatch.setattr(
         module,
         "run_walk_forward_research",
-        lambda *_args, **_kwargs: pytest.fail("schema drift reached backtesting"),
+        lambda *_args, **_kwargs: pytest.fail("conflicting duplicate reached backtesting"),
     )
 
-    with pytest.raises(ValueError, match=r"page 0 row 0 must contain exactly 9 fields"):
+    with pytest.raises(ValueError, match=r"conflicts with an earlier row for timestamp"):
         module.main()
