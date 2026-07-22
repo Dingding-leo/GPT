@@ -32,99 +32,86 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          from textwrap import dedent
 
           source_path = Path("src/gpt_quant/walk_forward.py")
           source = source_path.read_text(encoding="utf-8")
-          insertion_anchor = '''    if not unique:
-              raise ValueError("candidate grid cannot be empty")
-          return list(unique.values())
+          helper = dedent(
+              '''
+
+              def _parameter_stability_key(parameters: Mapping[str, Any]) -> str:
+                  trend_weight = float(parameters["trend_weight"])
+                  displayed_weight = f"{trend_weight:.4f}"
+                  if float(displayed_weight) != trend_weight:
+                      displayed_weight = repr(trend_weight)
+                  return (
+                      f"m={parameters['momentum_lookback']}|r={parameters['reversal_lookback']}|"
+                      f"trend={displayed_weight}"
+                  )
 
 
-          def _run_test_window(
-          '''
-          insertion = '''    if not unique:
-              raise ValueError("candidate grid cannot be empty")
-          return list(unique.values())
-
-
-          def _parameter_stability_key(parameters: Mapping[str, Any]) -> str:
-              trend_weight = float(parameters["trend_weight"])
-              displayed_weight = f"{trend_weight:.4f}"
-              if float(displayed_weight) != trend_weight:
-                  displayed_weight = repr(trend_weight)
-              return (
-                  f"m={parameters['momentum_lookback']}|r={parameters['reversal_lookback']}|"
-                  f"trend={displayed_weight}"
-              )
-
-
-          def _parameter_stability(selected: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
-              parameter_keys = [_parameter_stability_key(item) for item in selected]
-              switches = sum(
-                  left != right for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
-              )
-              return {
-                  "selection_frequency": dict(Counter(parameter_keys).most_common()),
-                  "parameter_switches": switches,
-                  "parameter_switch_rate": switches / max(1, len(parameter_keys) - 1),
-                  "unique_parameter_sets": len(set(parameter_keys)),
-              }
-
-
-          def _run_test_window(
-          '''
-          if insertion_anchor not in source:
-              raise SystemExit("candidate helper insertion anchor not found")
-          source = source.replace(insertion_anchor, insertion, 1)
-
-          old_block = '''    parameter_keys = [
-              f"m={item['momentum_lookback']}|r={item['reversal_lookback']}|"
-              f"trend={float(item['trend_weight']):.4f}"
-              for item in selected
-          ]
-          switches = sum(
-              left != right for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
+              def _parameter_stability(selected: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
+                  parameter_keys = [_parameter_stability_key(item) for item in selected]
+                  switches = sum(
+                      left != right
+                      for left, right in zip(parameter_keys, parameter_keys[1:], strict=False)
+                  )
+                  return {
+                      "selection_frequency": dict(Counter(parameter_keys).most_common()),
+                      "parameter_switches": switches,
+                      "parameter_switch_rate": switches / max(1, len(parameter_keys) - 1),
+                      "unique_parameter_sets": len(set(parameter_keys)),
+                  }
+              '''
           )
-          stability = {
-              "selection_frequency": dict(Counter(parameter_keys).most_common()),
-              "parameter_switches": switches,
-              "parameter_switch_rate": switches / max(1, len(parameter_keys) - 1),
-              "unique_parameter_sets": len(set(parameter_keys)),
-          }
-          '''
-          if old_block not in source:
-              raise SystemExit("parameter stability block not found")
-          source = source.replace(old_block, "    stability = _parameter_stability(selected)\n", 1)
+          if "def _parameter_stability_key" in source:
+              raise SystemExit("parameter stability helper already exists")
+          candidate_start = source.index("def _candidates(")
+          insertion_at = source.index("\n\ndef _run_test_window(", candidate_start)
+          source = source[:insertion_at] + helper + source[insertion_at:]
+
+          stability_start = source.index(
+              "    parameter_keys = [", source.index("def run_walk_forward_research(")
+          )
+          stability_end = source.index("    fold_stability =", stability_start)
+          source = (
+              source[:stability_start]
+              + "    stability = _parameter_stability(selected)\n"
+              + source[stability_end:]
+          )
           source_path.write_text(source, encoding="utf-8")
 
           test_path = Path("tests/test_walk_forward_weight_identity.py")
           tests = test_path.read_text(encoding="utf-8")
-          addition = '''
-
-          def test_parameter_stability_preserves_exact_high_precision_weight_identity() -> None:
-              selected = [
-                  {"momentum_lookback": 21, "reversal_lookback": 3, "trend_weight": 0.7},
-                  {
-                      "momentum_lookback": 21,
-                      "reversal_lookback": 3,
-                      "trend_weight": 0.70000000001,
-                  },
-                  {"momentum_lookback": 21, "reversal_lookback": 3, "trend_weight": 0.7},
-              ]
-
-              stability = walk_forward._parameter_stability(selected)
-
-              assert stability["selection_frequency"] == {
-                  "m=21|r=3|trend=0.7000": 2,
-                  "m=21|r=3|trend=0.70000000001": 1,
-              }
-              assert stability["parameter_switches"] == 2
-              assert stability["parameter_switch_rate"] == 1.0
-              assert stability["unique_parameter_sets"] == 2
-          '''
           if "test_parameter_stability_preserves_exact_high_precision_weight_identity" in tests:
               raise SystemExit("regression already exists")
-          test_path.write_text(tests.rstrip() + addition + "\n", encoding="utf-8")
+          addition = dedent(
+              '''
+
+
+              def test_parameter_stability_preserves_exact_high_precision_weight_identity() -> None:
+                  selected = [
+                      {"momentum_lookback": 21, "reversal_lookback": 3, "trend_weight": 0.7},
+                      {
+                          "momentum_lookback": 21,
+                          "reversal_lookback": 3,
+                          "trend_weight": 0.70000000001,
+                      },
+                      {"momentum_lookback": 21, "reversal_lookback": 3, "trend_weight": 0.7},
+                  ]
+
+                  stability = walk_forward._parameter_stability(selected)
+
+                  assert stability["selection_frequency"] == {
+                      "m=21|r=3|trend=0.7000": 2,
+                      "m=21|r=3|trend=0.70000000001": 1,
+                  }
+                  assert stability["parameter_switches"] == 2
+                  assert stability["parameter_switch_rate"] == 1.0
+                  assert stability["unique_parameter_sets"] == 2
+              '''
+          )
+          test_path.write_text(tests.rstrip() + addition, encoding="utf-8")
           PY
       - name: Verify focused change
         run: |
