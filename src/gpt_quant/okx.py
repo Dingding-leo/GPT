@@ -200,8 +200,9 @@ def fetch_okx_history_candles(
     candle is excluded so repeated research runs cannot mix partial and complete bars.
     A requested ``start`` is a completeness boundary: exhausting ``max_pages`` before
     reaching it raises instead of silently returning a truncated research sample.
-    Fixed-width bars must also be continuous at the declared cadence. Calendar bars
-    fail closed until calendar-aware continuity validation is implemented.
+    Raw pagination overlaps must agree exactly, and fixed-width bars must be continuous
+    at the declared cadence. Calendar bars fail closed until calendar-aware continuity
+    validation is implemented.
     """
 
     if not inst_id or any(character.isspace() for character in inst_id):
@@ -238,6 +239,7 @@ def fetch_okx_history_candles(
     raw_rows: list[Sequence[Any]] = []
     cursor: str | None = None
     previous_oldest: int | None = None
+    seen_rows_by_timestamp: dict[int, tuple[Any, ...]] = {}
     start_ms = int(start_timestamp.timestamp() * 1_000) if start_timestamp is not None else None
     pagination_termination = "max_pages"
 
@@ -259,16 +261,30 @@ def fetch_okx_history_candles(
         if not page_data:
             pagination_termination = "empty_page"
             break
-        raw_rows.extend(page_data)
 
         page_timestamps: list[int] = []
-        for row in page_data:
-            if not isinstance(row, Sequence) or isinstance(row, (str, bytes)) or not row:
+        for row_number, row in enumerate(page_data, start=1):
+            if not isinstance(row, Sequence) or isinstance(row, (str, bytes)):
                 raise ValueError("OKX candle response contains a malformed row")
+            if len(row) != len(_COLUMNS):
+                raise ValueError(
+                    f"OKX candle response page {page_number + 1} row {row_number} "
+                    f"must contain exactly {len(_COLUMNS)} fields"
+                )
             try:
-                page_timestamps.append(int(row[0]))
+                timestamp = int(row[0])
             except (TypeError, ValueError) as exc:
                 raise ValueError("OKX candle response contains an invalid timestamp") from exc
+            normalized_row = tuple(row)
+            previous = seen_rows_by_timestamp.get(timestamp)
+            if previous is not None and normalized_row != previous:
+                raise ValueError(
+                    f"OKX candle response conflicts with an earlier row for timestamp {timestamp}"
+                )
+            seen_rows_by_timestamp.setdefault(timestamp, normalized_row)
+            page_timestamps.append(timestamp)
+        raw_rows.extend(page_data)
+
         oldest = min(page_timestamps)
         if previous_oldest is not None and oldest >= previous_oldest:
             raise RuntimeError("OKX pagination did not move backward in time")
