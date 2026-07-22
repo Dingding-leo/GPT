@@ -136,3 +136,15 @@ def test_manifest_builder_is_documented_for_bash_and_powershell() -> None:
     assert guide.count(command) == 2
     assert "```bash" in guide
     assert "```powershell" in guide
+
+
+def test_manifest_guide_does_not_overstate_optional_provenance_validation() -> None:
+    guide = (_REPOSITORY_ROOT / "docs/VERIFIED_SNAPSHOT_MANIFEST.md").read_text(encoding="utf-8")
+
+    assert "`raw_pages_sha256`（存在时）是格式有效的 SHA-256" in guide
+    assert (
+        "`source_artifact_id`、`source_artifact_name`、`source_artifact_sha256` "
+        "和 `source_head_sha` 等可选来源字段会按 metadata 声明复制到 manifest"
+    ) in guide
+    assert "helper 当前不会校验这些字段的格式" in guide
+    assert "所有记录的 SHA-256 字段格式有效" not in guide
