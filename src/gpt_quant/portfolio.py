@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from collections.abc import Iterable, Mapping
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from io import BytesIO
 from numbers import Real
 from pathlib import Path
 from typing import Any
@@ -14,7 +16,6 @@ import numpy as np
 import pandas as pd
 
 from .metrics import performance_metrics
-from .reproducibility import file_sha256
 
 _DAILY_INTERVAL = pd.Timedelta(days=1)
 _HEX_DIGITS = frozenset("0123456789abcdef")
@@ -230,11 +231,12 @@ def load_verified_return_csv(
     expected = expected_sha256.strip().lower()
     if len(expected) != 64 or any(character not in _HEX_DIGITS for character in expected):
         raise ValueError("expected_sha256 must be a 64-character hexadecimal digest")
-    actual = file_sha256(source)
+    payload = source.read_bytes()
+    actual = hashlib.sha256(payload).hexdigest()
     if actual != expected:
         raise ValueError(f"return file hash mismatch: expected {expected}, actual {actual}")
 
-    frame = pd.read_csv(source)
+    frame = pd.read_csv(BytesIO(payload))
     missing = {timestamp_column, return_column} - set(frame.columns)
     if missing:
         raise ValueError(f"return file is missing required columns: {sorted(missing)}")
