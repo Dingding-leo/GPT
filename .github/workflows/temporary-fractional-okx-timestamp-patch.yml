@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - auto/data/20260722-17-reject-fractional-okx-timestamps
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
