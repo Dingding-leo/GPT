@@ -71,3 +71,24 @@ def test_load_price_csv_rejects_invalid_timestamp(
 
     with pytest.raises(ValueError, match="timestamp column must contain only valid timestamps"):
         load_price_csv(path)
+
+
+def test_load_price_csv_rejects_duplicate_instants_after_utc_normalization(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    prices = _real_price_window(btc_usdt_prices)
+    frame = prices.rename_axis("timestamp").reset_index()
+    frame["timestamp"] = frame["timestamp"].astype(str)
+    duplicate_instant = prices.index[9].tz_convert("Australia/Adelaide").isoformat()
+    frame.loc[10, "timestamp"] = duplicate_instant
+
+    assert frame.loc[9, "timestamp"] != frame.loc[10, "timestamp"]
+    normalized = pd.to_datetime(frame.loc[[9, 10], "timestamp"], utc=True)
+    assert normalized.iloc[0] == normalized.iloc[1]
+
+    path = tmp_path / "utc-normalized-duplicate-okx-prices.csv"
+    frame.to_csv(path, index=False)
+
+    with pytest.raises(ValueError, match="price index must not contain duplicates"):
+        load_price_csv(path)
