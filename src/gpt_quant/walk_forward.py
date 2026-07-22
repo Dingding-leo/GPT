@@ -460,7 +460,12 @@ def run_walk_forward_research(
         trend_weights,
     )
     longest_lookback = max(
-        max(candidate.momentum_lookback, candidate.volatility_lookback) for candidate in candidates
+        max(
+            candidate.momentum_lookback,
+            candidate.reversal_lookback,
+            candidate.volatility_lookback,
+        )
+        for candidate in candidates
     )
     if selection_bars <= longest_lookback:
         raise ValueError("selection_bars must exceed every candidate lookback")
