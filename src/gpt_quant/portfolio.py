@@ -43,6 +43,7 @@ class _PortfolioBuildSpec:
     initial_weights: tuple[tuple[str, float], ...]
     annualization: int
     max_sleeve_weight: float
+    max_variance_contribution: float
     provenance_json: str
     return_bindings: tuple[_VerifiedReturnBinding, ...]
 
@@ -398,6 +399,7 @@ def build_buy_and_hold_sleeve_portfolio(
     provenance: Mapping[str, Any],
     annualization: int = 365,
     max_sleeve_weight: float = 0.75,
+    max_variance_contribution: float = 0.75,
 ) -> PortfolioRiskResult:
     """Aggregate net sleeve returns without same-sample weight optimisation or rebalancing."""
 
@@ -415,6 +417,14 @@ def build_buy_and_hold_sleeve_portfolio(
     ):
         raise ValueError("max_sleeve_weight must be a finite real number in (0, 1)")
     max_sleeve_weight = float(max_sleeve_weight)
+    if (
+        isinstance(max_variance_contribution, bool)
+        or not isinstance(max_variance_contribution, Real)
+        or not math.isfinite(float(max_variance_contribution))
+        or not 0.0 < float(max_variance_contribution) < 1.0
+    ):
+        raise ValueError("max_variance_contribution must be a finite real number in (0, 1)")
+    max_variance_contribution = float(max_variance_contribution)
 
     returns, weights = _validate_sleeves(sleeve_returns, initial_weights)
     bindings = _validate_return_source_bindings(
@@ -475,11 +485,18 @@ def build_buy_and_hold_sleeve_portfolio(
     risk_contributions = {
         name: float(value) for name, value in zip(returns.columns, contributions, strict=True)
     }
+    maximum_variance_contributor = max(risk_contributions, key=risk_contributions.__getitem__)
+    maximum_variance_contribution = risk_contributions[maximum_variance_contributor]
+    variance_contribution_breaches = [
+        name for name, value in risk_contributions.items() if value > max_variance_contribution
+    ]
+    variance_contribution_passes = not variance_contribution_breaches
 
     max_weights = end_weights.max().combine(weights, max)
     initial_weight_breach = bool(weights.gt(max_sleeve_weight).any())
     breach_mask = end_weights.gt(max_sleeve_weight).any(axis=1)
     worst_timestamp = portfolio_return.idxmin()
+    weight_concentration_passes = not initial_weight_breach and not bool(breach_mask.any())
     concentration = {
         "maximum_allowed_sleeve_weight": max_sleeve_weight,
         "maximum_observed_weights": {name: float(max_weights[name]) for name in returns},
@@ -487,7 +504,13 @@ def build_buy_and_hold_sleeve_portfolio(
         "initial_weight_breach": initial_weight_breach,
         "breach_observations": int(breach_mask.sum()),
         "breach_ratio": float(breach_mask.mean()),
-        "passes": not initial_weight_breach and not bool(breach_mask.any()),
+        "weight_concentration_passes": weight_concentration_passes,
+        "maximum_allowed_variance_contribution": max_variance_contribution,
+        "maximum_observed_variance_contribution": maximum_variance_contribution,
+        "maximum_variance_contributor": maximum_variance_contributor,
+        "variance_contribution_breaches": variance_contribution_breaches,
+        "variance_contribution_passes": variance_contribution_passes,
+        "passes": weight_concentration_passes and variance_contribution_passes,
         "worst_portfolio_day": {
             "timestamp": worst_timestamp.isoformat(),
             "portfolio_return": float(portfolio_return.loc[worst_timestamp]),
@@ -496,17 +519,23 @@ def build_buy_and_hold_sleeve_portfolio(
             },
         },
     }
+    failed_controls: list[str] = []
+    if not weight_concentration_passes:
+        failed_controls.append("buy-and-hold sleeve-weight drift")
+    if not variance_contribution_passes:
+        failed_controls.append("initial-weight variance contribution")
     risk_status = (
-        "pass: sleeve weights remain within the declared concentration limit"
-        if concentration["passes"]
-        else "reject: buy-and-hold sleeve drift breaches the declared concentration limit"
+        "pass: sleeve weights and variance contributions remain within declared limits"
+        if not failed_controls
+        else f"reject: {' and '.join(failed_controls)} breaches the declared limit"
     )
     generated_at_utc = datetime.now(UTC).isoformat()
     build_spec = _PortfolioBuildSpec(
         generated_at_utc=generated_at_utc,
         initial_weights=tuple((name, float(weights[name])) for name in returns),
         annualization=annualization,
-        max_sleeve_weight=float(max_sleeve_weight),
+        max_sleeve_weight=max_sleeve_weight,
+        max_variance_contribution=max_variance_contribution,
         provenance_json=_canonical_json(validated_provenance),
         return_bindings=bindings,
     )
@@ -526,6 +555,7 @@ def build_buy_and_hold_sleeve_portfolio(
             "allocation_rule": "initial buy-and-hold sleeve allocation; no rebalancing",
             "incremental_portfolio_rebalancing_cost": 0.0,
             "max_sleeve_weight": max_sleeve_weight,
+            "max_variance_contribution": max_variance_contribution,
         },
         portfolio_metrics=portfolio_metrics,
         sleeve_metrics=sleeve_metrics,
@@ -588,6 +618,7 @@ def _validate_result_against_verified_sources(result: PortfolioRiskResult) -> No
         provenance=provenance,
         annualization=spec.annualization,
         max_sleeve_weight=spec.max_sleeve_weight,
+        max_variance_contribution=spec.max_variance_contribution,
     )
     expected_payload = expected.to_dict()
     expected_payload["generated_at_utc"] = spec.generated_at_utc
@@ -676,6 +707,15 @@ def write_portfolio_risk_report(
         lines.append(f"- Maximum observed {name} weight: {value:.2%}")
     lines.append(f"- Breach observations: {result.concentration['breach_observations']}")
     lines.extend(["", "## Initial-weight variance contributions", ""])
+    lines.append(
+        "- Maximum allowed contribution: "
+        f"{result.concentration['maximum_allowed_variance_contribution']:.2%}"
+    )
+    lines.append(
+        "- Largest observed contribution: "
+        f"{result.concentration['maximum_variance_contributor']} "
+        f"({result.concentration['maximum_observed_variance_contribution']:.2%})"
+    )
     for name, value in result.risk_contributions.items():
         lines.append(f"- {name}: {value:.2%}")
     lines.extend(["", "## Return dependence", ""])
