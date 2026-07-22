@@ -1,9 +1,8 @@
 name: Temporary Research Formatter
 
 on:
-  push:
-    branches:
-      - auto/research/20260722-16-lagged-market-trend-regimes
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
