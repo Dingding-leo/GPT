@@ -43,6 +43,21 @@ jobs:
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
 
+      - name: Apply temporary Ruff formatting
+        run: |
+          ruff format reports/research/fold-payoff-asymmetry/analysis.py
+          ruff format tests/test_fold_payoff_asymmetry_report.py
+
+      - name: Upload formatted research targets
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fold-payoff-formatted-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: |
+            reports/research/fold-payoff-asymmetry/analysis.py
+            tests/test_fold_payoff_asymmetry_report.py
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
