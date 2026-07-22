@@ -47,6 +47,20 @@ def _fixture_provenance(metadata: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _markdown_metric_rows(markdown: str) -> dict[str, str]:
+    block = markdown.split("## Portfolio metrics\n\n", maxsplit=1)[1].split(
+        "\n\n## Sleeve concentration", maxsplit=1
+    )[0]
+    rows: dict[str, str] = {}
+    for line in block.splitlines()[2:]:
+        if not line.startswith("|"):
+            continue
+        _, name, value, _ = (part.strip() for part in line.split("|"))
+        assert name not in rows
+        rows[name] = value
+    return rows
+
+
 def test_portfolio_report_artifacts_reconcile_to_one_equity_curve(tmp_path: Path) -> None:
     btc, eth, metadata = _load_fixture_returns()
     result = build_buy_and_hold_sleeve_portfolio(
@@ -103,4 +117,10 @@ def test_portfolio_report_artifacts_reconcile_to_one_equity_curve(tmp_path: Path
     )
 
     markdown = paths["markdown"].read_text(encoding="utf-8")
+    expected_metrics = {
+        name: f"{value:.6f}" if isinstance(value, float) else str(value)
+        for name, value in payload["portfolio_metrics"].items()
+    }
+    assert _markdown_metric_rows(markdown) == expected_metrics
+    assert f"Generated at: `{payload['generated_at_utc']}`" in markdown
     assert f"Risk status: **{payload['risk_status']}**" in markdown
