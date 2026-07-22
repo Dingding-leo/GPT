@@ -7,6 +7,7 @@ from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -333,11 +334,18 @@ def fetch_okx_history_candles(
                 )
             seen_rows_by_timestamp.setdefault(timestamp, normalized_row)
             page_timestamps.append(timestamp)
-        raw_rows.extend(page_data)
 
-        oldest = min(page_timestamps)
+        if any(newer <= older for newer, older in pairwise(page_timestamps)):
+            raise ValueError(
+                f"OKX candle response page {page_number + 1} must be strictly newest-to-oldest"
+            )
+        newest = page_timestamps[0]
+        oldest = page_timestamps[-1]
+        if previous_oldest is not None and newest > previous_oldest:
+            raise RuntimeError("OKX pagination returned rows newer than the requested cursor")
         if previous_oldest is not None and oldest >= previous_oldest:
             raise RuntimeError("OKX pagination did not move backward in time")
+        raw_rows.extend(page_data)
         previous_oldest = oldest
         cursor = str(oldest)
 

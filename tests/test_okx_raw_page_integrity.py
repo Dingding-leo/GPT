@@ -63,6 +63,40 @@ def test_okx_downloader_allows_exact_pagination_overlap() -> None:
     ]
 
 
+def test_okx_downloader_rejects_page_not_newest_to_oldest() -> None:
+    _partial, day_20, day_19, _day_18, _day_17 = _real_okx_rows()
+
+    with pytest.raises(ValueError, match="strictly newest-to-oldest"):
+        fetch_okx_history_candles(
+            inst_id="BTC-USDT",
+            bar="1Dutc",
+            base_url="https://example.test",
+            limit=2,
+            max_pages=1,
+            pause_seconds=0.0,
+            get_json=_getter_for_pages({None: [day_19, day_20]}),
+        )
+
+
+def test_okx_downloader_rejects_rows_newer_than_pagination_cursor() -> None:
+    _partial, day_20, day_19, day_18, _day_17 = _real_okx_rows()
+    pages = {
+        None: [day_20, day_19],
+        day_19[0]: [day_20, day_18],
+    }
+
+    with pytest.raises(RuntimeError, match="newer than the requested cursor"):
+        fetch_okx_history_candles(
+            inst_id="BTC-USDT",
+            bar="1Dutc",
+            base_url="https://example.test",
+            limit=2,
+            max_pages=5,
+            pause_seconds=0.0,
+            get_json=_getter_for_pages(pages),
+        )
+
+
 def test_okx_downloader_rejects_conflicting_pagination_overlap() -> None:
     _partial, day_20, day_19, day_18, _day_17 = _real_okx_rows()
     conflicting_day_19 = list(day_19)
