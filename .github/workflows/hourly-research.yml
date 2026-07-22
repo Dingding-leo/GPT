@@ -42,25 +42,6 @@ jobs:
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
 
-      - name: Temporarily format autocorrelation targets
-        run: |
-          ruff check --fix \
-            reports/research/lagged-autocorrelation-regimes/analysis.py \
-            tests/test_lagged_autocorrelation_regime_report.py
-          ruff format \
-            reports/research/lagged-autocorrelation-regimes/analysis.py \
-            tests/test_lagged_autocorrelation_regime_report.py
-
-      - name: Upload formatted autocorrelation targets
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
-        with:
-          name: formatted-autocorrelation-${{ github.sha }}
-          path: |
-            reports/research/lagged-autocorrelation-regimes/analysis.py
-            tests/test_lagged_autocorrelation_regime_report.py
-          if-no-files-found: error
-          retention-days: 1
-
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
@@ -120,7 +101,7 @@ jobs:
             --btc-returns reports/okx/BTC-USDT/walk_forward_returns.csv \
             --eth-returns reports/okx/ETH-USDT/walk_forward_returns.csv \
             --btc-sha256 "$BTC_RETURN_SHA256" \
-            --eth-sha256 "$ETH_RETURN_SHA256" \
+            --eth-sh256 "$ETH_RETURN_SHA256" \
             --provider OKX \
             --market-type spot \
             --timeframe 1Dutc \
