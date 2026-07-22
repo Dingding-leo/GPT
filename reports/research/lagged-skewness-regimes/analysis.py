@@ -227,11 +227,7 @@ def classify_skewness_regimes(
 def moving_block_indices(n: int, *, block_length: int, resamples: int, seed: int) -> np.ndarray:
     if isinstance(n, bool) or not isinstance(n, int) or n < 1:
         raise ValueError("observation count must be a positive integer")
-    if (
-        isinstance(block_length, bool)
-        or not isinstance(block_length, int)
-        or block_length < 1
-    ):
+    if isinstance(block_length, bool) or not isinstance(block_length, int) or block_length < 1:
         raise ValueError("block length must be a positive integer")
     if isinstance(resamples, bool) or not isinstance(resamples, int) or resamples < 1:
         raise ValueError("resample count must be a positive integer")
@@ -316,9 +312,7 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
     ]
     passes = all(pass_flags)
     failure_reason = (
-        None
-        if passes
-        else "At least one market/regime 95% lower confidence bound is non-positive."
+        None if passes else "At least one market/regime 95% lower confidence bound is non-positive."
     )
     return {
         "hypothesis": (

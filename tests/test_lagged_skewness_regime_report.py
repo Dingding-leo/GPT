@@ -10,18 +10,10 @@ import pandas as pd
 import pytest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-ANALYSIS_PATH = (
-    REPOSITORY_ROOT / "reports" / "research" / "lagged-skewness-regimes" / "analysis.py"
-)
-RESULT_PATH = (
-    REPOSITORY_ROOT / "reports" / "research" / "lagged-skewness-regimes" / "result.json"
-)
+ANALYSIS_PATH = REPOSITORY_ROOT / "reports" / "research" / "lagged-skewness-regimes" / "analysis.py"
+RESULT_PATH = REPOSITORY_ROOT / "reports" / "research" / "lagged-skewness-regimes" / "result.json"
 FIXTURE_DIR = (
-    REPOSITORY_ROOT
-    / "tests"
-    / "fixtures"
-    / "okx"
-    / "btc-usdt-1dutc-raw-20260717-20260721"
+    REPOSITORY_ROOT / "tests" / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
 )
 
 SPEC = importlib.util.spec_from_file_location("lagged_skewness_regime_analysis", ANALYSIS_PATH)
