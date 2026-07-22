@@ -14,7 +14,7 @@ concurrency:
 jobs:
   dependency-audit:
     name: Python ${{ matrix.python-version }} / ${{ matrix.target.name }} dependency audit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       PIP_BOOTSTRAP_VERSION: "26.1.2"
