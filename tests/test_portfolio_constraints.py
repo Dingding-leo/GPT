@@ -101,4 +101,6 @@ def test_non_vacuous_concentration_cap_preserves_valid_portfolio() -> None:
 
     assert result.settings["max_sleeve_weight"] == pytest.approx(0.75)
     assert result.concentration["maximum_allowed_sleeve_weight"] == pytest.approx(0.75)
-    assert all(weight > 0.0 for weight in result.settings["initial_weights"].values())
+    assert max(result.settings["initial_weights"].values()) < result.settings["max_sleeve_weight"]
+    assert result.concentration["passes"] is True
+    assert result.risk_status.startswith("pass:")
