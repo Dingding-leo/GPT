@@ -1,0 +1,37 @@
+name: Temporary PR121 Formatter
+
+on:
+  push:
+    branches:
+      - auto/research/20260722-18-lagged-liquidity-regimes
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install formatter
+        run: python -m pip install -e ".[dev]"
+      - name: Format target files
+        run: ruff format reports/research/lagged-liquidity-regimes/analysis.py tests/test_lagged_liquidity_regime_report.py
+      - name: Upload formatted files
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: pr121-formatted-${{ github.sha }}
+          path: |
+            reports/research/lagged-liquidity-regimes/analysis.py
+            tests/test_lagged_liquidity_regime_report.py
+          if-no-files-found: error
+          retention-days: 1
