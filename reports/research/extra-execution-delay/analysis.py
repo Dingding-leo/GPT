@@ -247,9 +247,7 @@ def analyze_market(frame: pd.DataFrame, seed: int) -> dict[str, object]:
             "average_abs_exposure": float(delayed["position"].abs().mean()),
             "cost_drag_sum": float(delayed["trading_cost"].sum()),
             "end": str(delayed["timestamp"].iloc[-1]),
-            "original_annualized_mean": float(
-                frame["strategy_return"].mean() * ANNUALIZATION
-            ),
+            "original_annualized_mean": float(frame["strategy_return"].mean() * ANNUALIZATION),
             "start": str(delayed["timestamp"].iloc[0]),
             "total_return": float(delayed["nav"].iloc[-1] - 1.0),
         }
