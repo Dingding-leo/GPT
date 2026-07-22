@@ -39,6 +39,9 @@ def test_walk_forward_preserves_distinct_high_precision_weights(
 
     assert result.settings["candidate_count"] == 2
     assert result.folds[0]["candidates_tested"] == 2
+    selected_parameters = result.folds[0]["selected_parameters"]
+    selected_key = walk_forward._parameter_stability_key(selected_parameters)
+    assert result.parameter_stability["selection_frequency"] == {selected_key: 1}
 
 
 def test_parameter_stability_preserves_exact_high_precision_weight_identity() -> None:
