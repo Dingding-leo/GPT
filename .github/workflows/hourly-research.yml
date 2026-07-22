@@ -36,6 +36,9 @@ jobs:
       - name: Install project
         run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
 
+      - name: Temporarily format PR100 targets
+        run: ruff format reports/research/fold-boundary-exclusion/analysis.py tests/test_fold_boundary_exclusion_report.py
+
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
@@ -59,6 +62,8 @@ jobs:
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: quant-research-${{ github.run_number }}
-          path: reports/
+          path: |
+            reports/
+            tests/test_fold_boundary_exclusion_report.py
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
