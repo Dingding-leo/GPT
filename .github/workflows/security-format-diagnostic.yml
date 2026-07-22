@@ -1,9 +1,8 @@
 name: Security Format Diagnostic
 
 on:
-  push:
-    branches:
-      - auto/security/20260722-03-dependency-review-gate
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
