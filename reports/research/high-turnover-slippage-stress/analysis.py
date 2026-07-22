@@ -223,7 +223,10 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
             "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
             "The stress is a fixed diagnostic, not a calibrated exchange-impact model.",
             "The analysis does not estimate capacity, order-book depth, latency, or partial fills.",
-            "The highest-turnover set is recomputed inside each resample and is not a trading rule.",
+            (
+                "The highest-turnover set is recomputed inside each resample and is not a "
+                "trading rule."
+            ),
         ],
     }
 
