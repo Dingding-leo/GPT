@@ -1,0 +1,103 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "adaptive-selection-vs-fixed-base-v1|markets=BTC-USDT,ETH-USDT|source=immutable-OKX-1Dutc-snapshots-and-persisted-net-rolling-oos-returns|adaptive=repository-730-selection-90-test-27-grid|fixed-base=momentum90-reversal5-trend0.70-vol30-targetvol0.50-long-cash|execution=one-bar-delay-10bps-continuous-position|evaluation=2020-01-11..2026-06-07-2340-bars|metrics=annualized-arithmetic-mean-delta,annualized-sharpe-delta|resampling=paired-noncircular-moving-block-bootstrap-20|resamples=2000|confidence=0.95|pass=both-metric-lower-bounds-positive-in-both-markets|candidate_count=1",
+  "failure_reason": "At least one market or metric has a non-positive 95% paired moving-block-bootstrap lower bound.",
+  "hypothesis": "The repository's adaptive rolling parameter selection improves both annualized arithmetic mean net return and annualized Sharpe versus its fixed base configuration in BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "adaptive_annualized_mean": 0.17168956582497064,
+      "adaptive_annualized_sharpe": 0.7259698467624875,
+      "annualized_mean_delta": 0.03574277408502585,
+      "annualized_mean_delta_interval": [
+        -0.08827333428971335,
+        0.14820543695238222
+      ],
+      "annualized_sharpe_delta": 0.17422922054046674,
+      "annualized_sharpe_delta_interval": [
+        -0.34394800626868005,
+        0.598541568088599
+      ],
+      "fixed_annualized_mean": 0.13594679173994478,
+      "fixed_annualized_sharpe": 0.5517406262220208,
+      "observations": 2340,
+      "passes": false,
+      "probability_annualized_mean_delta_positive": 0.687,
+      "probability_annualized_sharpe_delta_positive": 0.7145,
+      "selected_path_reproduction_max_abs_error": 9.985502008591496e-17
+    },
+    "ETH-USDT": {
+      "adaptive_annualized_mean": 0.13704095296450977,
+      "adaptive_annualized_sharpe": 0.5379864336831103,
+      "annualized_mean_delta": -0.02230626838596675,
+      "annualized_mean_delta_interval": [
+        -0.17868572670335037,
+        0.13023728414717
+      ],
+      "annualized_sharpe_delta": -0.08062383148430019,
+      "annualized_sharpe_delta_interval": [
+        -0.6797300774107412,
+        0.45571087612668626
+      ],
+      "fixed_annualized_mean": 0.15934722135047652,
+      "fixed_annualized_sharpe": 0.6186102651674105,
+      "observations": 2340,
+      "passes": false,
+      "probability_annualized_mean_delta_positive": 0.3565,
+      "probability_annualized_sharpe_delta_positive": 0.3495,
+      "selected_path_reproduction_max_abs_error": 9.996344030316351e-17
+    }
+  },
+  "method": {
+    "adaptive_process": "repository rolling 730-bar selection / 90-bar test over 27 candidates",
+    "annualization": 365,
+    "block_length": 20,
+    "confidence": 0.95,
+    "development_markets": true,
+    "execution_delay_bars": 1,
+    "fixed_base_configuration": {
+      "max_position": 1.0,
+      "min_position": 0.0,
+      "momentum_lookback": 90,
+      "reversal_lookback": 5,
+      "reversal_weight": 0.30000000000000004,
+      "target_volatility": 0.5,
+      "trend_weight": 0.7,
+      "volatility_lookback": 30
+    },
+    "resamples": 2000,
+    "transaction_cost_bps": 10.0
+  },
+  "provenance": {
+    "market_type": "spot",
+    "markets": {
+      "BTC-USDT": {
+        "report_sha256": "b06a4cc4f059e4b0642d390d7cb19e105e4eb5875ef58f95d8f3a679a6168e14",
+        "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+        "seed": 202607223,
+        "snapshot_sha256": "b0bd7c6c7e30fcc095073169f60bde24559f481b24cc6f4bdfb85349f57974bb"
+      },
+      "ETH-USDT": {
+        "report_sha256": "90364aceef3cb297704aa26e65e3c2cef6f3b02f11251184d9c3f7ade52787c8",
+        "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+        "seed": 202607224,
+        "snapshot_sha256": "78f3bf81d3983e6c894066a1c298fbf14ae06a5eff9ca7326554b0a8933c0df5"
+      }
+    },
+    "oos_end": "2026-06-07T00:00:00+00:00",
+    "oos_observations_per_market": 2340,
+    "oos_start": "2020-01-11T00:00:00+00:00",
+    "provider": "OKX",
+    "source_artifact_id": 8528966554,
+    "source_artifact_name": "quant-research-source-973-attempt-1",
+    "source_artifact_sha256": "67bbf4136107a98bde8ddb118c6449d9db4da75b7eb7e9d3da82f822b156f43b",
+    "source_base_commit": "762151882255be7b2e3bd26370151b8182526fd3",
+    "source_head_commit": "007935d8581a6c1b622ce0a7702faaa0884cf227",
+    "source_workflow_run_id": 29918619194,
+    "timeframe": "1Dutc"
+  },
+  "verdict": "rejected"
+}
