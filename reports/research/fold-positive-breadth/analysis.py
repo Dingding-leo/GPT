@@ -136,7 +136,8 @@ def analyze(artifact_dir: str | Path) -> dict[str, object]:
             raise ValueError(f"{market} must contain exactly {EXPECTED_FOLDS} folds")
         if not np.equal(fold_sizes, EXPECTED_FOLD_OBSERVATIONS).all():
             raise ValueError(
-                f"{market} folds must each contain exactly {EXPECTED_FOLD_OBSERVATIONS} observations"
+                f"{market} folds must each contain exactly "
+                f"{EXPECTED_FOLD_OBSERVATIONS} observations"
             )
 
         statistics = moving_block_positive_share(
