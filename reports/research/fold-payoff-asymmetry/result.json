@@ -1,0 +1,131 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "fold-payoff-asymmetry-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|folds=26x90-nonoverlapping|fold-metric=compounded-net-return|payoff-ratio=sum-positive-fold-returns/abs(sum-negative-fold-returns)|claim=fold-payoff-ratio>1-in-both-markets|resampling=noncircular-moving-block-bootstrap-over-consecutive-folds|block-length=3-folds|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072303,ETH-USDT:2026072304|candidate_count=1",
+  "design": {
+    "block_length_folds": 3,
+    "confidence": 0.95,
+    "expected_fold_observations": 90,
+    "expected_folds": 26,
+    "fold_metric": "compounded net strategy return",
+    "payoff_ratio": "sum(positive fold returns) / abs(sum(negative fold returns))",
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072303,
+      "ETH-USDT": 2026072304
+    }
+  },
+  "hypothesis": "BTC-USDT and ETH-USDT each have aggregate positive compounded OOS fold returns that exceed the absolute aggregate negative fold returns, with a 95% moving-block-bootstrap lower bound for the fold payoff ratio above one.",
+  "markets": {
+    "BTC-USDT": {
+      "confidence_lower": 0.9065500397466728,
+      "confidence_upper": 10.324732294569003,
+      "end": "2026-06-07T00:00:00+00:00",
+      "fold_payoff_ratio": 2.5134831880281174,
+      "fold_returns": [
+        -0.23941135936713842,
+        -0.034979047134904406,
+        0.06208308583544642,
+        1.044396962807753,
+        0.12465675784138863,
+        -0.05532611856727687,
+        0.13395851610340825,
+        0.05248411253442331,
+        -0.001604624984328562,
+        -0.09323757952162348,
+        -0.021881997332782954,
+        -0.11770556552332212,
+        0.07160271928166417,
+        0.05746419843360839,
+        -0.029289573821077997,
+        0.18180070284999372,
+        0.19255911235330614,
+        0.07602103801991955,
+        -0.09548048438954693,
+        0.29620020611375053,
+        -0.09960389789161916,
+        -0.008150405225081925,
+        0.050823974908152714,
+        -0.03510549571636956,
+        0.0,
+        -0.10081468632111801
+      ],
+      "folds": 26,
+      "negative_folds": 13,
+      "positive_folds": 12,
+      "probability_ratio_above_one": 0.9615,
+      "start": "2020-01-11T00:00:00+00:00",
+      "total_absolute_negative_fold_return": 0.9325908357961904,
+      "total_positive_fold_return": 2.344051387082815,
+      "zero_folds": 1
+    },
+    "ETH-USDT": {
+      "confidence_lower": 0.8408106475696155,
+      "confidence_upper": 9.383926132924787,
+      "end": "2026-06-07T00:00:00+00:00",
+      "fold_payoff_ratio": 2.021251576468156,
+      "fold_returns": [
+        -0.19035191524703632,
+        0.040963339426477896,
+        0.001242996466659374,
+        0.5212580441373669,
+        0.1587440516920784,
+        0.11067830602492523,
+        0.1358147891622037,
+        0.005624495314947575,
+        0.04642779105441841,
+        -0.12293508095577388,
+        0.014049781060085698,
+        -0.02752437348554726,
+        0.057201992301554316,
+        0.06743925793249472,
+        -0.026566389582348804,
+        0.03449012798824724,
+        -0.04616972862637814,
+        0.1350932266829421,
+        -0.23688322326324085,
+        0.10333285664836445,
+        -0.06949426645131418,
+        0.1318307217615311,
+        0.2873943822312326,
+        -0.04082393633108217,
+        -0.10299785305070386,
+        -0.05231246157668068
+      ],
+      "folds": 26,
+      "negative_folds": 10,
+      "positive_folds": 16,
+      "probability_ratio_above_one": 0.9525,
+      "start": "2020-01-11T00:00:00+00:00",
+      "total_absolute_negative_fold_return": 0.9160592285701061,
+      "total_positive_fold_return": 1.8515861598855297,
+      "zero_folds": 0
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "market_type": "spot",
+    "provider": "OKX",
+    "return_file_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "source_artifact_id": 8536340303,
+    "source_artifact_name": "quant-research-source-1159-attempt-1",
+    "source_artifact_sha256": "83eb247b7d848ddc61ebbb914e937268af0352ed1cbb11371877e6d947de1fb3",
+    "source_head_sha": "88a8280d3a29153ab9fdd976ffb68899c975a908",
+    "source_workflow_run_id": 29936458263,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reasons": [
+    "BTC-USDT fold-payoff-ratio 95% lower bound 0.906550 is not above 1",
+    "ETH-USDT fold-payoff-ratio 95% lower bound 0.840811 is not above 1"
+  ],
+  "verdict": "reject"
+}
