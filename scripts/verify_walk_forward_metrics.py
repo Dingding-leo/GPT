@@ -146,11 +146,10 @@ def verify_walk_forward_metrics(
                     f"aggregate_metrics.{name} mismatch: expected {expected!r}, actual {actual!r}"
                 )
             continue
-        try:
-            expected_float = float(expected)
-            actual_float = float(actual)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(f"aggregate_metrics.{name} must be numeric") from exc
+        if not isinstance(expected, (int, float)) or isinstance(expected, bool):
+            raise ValueError(f"aggregate_metrics.{name} must be a JSON number")
+        expected_float = float(expected)
+        actual_float = float(actual)
         if not math.isfinite(expected_float) or not math.isfinite(actual_float):
             raise ValueError(f"aggregate_metrics.{name} must be finite")
         if not math.isclose(expected_float, actual_float, rel_tol=1e-12, abs_tol=1e-12):
