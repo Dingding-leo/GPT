@@ -28,14 +28,18 @@ def _load_analysis_module():
 
 
 def _real_backtest_frame(btc_usdt_prices: pd.Series) -> pd.DataFrame:
-    return run_backtest(
-        btc_usdt_prices,
-        StrategyConfig(
-            annualization=365,
-            min_position=0.0,
-            transaction_cost_bps=10.0,
-        ),
-    ).frame
+    return (
+        run_backtest(
+            btc_usdt_prices,
+            StrategyConfig(
+                annualization=365,
+                min_position=0.0,
+                transaction_cost_bps=10.0,
+            ),
+        )
+        .frame.rename_axis("timestamp")
+        .reset_index()
+    )
 
 
 def test_extra_delay_reprices_real_execution_from_cash(btc_usdt_prices: pd.Series) -> None:
