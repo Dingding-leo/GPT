@@ -156,9 +156,7 @@ def analyze(artifact_dir: str | Path) -> dict[str, object]:
         market_results[market] = statistics
         return_hashes[market] = file_sha256(returns_path)
 
-    passed = all(
-        float(market_results[market]["confidence_lower"]) > 0.5 for market in MARKETS
-    )
+    passed = all(float(market_results[market]["confidence_lower"]) > 0.5 for market in MARKETS)
     rejection_reasons = []
     if not passed:
         for market in MARKETS:
