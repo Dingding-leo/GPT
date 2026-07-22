@@ -1,0 +1,111 @@
+{
+  "candidate_count": 1,
+  "canonical_signature": "chronological-half-return-consistency-v1|markets=BTC-USDT,ETH-USDT|split=equal-observation-halves-first1170-second1170|metric=annualized-arithmetic-mean-net-return|annualization=365|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:first:20260722,second:20260724;ETH-USDT:first:20260723,second:20260725|candidate_count=1",
+  "claim_boundary": "This is one predeclared temporal-stability diagnostic on BTC-USDT and ETH-USDT development markets. The midpoint is fixed by observation count and is not a new holdout, tradable switching rule, causal claim, or execution model.",
+  "failure_reasons": [
+    "BTC-USDT first half mean lower confidence bound is not positive",
+    "BTC-USDT second half mean lower confidence bound is not positive",
+    "ETH-USDT first half mean lower confidence bound is not positive",
+    "ETH-USDT second half mean lower confidence bound is not positive"
+  ],
+  "hypothesis": "For both BTC-USDT and ETH-USDT, net OOS strategy returns have a positive annualized arithmetic mean in both equal chronological halves, with all four 95% moving-block-bootstrap lower bounds above zero.",
+  "joint_supported": false,
+  "markets": {
+    "BTC-USDT": {
+      "full_observations": 2340,
+      "halves": {
+        "first_half": {
+          "annualized_mean": 0.19644480421334354,
+          "bootstrap": {
+            "ci_lower": -0.14278769783805448,
+            "ci_upper": 0.5211797627647313,
+            "lower_bound_positive": false,
+            "median": 0.17332757727354525,
+            "probability_positive": 0.87
+          },
+          "end": "2023-03-25 00:00:00+00:00",
+          "observations": 1170,
+          "seed": 20260722,
+          "start": "2020-01-11 00:00:00+00:00"
+        },
+        "second_half": {
+          "annualized_mean": 0.14693432743659776,
+          "bootstrap": {
+            "ci_lower": -0.08490499090783582,
+            "ci_upper": 0.4532619254761127,
+            "lower_bound_positive": false,
+            "median": 0.15317605559194525,
+            "probability_positive": 0.879
+          },
+          "end": "2026-06-07 00:00:00+00:00",
+          "observations": 1170,
+          "seed": 20260724,
+          "start": "2023-03-26 00:00:00+00:00"
+        }
+      },
+      "report_sha256": "c5262c4c8c0945b43907f006ca5bf986229c350e5e908d8baa4837cc2de32921",
+      "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "split_index": 1170,
+      "split_rule": "first n/2 observations versus final n/2 observations"
+    },
+    "ETH-USDT": {
+      "full_observations": 2340,
+      "halves": {
+        "first_half": {
+          "annualized_mean": 0.22217982617814075,
+          "bootstrap": {
+            "ci_lower": -0.08663931786846908,
+            "ci_upper": 0.5299487491225864,
+            "lower_bound_positive": false,
+            "median": 0.21768912350155945,
+            "probability_positive": 0.9235
+          },
+          "end": "2023-03-25 00:00:00+00:00",
+          "observations": 1170,
+          "seed": 20260723,
+          "start": "2020-01-11 00:00:00+00:00"
+        },
+        "second_half": {
+          "annualized_mean": 0.051902079750878724,
+          "bootstrap": {
+            "ci_lower": -0.21974980858100007,
+            "ci_upper": 0.30892998241705183,
+            "lower_bound_positive": false,
+            "median": 0.041522867826913175,
+            "probability_positive": 0.6265
+          },
+          "end": "2026-06-07 00:00:00+00:00",
+          "observations": 1170,
+          "seed": 20260725,
+          "start": "2023-03-26 00:00:00+00:00"
+        }
+      },
+      "report_sha256": "383d8273cdb12d8b3bfe271b4044eaa664c06018f7f6174f7a52f1ac1fdcdf24",
+      "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "split_index": 1170,
+      "split_rule": "first n/2 observations versus final n/2 observations"
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8513672060,
+    "source_artifact_name": "quant-research-378",
+    "source_artifact_sha256": "7902fd0e653a446151188dc426386bfb8406d404a348aaf8be13a7671deb10ec",
+    "source_base_commit": "a2f1ab460409113057198ebdd00e3ce4f6c7bf82",
+    "source_persistent_head": "e1f49e3ad33fa2cd820de5ca0a6f70231f214a20",
+    "source_tested_merge_commit": "fd8d2191e30bb0aeb80da0021f2923f3bc9a8377",
+    "source_workflow_run_id": 29877892427
+  },
+  "settings": {
+    "annualization": 365,
+    "block_length": 20,
+    "candidate_count": 1,
+    "confidence": 0.95,
+    "development_market_screen": true,
+    "resamples_per_half": 2000,
+    "split_rule": "equal chronological halves by observation count"
+  },
+  "verdict": "rejected"
+}
