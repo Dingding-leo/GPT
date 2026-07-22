@@ -32,13 +32,13 @@ jobs:
       - name: Format target files
         run: |
           ruff format reports/research/high-turnover-slippage-stress/analysis.py
-          ruff format tests/test_high_turnover-slippage-stress_report.py
+          ruff format tests/test_high_turnover_slippage_stress_report.py
       - name: Upload formatted files
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
         with:
           name: high-turnover-formatted-${{ github.sha }}
           path: |
             reports/research/high-turnover-slippage-stress/analysis.py
-            tests/test_high-turnover-slippage-stress_report.py
+            tests/test_high_turnover_slippage_stress_report.py
           if-no-files-found: error
           retention-days: 1
