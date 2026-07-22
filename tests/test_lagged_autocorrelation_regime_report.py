@@ -10,16 +10,10 @@ import pandas as pd
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS_PATH = (
-    REPOSITORY_ROOT
-    / "reports"
-    / "research"
-    / "lagged-autocorrelation-regimes"
-    / "analysis.py"
+    REPOSITORY_ROOT / "reports" / "research" / "lagged-autocorrelation-regimes" / "analysis.py"
 )
 RESULT_PATH = ANALYSIS_PATH.with_name("result.json")
-FIXTURE_DIR = (
-    Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
-)
+FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
 SPEC = importlib.util.spec_from_file_location("lagged_autocorrelation_regimes", ANALYSIS_PATH)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError(f"unable to load analysis module from {ANALYSIS_PATH}")
