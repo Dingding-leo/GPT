@@ -22,10 +22,31 @@ _SOURCE_FILENAMES = {
 }
 
 
+def _fixture_metadata() -> dict[str, object]:
+    return json.loads((_FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8"))
+
+
+def _fixture_provenance(metadata: dict[str, object]) -> dict[str, object]:
+    instruments = metadata["instruments"]
+    return {
+        "provider": metadata["provider"],
+        "market_type": metadata["market_type"],
+        "timeframe": metadata["timeframe"],
+        "source_workflow_run_id": metadata["source_workflow_run_id"],
+        "source_artifact_id": metadata["source_artifact_id"],
+        "source_artifact_name": metadata["source_artifact_name"],
+        "source_artifact_sha256": metadata["source_artifact_sha256"],
+        "source_head_sha": metadata["source_head_sha"],
+        "return_file_sha256": {
+            name: details["fixture_sha256"] for name, details in instruments.items()
+        },
+    }
+
+
 def _build_result_from_copied_sources(
     tmp_path: Path,
 ) -> tuple[PortfolioRiskResult, dict[str, Path]]:
-    metadata = json.loads((_FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8"))
+    metadata = _fixture_metadata()
     instruments = metadata["instruments"]
     source_dir = tmp_path / "verified-sources"
     source_dir.mkdir()
@@ -41,24 +62,11 @@ def _build_result_from_copied_sources(
             expected_sha256=instruments[instrument]["fixture_sha256"],
         )
 
-    provenance = {
-        "provider": metadata["provider"],
-        "market_type": metadata["market_type"],
-        "timeframe": metadata["timeframe"],
-        "source_workflow_run_id": metadata["source_workflow_run_id"],
-        "source_artifact_id": metadata["source_artifact_id"],
-        "source_artifact_name": metadata["source_artifact_name"],
-        "source_artifact_sha256": metadata["source_artifact_sha256"],
-        "source_head_sha": metadata["source_head_sha"],
-        "return_file_sha256": {
-            name: details["fixture_sha256"] for name, details in instruments.items()
-        },
-    }
     result = build_buy_and_hold_sleeve_portfolio(
         sleeve_returns,
         initial_weights={"BTC-USDT": 0.5, "ETH-USDT": 0.5},
         max_sleeve_weight=0.75,
-        provenance=provenance,
+        provenance=_fixture_provenance(metadata),
     )
     return result, source_paths
 
@@ -131,7 +139,7 @@ def test_return_loader_parses_the_exact_bytes_whose_hash_was_verified(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    metadata = json.loads((_FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8"))
+    metadata = _fixture_metadata()
     source = tmp_path / _SOURCE_FILENAMES["BTC-USDT"]
     shutil.copyfile(_FIXTURE_DIR / source.name, source)
 
@@ -157,3 +165,36 @@ def test_return_loader_parses_the_exact_bytes_whose_hash_was_verified(
 
     assert source.read_bytes() == altered_bytes
     assert loaded.iloc[changed_row] == pytest.approx(original_value)
+
+
+def test_report_reloads_relative_sources_after_working_directory_changes(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    metadata = _fixture_metadata()
+    instruments = metadata["instruments"]
+    source_dir = tmp_path / "relative-sources"
+    source_dir.mkdir()
+    for filename in _SOURCE_FILENAMES.values():
+        shutil.copyfile(_FIXTURE_DIR / filename, source_dir / filename)
+
+    monkeypatch.chdir(source_dir)
+    sleeve_returns = {
+        instrument: load_verified_return_csv(
+            filename,
+            expected_sha256=instruments[instrument]["fixture_sha256"],
+        )
+        for instrument, filename in _SOURCE_FILENAMES.items()
+    }
+    result = build_buy_and_hold_sleeve_portfolio(
+        sleeve_returns,
+        initial_weights={"BTC-USDT": 0.5, "ETH-USDT": 0.5},
+        max_sleeve_weight=0.75,
+        provenance=_fixture_provenance(metadata),
+    )
+
+    monkeypatch.chdir(tmp_path.parent)
+    paths = write_portfolio_risk_report(result, tmp_path / "report-after-cwd-change")
+
+    assert set(paths) == {"json", "markdown", "returns"}
+    assert all(path.is_file() for path in paths.values())
