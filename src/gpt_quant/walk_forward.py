@@ -82,7 +82,7 @@ def _validated_trend_weight(value: object) -> float:
         raise ValueError("trend weight candidates must be finite real numbers")
     if not 0.0 <= parsed <= 1.0:
         raise ValueError("trend weights must be in [0, 1]")
-    return round(parsed, 10)
+    return parsed
 
 
 def _validated_window_bars(value: object, *, label: str, minimum: int) -> int:
