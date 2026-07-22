@@ -125,15 +125,7 @@ def test_lagged_volatility_regime_report_records_rejection() -> None:
         assert market_result["point"]["low_vol_annualized_mean"] > 0.0
         assert market_result["point"]["high_vol_annualized_mean"] > 0.0
 
-    assert result["markets"]["BTC-USDT"]["bootstrap"]["high_vol"][
-        "lower_bound_positive"
-    ] is True
-    assert result["markets"]["BTC-USDT"]["bootstrap"]["low_vol"][
-        "lower_bound_positive"
-    ] is False
-    assert result["markets"]["ETH-USDT"]["bootstrap"]["high_vol"][
-        "lower_bound_positive"
-    ] is False
-    assert result["markets"]["ETH-USDT"]["bootstrap"]["low_vol"][
-        "lower_bound_positive"
-    ] is False
+    assert result["markets"]["BTC-USDT"]["bootstrap"]["high_vol"]["lower_bound_positive"]
+    assert not result["markets"]["BTC-USDT"]["bootstrap"]["low_vol"]["lower_bound_positive"]
+    assert not result["markets"]["ETH-USDT"]["bootstrap"]["high_vol"]["lower_bound_positive"]
+    assert not result["markets"]["ETH-USDT"]["bootstrap"]["low_vol"]["lower_bound_positive"]
