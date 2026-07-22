@@ -18,13 +18,7 @@ ANALYSIS_PATH = (
     / "analysis.py"
 )
 RESULT_PATH = ANALYSIS_PATH.with_name("result.json")
-FIXTURE_DIR = (
-    REPOSITORY_ROOT
-    / "tests"
-    / "fixtures"
-    / "okx"
-    / "btc_eth_oos_20200111_20200219"
-)
+FIXTURE_DIR = REPOSITORY_ROOT / "tests" / "fixtures" / "okx" / "btc_eth_oos_20200111_20200219"
 SPEC = importlib.util.spec_from_file_location("adaptive_selection_risk_analysis", ANALYSIS_PATH)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError(f"unable to load analysis module from {ANALYSIS_PATH}")
@@ -98,7 +92,6 @@ def test_committed_result_records_single_rejected_hypothesis() -> None:
     assert all(market["observations"] == 2340 for market in result["markets"].values())
     assert all(not market["passes"] for market in result["markets"].values())
     assert any(
-        market["max_drawdown_delta_interval"][0] <= 0.0
-        or market["calmar_delta_interval"][0] <= 0.0
+        market["max_drawdown_delta_interval"][0] <= 0.0 or market["calmar_delta_interval"][0] <= 0.0
         for market in result["markets"].values()
     )
