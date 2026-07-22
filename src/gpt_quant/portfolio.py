@@ -337,7 +337,7 @@ def _validate_return_source_bindings(
 ) -> tuple[_VerifiedReturnBinding, ...]:
     """Bind each in-memory sleeve exactly to rows from its verified source file."""
 
-    return tuple(
+    bindings = tuple(
         _validated_return_source_binding(
             name,
             sleeve_returns[name],
@@ -345,6 +345,20 @@ def _validate_return_source_bindings(
         )
         for name in sorted(sleeve_returns)
     )
+    source_column_identities = {
+        (
+            binding.sha256,
+            binding.timestamp_column,
+            binding.return_column,
+            binding.selected_timestamps,
+        )
+        for binding in bindings
+    }
+    if len(source_column_identities) != len(bindings):
+        raise ValueError(
+            "portfolio sleeves must use distinct verified return source columns"
+        )
+    return bindings
 
 
 def _validate_sleeves(
