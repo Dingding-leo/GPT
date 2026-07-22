@@ -1,9 +1,8 @@
 name: Temporary PR121 Formatter
 
 on:
-  push:
-    branches:
-      - auto/research/20260722-18-lagged-liquidity-regimes
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
