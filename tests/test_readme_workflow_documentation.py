@@ -14,8 +14,16 @@ def test_readme_matches_hourly_portfolio_artifact_pipeline() -> None:
     assert readme.count(source_pattern) == 1
     assert readme.count(portfolio_pattern) == 1
 
-    assert 'SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-attempt-${{ github.run_attempt }}"' in workflow
-    assert 'PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-attempt-${{ github.run_attempt }}"' in workflow
+    source_declaration = (
+        'SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-'
+        'attempt-${{ github.run_attempt }}"'
+    )
+    portfolio_declaration = (
+        'PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-'
+        'attempt-${{ github.run_attempt }}"'
+    )
+    assert source_declaration in workflow
+    assert portfolio_declaration in workflow
 
     for output in (
         "portfolio_risk.json",
