@@ -156,7 +156,8 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
         ),
         "economic_rationale": (
             "Crypto liquidity and institutional participation differ between weekdays and "
-            "weekends. A robust daily strategy should not depend on only one calendar-liquidity regime."
+            "weekends. A robust daily strategy should not depend on only one "
+            "calendar-liquidity regime."
         ),
         "method": {
             "annualization": ANNUALIZATION,
@@ -174,7 +175,9 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
             "source_workflow_run_id": 29891907836,
             "source_artifact_id": 8518541653,
             "source_artifact_name": "quant-research-source-608",
-            "source_artifact_sha256": "049c82dff0ed05c37e106d8ac30857532d5f20f18cc9191aaf6f100d3642b7c0",
+            "source_artifact_sha256": (
+                "049c82dff0ed05c37e106d8ac30857532d5f20f18cc9191aaf6f100d3642b7c0"
+            ),
             "source_head_sha": "36861294403b51b1ecb41d1586534df7bcf3e0ae",
             "tested_base_sha": "b9efe58b7c804d122658c4dbc27192b0dae1294c",
             "return_file_sha256": {market: spec["sha256"] for market, spec in MARKETS.items()},
@@ -184,7 +187,8 @@ def build_result(artifact_dir: Path) -> dict[str, object]:
         "failure_reasons": failures,
         "limitations": [
             "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
-            "Conditional regime means are descriptive and do not constitute a trading calendar rule.",
+            "Conditional regime means are descriptive and do not constitute a "
+            "trading calendar rule.",
             "The analysis does not model spread, impact, capacity, latency, or partial fills.",
         ],
     }
