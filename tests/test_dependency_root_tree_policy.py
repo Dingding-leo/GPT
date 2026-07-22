@@ -80,6 +80,5 @@ def test_trusted_workflow_validates_casefolded_root_before_resolution() -> None:
     assert "Accept: application/vnd.github+json" in workflow
     assert root_download < root_validation < exact_status_validation < preparation < resolution
     assert all(
-        path.name.casefold() not in {"setup.py", "setup.cfg"}
-        for path in REPOSITORY_ROOT.iterdir()
+        path.name.casefold() not in {"setup.py", "setup.cfg"} for path in REPOSITORY_ROOT.iterdir()
     )
