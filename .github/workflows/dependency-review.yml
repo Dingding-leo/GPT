@@ -91,6 +91,14 @@ jobs:
             --output "${PROPOSED_PYPROJECT}"
           sha256sum "${PROPOSED_PYPROJECT}" > reports/security/proposed-pyproject.sha256
 
+          root_api_url="https://api.github.com/repos/${HEAD_REPOSITORY}/contents?ref=${HEAD_SHA}"
+          curl --fail-with-body --location --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${root_api_url}" \
+            --output reports/security/proposed-root-contents.json
+
           : > reports/security/legacy-build-files.tsv
           for path in setup.py setup.cfg; do
             status="$(curl --location --silent --show-error \
@@ -120,6 +128,8 @@ jobs:
 
       - name: Validate proposed dependency declarations
         run: |
+          python scripts/dependency_audit_root_tree.py \
+            reports/security/proposed-root-contents.json
           python scripts/dependency_audit_inputs.py validate-legacy-build-files \
             reports/security/legacy-build-files.json
           python scripts/dependency_audit_inputs.py prepare \
