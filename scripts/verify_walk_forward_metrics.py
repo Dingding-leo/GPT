@@ -36,6 +36,15 @@ def _mapping(value: object, name: str) -> Mapping[str, Any]:
     return value
 
 
+def _reject_duplicate_object_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"report JSON contains duplicate object key {key!r}")
+        result[key] = value
+    return result
+
+
 def _json_integer(value: object, name: str, *, minimum: int) -> int:
     if not isinstance(value, int) or isinstance(value, bool) or value < minimum:
         raise ValueError(f"{name} must be an integer of at least {minimum}")
@@ -136,7 +145,13 @@ def verify_walk_forward_metrics(
 ) -> dict[str, float | int]:
     report_path = Path(report_json)
     returns_path = Path(returns_csv)
-    report = _mapping(json.loads(report_path.read_text(encoding="utf-8")), "report")
+    report = _mapping(
+        json.loads(
+            report_path.read_text(encoding="utf-8"),
+            object_pairs_hook=_reject_duplicate_object_keys,
+        ),
+        "report",
+    )
     settings = _mapping(report.get("settings"), "settings")
     base_config = _mapping(settings.get("base_config"), "settings.base_config")
     annualization = base_config.get("annualization")
