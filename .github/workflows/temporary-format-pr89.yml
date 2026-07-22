@@ -1,0 +1,47 @@
+name: Temporary PR 89 formatter
+
+on:
+  push:
+    branches:
+      - auto/research/20260722-10-best-day-dependence
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install development tools
+        run: python -m pip install -e ".[dev]"
+
+      - name: Apply repository lint fixes and formatting
+        run: |
+          ruff check --fix \
+            reports/research/best-day-dependence/analysis.py \
+            tests/test_best_day_dependence_report.py
+          ruff format \
+            reports/research/best-day-dependence/analysis.py \
+            tests/test_best_day_dependence_report.py
+
+      - name: Upload formatted sources
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: pr89-formatted-sources
+          path: |
+            reports/research/best-day-dependence/analysis.py
+            tests/test_best_day_dependence_report.py
+          if-no-files-found: error
+          retention-days: 1
