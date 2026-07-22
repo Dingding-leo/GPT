@@ -355,9 +355,7 @@ def _validate_return_source_bindings(
         for binding in bindings
     }
     if len(source_column_identities) != len(bindings):
-        raise ValueError(
-            "portfolio sleeves must use distinct verified return source columns"
-        )
+        raise ValueError("portfolio sleeves must use distinct verified return source columns")
     return bindings
 
 
