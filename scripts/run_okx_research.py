@@ -70,6 +70,13 @@ def _validate_okx_raw_page_schema(raw_pages: tuple[dict[str, Any], ...]) -> None
             seen_rows_by_timestamp.setdefault(timestamp, normalized_row)
 
 
+def _json_array(mapping: dict[str, Any], key: str, default: list[Any]) -> list[Any]:
+    value = mapping.get(key, default)
+    if not isinstance(value, list):
+        raise ValueError(f"{key} must be a JSON array")
+    return value
+
+
 def _build_effective_config(
     *,
     data: dict[str, Any],
@@ -123,9 +130,9 @@ def main() -> int:
     base_config = StrategyConfig(**experiment.get("strategy", {}))
     search = experiment.get("search", {})
     robustness = experiment.get("robustness", {})
-    momentum_lookbacks = [int(value) for value in search.get("momentum_lookbacks", [30, 90, 180])]
-    reversal_lookbacks = [int(value) for value in search.get("reversal_lookbacks", [2, 5, 10])]
-    trend_weights = [float(value) for value in search.get("trend_weights", [0.55, 0.70, 0.85])]
+    momentum_lookbacks = _json_array(search, "momentum_lookbacks", [30, 90, 180])
+    reversal_lookbacks = _json_array(search, "reversal_lookbacks", [2, 5, 10])
+    trend_weights = _json_array(search, "trend_weights", [0.55, 0.70, 0.85])
     selection_bars = int(search.get("selection_bars", 730))
     test_bars = int(search.get("test_bars", 90))
     cost_multipliers = [
