@@ -183,7 +183,7 @@ def _default_json_getter(url: str, timeout: float) -> Mapping[str, Any]:
             last_error = exc
             if exc.code not in _RETRYABLE_HTTP_STATUS_CODES or attempt == 2:
                 raise RuntimeError(f"OKX HTTP error {exc.code}") from exc
-        except (URLError, TimeoutError, json.JSONDecodeError) as exc:
+        except (URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError) as exc:
             last_error = exc
             if attempt == 2:
                 raise RuntimeError("OKX request failed after retries") from exc
