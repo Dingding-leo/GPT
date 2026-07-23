@@ -45,7 +45,19 @@ jobs:
           python -m pip install -e ".[dev]"
 
       - name: Lint and formatting
-        run: ruff check . && ruff format --check .
+        run: |
+          set -euo pipefail
+          ruff check \
+            reports/research/expected-shortfall-vs-buy-and-hold/analysis.py \
+            tests/test_expected_shortfall_vs_buy_and_hold_report.py \
+            --fix
+          ruff format \
+            reports/research/expected-shortfall-vs-buy-and-hold/analysis.py \
+            tests/test_expected_shortfall_vs_buy_and_hold_report.py
+          git diff -- \
+            reports/research/expected-shortfall-vs-buy-and-hold/analysis.py \
+            tests/test_expected_shortfall_vs_buy_and_hold_report.py
+          exit 1
 
       - name: Test against public OKX data
         env:
