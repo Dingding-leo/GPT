@@ -52,6 +52,11 @@ def _lock_path(path: Path) -> Path:
     return path.with_name(f".{path.name}.lock")
 
 
+def _write_private_journal(path: Path, payload: bytes) -> None:
+    path.write_bytes(payload)
+    path.chmod(0o600)
+
+
 def _crash_during_intent_publication(path: str) -> None:
     def crash_publish(*args: object, **kwargs: object) -> None:
         os._exit(_CRASH_EXIT_CODE)
@@ -192,19 +197,19 @@ def test_target_intent_journal_rejects_ambiguous_persisted_state(tmp_path: Path)
     earlier = _intent(day=22, target_position=0.25)
     later = _intent(day=23, target_position=0.75)
 
-    path.write_bytes(earlier.to_json_bytes() + earlier.to_json_bytes())
+    _write_private_journal(path, earlier.to_json_bytes() + earlier.to_json_bytes())
     with pytest.raises(ValueError, match="duplicate intent ID"):
         load_target_position_intent_journal(path)
 
-    path.write_bytes(later.to_json_bytes() + earlier.to_json_bytes())
+    _write_private_journal(path, later.to_json_bytes() + earlier.to_json_bytes())
     with pytest.raises(ValueError, match="chronological ordering"):
         load_target_position_intent_journal(path)
 
-    path.write_bytes(earlier.to_json_bytes().removesuffix(b"\n"))
+    _write_private_journal(path, earlier.to_json_bytes().removesuffix(b"\n"))
     with pytest.raises(ValueError, match="newline-terminated"):
         load_target_position_intent_journal(path)
 
-    path.write_bytes(earlier.to_json_bytes().replace(b"\n", b"\r\n"))
+    _write_private_journal(path, earlier.to_json_bytes().replace(b"\n", b"\r\n"))
     with pytest.raises(ValueError, match="canonical encoding"):
         load_target_position_intent_journal(path)
 
