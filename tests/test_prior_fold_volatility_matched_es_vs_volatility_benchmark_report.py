@@ -75,9 +75,7 @@ def test_prior_fold_scale_reconstructs_position_and_costs_from_real_snapshot() -
     )
 
     structurally_altered = frame.copy()
-    structurally_altered.loc[
-        structurally_altered["fold"] == 2, analysis.STRATEGY_COLUMN
-    ] *= 2.0
+    structurally_altered.loc[structurally_altered["fold"] == 2, analysis.STRATEGY_COLUMN] *= 2.0
     analysis.COMPLETE_FOLD_SIZE = 10
     try:
         _, altered_scales = analysis.prior_fold_scaled_returns(
