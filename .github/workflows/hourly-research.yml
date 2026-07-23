@@ -44,25 +44,8 @@ jobs:
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
 
-      - name: Apply exact Ruff formatting diagnostic
-        run: |
-          ruff check .
-          ruff format \
-            reports/research/benchmark-relative-fold-breadth/analysis.py \
-            tests/test_benchmark_relative_fold_breadth_report.py
-
-      - name: Upload exact Ruff formatting diagnostic
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: benchmark-relative-fold-ruff-format
-          path: |
-            reports/research/benchmark-relative-fold-breadth/analysis.py
-            tests/test_benchmark_relative_fold_breadth_report.py
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Stop after formatting diagnostic
-        run: exit 1
+      - name: Lint and formatting
+        run: ruff check . && ruff format --check .
 
       - name: Test against public OKX data
         env:
