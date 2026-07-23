@@ -90,9 +90,7 @@ def _state(
             latency_bps=4.0,
         ),
     )
-    return snapshot, target_policy, _intent(
-        fixture_sha256, target_position=target_position
-    )
+    return snapshot, target_policy, _intent(fixture_sha256, target_position=target_position)
 
 
 def test_freshness_gate_rejects_replayed_stale_portfolio_state() -> None:
