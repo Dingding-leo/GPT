@@ -1,9 +1,7 @@
 name: Temporary Ruff Format PR 241
 
 on:
-  push:
-    branches:
-      - auto/research/20260723-16-volatility-matched-acute-loss
+  pull_request:
 
 permissions:
   contents: read
