@@ -285,8 +285,7 @@ def build_result(artifact_dir: str | Path) -> dict[str, object]:
         rejection_reason = (
             "The 95% complete-fold moving-block-bootstrap lower bound for the mean "
             "strategy-minus-volatility-targeted-long worst 20-session return delta was "
-            "non-positive in: "
-            + ", ".join(failed_markets)
+            "non-positive in: " + ", ".join(failed_markets)
         )
 
     return {
@@ -334,8 +333,7 @@ def build_result(artifact_dir: str | Path) -> dict[str, object]:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Compare strategy and volatility-targeted-long worst within-fold "
-            "20-session losses."
+            "Compare strategy and volatility-targeted-long worst within-fold 20-session losses."
         )
     )
     parser.add_argument("--artifact-dir", required=True, type=Path)
