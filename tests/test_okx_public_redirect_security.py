@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Thread
@@ -75,11 +75,14 @@ def _assert_cross_origin_redirect_rejected(
 ) -> None:
     origin_contacts: list[str] = []
     destination_contacts: list[str] = []
-    with (
-        _serve(_payload_handler(destination_payload, destination_contacts)) as destination,
-        _serve(_redirect_handler(f"{destination}/link-local-target", origin_contacts)) as origin,
-        pytest.raises((HTTPError, RuntimeError)),
-    ):
+    with ExitStack() as stack:
+        destination = stack.enter_context(
+            _serve(_payload_handler(destination_payload, destination_contacts))
+        )
+        origin = stack.enter_context(
+            _serve(_redirect_handler(f"{destination}/link-local-target", origin_contacts))
+        )
+        stack.enter_context(pytest.raises((HTTPError, RuntimeError)))
         getter(f"{origin}/public-okx-endpoint", 2.0)
 
     assert origin_contacts == ["/public-okx-endpoint"]
