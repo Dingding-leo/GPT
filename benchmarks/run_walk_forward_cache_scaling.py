@@ -56,30 +56,24 @@ def _linear_fit(
     x = [float(value) for value in x_values]
     y = [float(value) for value in y_values]
     if len(x) != len(y) or len(x) < 2:
-        raise ValueError(
-            "linear fit requires equally sized inputs with at least two points"
-        )
+        raise ValueError("linear fit requires equally sized inputs with at least two points")
     x_mean = statistics.fmean(x)
     y_mean = statistics.fmean(y)
     x_offsets = [value - x_mean for value in x]
     x_sum_squares = sum(offset * offset for offset in x_offsets)
     if x_sum_squares == 0.0:
         raise ValueError("linear fit requires at least two distinct x values")
-    slope = sum(
-        x_offset * (y_value - y_mean)
-        for x_offset, y_value in zip(x_offsets, y, strict=True)
-    ) / x_sum_squares
+    slope = (
+        sum(x_offset * (y_value - y_mean) for x_offset, y_value in zip(x_offsets, y, strict=True))
+        / x_sum_squares
+    )
     intercept = y_mean - slope * x_mean
     residual_sum_squares = sum(
         (y_value - (intercept + slope * x_value)) ** 2
         for x_value, y_value in zip(x, y, strict=True)
     )
     total_sum_squares = sum((y_value - y_mean) ** 2 for y_value in y)
-    r_squared = (
-        1.0
-        if total_sum_squares == 0.0
-        else 1.0 - residual_sum_squares / total_sum_squares
-    )
+    r_squared = 1.0 if total_sum_squares == 0.0 else 1.0 - residual_sum_squares / total_sum_squares
     return LinearFit(intercept=intercept, slope=slope, r_squared=r_squared)
 
 
@@ -374,10 +368,7 @@ def main() -> None:
         print(f"peak_rss_fit_intercept_bytes={peak_rss_fit.intercept:.3f}")
         print(f"peak_rss_fit_slope_bytes_per_candidate={peak_rss_fit.slope:.3f}")
         print(f"peak_rss_fit_r_squared={peak_rss_fit.r_squared:.9f}")
-        print(
-            "scaling_interpretation="
-            "descriptive_fit_only_not_asymptotic_complexity"
-        )
+        print("scaling_interpretation=descriptive_fit_only_not_asymptotic_complexity")
     else:
         print("linear_fit=unavailable_requires_at_least_two_cardinalities")
 
