@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import math
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
@@ -35,26 +36,34 @@ CANONICAL_SIGNATURE = (
 )
 
 
-def file_sha256(path: str | Path) -> str:
-    digest = hashlib.sha256()
-    with Path(path).open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
-def verify_return_file_sha256(path: str | Path, market: str) -> str:
+def verify_return_payload_sha256(payload: bytes, market: str) -> str:
+    if not isinstance(payload, bytes):
+        raise TypeError("return payload must be bytes")
     try:
         expected = EXPECTED_RETURN_FILE_SHA256[market]
     except KeyError as exc:
         raise ValueError(f"unsupported market: {market}") from exc
 
-    observed = file_sha256(path)
+    observed = hashlib.sha256(payload).hexdigest()
     if observed != expected:
         raise ValueError(
             f"{market} return file SHA-256 mismatch: expected {expected}, observed {observed}"
         )
     return observed
+
+
+def read_verified_return_payloads(
+    artifact_dir: str | Path,
+) -> tuple[dict[str, bytes], dict[str, str]]:
+    artifact_root = Path(artifact_dir)
+    payloads = {
+        market: (artifact_root / market / "walk_forward_returns.csv").read_bytes()
+        for market in MARKETS
+    }
+    digests = {
+        market: verify_return_payload_sha256(payloads[market], market) for market in MARKETS
+    }
+    return payloads, digests
 
 
 def _validated_timestamps(values: pd.Series) -> pd.DatetimeIndex:
@@ -73,8 +82,10 @@ def _validated_timestamps(values: pd.Series) -> pd.DatetimeIndex:
     return timestamps
 
 
-def load_returns(path: str | Path) -> pd.DataFrame:
-    frame = pd.read_csv(path)
+def load_returns(payload: bytes) -> pd.DataFrame:
+    if not isinstance(payload, bytes):
+        raise TypeError("return payload must be bytes")
+    frame = pd.read_csv(BytesIO(payload))
     required = {"timestamp", STRATEGY_RETURN_COLUMN, BENCHMARK_RETURN_COLUMN}
     missing = required - set(frame.columns)
     if missing:
@@ -226,10 +237,12 @@ def bootstrap_volatility_matched_expected_shortfall_delta(
     }
 
 
-def analyze_market(artifact_dir: str | Path, market: str) -> dict[str, object]:
-    returns_path = Path(artifact_dir) / market / "walk_forward_returns.csv"
-    return_file_sha256 = verify_return_file_sha256(returns_path, market)
-    returns = load_returns(returns_path)
+def analyze_market(
+    payload: bytes,
+    market: str,
+    return_file_sha256: str,
+) -> dict[str, object]:
+    returns = load_returns(payload)
     result = bootstrap_volatility_matched_expected_shortfall_delta(
         returns[STRATEGY_RETURN_COLUMN].to_numpy(dtype=float),
         returns[BENCHMARK_RETURN_COLUMN].to_numpy(dtype=float),
@@ -249,7 +262,11 @@ def analyze_market(artifact_dir: str | Path, market: str) -> dict[str, object]:
 
 
 def build_result(artifact_dir: str | Path) -> dict[str, object]:
-    markets = {market: analyze_market(artifact_dir, market) for market in MARKETS}
+    payloads, return_file_sha256 = read_verified_return_payloads(artifact_dir)
+    markets = {
+        market: analyze_market(payloads[market], market, return_file_sha256[market])
+        for market in MARKETS
+    }
     joint_passed = all(bool(markets[market]["passed"]) for market in MARKETS)
     failed_markets = [market for market in MARKETS if not bool(markets[market]["passed"])]
     rejection_reason = None
