@@ -467,8 +467,11 @@ def run_walk_forward_research(
         )
         for candidate in candidates
     )
-    if selection_bars <= longest_lookback:
-        raise ValueError("selection_bars must exceed every candidate lookback")
+    if longest_lookback > selection_bars - 2:
+        raise ValueError(
+            "selection_bars must provide at least one one-bar-delayed "
+            "selection-window observation after every candidate lookback"
+        )
 
     folds: list[dict[str, Any]] = []
     base_frames: list[pd.DataFrame] = []
