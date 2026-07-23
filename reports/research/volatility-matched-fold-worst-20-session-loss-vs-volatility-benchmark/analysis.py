@@ -182,7 +182,9 @@ def fold_worst_window_deltas(
         scale = sample_volatility_scale(strategy, benchmark)
         scaled_benchmark = benchmark * scale
         if np.any(scaled_benchmark <= -1.0) or not np.isfinite(scaled_benchmark).all():
-            raise ValueError("volatility-matched benchmark returns must remain finite and above -100%")
+            raise ValueError(
+                "volatility-matched benchmark returns must remain finite and above -100%"
+            )
         strategy_worst = worst_compounded_window_return(strategy, window=window)
         benchmark_worst = worst_compounded_window_return(scaled_benchmark, window=window)
         rows.append(
@@ -275,9 +277,7 @@ def analyze_market(artifact_dir: str | Path, market: str) -> dict[str, object]:
         "complete_folds": complete_folds,
         "excluded_trailing_rows": excluded_rows,
         "rolling_windows_per_fold": COMPLETE_FOLD_LENGTH - LOSS_WINDOW + 1,
-        "mean_benchmark_volatility_scale": float(
-            fold_metrics["benchmark_volatility_scale"].mean()
-        ),
+        "mean_benchmark_volatility_scale": float(fold_metrics["benchmark_volatility_scale"].mean()),
         "median_benchmark_volatility_scale": float(
             fold_metrics["benchmark_volatility_scale"].median()
         ),

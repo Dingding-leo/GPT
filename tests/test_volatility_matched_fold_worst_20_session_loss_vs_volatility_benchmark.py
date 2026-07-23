@@ -61,24 +61,18 @@ def test_volatility_matching_and_worst_window_use_aligned_real_returns() -> None
     metrics = analysis.fold_worst_window_deltas(frame, fold_length=40, window=20)
 
     assert observed_scale == pytest.approx(expected_scale)
-    assert metrics.loc[0, "benchmark_volatility_scale"] == pytest.approx(
-        expected_scale
-    )
+    assert metrics.loc[0, "benchmark_volatility_scale"] == pytest.approx(expected_scale)
     expected_strategy_worst = min(
-        float(np.prod(1.0 + strategy[start : start + 20]) - 1.0)
-        for start in range(21)
+        float(np.prod(1.0 + strategy[start : start + 20]) - 1.0) for start in range(21)
     )
     scaled_benchmark = benchmark * expected_scale
     expected_benchmark_worst = min(
-        float(np.prod(1.0 + scaled_benchmark[start : start + 20]) - 1.0)
-        for start in range(21)
+        float(np.prod(1.0 + scaled_benchmark[start : start + 20]) - 1.0) for start in range(21)
     )
-    assert metrics.loc[0, "strategy_worst_window_return"] == pytest.approx(
-        expected_strategy_worst
+    assert metrics.loc[0, "strategy_worst_window_return"] == pytest.approx(expected_strategy_worst)
+    assert metrics.loc[0, "volatility_matched_benchmark_worst_window_return"] == pytest.approx(
+        expected_benchmark_worst
     )
-    assert metrics.loc[
-        0, "volatility_matched_benchmark_worst_window_return"
-    ] == pytest.approx(expected_benchmark_worst)
 
 
 def test_fold_block_bootstrap_reuses_consecutive_observed_fold_statistics(
@@ -115,9 +109,7 @@ def test_fold_block_bootstrap_reuses_consecutive_observed_fold_statistics(
         seed=7,
     )
 
-    expected_means = np.asarray(
-        [float(np.mean(observed[indices])) for indices in sample_indices]
-    )
+    expected_means = np.asarray([float(np.mean(observed[indices])) for indices in sample_indices])
     assert result["ci_lower"] == pytest.approx(np.quantile(expected_means, 0.025))
     assert result["ci_upper"] == pytest.approx(np.quantile(expected_means, 0.975))
 
