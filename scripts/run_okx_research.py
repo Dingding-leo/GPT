@@ -17,6 +17,7 @@ from gpt_quant import (
     fetch_okx_history_candles,
     file_sha256,
     run_walk_forward_research,
+    verify_walk_forward_report,
     write_okx_snapshot,
     write_walk_forward_report,
 )
@@ -155,6 +156,19 @@ def _write_effective_config_snapshot(
     return config_path
 
 
+def _write_walk_forward_verification(
+    output: str | Path,
+    verification: dict[str, float | int | str],
+) -> Path:
+    output_path = Path(output)
+    verification_path = output_path / "walk_forward_verification.json"
+    verification_path.write_text(
+        json.dumps(verification, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return verification_path
+
+
 def main() -> int:
     args = parse_args()
     experiment = load_json(args.config)
@@ -214,6 +228,8 @@ def main() -> int:
         provenance=snapshot.metadata,
     )
     report_paths = write_walk_forward_report(result, output)
+    verification = verify_walk_forward_report(output)
+    report_paths["verification"] = _write_walk_forward_verification(output, verification)
 
     effective_config = _build_effective_config(
         data={
@@ -275,6 +291,7 @@ def main() -> int:
     print(f"aggregate_sharpe={result.aggregate_metrics['sharpe']:.6f}")
     print(f"aggregate_max_drawdown={result.aggregate_metrics['max_drawdown']:.6f}")
     print(f"robustness_status={result.robustness_status}")
+    print(f"walk_forward_verification={verification['status']}")
     print(f"experiment_id={manifest_entry['experiment_id']}")
     print(f"run_id={manifest_entry['run_id']}")
     print(f"manifest_appended={str(manifest_appended).lower()}")
