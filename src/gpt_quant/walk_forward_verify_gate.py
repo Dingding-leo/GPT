@@ -9,6 +9,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from .backtest import run_backtest
+from .config import StrategyConfig
 from .walk_forward_verify import verify_walk_forward_report as _verify_report_metrics
 
 _ACCOUNTING_TOLERANCE = 1e-12
@@ -112,7 +114,7 @@ def _validate_source_returns(
     output: Path,
     payload: Mapping[str, object],
     persisted: pd.DataFrame,
-) -> tuple[str, str]:
+) -> tuple[str, str, pd.Series]:
     data_summary = _mapping(payload.get("data_summary"), "data_summary")
     provenance = _mapping(data_summary.get("provenance"), "data_summary.provenance")
     if provenance.get("provider") != "OKX":
@@ -178,7 +180,100 @@ def _validate_source_returns(
         expected_asset_return.reset_index(drop=True),
     )
     predecessor = snapshot_index[int(source_positions[0]) - 1].isoformat()
-    return snapshot_sha256, predecessor
+    return snapshot_sha256, predecessor, source_close
+
+
+def _validate_selected_position_paths(
+    payload: Mapping[str, object],
+    persisted: pd.DataFrame,
+    source_close: pd.Series,
+) -> tuple[int, int]:
+    folds = payload.get("folds")
+    if not isinstance(folds, list) or not folds:
+        raise ValueError("walk-forward report folds must be a non-empty list")
+
+    persisted_index = _timestamp_index(
+        persisted["timestamp"],
+        "walk-forward returns timestamp",
+    )
+    fold_values = _numeric(persisted, "fold")
+    if (fold_values <= 0.0).any() or not np.equal(fold_values, np.floor(fold_values)).all():
+        raise ValueError("walk-forward fold identifiers must be positive integers")
+
+    indexed = persisted.copy()
+    indexed.index = persisted_index
+    indexed["fold"] = fold_values.to_numpy(dtype=int, copy=False)
+    indexed["target_position"] = _numeric(persisted, "target_position").to_numpy(copy=False)
+    indexed["position"] = _numeric(persisted, "position").to_numpy(copy=False)
+
+    expected_fold_ids: list[int] = []
+    verified_rows = 0
+    for ordinal, fold in enumerate(folds, start=1):
+        fold_mapping = _mapping(fold, f"fold {ordinal}")
+        fold_id_value = fold_mapping.get("fold")
+        if isinstance(fold_id_value, bool) or not isinstance(fold_id_value, int):
+            raise ValueError(f"fold {ordinal} identifier must be a positive integer")
+        fold_id = int(fold_id_value)
+        if fold_id <= 0:
+            raise ValueError(f"fold {ordinal} identifier must be a positive integer")
+        if fold_id in expected_fold_ids:
+            raise ValueError(f"walk-forward report contains duplicate fold {fold_id}")
+        expected_fold_ids.append(fold_id)
+
+        fold_frame = indexed.loc[indexed["fold"] == fold_id]
+        if fold_frame.empty:
+            raise ValueError(f"walk-forward returns CSV is missing fold {fold_id}")
+        test_start = _explicit_utc_timestamp(
+            fold_mapping.get("test_start"),
+            f"fold {fold_id} test_start",
+        )
+        test_end = _explicit_utc_timestamp(
+            fold_mapping.get("test_end"),
+            f"fold {fold_id} test_end",
+        )
+        if fold_frame.index[0] != test_start or fold_frame.index[-1] != test_end:
+            raise ValueError(f"fold {fold_id} test boundaries do not match persisted returns")
+
+        selected_parameters = _mapping(
+            fold_mapping.get("selected_parameters"),
+            f"fold {fold_id} selected_parameters",
+        )
+        try:
+            selected_config = StrategyConfig(**dict(selected_parameters))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"fold {fold_id} selected_parameters are invalid") from exc
+        if not math.isclose(
+            selected_config.transaction_cost_bps,
+            _BASELINE_FEE_BPS,
+            rel_tol=0.0,
+            abs_tol=_ACCOUNTING_TOLERANCE,
+        ):
+            raise ValueError(f"fold {fold_id} selected fee must match the canonical baseline")
+
+        expected_fold = run_backtest(
+            source_close.loc[:test_end],
+            selected_config,
+            start=test_start,
+            end=test_end,
+        ).frame
+        if not expected_fold.index.equals(fold_frame.index):
+            raise ValueError(f"fold {fold_id} source timestamps do not match persisted returns")
+        _assert_accounting(
+            f"fold {fold_id} source target_position",
+            fold_frame["target_position"],
+            expected_fold["target_position"],
+        )
+        _assert_accounting(
+            f"fold {fold_id} source position",
+            fold_frame["position"],
+            expected_fold["position"],
+        )
+        verified_rows += len(fold_frame)
+
+    actual_fold_ids = sorted(int(value) for value in indexed["fold"].unique())
+    if actual_fold_ids != sorted(expected_fold_ids):
+        raise ValueError("walk-forward report fold identifiers do not match persisted returns")
+    return len(expected_fold_ids), verified_rows
 
 
 def _validate_accounting(payload: Mapping[str, object], persisted: pd.DataFrame) -> None:
@@ -231,8 +326,15 @@ def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int 
     payload_mapping = _mapping(payload, "walk-forward report")
 
     _validate_explicit_timestamps(payload_mapping, persisted)
-    source_snapshot_sha256, source_preceding_close_timestamp = _validate_source_returns(
-        output, payload_mapping, persisted
+    (
+        source_snapshot_sha256,
+        source_preceding_close_timestamp,
+        source_close,
+    ) = _validate_source_returns(output, payload_mapping, persisted)
+    selected_folds_verified, selected_rows_verified = _validate_selected_position_paths(
+        payload_mapping,
+        persisted,
+        source_close,
     )
     _validate_accounting(payload_mapping, persisted)
     verification = _verify_report_metrics(output, tolerance=_METRIC_TOLERANCE)
@@ -250,4 +352,10 @@ def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int 
     verification["source_price_rows_verified"] = len(persisted)
     verification["source_preceding_close_timestamp"] = source_preceding_close_timestamp
     verification["asset_return_source"] = "immutable_normalized_okx_close_pct_change"
+    verification["selected_folds_verified"] = selected_folds_verified
+    verification["selected_target_rows_verified"] = selected_rows_verified
+    verification["selected_position_rows_verified"] = selected_rows_verified
+    verification["target_position_source"] = (
+        "immutable_normalized_okx_close_and_persisted_selected_config"
+    )
     return verification
