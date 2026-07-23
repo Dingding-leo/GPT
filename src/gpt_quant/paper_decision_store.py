@@ -54,13 +54,10 @@ def _private_decision_directory(
     *,
     create: bool,
 ) -> Iterator[None]:
-    if create:
+    if create or not directory.exists():
         if directory.is_symlink():
             raise ValueError("paper decision directory must not be a symbolic link")
         directory.mkdir(parents=True, mode=0o700, exist_ok=True)
-    elif not directory.exists():
-        yield
-        return
 
     descriptor = os.open(
         directory,
