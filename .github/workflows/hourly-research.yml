@@ -44,28 +44,8 @@ jobs:
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
 
-      - name: Format focused research files
-        run: |
-          ruff check \
-            reports/research/expected-shortfall-vs-buy-and-hold/analysis.py \
-            tests/test_expected_shortfall_vs_buy_and_hold_report.py \
-            --fix
-          ruff format \
-            reports/research/expected-shortfall-vs-buy-and-hold/analysis.py \
-            tests/test_expected_shortfall_vs_buy_and_hold_report.py
-
-      - name: Upload formatting diagnostic
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: expected-shortfall-formatting
-          path: |
-            reports/research/expected-shortfall-vs-buy-and-hold/analysis.py
-            tests/test_expected_shortfall_vs_buy_and_hold_report.py
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Stop after formatting diagnostic
-        run: exit 1
+      - name: Lint and formatting
+        run: ruff check . && ruff format --check .
 
       - name: Test against public OKX data
         env:
