@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 import pytest
@@ -12,7 +13,7 @@ _CONFIG_PATH = Path("config/okx_research.json")
 _EXPECTED_ONE_WAY_COSTS_BPS = [5.0, 7.5, 10.0, 15.0]
 
 
-def _experiment_config() -> dict[str, object]:
+def _experiment_config() -> dict[str, Any]:
     return json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
 
 
@@ -20,14 +21,13 @@ def test_declared_fee_baseline_maps_to_absolute_cost_sensitivities() -> None:
     experiment = _experiment_config()
     strategy = experiment["strategy"]
     robustness = experiment["robustness"]
-    assert isinstance(strategy, dict)
-    assert isinstance(robustness, dict)
 
     fee_bps = float(strategy["transaction_cost_bps"])
     multipliers = [float(value) for value in robustness["cost_multipliers"]]
+    absolute_costs_bps = [fee_bps * value for value in multipliers]
 
     assert fee_bps == 5.0
-    assert [fee_bps * value for value in multipliers] == _EXPECTED_ONE_WAY_COSTS_BPS
+    assert absolute_costs_bps == _EXPECTED_ONE_WAY_COSTS_BPS
 
 
 def test_canonical_baseline_selects_every_fold_under_five_bps(
@@ -37,9 +37,6 @@ def test_canonical_baseline_selects_every_fold_under_five_bps(
     strategy = experiment["strategy"]
     search = experiment["search"]
     robustness = experiment["robustness"]
-    assert isinstance(strategy, dict)
-    assert isinstance(search, dict)
-    assert isinstance(robustness, dict)
 
     base_config = StrategyConfig(**strategy)
     result = run_walk_forward_research(
@@ -53,21 +50,21 @@ def test_canonical_baseline_selects_every_fold_under_five_bps(
         cost_multipliers=robustness["cost_multipliers"],
     )
 
-    assert result.settings["candidate_count"] == 27
-    assert result.settings["base_config"]["transaction_cost_bps"] == 5.0
-    assert all(
-        fold["selected_parameters"]["transaction_cost_bps"] == 5.0
+    selected_fold_fees = {
+        float(fold["selected_parameters"]["transaction_cost_bps"])
         for fold in result.folds
-    )
-    assert result.cost_stress_metrics["1x"] == pytest.approx(result.aggregate_metrics)
-    assert result.settings["cost_multipliers"] == [1.0, 1.5, 2.0, 3.0]
-
+    }
+    multipliers = [float(value) for value in result.settings["cost_multipliers"]]
+    absolute_costs_bps = [base_config.transaction_cost_bps * value for value in multipliers]
     cost_drag = [
         result.cost_stress_metrics[f"{multiplier:g}x"]["cost_drag_sum"]
-        for multiplier in result.settings["cost_multipliers"]
+        for multiplier in multipliers
     ]
+
+    assert result.settings["candidate_count"] == 27
+    assert result.settings["base_config"]["transaction_cost_bps"] == 5.0
+    assert selected_fold_fees == {5.0}
+    assert result.cost_stress_metrics["1x"] == pytest.approx(result.aggregate_metrics)
+    assert multipliers == [1.0, 1.5, 2.0, 3.0]
+    assert absolute_costs_bps == _EXPECTED_ONE_WAY_COSTS_BPS
     assert cost_drag == sorted(cost_drag)
-    assert [
-        base_config.transaction_cost_bps * multiplier
-        for multiplier in result.settings["cost_multipliers"]
-    ] == _EXPECTED_ONE_WAY_COSTS_BPS
