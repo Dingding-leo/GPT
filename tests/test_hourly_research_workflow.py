@@ -43,12 +43,16 @@ def test_hourly_workflow_publishes_portfolio_from_source_artifact_evidence() -> 
     workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
 
     research = workflow.index("- name: Run OKX rolling out-of-sample research")
+    verification = workflow.index("- name: Verify persisted walk-forward evidence")
     hashes = workflow.index("- name: Hash portfolio return inputs")
     source_upload = workflow.index("- name: Upload immutable sleeve research source")
     portfolio = workflow.index("- name: Generate verified portfolio risk report")
     portfolio_upload = workflow.index("- name: Upload verified portfolio risk artifact")
 
-    assert research < hashes < source_upload < portfolio < portfolio_upload
+    assert research < verification < hashes < source_upload < portfolio < portfolio_upload
+    assert workflow.count("python scripts/verify_walk_forward_report.py") == 1
+    assert '--output-dir "reports/okx/$instrument"' in workflow
+    assert workflow.count("--manifest-path reports/okx/experiment-manifest.jsonl") == 2
     assert workflow.count("id: source-artifact") == 1
     assert workflow.count("id: return-hashes") == 1
     assert "steps.source-artifact.outputs.artifact-id" in workflow
