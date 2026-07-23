@@ -10,7 +10,7 @@ import pytest
 
 
 def _load_scaling_benchmark_module(monkeypatch: pytest.MonkeyPatch) -> ModuleType:
-    benchmarks = Path(__file__).parent
+    benchmarks = Path(__file__).parents[1] / "benchmarks"
     monkeypatch.syspath_prepend(str(benchmarks))
     path = benchmarks / "run_walk_forward_cache_scaling.py"
     spec = importlib.util.spec_from_file_location("run_walk_forward_cache_scaling", path)
