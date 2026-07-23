@@ -20,15 +20,27 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
-      - name: Format score binding
+      - name: Apply exact focused Ruff output
         run: |
           python -m pip install "ruff==0.15.22"
-          ruff check --fix tests/test_fold_local_top3_score_binding.py
-          ruff format tests/test_fold_local_top3_score_binding.py
-      - name: Upload formatted score binding
+          ruff check --fix \
+            reports/research/fold_local_top3_score_ensemble \
+            tests/test_fold_local_top3_score_ensemble_report.py \
+            tests/test_fold_local_top3_score_binding.py
+          ruff format \
+            reports/research/fold_local_top3_score_ensemble \
+            tests/test_fold_local_top3_score_ensemble_report.py \
+            tests/test_fold_local_top3_score_binding.py
+          ruff check . > /tmp/ruff-diagnostic.txt 2>&1 || true
+          ruff format --check . >> /tmp/ruff-diagnostic.txt 2>&1 || true
+      - name: Upload exact focused Ruff output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: formatted-top3-binding
-          path: tests/test_fold_local_top3_score_binding.py
+          name: formatted-top3-complete
+          path: |
+            reports/research/fold_local_top3_score_ensemble
+            tests/test_fold_local_top3_score_ensemble_report.py
+            tests/test_fold_local_top3_score_binding.py
+            /tmp/ruff-diagnostic.txt
           if-no-files-found: error
           retention-days: 1
