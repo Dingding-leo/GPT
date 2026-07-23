@@ -158,7 +158,9 @@ def verify_walk_forward_report(
         raise ValueError("walk-forward returns CSV is unreadable") from exc
     missing_columns = sorted(_REQUIRED_RETURN_COLUMNS - set(persisted.columns))
     if missing_columns:
-        raise ValueError(f"walk-forward returns CSV is missing required columns: {missing_columns}")
+        raise ValueError(
+            f"walk-forward returns CSV is missing required columns: {missing_columns}"
+        )
     if persisted.empty:
         raise ValueError("walk-forward returns CSV cannot be empty")
 
@@ -173,7 +175,10 @@ def verify_walk_forward_report(
     numeric_names = sorted(_REQUIRED_RETURN_COLUMNS - {"timestamp"})
     numeric = {name: _numeric_column(persisted, name) for name in numeric_names}
     fold_values = numeric["fold"].to_numpy(copy=False)
-    if not np.equal(fold_values, np.floor(fold_values)).all() or (fold_values <= 0).any():
+    if (
+        not np.equal(fold_values, np.floor(fold_values)).all()
+        or (fold_values <= 0).any()
+    ):
         raise ValueError("walk-forward fold identifiers must be positive integers")
     persisted["fold"] = fold_values.astype(int)
     for name, values in numeric.items():
@@ -231,16 +236,21 @@ def verify_walk_forward_report(
     expected_fold_ids: list[int] = []
     for position, fold_payload in enumerate(folds, start=1):
         fold_mapping = _mapping(fold_payload, f"fold {position}")
-        fold_id = _positive_integer(fold_mapping.get("fold"), f"fold {position} identifier")
+        fold_id = _positive_integer(
+            fold_mapping.get("fold"),
+            f"fold {position} identifier",
+        )
         if fold_id in expected_fold_ids:
             raise ValueError(f"walk-forward report contains duplicate fold {fold_id}")
         expected_fold_ids.append(fold_id)
         fold_frame = persisted.loc[persisted["fold"] == fold_id]
         if fold_frame.empty:
             raise ValueError(f"walk-forward returns CSV is missing fold {fold_id}")
-        if fold_frame.index[0] != _utc_timestamp(fold_mapping.get("test_start"), "test_start"):
+        test_start = _utc_timestamp(fold_mapping.get("test_start"), "test_start")
+        test_end = _utc_timestamp(fold_mapping.get("test_end"), "test_end")
+        if fold_frame.index[0] != test_start:
             raise ValueError(f"fold {fold_id} test_start does not match persisted returns")
-        if fold_frame.index[-1] != _utc_timestamp(fold_mapping.get("test_end"), "test_end"):
+        if fold_frame.index[-1] != test_end:
             raise ValueError(f"fold {fold_id} test_end does not match persisted returns")
         fold_metrics = performance_metrics(fold_frame, annualization=annualization)
         _assert_metric_mapping(
@@ -255,9 +265,17 @@ def verify_walk_forward_report(
         raise ValueError("walk-forward report fold identifiers do not match persisted returns")
 
     data_summary = _mapping(payload_mapping.get("data_summary"), "data_summary")
-    if index[0] != _utc_timestamp(data_summary.get("evaluation_start"), "evaluation_start"):
+    evaluation_start = _utc_timestamp(
+        data_summary.get("evaluation_start"),
+        "evaluation_start",
+    )
+    evaluation_end = _utc_timestamp(
+        data_summary.get("evaluation_end"),
+        "evaluation_end",
+    )
+    if index[0] != evaluation_start:
         raise ValueError("evaluation_start does not match persisted returns")
-    if index[-1] != _utc_timestamp(data_summary.get("evaluation_end"), "evaluation_end"):
+    if index[-1] != evaluation_end:
         raise ValueError("evaluation_end does not match persisted returns")
 
     return {
