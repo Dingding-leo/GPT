@@ -94,7 +94,9 @@ def _run_verifier_workload(
     try:
         result: list[dict[str, float | int | str]] = []
         for _ in range(repetitions):
-            result = [verify_gate.verify_walk_forward_report(root / item) for item in _INSTRUMENTS]
+            result = [
+                verify_gate.verify_walk_forward_report(root / item) for item in _INSTRUMENTS
+            ]
         return result
     finally:
         verify_gate._timestamp_index = original
@@ -169,36 +171,47 @@ def main() -> None:
 
     root = args.artifact_dir
     timestamp_workload = _load_timestamp_workload(root)
-    baseline_timestamp = lambda: _run_timestamp_workload(
-        _baseline_timestamp_index,
-        timestamp_workload,
-        args.component_repetitions,
-    )
-    optimized_timestamp = lambda: _run_timestamp_workload(
-        verify_gate._timestamp_index,
-        timestamp_workload,
-        args.component_repetitions,
-    )
+
+    def baseline_timestamp() -> list[pd.DatetimeIndex]:
+        return _run_timestamp_workload(
+            _baseline_timestamp_index,
+            timestamp_workload,
+            args.component_repetitions,
+        )
+
+    def optimized_timestamp() -> list[pd.DatetimeIndex]:
+        return _run_timestamp_workload(
+            verify_gate._timestamp_index,
+            timestamp_workload,
+            args.component_repetitions,
+        )
+
     baseline_indexes = _run_timestamp_workload(
         _baseline_timestamp_index, timestamp_workload, 1
     )
-    optimized_indexes = _run_timestamp_workload(verify_gate._timestamp_index, timestamp_workload, 1)
+    optimized_indexes = _run_timestamp_workload(
+        verify_gate._timestamp_index, timestamp_workload, 1
+    )
     if len(baseline_indexes) != len(optimized_indexes) or not all(
         baseline.equals(optimized)
         for baseline, optimized in zip(baseline_indexes, optimized_indexes, strict=True)
     ):
         raise AssertionError("optimized timestamp indexes differ from the scalar baseline")
 
-    baseline_verifier = lambda: _run_verifier_workload(
-        root,
-        _baseline_timestamp_index,
-        args.verifier_repetitions,
-    )
-    optimized_verifier = lambda: _run_verifier_workload(
-        root,
-        verify_gate._timestamp_index,
-        args.verifier_repetitions,
-    )
+    def baseline_verifier() -> list[dict[str, float | int | str]]:
+        return _run_verifier_workload(
+            root,
+            _baseline_timestamp_index,
+            args.verifier_repetitions,
+        )
+
+    def optimized_verifier() -> list[dict[str, float | int | str]]:
+        return _run_verifier_workload(
+            root,
+            verify_gate._timestamp_index,
+            args.verifier_repetitions,
+        )
+
     if _run_verifier_workload(root, _baseline_timestamp_index, 1) != _run_verifier_workload(
         root, verify_gate._timestamp_index, 1
     ):
@@ -244,8 +257,12 @@ def main() -> None:
             **_result(
                 verifier_baseline,
                 verifier_optimized,
-                _peak_bytes(lambda: _run_verifier_workload(root, _baseline_timestamp_index, 1)),
-                _peak_bytes(lambda: _run_verifier_workload(root, verify_gate._timestamp_index, 1)),
+                _peak_bytes(
+                    lambda: _run_verifier_workload(root, _baseline_timestamp_index, 1)
+                ),
+                _peak_bytes(
+                    lambda: _run_verifier_workload(root, verify_gate._timestamp_index, 1)
+                ),
             ),
         },
     }
