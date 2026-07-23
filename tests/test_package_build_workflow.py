@@ -35,7 +35,8 @@ def test_package_workflow_builds_sdist_then_verifies_wheel() -> None:
     assert workflow.count('pip install "pip==${PIP_BOOTSTRAP_VERSION}"') == 2
     assert workflow.count('"build==${BUILD_FRONTEND_VERSION}"') == 1
     assert workflow.count('"setuptools==${BUILD_BACKEND_VERSION}"') == 1
-    assert workflow.count("python -m pip check") == 2
+    assert build_block.count("python -m pip check") == 1
+    assert verify_block.count("/tmp/gpt-wheel-venv/bin/python -m pip check") == 1
     assert workflow.count('os.environ["BUILD_BACKEND_VERSION"]') == 1
     assert workflow.count("python -m build --no-isolation") == 1
     assert "python -m build\n" not in workflow
