@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import math
 from numbers import Integral, Real
 
@@ -12,6 +13,7 @@ _ACTIVE_POSITION_THRESHOLD = 0.01
 _POSITION_LIMIT_TOLERANCE = 1e-12
 _DRAWDOWN_THRESHOLD = 1e-12
 _EXPECTED_SHORTFALL_TAIL_FRACTION = 0.05
+_PERIOD_RETURN_THRESHOLD = 1e-12
 
 
 def _positive_integer(value: object, label: str) -> int:
@@ -54,13 +56,88 @@ def _underwater_durations(drawdown: np.ndarray) -> tuple[int, int]:
     return (running if drawdown[-1] < -_DRAWDOWN_THRESHOLD else 0, longest)
 
 
+def _period_classification(value: float) -> str:
+    if value > _PERIOD_RETURN_THRESHOLD:
+        return "profitable"
+    if value < -_PERIOD_RETURN_THRESHOLD:
+        return "losing"
+    return "flat"
+
+
+def _calendar_period_records(
+    net_returns: pd.Series,
+    *,
+    period: str,
+) -> list[dict[str, object]]:
+    if period not in {"month", "year"}:
+        raise ValueError("calendar period must be month or year")
+
+    utc_index = net_returns.index.tz_convert("UTC")
+    labels = utc_index.strftime("%Y-%m" if period == "month" else "%Y")
+    records: list[dict[str, object]] = []
+    for label in dict.fromkeys(labels):
+        mask = labels == label
+        values = net_returns.loc[mask]
+        observed_index = utc_index[mask]
+        if period == "month":
+            year, month = (int(part) for part in label.split("-"))
+            expected_start = pd.Timestamp(year=year, month=month, day=1, tz="UTC")
+            expected_end = pd.Timestamp(
+                year=year,
+                month=month,
+                day=calendar.monthrange(year, month)[1],
+                tz="UTC",
+            )
+        else:
+            year = int(label)
+            expected_start = pd.Timestamp(year=year, month=1, day=1, tz="UTC")
+            expected_end = pd.Timestamp(year=year, month=12, day=31, tz="UTC")
+
+        normalized = observed_index.normalize()
+        expected_observations = int((expected_end - expected_start).days) + 1
+        complete = bool(
+            len(observed_index) == expected_observations
+            and observed_index.equals(normalized)
+            and normalized[0] == expected_start
+            and normalized[-1] == expected_end
+            and normalized.to_series().diff().dropna().eq(pd.Timedelta(days=1)).all()
+        )
+        period_return = float((1.0 + values).prod() - 1.0)
+        records.append(
+            {
+                "period": label,
+                "coverage": "complete" if complete else "partial",
+                "observations": len(values),
+                "evaluation_start": observed_index[0].isoformat(),
+                "evaluation_end": observed_index[-1].isoformat(),
+                "net_total_return": period_return,
+                "classification": _period_classification(period_return),
+            }
+        )
+    return records
+
+
+def _period_summary(records: list[dict[str, object]], *, label: str) -> dict[str, object]:
+    return {
+        f"profitable_{label}_count": sum(
+            record["classification"] == "profitable" for record in records
+        ),
+        f"losing_{label}_count": sum(record["classification"] == "losing" for record in records),
+        f"flat_{label}_count": sum(record["classification"] == "flat" for record in records),
+        f"partial_{label}_count": sum(record["coverage"] == "partial" for record in records),
+        f"partial_{label}_labels": [
+            record["period"] for record in records if record["coverage"] == "partial"
+        ],
+    }
+
+
 def walk_forward_path_diagnostics(
     frame: pd.DataFrame,
     *,
     annualization: int,
     minimum_position: float,
     maximum_absolute_position: float,
-) -> dict[str, float | int | str | bool]:
+) -> dict[str, object]:
     """Reconstruct position-path diagnostics without treating transitions as exchange orders."""
 
     ann = _positive_integer(annualization, "annualization")
@@ -164,6 +241,8 @@ def walk_forward_path_diagnostics(
     expected_shortfall = float(np.sort(return_values)[:tail_observations].mean())
     active_returns = net_returns[net_returns != 0.0]
     bar_hit_rate = float((active_returns > 0.0).mean()) if len(active_returns) else 0.0
+    calendar_months = _calendar_period_records(net_returns, period="month")
+    calendar_years = _calendar_period_records(net_returns, period="year")
 
     return {
         "diagnostic_schema": "walk_forward_path_v1",
@@ -209,4 +288,13 @@ def walk_forward_path_diagnostics(
         "recomputed_maximum_drawdown": float(drawdown.min()),
         "current_underwater_duration_bars": current_underwater_bars,
         "longest_underwater_duration_bars": longest_underwater_bars,
+        "calendar_period_return_basis": (
+            "UTC calendar periods; compounded net strategy_return; +/-1e-12 is flat; coverage is "
+            "complete only when every midnight UTC daily observation from calendar start to end "
+            "is present"
+        ),
+        "calendar_months": calendar_months,
+        **_period_summary(calendar_months, label="month"),
+        "calendar_years": calendar_years,
+        **_period_summary(calendar_years, label="year"),
     }
