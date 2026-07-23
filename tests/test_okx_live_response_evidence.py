@@ -122,9 +122,10 @@ def test_real_okx_cutoff_persists_reconstructable_public_time_response(tmp_path)
     assert restored["instrument_id"] == "BTC-USDT"
     assert restored["bar"] == "1Dutc"
     assert restored["server_time_response"] == _SERVER_TIME_PAYLOAD
-    assert restored["server_time_response_sha256"] == hashlib.sha256(
-        _canonical_json_bytes(_SERVER_TIME_PAYLOAD)
-    ).hexdigest()
+    assert (
+        restored["server_time_response_sha256"]
+        == hashlib.sha256(_canonical_json_bytes(_SERVER_TIME_PAYLOAD)).hexdigest()
+    )
     assert restored["exchange_server_time_utc"] == "2026-07-21T12:00:00.100000+00:00"
     assert restored["signal_not_before_utc"] == "2026-07-21T12:00:00.200000+00:00"
 
