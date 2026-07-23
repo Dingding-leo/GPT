@@ -22,26 +22,28 @@ jobs:
           python-version: "3.13"
       - name: Install formatter
         run: python -m pip install "ruff>=0.9,<1"
-      - name: Format submitted files
+      - name: Format and inspect submitted files
         run: |
           ruff format \
             src/gpt_quant/backtest.py \
             src/gpt_quant/metrics.py \
             src/gpt_quant/walk_forward_report.py \
             tests/test_walk_forward_fee_decomposition.py
+          ruff check \
+            src/gpt_quant/backtest.py \
+            src/gpt_quant/metrics.py \
+            src/gpt_quant/walk_forward_report.py \
+            tests/test_walk_forward_fee_decomposition.py \
+            > ruff-check.txt 2>&1 || true
+          cp "$(command -v ruff)" ruff-bin
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: backtest-formatted-files
+          name: backtest-format-diagnostics
           path: |
             src/gpt_quant/backtest.py
             src/gpt_quant/metrics.py
             src/gpt_quant/walk_forward_report.py
             tests/test_walk_forward_fee_decomposition.py
+            ruff-check.txt
+            ruff-bin
           if-no-files-found: error
-      - name: Check submitted files
-        run: |
-          ruff check \
-            src/gpt_quant/backtest.py \
-            src/gpt_quant/metrics.py \
-            src/gpt_quant/walk_forward_report.py \
-            tests/test_walk_forward_fee_decomposition.py
