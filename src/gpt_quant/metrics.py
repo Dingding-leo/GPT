@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
+from numbers import Number
 
 import numpy as np
 import pandas as pd
@@ -20,6 +21,38 @@ def max_drawdown_from_returns(returns: pd.Series) -> float:
     running_peak = np.maximum.accumulate(nav)
     drawdown = nav / running_peak - 1.0
     return float(drawdown.min())
+
+
+def _invalid_return_error(series: pd.Series, position: int) -> ValueError:
+    index_value = series.index[position]
+    location = (
+        index_value.isoformat() if isinstance(index_value, pd.Timestamp) else str(index_value)
+    )
+    return ValueError(
+        f"strategy_return must contain finite real numbers; invalid value at {location}"
+    )
+
+
+def _validated_returns(series: pd.Series) -> pd.Series:
+    values = series.to_numpy(copy=False)
+    kind = values.dtype.kind
+
+    if kind in "iuf":
+        float_values = values.astype(float, copy=False)
+    elif kind == "O":
+        for position, value in enumerate(values):
+            if not isinstance(value, Number) or isinstance(
+                value, bool | np.bool_ | complex | np.complexfloating
+            ):
+                raise _invalid_return_error(series, position)
+        float_values = np.asarray(values, dtype=float)
+    else:
+        raise _invalid_return_error(series, 0)
+
+    invalid_positions = np.flatnonzero(~np.isfinite(float_values))
+    if invalid_positions.size:
+        raise _invalid_return_error(series, int(invalid_positions[0]))
+    return pd.Series(float_values, index=series.index, name=series.name, copy=False)
 
 
 def _validate_solvent_returns(returns: pd.Series) -> None:
@@ -44,11 +77,11 @@ def performance_metrics(
     ann = annualization or (
         result.config.annualization if isinstance(result, BacktestResult) else 252
     )
-    returns = pd.to_numeric(frame["strategy_return"], errors="coerce").fillna(0.0)
+    if frame.empty:
+        raise ValueError("cannot calculate metrics for an empty frame")
+    returns = _validated_returns(frame["strategy_return"])
     _validate_solvent_returns(returns)
     n = int(len(returns))
-    if n == 0:
-        raise ValueError("cannot calculate metrics for an empty frame")
 
     total_growth = float((1.0 + returns).prod())
     total_return = total_growth - 1.0
