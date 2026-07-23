@@ -67,7 +67,11 @@ def test_hourly_workflow_publishes_portfolio_from_source_artifact_evidence() -> 
         'PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-attempt-'
         '${{ github.run_attempt }}"' in workflow
     )
-    assert workflow.count("github.run_attempt") == 2
+    assert (
+        'LIVE_READINESS_ARTIFACT_NAME: "live-readiness-${{ github.run_number }}-attempt-'
+        '${{ github.run_attempt }}"' in workflow
+    )
+    assert workflow.count("github.run_attempt") == 3
     assert 'sha256sum "$btc_returns"' in workflow
     assert 'sha256sum "$eth_returns"' in workflow
     assert '--source-workflow-run "$GITHUB_RUN_ID"' in workflow
