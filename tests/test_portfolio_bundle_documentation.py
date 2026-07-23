@@ -103,9 +103,9 @@ def test_docs_match_four_file_portfolio_artifact_bundle() -> None:
         "output.mkdir(parents=True, exist_ok=True)"
     )
     assert contract.index("if output.is_symlink():") < contract.index("return ordered_names")
-    assert contract.index(
-        "if any(path.is_symlink() for path in paths.values()):"
-    ) < contract.index("return ordered_names")
+    assert contract.index("if any(path.is_symlink() for path in paths.values()):") < contract.index(
+        "return ordered_names"
+    )
 
     for test_name in (
         "test_atomic_publisher_rejects_symlink_output_directory_before_staging",
