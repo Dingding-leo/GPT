@@ -117,9 +117,10 @@ def test_manifest_verifier_binds_real_okx_report_to_exact_evidence(
     assert binding["manifest_candidate_count"] == 1
     assert binding["manifest_experiment_id"].startswith("exp-")
     assert binding["manifest_run_id"].startswith("run-")
-    assert binding["manifest_normalized_csv_sha256"] == hashlib.sha256(
-        paths["snapshot"].read_bytes()
-    ).hexdigest()
+    assert (
+        binding["manifest_normalized_csv_sha256"]
+        == hashlib.sha256(paths["snapshot"].read_bytes()).hexdigest()
+    )
 
 
 def test_manifest_verifier_rejects_self_consistent_report_outside_manifest(
