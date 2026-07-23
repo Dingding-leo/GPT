@@ -341,9 +341,9 @@ def _merge_experiment_manifests_locked(
             by_experiment[experiment_id] = evidence
             additions.append(entry)
 
-    combined = sorted([*existing, *additions], key=_registry_sort_key)
-    canonical_registry = _canonical_registry(combined)
-    if not registry.exists() or registry.read_bytes() != canonical_registry:
+    ordered_additions = sorted(additions, key=_registry_sort_key)
+    combined = [*existing, *ordered_additions]
+    if ordered_additions or not registry.exists():
         _write_registry_atomic(registry, combined)
     return RegistryUpdate(
         registry_path=registry,
