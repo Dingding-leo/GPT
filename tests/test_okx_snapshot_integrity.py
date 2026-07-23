@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+import gpt_quant.okx as okx_module
 from gpt_quant.okx import fetch_okx_history_candles, write_okx_snapshot
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
@@ -24,8 +25,12 @@ def _real_rows() -> list[list[str]]:
     return [list(row) for row in rows]
 
 
-def _snapshot():
-    rows = _real_rows()
+def _snapshot(
+    *,
+    end: str | None = None,
+    rows: list[list[str]] | None = None,
+):
+    rows = _real_rows() if rows is None else rows
 
     def getter(url: str, timeout: float) -> dict[str, object]:
         return {"code": "0", "msg": "", "data": rows}
@@ -36,6 +41,7 @@ def _snapshot():
         limit=len(rows),
         max_pages=1,
         pause_seconds=0.0,
+        end=end,
         get_json=getter,
     )
 
@@ -105,3 +111,92 @@ def test_writer_persists_unchanged_source_bound_snapshot(tmp_path: Path) -> None
         hashlib.sha256(paths["raw"].read_bytes()).hexdigest()
         == snapshot.metadata["raw_pages_sha256"]
     )
+
+
+@pytest.mark.parametrize("output_preexisted", [False, True])
+def test_writer_rolls_back_partial_snapshot_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    output_preexisted: bool,
+) -> None:
+    output = tmp_path / "snapshot"
+    previous_payloads: dict[str, bytes] = {}
+    if output_preexisted:
+        previous_paths = write_okx_snapshot(_snapshot(end="2026-07-19"), output)
+        previous_payloads = {name: path.read_bytes() for name, path in previous_paths.items()}
+        (output / "caller-owned.txt").write_text("preserve me", encoding="utf-8")
+
+    real_replace = okx_module.os.replace
+    replace_calls = 0
+
+    def fail_metadata_commit(source: str | Path, destination: str | Path) -> None:
+        nonlocal replace_calls
+        replace_calls += 1
+        if replace_calls == 3:
+            raise OSError("injected metadata commit failure")
+        real_replace(source, destination)
+
+    monkeypatch.setattr(okx_module.os, "replace", fail_metadata_commit)
+
+    with pytest.raises(OSError, match="injected metadata commit failure"):
+        write_okx_snapshot(_snapshot(), output)
+
+    if output_preexisted:
+        assert (output / "caller-owned.txt").read_text(encoding="utf-8") == "preserve me"
+        current_paths = {
+            "candles": output / "okx-BTC-USDT-1Dutc.csv",
+            "raw": output / "okx-BTC-USDT-1Dutc.raw.json",
+            "metadata": output / "okx-BTC-USDT-1Dutc.metadata.json",
+        }
+        assert {
+            name: path.read_bytes() for name, path in current_paths.items()
+        } == previous_payloads
+        assert sorted(path.name for path in output.iterdir()) == [
+            "caller-owned.txt",
+            "okx-BTC-USDT-1Dutc.csv",
+            "okx-BTC-USDT-1Dutc.metadata.json",
+            "okx-BTC-USDT-1Dutc.raw.json",
+        ]
+    else:
+        assert not output.exists()
+
+
+def test_writer_reports_incomplete_rollback(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output = tmp_path / "snapshot"
+    previous_paths = write_okx_snapshot(_snapshot(rows=_real_rows()[2:]), output)
+    previous_payloads = {name: path.read_bytes() for name, path in previous_paths.items()}
+    (output / "caller-owned.txt").write_text("preserve me", encoding="utf-8")
+
+    real_replace = okx_module.os.replace
+    replace_calls = 0
+
+    def fail_commit_and_first_restore(source: str | Path, destination: str | Path) -> None:
+        nonlocal replace_calls
+        replace_calls += 1
+        if replace_calls == 3:
+            raise OSError("injected metadata commit failure")
+        if replace_calls == 4:
+            raise OSError("injected raw rollback failure")
+        real_replace(source, destination)
+
+    monkeypatch.setattr(okx_module.os, "replace", fail_commit_and_first_restore)
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "OKX snapshot commit failed and rollback was incomplete: "
+            "raw: injected raw rollback failure"
+        ),
+    ) as exc_info:
+        write_okx_snapshot(_snapshot(), output)
+
+    assert isinstance(exc_info.value.__cause__, OSError)
+    assert str(exc_info.value.__cause__) == "injected metadata commit failure"
+    assert (output / "caller-owned.txt").read_text(encoding="utf-8") == "preserve me"
+    assert previous_paths["candles"].read_bytes() == previous_payloads["candles"]
+    assert previous_paths["metadata"].read_bytes() == previous_payloads["metadata"]
+    assert previous_paths["raw"].read_bytes() != previous_payloads["raw"]
+    assert not any(path.name.startswith(".okx-snapshot-") for path in output.iterdir())

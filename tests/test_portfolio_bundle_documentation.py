@@ -6,9 +6,7 @@ _REPRODUCTION_PATH = _REPOSITORY_ROOT / "docs" / "REPRODUCTION.md"
 _WORKFLOW_PATH = _REPOSITORY_ROOT / ".github" / "workflows" / "hourly-research.yml"
 _PORTFOLIO_SCRIPT_PATH = _REPOSITORY_ROOT / "scripts" / "run_portfolio_risk.py"
 _PORTFOLIO_STRESS_PATH = _REPOSITORY_ROOT / "src" / "gpt_quant" / "portfolio_stress.py"
-_BUNDLE_RECOVERY_TEST_PATH = (
-    _REPOSITORY_ROOT / "tests" / "test_portfolio_stress_correlation.py"
-)
+_BUNDLE_RECOVERY_TEST_PATH = _REPOSITORY_ROOT / "tests" / "test_portfolio_stress_correlation.py"
 _INCOMPLETE_ROLLBACK_TEST_PATH = (
     _REPOSITORY_ROOT / "tests" / "test_portfolio_stress_bundle_incomplete_rollback.py"
 )
@@ -28,9 +26,7 @@ def test_docs_match_four_file_portfolio_artifact_bundle() -> None:
     script = _PORTFOLIO_SCRIPT_PATH.read_text(encoding="utf-8")
     stress_module = _PORTFOLIO_STRESS_PATH.read_text(encoding="utf-8")
     recovery_test = _BUNDLE_RECOVERY_TEST_PATH.read_text(encoding="utf-8")
-    incomplete_rollback_test = _INCOMPLETE_ROLLBACK_TEST_PATH.read_text(
-        encoding="utf-8"
-    )
+    incomplete_rollback_test = _INCOMPLETE_ROLLBACK_TEST_PATH.read_text(encoding="utf-8")
 
     for output in _OUTPUTS:
         assert output in readme
@@ -50,12 +46,8 @@ def test_docs_match_four_file_portfolio_artifact_bundle() -> None:
     ):
         assert declaration in stress_module
 
-    diagnostic_start = stress_module.index(
-        "def build_portfolio_stress_correlation_diagnostic("
-    )
-    standalone_start = stress_module.index(
-        "def write_portfolio_stress_correlation_report("
-    )
+    diagnostic_start = stress_module.index("def build_portfolio_stress_correlation_diagnostic(")
+    standalone_start = stress_module.index("def write_portfolio_stress_correlation_report(")
     diagnostic = stress_module[diagnostic_start:standalone_start]
     for claim in (
         "report_only=True",
@@ -82,9 +74,9 @@ def test_docs_match_four_file_portfolio_artifact_bundle() -> None:
     ) < bundle.index(
         'staged_paths["stress_correlation"] = write_portfolio_stress_correlation_report('
     )
-    assert bundle.index(
-        "os.replace(staged_paths[name], destinations[name])"
-    ) < bundle.index("for name in reversed(replaced):")
+    assert bundle.index("os.replace(staged_paths[name], destinations[name])") < bundle.index(
+        "for name in reversed(replaced):"
+    )
 
     assert "if final_replacements == 4" in recovery_test
     assert "for name, path in original_paths.items()" in recovery_test

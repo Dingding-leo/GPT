@@ -45,6 +45,7 @@ jobs:
           python -m pip install \
             "build==${BUILD_FRONTEND_VERSION}" \
             "setuptools==${BUILD_BACKEND_VERSION}"
+          python -m pip check
           python -c 'import os, setuptools; assert setuptools.__version__ == os.environ["BUILD_BACKEND_VERSION"]'
           python -m build --no-isolation
 

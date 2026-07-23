@@ -128,13 +128,15 @@ python scripts/run_research.py \
 - 重新下载 BTC-USDT、ETH-USDT 公共日线并运行滚动样本外研究；
 - 对两份 `walk_forward_returns.csv` 计算 SHA-256，并先把完整 `reports/okx/` 上传为 `quant-research-source-<run-number>-attempt-<run-attempt>` 不可变来源 artifact；
 - 使用该来源 artifact 的 ID、SHA-256 digest、workflow run ID、实际检出 commit 及两份 return 文件哈希生成固定初始权重、无再平衡的 BTC/ETH 风险诊断；工作流显式设置 `MAX_VARIANCE_CONTRIBUTION=0.75` 与 `MAX_PAIRWISE_CORRELATION=0.90`，把两项约束传给 portfolio CLI，并启用 `--fail-on-reject`；
-- 将 `portfolio_risk.json`、`portfolio_risk.md` 和 `portfolio_returns.csv` 单独上传为 `quant-portfolio-risk-<run-number>-attempt-<run-attempt>` artifact。
+- 将 `portfolio_risk.json`、`portfolio_returns.csv`、`portfolio_risk.md` 与 `portfolio_stress_correlation.json` 作为同一四文件 generation，单独上传为 `quant-portfolio-risk-<run-number>-attempt-<run-attempt>` artifact；stress correlation 固定 `report_only=true`、`gate_status=not_evaluated`、`threshold=null`，只用于 development-market 诊断，不参与聚合风险门禁。
 
 两个 artifact 都保留 14 天，并在 workflow rerun 时使用新的 attempt 后缀，避免把不同尝试写入同一身份。组合报告只有在 buy-and-hold sleeve-weight concentration、initial-weight variance contribution 和 pairwise return correlation 三项约束都通过时才标记为 `pass`：默认最大 sleeve weight 为 75%，单一 sleeve 的最大方差贡献同样为 75%，任意可计算 sleeve pair 的收益相关系数上限为 90%；相关系数严格高于上限，或因零方差等原因不可计算，都会标记为 `reject`。方差贡献预算按固定初始权重与 development-return covariance 计算；相关性预算按对齐的 development-return observations 计算。两者都不是新的优化权重或 untouched-holdout 证据。
 
-工作流启用 `--fail-on-reject` 后，任一组合约束使聚合 `concentration.passes=false` 时，portfolio CLI 会先通过事务式发布完整提交三个 report 文件并打印 `risk_gate_passes=false`，随后返回非零状态，使该 Actions gate 失败。portfolio upload step 使用 `always()` 与 `portfolio_risk.json` file-exists guard，因此 reject 证据仍会上传；若输入或 provenance 在报告生成前失败且没有 JSON，则不会上传空 artifact。未传入该 flag 的手动 CLI 调用保留 report-only 兼容模式，reject 报告本身仍返回零状态。
+工作流启用 `--fail-on-reject` 后，任一组合约束使聚合 `concentration.passes=false` 时，portfolio CLI 会先通过外层 `write_portfolio_risk_bundle()` 发布完整四文件 generation 并打印 `risk_gate_passes=false`，随后返回非零状态，使该 Actions gate 失败。lower-level 三文件 core writer 会事务式发布完整提交三个 report 文件到 bundle staging 目录。portfolio upload step 使用 `always()` 与 `portfolio_risk.json` file-exists guard，因此 reject 证据仍会上传；若输入或 provenance 在报告生成前失败且没有 JSON，则不会上传空 artifact。未传入该 flag 的手动 CLI 调用保留 report-only 兼容模式，reject 报告本身仍返回零状态。
 
-三个 report payload 会先在输出目录内的临时 staging 目录完整生成，再按 JSON、returns、Markdown 顺序用原子文件替换发布。若发布中途失败且 rollback 成功，已替换文件会按逆序回滚：输出目录此前不存在时，不会留下新建的部分 report 目录；替换已有完整 report 时，会恢复原有三个文件的精确字节。若 rollback 自身也失败，写入器会抛出 `portfolio report commit failed and rollback was incomplete`；此时不能把该目录当作一致证据，必须保留失败日志并重新生成。
+lower-level 三文件 core writer 的三个 report payload 会先在输出目录内的临时 staging 目录完整生成，再按 JSON、returns、Markdown 顺序用原子文件替换发布。若发布中途失败且 rollback 成功，已替换文件会按逆序回滚：输出目录此前不存在时，不会留下新建的部分 report 目录；替换已有完整 report 时，会恢复原有三个文件的精确字节。若 rollback 自身也失败，写入器会抛出 `portfolio report commit failed and rollback was incomplete`；此时不能把该目录当作一致证据，必须保留失败日志并重新生成。该错误只适用于 staging 层。
+
+外层 bundle 在 core writer 完成后加入 report-only stress correlation；四个 payload 全部就绪后，才按 JSON、returns、Markdown、stress correlation 顺序替换到最终目录。若外层发布中途失败且 rollback 成功，已替换文件同样会按逆序回滚；首次发布不会留下部分 report 目录，替换已有 generation 时会恢复原有四个文件的精确字节。若外层 rollback 自身也失败，会抛出 `portfolio bundle commit failed and rollback was incomplete`；此时不能把该目录当作一致证据，必须保留失败日志并重新生成。
 
 生成指标前，portfolio builder 会用已记录的 SHA-256 重新读取每个 return source，并要求内存中的时间戳和收益逐字节对应已验证来源。每个 sleeve 还必须绑定到不同的 `(文件 SHA-256, timestamp 列, return 列, 所选时间戳)`；把同一个已验证 return 列改名成 BTC 与 ETH 两个 sleeve 会直接失败。canonical BTC/ETH CLI 更严格，要求两份 return 文件的 SHA-256 本身不同。
 

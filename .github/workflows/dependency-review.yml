@@ -132,6 +132,9 @@ jobs:
             reports/security/proposed-root-contents.json
           python scripts/dependency_audit_inputs.py validate-legacy-build-files \
             reports/security/legacy-build-files.json
+          python scripts/dependency_audit_direct_policy.py \
+            reports/security/proposed-pyproject.toml \
+            reports/security/direct-dependency-policy.json
           python scripts/dependency_audit_inputs.py prepare \
             reports/security/proposed-pyproject.toml \
             reports/security
