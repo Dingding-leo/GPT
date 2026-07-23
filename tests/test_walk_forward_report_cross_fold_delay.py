@@ -40,7 +40,9 @@ def test_verifier_rejects_cross_fold_position_delay_drift(
     )
     paths = write_walk_forward_report(result, tmp_path)
     returns = pd.read_csv(paths["returns"])
-    fold_boundaries = np.flatnonzero(returns["fold"].ne(returns["fold"].shift()).to_numpy())
+    fold_boundaries = np.flatnonzero(
+        returns["fold"].ne(returns["fold"].shift()).to_numpy()
+    )
     assert len(fold_boundaries) == 2
     second_fold_start = int(fold_boundaries[1])
     previous_row = second_fold_start - 1

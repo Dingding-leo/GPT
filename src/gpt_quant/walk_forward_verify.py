@@ -312,6 +312,23 @@ def verify_walk_forward_report(
         "transaction_cost_bps",
     )
 
+    fold_boundaries = np.flatnonzero(
+        persisted["fold"].ne(persisted["fold"].shift()).to_numpy()
+    )[1:]
+    if fold_boundaries.size:
+        cross_fold_positions = (
+            persisted["position"].iloc[fold_boundaries].reset_index(drop=True)
+        )
+        previous_fold_targets = (
+            persisted["target_position"].iloc[fold_boundaries - 1].reset_index(drop=True)
+        )
+        _assert_series_close(
+            "cross-fold delayed position",
+            cross_fold_positions,
+            previous_fold_targets,
+            tolerance=tolerance,
+        )
+
     previous_position = persisted["position"].shift(1, fill_value=0.0)
     expected_turnover = (persisted["position"] - previous_position).abs()
     _assert_series_close(
