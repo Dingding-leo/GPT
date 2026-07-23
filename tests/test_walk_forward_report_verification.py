@@ -79,9 +79,10 @@ def test_verifier_recomputes_persisted_real_okx_report(
     assert verification["metric_tolerance"] == 1e-9
     assert verification["source_price_rows_verified"] == len(returns)
     assert verification["asset_return_source"] == "immutable_normalized_okx_close_pct_change"
-    assert verification["source_snapshot_sha256"] == hashlib.sha256(
-        paths["snapshot"].read_bytes()
-    ).hexdigest()
+    assert (
+        verification["source_snapshot_sha256"]
+        == hashlib.sha256(paths["snapshot"].read_bytes()).hexdigest()
+    )
     assert (
         verification["report_json_sha256"] == hashlib.sha256(paths["json"].read_bytes()).hexdigest()
     )
