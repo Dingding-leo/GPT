@@ -57,7 +57,10 @@ def test_dependency_audit_guide_matches_trusted_workflow_and_policy() -> None:
     assert pyproject["build-system"]["build-backend"] == "setuptools.build_meta"
     assert pyproject["project"]["requires-python"] == ">=3.11,<3.15"
     assert pyproject["build-system"]["requires"] == ["setuptools>=69"]
-    assert pyproject["project"]["dependencies"] == ["numpy>=1.26,<3", "pandas>=2.1,<3"]
+    assert pyproject["project"]["dependencies"] == [
+        "numpy>=1.26,<3",
+        "pandas>=2.1,<3",
+    ]
     assert pyproject["project"]["optional-dependencies"]["dev"] == [
         "pytest>=8,<10",
         "ruff>=0.9,<1",
@@ -70,7 +73,14 @@ def test_dependency_audit_guide_matches_trusted_workflow_and_policy() -> None:
         "[tool.setuptools.cmdclass] is not allowed",
     ):
         assert error in validator
-        assert f"`{error.removesuffix(' is not allowed')}`" in guide or error in guide
+
+    for claim in (
+        "`[build-system].backend-path`",
+        "`[project].dynamic`",
+        "`[tool.setuptools.dynamic]`",
+        "`[tool.setuptools.cmdclass]`",
+    ):
+        assert claim in guide
 
     assert "setup.py" in guide
     assert "setup.cfg" in guide
