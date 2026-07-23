@@ -69,9 +69,25 @@ jobs:
           retention-days: 1
 
       - name: Test against public OKX data
+        id: pytest
         env:
           OKX_BASE_URL: https://www.okx.com
-        run: pytest
+        shell: bash
+        run: |
+          set +e
+          pytest > pytest-output.txt 2>&1
+          status=$?
+          cat pytest-output.txt
+          exit "$status"
+
+      - name: Upload pytest diagnostics
+        if: ${{ failure() && steps.pytest.outcome == 'failure' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pytest-diagnostics-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: pytest-output.txt
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Run OKX rolling out-of-sample research
         env:
