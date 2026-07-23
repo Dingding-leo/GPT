@@ -29,11 +29,6 @@ jobs:
             src/gpt_quant/metrics.py \
             src/gpt_quant/walk_forward_report.py \
             tests/test_walk_forward_fee_decomposition.py
-          ruff check \
-            src/gpt_quant/backtest.py \
-            src/gpt_quant/metrics.py \
-            src/gpt_quant/walk_forward_report.py \
-            tests/test_walk_forward_fee_decomposition.py
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: backtest-formatted-files
@@ -43,3 +38,10 @@ jobs:
             src/gpt_quant/walk_forward_report.py
             tests/test_walk_forward_fee_decomposition.py
           if-no-files-found: error
+      - name: Check submitted files
+        run: |
+          ruff check \
+            src/gpt_quant/backtest.py \
+            src/gpt_quant/metrics.py \
+            src/gpt_quant/walk_forward_report.py \
+            tests/test_walk_forward_fee_decomposition.py
