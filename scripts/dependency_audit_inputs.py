@@ -16,6 +16,7 @@ _EXTRA_NAME = _DISTRIBUTION_NAME
 _EXTRA_SEPARATOR = re.compile(r"[-_.]+")
 _MARKER_IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 _WINDOWS_PATH = re.compile(r"^[A-Za-z]:[\\/]")
+_SHA256_HEX = re.compile(r"^[0-9A-Fa-f]{64}$")
 _ALLOWED_MARKER_VARIABLES = frozenset({"python_version"})
 _MARKER_KEYWORDS = frozenset({"and", "in", "not", "or"})
 _REQUIRED_PYTHON = ">=3.11,<3.15"
@@ -191,9 +192,16 @@ def prepare_audit_inputs(pyproject_path: Path, output_dir: Path) -> dict[str, ob
     dynamic = project.get("dynamic", [])
     if not isinstance(dynamic, list) or not all(isinstance(value, str) for value in dynamic):
         raise ValueError("[project].dynamic must be a list of strings")
-    forbidden_dynamic = {"dependencies", "optional-dependencies"}.intersection(dynamic)
-    if forbidden_dynamic:
-        raise ValueError(f"dependency declarations cannot be dynamic: {sorted(forbidden_dynamic)}")
+    if dynamic:
+        raise ValueError("dynamic project metadata is not allowed")
+    tool = pyproject.get("tool", {})
+    if not isinstance(tool, dict):
+        raise ValueError("[tool] must be a table")
+    setuptools_config = tool.get("setuptools", {})
+    if not isinstance(setuptools_config, dict):
+        raise ValueError("[tool.setuptools] must be a table")
+    if "dynamic" in setuptools_config:
+        raise ValueError("[tool.setuptools.dynamic] is not allowed")
 
     project_requirements = _validated_requirements(
         project.get("dependencies", []),
@@ -291,8 +299,9 @@ def lock_resolution_report(
             raise ValueError("pip resolution omitted archive information")
         hashes = archive_info.get("hashes")
         sha256 = hashes.get("sha256") if isinstance(hashes, dict) else None
-        if not isinstance(sha256, str) or len(sha256) != 64:
-            raise ValueError("pip resolution omitted an artifact SHA-256")
+        if not isinstance(sha256, str) or _SHA256_HEX.fullmatch(sha256) is None:
+            raise ValueError("pip resolution omitted a valid artifact SHA-256")
+        sha256 = sha256.lower()
 
         canonical_name = _EXTRA_SEPARATOR.sub("-", name).lower()
         existing = resolved.get(canonical_name)
