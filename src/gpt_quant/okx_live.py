@@ -7,7 +7,7 @@ from typing import Any
 
 import pandas as pd
 
-from .okx import JSONGetter, OKXCandleSnapshot, _default_json_getter
+from .okx import JSONGetter, OKXCandleSnapshot, _default_json_getter, _verified_snapshot_bytes
 
 Clock = Callable[[], pd.Timestamp | str]
 _SERVER_TIME_ENDPOINT = "/api/v5/public/time"
@@ -235,6 +235,7 @@ def build_okx_completed_bar_cutoff(
         raise ValueError("max_round_trip_seconds must be positive")
     if max_abs_clock_skew_seconds < 0:
         raise ValueError("max_abs_clock_skew_seconds cannot be negative")
+    _verified_snapshot_bytes(snapshot)
     (
         server_request_started,
         server_response_received,
