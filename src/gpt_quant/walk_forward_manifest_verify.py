@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from .reproducibility import canonical_json_sha256, file_sha256
+from .reproducibility import canonical_json_sha256, file_sha256, resolve_git_commit
 
 _HEX_DIGITS = frozenset("0123456789abcdef")
 _REQUIRED_ARTIFACT_KEYS = ("candles", "effective_config", "json", "returns")
@@ -81,8 +81,10 @@ def _load_manifest(path: Path) -> list[Mapping[str, Any]]:
 def verify_walk_forward_manifest(
     output_dir: str | Path,
     manifest_path: str | Path,
+    *,
+    repository_root: str | Path = ".",
 ) -> dict[str, int | str]:
-    """Bind persisted walk-forward evidence to one exact experiment-manifest entry."""
+    """Bind persisted walk-forward evidence to one exact manifest entry and checkout."""
 
     output = Path(output_dir)
     report_path = output / "walk_forward.json"
@@ -178,6 +180,11 @@ def verify_walk_forward_manifest(
     if manifest_config_sha256 != config_sha256:
         raise ValueError("manifest config_sha256 does not match effective configuration")
 
+    manifest_code_commit = _git_commit(entry.get("code_commit"))
+    verified_code_commit = resolve_git_commit(repository_root)
+    if manifest_code_commit != verified_code_commit:
+        raise ValueError("manifest code_commit does not match the verified checkout")
+
     return {
         "manifest_schema_version": _positive_integer(
             entry.get("schema_version"), "manifest schema_version"
@@ -188,7 +195,7 @@ def verify_walk_forward_manifest(
             "experiment_id",
         ),
         "manifest_run_id": _required_text(entry.get("run_id"), "run_id"),
-        "manifest_code_commit": _git_commit(entry.get("code_commit")),
+        "manifest_code_commit": manifest_code_commit,
         "manifest_candidate_count": candidate_count,
         "manifest_config_sha256": config_sha256,
         "manifest_normalized_csv_sha256": normalized_csv_sha256,
