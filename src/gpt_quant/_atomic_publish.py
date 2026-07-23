@@ -29,6 +29,8 @@ def _validated_contract(
         raise ValueError(
             f"{error_label} destinations must be direct children of the output directory"
         )
+    if any(path.is_symlink() for path in paths.values()):
+        raise ValueError(f"{error_label} destinations must not be symbolic links")
     return ordered_names
 
 
