@@ -1,0 +1,18 @@
+{
+  "end": "2020-02-19 00:00:00+00:00",
+  "extraction": "first 40 aligned out-of-sample strategy and volatility-targeted-long return observations",
+  "fixture_path": "tests/fixtures/okx_btc_usdt_oos_volatility_benchmark_20200111_20200219/returns.csv",
+  "fixture_sha256": "20a7125cafcf4c4b88275193b6afcce9d7ea570ba7d60402b3cab301bebb6503",
+  "instrument": "BTC-USDT",
+  "market_type": "spot",
+  "observations": 40,
+  "provider": "OKX",
+  "source_artifact_id": 8552001681,
+  "source_artifact_name": "quant-research-source-218-final",
+  "source_artifact_sha256": "e875970e048fdb6eb1a946330a8229ac445378a165c196de5e88abdde4b14576",
+  "source_head_sha": "0aeb79ba909be8b8be8e07f4c11b1f2b0fd32cec",
+  "source_return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+  "source_workflow_run_id": 29977584146,
+  "start": "2020-01-11 00:00:00+00:00",
+  "timeframe": "1Dutc"
+}
