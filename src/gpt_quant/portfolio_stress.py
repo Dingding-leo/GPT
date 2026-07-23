@@ -14,7 +14,12 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from .portfolio import PortfolioRiskResult, write_portfolio_risk_report
+from .portfolio import (
+    PortfolioRiskResult,
+    _validate_result_against_verified_sources,
+    validate_portfolio_provenance,
+    write_portfolio_risk_report,
+)
 
 _STRESS_CORRELATION_FILENAME = "portfolio_stress_correlation.json"
 _PORTFOLIO_BUNDLE_FILENAMES = {
@@ -201,13 +206,23 @@ def build_portfolio_stress_correlation_diagnostic(
 
 
 def write_portfolio_stress_correlation_report(
-    diagnostic: PortfolioStressCorrelationDiagnostic,
+    result: PortfolioRiskResult,
     output_dir: str | Path,
 ) -> Path:
-    """Atomically persist the report-only stress-correlation diagnostic as strict JSON."""
+    """Revalidate verified sources and atomically persist the report-only diagnostic."""
 
-    if not isinstance(diagnostic, PortfolioStressCorrelationDiagnostic):
-        raise TypeError("diagnostic must be a PortfolioStressCorrelationDiagnostic")
+    if not isinstance(result, PortfolioRiskResult):
+        raise TypeError("result must be a PortfolioRiskResult")
+    sleeves = result.data_summary.get("sleeves")
+    if not isinstance(sleeves, list):
+        raise ValueError("portfolio result must declare its sleeve names")
+    validate_portfolio_provenance(
+        result.data_summary.get("provenance"),
+        expected_sleeves=sleeves,
+    )
+    _validate_result_against_verified_sources(result)
+    diagnostic = build_portfolio_stress_correlation_diagnostic(result)
+
     output = Path(output_dir)
     output_preexisted = output.exists()
     output.mkdir(parents=True, exist_ok=True)
@@ -255,7 +270,6 @@ def write_portfolio_risk_bundle(
 
     if not isinstance(result, PortfolioRiskResult):
         raise TypeError("result must be a PortfolioRiskResult")
-    diagnostic = build_portfolio_stress_correlation_diagnostic(result)
 
     output = Path(output_dir)
     output_preexisted = output.exists()
@@ -272,7 +286,7 @@ def write_portfolio_risk_bundle(
             staging = Path(staging_name)
             staged_paths = write_portfolio_risk_report(result, staging)
             staged_paths["stress_correlation"] = write_portfolio_stress_correlation_report(
-                diagnostic,
+                result,
                 staging,
             )
             if set(staged_paths) != set(destinations):
