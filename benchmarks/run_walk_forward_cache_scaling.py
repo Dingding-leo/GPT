@@ -149,9 +149,7 @@ def _write_worker_outputs(
                 "elapsed_seconds": elapsed_seconds,
                 "pre_workload_peak_rss_bytes": pre_workload_peak_rss_bytes,
                 "peak_rss_bytes": peak_rss_bytes,
-                "workload_peak_rss_increment_bytes": (
-                    peak_rss_bytes - pre_workload_peak_rss_bytes
-                ),
+                "workload_peak_rss_increment_bytes": (peak_rss_bytes - pre_workload_peak_rss_bytes),
                 "cache_entries": cache_entries,
             }
         ),
@@ -243,9 +241,7 @@ def _scaling_medians(
                     statistics.median(sample.peak_rss_bytes for sample in level)
                 ),
                 median_workload_peak_rss_increment_bytes=int(
-                    statistics.median(
-                        sample.workload_peak_rss_increment_bytes for sample in level
-                    )
+                    statistics.median(sample.workload_peak_rss_increment_bytes for sample in level)
                 ),
                 median_cache_entries=int(
                     statistics.median(sample.cache_entries for sample in level)
