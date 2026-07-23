@@ -202,6 +202,8 @@ def prepare_audit_inputs(pyproject_path: Path, output_dir: Path) -> dict[str, ob
         raise ValueError("[tool.setuptools] must be a table")
     if "dynamic" in setuptools_config:
         raise ValueError("[tool.setuptools.dynamic] is not allowed")
+    if "cmdclass" in setuptools_config:
+        raise ValueError("[tool.setuptools.cmdclass] is not allowed")
 
     project_requirements = _validated_requirements(
         project.get("dependencies", []),
