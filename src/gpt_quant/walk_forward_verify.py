@@ -83,9 +83,7 @@ def _assert_series_close(
         rtol=0.0,
         atol=tolerance,
     ):
-        difference = np.abs(
-            actual.to_numpy(dtype=float) - expected.to_numpy(dtype=float)
-        )
+        difference = np.abs(actual.to_numpy(dtype=float) - expected.to_numpy(dtype=float))
         position = int(np.argmax(difference))
         raise ValueError(
             f"{label} does not match persisted return accounting at row {position}; "
@@ -157,18 +155,14 @@ def verify_walk_forward_report(
         raise ValueError("walk-forward returns CSV is unreadable") from exc
     missing_columns = sorted(_REQUIRED_RETURN_COLUMNS - set(persisted.columns))
     if missing_columns:
-        raise ValueError(
-            f"walk-forward returns CSV is missing required columns: {missing_columns}"
-        )
+        raise ValueError(f"walk-forward returns CSV is missing required columns: {missing_columns}")
     if persisted.empty:
         raise ValueError("walk-forward returns CSV cannot be empty")
 
     try:
         timestamps = pd.to_datetime(persisted["timestamp"], utc=True, errors="raise")
     except (TypeError, ValueError) as exc:
-        raise ValueError(
-            "walk-forward returns timestamps must be valid UTC timestamps"
-        ) from exc
+        raise ValueError("walk-forward returns timestamps must be valid UTC timestamps") from exc
     index = pd.DatetimeIndex(timestamps, name="timestamp")
     if index.has_duplicates or not index.is_monotonic_increasing:
         raise ValueError("walk-forward returns timestamps must be unique and increasing")
@@ -176,10 +170,7 @@ def verify_walk_forward_report(
     numeric_names = sorted(_REQUIRED_RETURN_COLUMNS - {"timestamp"})
     numeric = {name: _numeric_column(persisted, name) for name in numeric_names}
     fold_values = numeric["fold"].to_numpy(copy=False)
-    if (
-        not np.equal(fold_values, np.floor(fold_values)).all()
-        or (fold_values <= 0).any()
-    ):
+    if not np.equal(fold_values, np.floor(fold_values)).all() or (fold_values <= 0).any():
         raise ValueError("walk-forward fold identifiers must be positive integers")
     persisted["fold"] = fold_values.astype(int)
     for name, values in numeric.items():
