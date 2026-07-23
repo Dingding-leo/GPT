@@ -118,9 +118,9 @@ def record_target_position_intent(
             (existing for existing in journal.intents if existing.intent_id == intent.intent_id),
             None,
         )
+        if matching is not None and matching.to_json_bytes() != intent.to_json_bytes():
+            raise ValueError(f"{_ERROR_LABEL} intent ID maps to conflicting bytes")
         if matching is not None:
-            if matching.to_json_bytes() != intent.to_json_bytes():
-                raise ValueError(f"{_ERROR_LABEL} intent ID maps to conflicting bytes")
             return journal
         intents = (*journal.intents, intent)
     else:
