@@ -35,6 +35,6 @@ def test_fetch_okx_top_of_book_rejects_untrusted_origin_before_io(base_url: str)
             instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
             base_url=base_url,
             get_bytes=forbidden,
-            get_json=forbidden,
+            get_server_time_bytes=forbidden,
             now=forbidden,
         )
