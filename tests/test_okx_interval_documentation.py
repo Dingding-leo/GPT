@@ -92,16 +92,14 @@ def test_okx_interval_guide_matches_open_ended_freshness_gate() -> None:
     assert "_OPEN_ENDED_FRESHNESS_GRACE_SECONDS = 5 * 60" in source
     assert (
         "max_age_seconds = 2 * expected_step_seconds "
-        "+ _OPEN_ENDED_FRESHNESS_GRACE_SECONDS"
-        in source
+        "+ _OPEN_ENDED_FRESHNESS_GRACE_SECONDS" in source
     )
 
     live_reference = source.index("as_of_timestamp = _current_utc_timestamp()")
     getter_assignment = source.index("getter = get_json or _default_json_getter")
     parsed_rows = source.index("parsed = parse_okx_candle_rows(raw_rows)")
     freshness_call = source.index(
-        "    freshness_age_seconds, freshness_max_age_seconds = "
-        "_validate_open_ended_freshness("
+        "    freshness_age_seconds, freshness_max_age_seconds = _validate_open_ended_freshness("
     )
     snapshot_return = source.index("return OKXCandleSnapshot(")
     assert live_reference < getter_assignment < parsed_rows < freshness_call < snapshot_return
