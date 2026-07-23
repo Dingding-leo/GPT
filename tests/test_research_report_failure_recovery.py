@@ -95,3 +95,65 @@ def test_publication_failure_preserves_complete_holdout_report_set(
         assert {path.name: path.read_bytes() for path in output_dir.iterdir()} == original_bytes
     else:
         assert not output_dir.exists()
+
+
+def test_publication_reports_incomplete_rollback(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output_dir = tmp_path / "holdout-report"
+    original = _real_result(btc_usdt_prices, transaction_cost_bps=10.0)
+    original_paths = write_research_report(original, output_dir)
+    original_bytes = {path.name: path.read_bytes() for path in original_paths}
+    operator_notes = output_dir / "operator-notes.txt"
+    operator_notes.write_text("preserve me", encoding="utf-8")
+
+    replacement = _real_result(btc_usdt_prices, transaction_cost_bps=20.0)
+    assert replacement.to_dict() != original.to_dict()
+
+    real_replace = os.replace
+    replace_calls = 0
+
+    def fail_markdown_commit_and_json_restore(
+        source: str | Path,
+        destination: str | Path,
+    ) -> None:
+        nonlocal replace_calls
+        source_path = Path(source)
+        destination_path = Path(destination)
+        if (
+            source_path.parent.name.startswith(".research-report-")
+            and destination_path.parent == output_dir
+            and destination_path.name in _REPORT_FILENAMES
+        ):
+            replace_calls += 1
+            if replace_calls == 2:
+                raise OSError("injected markdown commit failure")
+            if replace_calls == 3:
+                raise OSError("injected json rollback failure")
+        real_replace(source, destination)
+
+    monkeypatch.setattr(os, "replace", fail_markdown_commit_and_json_restore)
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "research report commit failed and rollback was incomplete: "
+            "json: injected json rollback failure"
+        ),
+    ) as exc_info:
+        write_research_report(replacement, output_dir)
+
+    assert replace_calls == 3
+    assert isinstance(exc_info.value.__cause__, OSError)
+    assert str(exc_info.value.__cause__) == "injected markdown commit failure"
+    assert (output_dir / "latest.json").read_bytes() != original_bytes["latest.json"]
+    assert (output_dir / "latest.md").read_bytes() == original_bytes["latest.md"]
+    assert operator_notes.read_text(encoding="utf-8") == "preserve me"
+    assert {path.name for path in output_dir.iterdir()} == {
+        "latest.json",
+        "latest.md",
+        "operator-notes.txt",
+    }
+    assert not any(path.name.startswith(".research-report-") for path in output_dir.iterdir())
