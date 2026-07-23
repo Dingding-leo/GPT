@@ -298,6 +298,9 @@ def build_okx_completed_bar_cutoff(
     bar_close = latest_open + pd.Timedelta(seconds=step_seconds)
     if exchange_observed_at < bar_close:
         raise ValueError("latest confirmed OKX candle has not closed according to server time")
+    availability_delay_seconds = (exchange_observed_at - bar_close).total_seconds()
+    if availability_delay_seconds >= step_seconds:
+        raise ValueError("latest confirmed OKX candle is stale relative to server time")
 
     signal_not_before = max(
         observed_at,
@@ -313,7 +316,7 @@ def build_okx_completed_bar_cutoff(
         exchange_observed_at_utc=exchange_observed_at,
         server_time_response_received_utc=server_response_received,
         signal_not_before_utc=signal_not_before,
-        availability_delay_seconds=(exchange_observed_at - bar_close).total_seconds(),
+        availability_delay_seconds=availability_delay_seconds,
         server_round_trip_seconds=server_round_trip_seconds,
         midpoint_clock_skew_seconds=midpoint_clock_skew_seconds,
         max_server_round_trip_seconds=float(max_round_trip_seconds),
