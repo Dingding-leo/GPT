@@ -157,6 +157,21 @@ def test_verifier_requires_every_metric_input_even_when_reported_value_is_zero(
     assert missing_column in completed.stderr
 
 
+def test_verifier_rejects_duplicate_metric_column_names(tmp_path: Path) -> None:
+    report_path, returns_path = _persist_real_fixture_result(tmp_path)
+    frame = pd.read_csv(returns_path)
+    duplicated = pd.concat([frame, frame[["strategy_return"]]], axis=1)
+    duplicated.to_csv(returns_path, index=False)
+
+    completed = _run_verifier(report_path, returns_path)
+
+    assert completed.returncode == 1
+    assert (
+        "returns CSV contains duplicate column names: ['strategy_return']"
+        in completed.stderr
+    )
+
+
 def test_verifier_rejects_timezone_naive_return_timestamps(tmp_path: Path) -> None:
     report_path, returns_path = _persist_real_fixture_result(tmp_path)
     frame = pd.read_csv(returns_path)
