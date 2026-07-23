@@ -63,17 +63,15 @@ def _baseline_selected_position_paths(
         "walk-forward returns timestamp",
     )
     fold_values = verify_gate._numeric(persisted, "fold")
-    if (fold_values <= 0.0).any() or not np.equal(
-        fold_values, np.floor(fold_values)
-    ).all():
+    if (fold_values <= 0.0).any() or not np.equal(fold_values, np.floor(fold_values)).all():
         raise ValueError("walk-forward fold identifiers must be positive integers")
 
     indexed = persisted.copy()
     indexed.index = persisted_index
     indexed["fold"] = fold_values.to_numpy(dtype=int, copy=False)
-    indexed["target_position"] = verify_gate._numeric(
-        persisted, "target_position"
-    ).to_numpy(copy=False)
+    indexed["target_position"] = verify_gate._numeric(persisted, "target_position").to_numpy(
+        copy=False
+    )
     indexed["position"] = verify_gate._numeric(persisted, "position").to_numpy(copy=False)
 
     expected_fold_ids: list[int] = []
