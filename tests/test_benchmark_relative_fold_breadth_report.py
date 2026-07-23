@@ -10,19 +10,11 @@ import pandas as pd
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS_PATH = (
-    REPOSITORY_ROOT
-    / "reports"
-    / "research"
-    / "benchmark-relative-fold-breadth"
-    / "analysis.py"
+    REPOSITORY_ROOT / "reports" / "research" / "benchmark-relative-fold-breadth" / "analysis.py"
 )
 RESULT_PATH = ANALYSIS_PATH.with_name("result.json")
 FIXTURE_DIR = (
-    REPOSITORY_ROOT
-    / "tests"
-    / "fixtures"
-    / "okx"
-    / "btc_usdt_relative_folds_20200111_20201006"
+    REPOSITORY_ROOT / "tests" / "fixtures" / "okx" / "btc_usdt_relative_folds_20200111_20201006"
 )
 FIXTURE_PATH = FIXTURE_DIR / "btc_usdt_relative_folds.csv"
 METADATA_PATH = FIXTURE_DIR / "metadata.json"
@@ -60,8 +52,7 @@ def test_real_okx_fixture_provenance_and_fold_compounding() -> None:
         assert len(fold) == 90
         strategy = float(np.prod(1.0 + fold["strategy_return"].to_numpy()) - 1.0)
         benchmark = float(
-            np.prod(1.0 + fold["benchmark_volatility_targeted_long_return"].to_numpy())
-            - 1.0
+            np.prod(1.0 + fold["benchmark_volatility_targeted_long_return"].to_numpy()) - 1.0
         )
         expected_deltas.append(strategy - benchmark)
         assert int(fold_id) in (1, 2, 3)
