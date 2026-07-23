@@ -22,9 +22,7 @@ from gpt_quant.execution_quote_binding import bind_execution_quote
 _EXPECTED_BASELINE_SHA256 = "a03579f4a1a399cc805bc4637ff90a6d796280704b2701b3a7e796f1d1244903"
 _EXPECTED_RESPONSE_SHA256 = "7d12a351f8f51320d1c8beee0063557e1c90388d66ac63412bf66ca544aeb3e3"
 _REAL_DAILY_SOURCE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
-_REAL_INSTRUMENT_SOURCE_SHA256 = (
-    "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"
-)
+_REAL_INSTRUMENT_SOURCE_SHA256 = "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"
 _CONFIG_SHA256 = "6b06037376bce5df483311704f7b701c5e03a2a2735b2dd3361036fccd94da1a"
 
 
@@ -92,9 +90,7 @@ def main() -> None:
         raise ValueError("samples must be at least 5 and events must be positive")
 
     baseline = _load_baseline(args.baseline_source)
-    bid_price, bid_quantity, ask_price, ask_quantity, observed_at = _load_quote(
-        args.okx_response
-    )
+    bid_price, bid_quantity, ask_price, ask_quantity, observed_at = _load_quote(args.okx_response)
     received_at = observed_at + timedelta(milliseconds=50)
     decision_at = received_at + timedelta(milliseconds=50)
     submitted_at = decision_at + timedelta(milliseconds=50)
@@ -167,12 +163,8 @@ def main() -> None:
 
     baseline_median = statistics.median(baseline_samples)
     optimized_median = statistics.median(optimized_samples)
-    baseline_peak = _peak_bytes(
-        lambda: _workload(baseline, binding, quote, values, args.events)
-    )
-    optimized_peak = _peak_bytes(
-        lambda: _workload(optimized, binding, quote, values, args.events)
-    )
+    baseline_peak = _peak_bytes(lambda: _workload(baseline, binding, quote, values, args.events))
+    optimized_peak = _peak_bytes(lambda: _workload(optimized, binding, quote, values, args.events))
     output = {
         "baseline_source_sha256": _EXPECTED_BASELINE_SHA256,
         "okx_response_sha256": _EXPECTED_RESPONSE_SHA256,
