@@ -23,7 +23,9 @@ def _verify_global_position_delay(persisted: pd.DataFrame, *, tolerance: float) 
     folds = _numeric_column(persisted, "fold")
     actual = positions.iloc[1:].reset_index(drop=True)
     expected = targets.shift(1).iloc[1:].reset_index(drop=True)
-    mismatches = np.flatnonzero(np.abs(actual.to_numpy() - expected.to_numpy()) > tolerance)
+    mismatches = np.flatnonzero(
+        np.abs(actual.to_numpy() - expected.to_numpy()) > tolerance
+    )
     if not mismatches.size:
         return
 
