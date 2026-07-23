@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping
-from numbers import Integral, Real
+from numbers import Integral
 
 import numpy as np
 import pandas as pd
