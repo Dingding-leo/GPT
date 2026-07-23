@@ -33,6 +33,7 @@ _PAYLOAD_KEYS = {
     "max_abs_midpoint_clock_skew_seconds",
     "maximum_quote_age_ms",
     "raw_response_json_utf8",
+    "raw_server_time_response_json_utf8",
     "quote",
 }
 _SERIALIZED_KEYS = _PAYLOAD_KEYS | {"evidence_id"}
@@ -168,6 +169,9 @@ class ReconstructableOKXTopOfBookEvidence:
             ),
             "maximum_quote_age_ms": observation.maximum_quote_age_ms,
             "raw_response_json_utf8": observation.raw_response_json.decode("utf-8"),
+            "raw_server_time_response_json_utf8": (
+                observation.raw_server_time_response_json.decode("utf-8")
+            ),
             "quote": observation.quote.to_dict(),
         }
 
@@ -175,7 +179,7 @@ class ReconstructableOKXTopOfBookEvidence:
         return _canonical_json_bytes({**self._payload(), "evidence_id": self.evidence_id}) + b"\n"
 
     @classmethod
-    def from_json_bytes(cls, value: bytes) -> ReconstructableOKXTopOfBookEvidence:
+    def from_json_bytes(cls, value: bytes) -> "ReconstructableOKXTopOfBookEvidence":
         try:
             serialized = value.decode("utf-8")
             payload = json.loads(
@@ -192,6 +196,9 @@ class ReconstructableOKXTopOfBookEvidence:
         raw_response = payload["raw_response_json_utf8"]
         if not isinstance(raw_response, str):
             raise ValueError("raw_response_json_utf8 must be UTF-8 text")
+        raw_server_time_response = payload["raw_server_time_response_json_utf8"]
+        if not isinstance(raw_server_time_response, str):
+            raise ValueError("raw_server_time_response_json_utf8 must be UTF-8 text")
 
         observation = OKXTopOfBookObservation(
             base_url=payload["base_url"],
@@ -241,6 +248,7 @@ class ReconstructableOKXTopOfBookEvidence:
             ),
             maximum_quote_age_ms=payload["maximum_quote_age_ms"],
             raw_response_json=raw_response.encode("utf-8"),
+            raw_server_time_response_json=raw_server_time_response.encode("utf-8"),
             quote=ExecutionQuoteSnapshot.from_mapping(payload["quote"]),
         )
         evidence = cls(observation=observation)
