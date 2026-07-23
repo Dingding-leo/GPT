@@ -18,7 +18,15 @@ jobs:
           python-version: "3.12"
       - name: Install project
         run: python -m pip install -e ".[dev]"
-      - name: Show Ruff diagnostics
+      - name: Capture Ruff diagnostics
         run: |
-          ruff check . || true
-          ruff format --diff .
+          ruff check . > /tmp/ruff-check.txt 2>&1 || true
+          ruff format --diff . > /tmp/ruff-format.diff
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ruff-diagnostic-${{ github.run_id }}
+          path: |
+            /tmp/ruff-check.txt
+            /tmp/ruff-format.diff
+          if-no-files-found: error
+          retention-days: 1
