@@ -4,7 +4,7 @@ import hashlib
 import json
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from math import isfinite
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -178,6 +178,9 @@ class OKXTopOfBookObservation:
         object.__setattr__(self, "server_round_trip_seconds", server_round_trip)
         object.__setattr__(self, "midpoint_clock_skew_seconds", midpoint_clock_skew)
         exchange_observed = validated_exchange_observed.to_pydatetime()
+        exchange_clock_response_received = response_received + timedelta(
+            seconds=midpoint_clock_skew
+        )
 
         maximum_quote_age_ms = _required_nonnegative_integer(
             self.maximum_quote_age_ms,
@@ -192,14 +195,16 @@ class OKXTopOfBookObservation:
             raise ValueError("OKX books response hash does not match the execution quote")
         if self.quote.provider != "okx":
             raise ValueError("OKX books observation must contain an OKX execution quote")
-        if self.quote.received_at_utc != response_received:
-            raise ValueError("OKX books response receipt does not match the execution quote")
+        if self.quote.received_at_utc != exchange_clock_response_received:
+            raise ValueError(
+                "OKX exchange-adjusted books receipt does not match the execution quote"
+            )
 
         replayed = _quote_from_raw_response(
             raw_response,
             instrument_id=self.quote.instrument_id,
             instrument_snapshot_sha256=self.quote.instrument_snapshot_sha256,
-            response_received_utc=response_received,
+            response_received_utc=exchange_clock_response_received,
         )
         if replayed != self.quote:
             raise ValueError("OKX books response does not reproduce the execution quote")
@@ -453,13 +458,6 @@ def fetch_okx_top_of_book(
     if request_round_trip > request_round_trip_bound:
         raise ValueError("OKX books request round trip exceeds the configured bound")
 
-    quote = _quote_from_raw_response(
-        raw_response,
-        instrument_id=instrument_id,
-        instrument_snapshot_sha256=instrument_snapshot_sha256,
-        response_received_utc=response_received,
-    )
-
     server_time_sample = sample_okx_server_time(
         base_url=normalized_base_url,
         timeout=timeout_seconds,
@@ -470,6 +468,16 @@ def fetch_okx_top_of_book(
     )
     if server_time_sample.local_request_started_utc.to_pydatetime() < response_received:
         raise ValueError("OKX server time must be sampled after the books response")
+
+    exchange_clock_response_received = response_received + timedelta(
+        seconds=server_time_sample.midpoint_clock_skew_seconds
+    )
+    quote = _quote_from_raw_response(
+        raw_response,
+        instrument_id=instrument_id,
+        instrument_snapshot_sha256=instrument_snapshot_sha256,
+        response_received_utc=exchange_clock_response_received,
+    )
 
     return OKXTopOfBookObservation(
         base_url=normalized_base_url,

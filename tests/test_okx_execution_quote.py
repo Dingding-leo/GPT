@@ -4,12 +4,13 @@ import hashlib
 import json
 from collections.abc import Iterator
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
 from gpt_quant.okx_execution_quote import fetch_okx_top_of_book
+from gpt_quant.okx_execution_quote_replay import ReconstructableOKXTopOfBookEvidence
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "order-book-btc-usdt-docs-20210826"
 _RESPONSE_PATH = _FIXTURE_DIR / "response.json"
@@ -100,6 +101,38 @@ def test_fetch_okx_top_of_book_binds_real_public_response_to_exchange_time() -> 
     assert quote.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
     assert quote.instrument_snapshot_sha256 == _INSTRUMENT_SNAPSHOT_SHA256
     assert quote.spread_bps > 0
+
+
+def test_fresh_quote_survives_bounded_slow_local_clock() -> None:
+    observation = fetch_okx_top_of_book(
+        instrument_id="BTC-USDT",
+        instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
+        base_url="https://example.test",
+        maximum_quote_age_ms=200,
+        max_abs_midpoint_clock_skew_seconds=0.2,
+        get_bytes=lambda url, timeout: _fixture_response(),
+        get_json=_server_time_getter("1629966436500"),
+        now=_clock(
+            "2021-08-26T08:27:16.320000Z",
+            "2021-08-26T08:27:16.350000Z",
+            "2021-08-26T08:27:16.360000Z",
+            "2021-08-26T08:27:16.440000Z",
+        ),
+    )
+
+    assert observation.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
+    assert observation.midpoint_clock_skew_seconds == pytest.approx(0.1)
+    assert observation.quote.observed_at_utc == datetime(
+        2021, 8, 26, 8, 27, 16, 396_000, tzinfo=UTC
+    )
+    assert observation.quote.received_at_utc == (
+        observation.response_received_utc
+        + timedelta(seconds=observation.midpoint_clock_skew_seconds)
+    )
+
+    evidence = ReconstructableOKXTopOfBookEvidence(observation=observation)
+    replayed = ReconstructableOKXTopOfBookEvidence.from_json_bytes(evidence.to_json_bytes())
+    assert replayed.observation == observation
 
 
 def test_top_of_book_observation_revalidates_complete_timing_envelope() -> None:
