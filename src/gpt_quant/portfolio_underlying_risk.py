@@ -153,6 +153,71 @@ def _total_return(values: pd.Series) -> float:
     return float((1.0 + values).prod() - 1.0)
 
 
+def _net_risk_contributions(
+    weighted_net: pd.DataFrame,
+    portfolio_net: pd.Series,
+    *,
+    annualization: int,
+    tolerance: float,
+) -> tuple[dict[str, dict[str, float]], dict[str, float | str]]:
+    annualized_variance = float(portfolio_net.var(ddof=1) * annualization)
+    if not math.isfinite(annualized_variance) or annualized_variance < -tolerance:
+        raise RuntimeError("portfolio net variance must be finite and non-negative")
+
+    annualized_variance = max(annualized_variance, 0.0)
+    annualized_covariance = weighted_net.apply(
+        lambda contribution: contribution.cov(portfolio_net) * annualization
+    )
+    if not np.isfinite(annualized_covariance).all():
+        raise RuntimeError("sleeve variance contributions must be finite")
+    if not math.isclose(
+        float(annualized_covariance.sum()),
+        annualized_variance,
+        rel_tol=0.0,
+        abs_tol=tolerance,
+    ):
+        raise RuntimeError("sleeve variance contributions do not reconcile")
+
+    annualized_volatility = math.sqrt(annualized_variance)
+    contributions: dict[str, dict[str, float]] = {}
+    for name, variance_contribution in annualized_covariance.items():
+        variance_value = float(variance_contribution)
+        if annualized_variance > tolerance:
+            variance_fraction = variance_value / annualized_variance
+            volatility_contribution = variance_value / annualized_volatility
+        else:
+            variance_fraction = 0.0
+            volatility_contribution = 0.0
+        contributions[str(name)] = {
+            "annualized_net_variance_contribution": variance_value,
+            "annualized_net_volatility_contribution": volatility_contribution,
+            "net_variance_contribution_fraction": variance_fraction,
+        }
+
+    status = (
+        "measured" if annualized_variance > tolerance else "zero_portfolio_variance"
+    )
+    summary: dict[str, float | str] = {
+        "annualized_net_variance": annualized_variance,
+        "annualized_net_volatility": annualized_volatility,
+        "annualized_net_variance_contribution_sum": float(annualized_covariance.sum()),
+        "annualized_net_volatility_contribution_sum": float(
+            sum(
+                values["annualized_net_volatility_contribution"]
+                for values in contributions.values()
+            )
+        ),
+        "net_variance_contribution_fraction_sum": float(
+            sum(
+                values["net_variance_contribution_fraction"]
+                for values in contributions.values()
+            )
+        ),
+        "risk_contribution_status": status,
+    }
+    return contributions, summary
+
+
 def build_underlying_sleeve_risk(
     sleeve_paths: Mapping[str, str | Path],
     *,
@@ -212,6 +277,12 @@ def build_underlying_sleeve_risk(
         atol=tolerance,
     ):
         raise RuntimeError("portfolio gross, fee, and net contributions do not reconcile")
+    risk_contributions, risk_summary = _net_risk_contributions(
+        weighted_net,
+        portfolio_net,
+        annualization=annualization,
+        tolerance=tolerance,
+    )
 
     exposure = start_weight * position.abs()
     weighted_turnover = start_weight * turnover
@@ -238,6 +309,7 @@ def build_underlying_sleeve_risk(
             "gross_total_return": _total_return(gross[name]),
             "net_total_return": _total_return(net[name]),
             "compounded_exchange_fee_drag": _total_return(gross[name]) - _total_return(net[name]),
+            **risk_contributions[name],
             "source_sha256": paths[name].attrs["source_sha256"],
         }
 
@@ -256,6 +328,7 @@ def build_underlying_sleeve_risk(
         "net_total_return": _total_return(portfolio_net),
         "compounded_exchange_fee_drag": _total_return(portfolio_gross)
         - _total_return(portfolio_net),
+        **risk_summary,
     }
 
     frame = pd.DataFrame(index=index)
@@ -266,6 +339,7 @@ def build_underlying_sleeve_risk(
         frame[f"{name}_absolute_exposure_contribution"] = exposure[name]
         frame[f"{name}_weighted_turnover"] = weighted_turnover[name]
         frame[f"{name}_weighted_exchange_fee"] = weighted_fee[name]
+        frame[f"{name}_weighted_net_return"] = weighted_net[name]
     frame["portfolio_absolute_market_exposure"] = portfolio_exposure
     frame["portfolio_weighted_underlying_turnover"] = portfolio_turnover
     frame["portfolio_exchange_fee"] = portfolio_fee
@@ -289,6 +363,11 @@ def build_underlying_sleeve_risk(
             "position_interpretation": "research position; not an exchange order or fill",
             "portfolio_exposure_method": "start-of-bar sleeve weight times absolute position",
             "portfolio_turnover_method": "start-of-bar sleeve weight times absolute turnover",
+            "risk_contribution_method": (
+                "sample covariance of start-of-bar weighted net sleeve returns with "
+                "portfolio net return; annualized Euler contributions sum to portfolio "
+                "variance and volatility"
+            ),
         },
         "sleeve_metrics": sleeve_metrics,
         "portfolio_metrics": portfolio_metrics,
