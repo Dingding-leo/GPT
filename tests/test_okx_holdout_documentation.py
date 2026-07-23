@@ -35,7 +35,7 @@ def test_okx_holdout_config_matches_daily_okx_market_assumptions() -> None:
         assert holdout["search"][key] == rolling["search"][key]
 
     assert holdout["strategy"]["annualization"] == 365
-    assert holdout["strategy"]["transaction_cost_bps"] == 10.0
+    assert holdout["strategy"]["transaction_cost_bps"] == 5.0
     assert holdout["search"]["validation_fraction"] == 0.2
     assert holdout["search"]["holdout_fraction"] == 0.2
     assert holdout["search"]["top_candidates"] == 10
@@ -153,5 +153,5 @@ def test_documented_okx_manifest_and_holdout_commands_run_on_verified_real_fixtu
     assert report["data_summary"]["observations"] == len(btc_usdt_prices)
     assert report["candidates_tested"] == 27
     assert report["selected_parameters"]["annualization"] == 365
-    assert report["selected_parameters"]["transaction_cost_bps"] == 10.0
+    assert report["selected_parameters"]["transaction_cost_bps"] == 5.0
     assert (output_dir / "latest.md").is_file()
