@@ -116,7 +116,7 @@ python -m json.tool `
   reports/security/local-dependency-inputs/dependency-inputs.json
 ```
 
-先删除旧目录很重要：一次失败的策略或 `prepare` 检查不会创建新的 evidence/input 文件，但也不会替调用者删除先前成功运行留下的旧目录。不要把旧 JSON 误认为当前 proposed manifest 的结果。
+先删除旧目录很重要：direct-policy 失败不会创建目标目录；但 direct-policy 成功后若后续 `prepare` 失败，policy JSON 会保留，而 resolver input 集合并不完整。只有两条命令都成功时，才把该目录视为当前 proposed manifest 的完整预检结果；不要把旧文件或部分新文件误认为完整证据。
 
 完整的本地策略回归为：
 
