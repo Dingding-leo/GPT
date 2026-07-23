@@ -107,12 +107,14 @@ def test_position_path_diagnostics_reject_turnover_not_derived_from_position(
         _path_diagnostics(corrupted)
 
 
+@pytest.mark.parametrize("breaching_position", [1.05, -0.05])
 def test_position_path_diagnostics_reject_configured_position_limit_breach(
     btc_usdt_prices: pd.Series,
+    breaching_position: float,
 ) -> None:
     result = _real_okx_result(btc_usdt_prices)
     corrupted = result.combined_frame.copy()
-    corrupted.iloc[10, corrupted.columns.get_loc("position")] = 1.05
+    corrupted.iloc[10, corrupted.columns.get_loc("position")] = breaching_position
     corrupted["turnover"] = (
         corrupted["position"] - corrupted["position"].shift(1, fill_value=0.0)
     ).abs()
