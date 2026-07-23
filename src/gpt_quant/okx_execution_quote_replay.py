@@ -138,9 +138,7 @@ class ReconstructableOKXTopOfBookEvidence:
             "server_time_request_started_utc": _format_utc(
                 observation.server_time_request_started_utc
             ),
-            "exchange_time_observed_utc": _format_utc(
-                observation.exchange_time_observed_utc
-            ),
+            "exchange_time_observed_utc": _format_utc(observation.exchange_time_observed_utc),
             "server_time_response_received_utc": _format_utc(
                 observation.server_time_response_received_utc
             ),
