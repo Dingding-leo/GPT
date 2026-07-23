@@ -82,13 +82,13 @@ def _open_private_directory(path: Path) -> tuple[int, os.stat_result]:
     no_follow = getattr(os, "O_NOFOLLOW", 0)
     directory_only = getattr(os, "O_DIRECTORY", 0)
     parent_descriptor = os.open(path.parent, os.O_RDONLY | directory_only | no_follow)
-    created = False
     try:
         try:
             os.mkdir(path.name, 0o700, dir_fd=parent_descriptor)
-            created = True
         except FileExistsError:
-            pass
+            created = False
+        else:
+            created = True
         descriptor = os.open(
             path.name,
             os.O_RDONLY | directory_only | no_follow,
