@@ -83,7 +83,7 @@ Cost, neighbourhood and daily tail-risk gates pass, but they do not override the
 ## Reproduction
 
 ```bash
-python reports/research/cross_market_maximin_shared_candidate/analysis.py \
+python reports/research/cross_market_maximin_shared_candidate/generate_result.py \
   --artifact-dir /path/to/unpacked/quant-research-source-348-attempt-1 \
   --output /tmp/recomputed-cross-market-maximin.json
 
@@ -100,5 +100,5 @@ pytest -q tests/test_cross_market_maximin_shared_candidate_report.py
 - Mean-score and rank-sum rules are neighbourhood stresses, not separately selected architectures.
 - Moving-block resampling creates artificial joins and preserves dependence only within 20-session blocks.
 - Delay scenarios shift daily positions and are not executable next-open fills.
-- The 7.5, 10 and 15 bps scenarios are aggregate all-in repricings, not measured spread, slippage, impact or latency.
+- The 7.5, 10 and 15 bps scenarios are aggregate all-in repricings, not measured friction components.
 - Capacity and prospective paper evidence remain unavailable.
