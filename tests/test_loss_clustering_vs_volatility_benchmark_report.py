@@ -77,6 +77,15 @@ def test_paired_block_bootstrap_is_deterministic_and_excludes_sampled_joins() ->
     assert first["benchmark_prior_loss_count"] > 0
 
 
+def test_sampled_blocks_avoid_singleton_tail() -> None:
+    blocks = analysis.sampled_block_indices(41, 20, np.random.default_rng(23))
+
+    assert sum(len(block) for block in blocks) == 41
+    assert all(len(block) >= 2 for block in blocks)
+    assert [len(block) for block in blocks] == [20, 19, 2]
+    assert all(np.all(np.diff(block) == 1) for block in blocks)
+
+
 def test_loader_rejects_timezone_naive_copy_before_metrics(tmp_path: Path) -> None:
     frame = _real_fixture()
     frame.loc[3, "timestamp"] = frame.loc[3, "timestamp"].removesuffix("+00:00")
