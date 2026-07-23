@@ -104,17 +104,16 @@ def holding_episode_metrics(frame: pd.DataFrame) -> dict[str, Any]:
 
 def calendar_metrics(frame: pd.DataFrame) -> dict[str, Any]:
     indexed = frame.set_index("timestamp")["strategy_return"]
-    months = [
-        total_return(group) for _, group in indexed.groupby(pd.Grouper(freq="ME")) if len(group)
-    ]
+    month_keys = [indexed.index.year, indexed.index.month]
+    months = [total_return(group) for _, group in indexed.groupby(month_keys, sort=True)]
     years = []
-    for label, group in indexed.groupby(pd.Grouper(freq="YE")):
+    for year, group in indexed.groupby(indexed.index.year, sort=True):
         if group.empty:
             continue
         start, end = group.index[0], group.index[-1]
         years.append(
             {
-                "year": int(label.year),
+                "year": int(year),
                 "return": total_return(group),
                 "partial": not (
                     start.month == 1 and start.day == 1 and end.month == 12 and end.day == 31
