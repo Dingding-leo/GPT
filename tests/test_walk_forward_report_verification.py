@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -32,6 +33,15 @@ def _write_real_okx_report(prices: pd.Series, output: Path) -> dict[str, Path]:
         },
     )
     return write_walk_forward_report(result, output)
+
+
+def _without_explicit_offset(value: object) -> str:
+    serialized = str(value)
+    if serialized.endswith("+00:00"):
+        return serialized[: -len("+00:00")]
+    if serialized.endswith("Z"):
+        return serialized[:-1]
+    raise AssertionError(f"expected an explicit UTC timestamp, got {serialized!r}")
 
 
 def test_verifier_recomputes_persisted_real_okx_report(
@@ -110,3 +120,34 @@ def test_verifier_accepts_fold_boundary_model_switch_accounting(
     verification = verify_walk_forward_report(tmp_path)
     assert verification["status"] == "passed"
     assert verification["fold_boundary_position_transitions_verified"] == 1
+
+
+def test_verifier_rejects_naive_report_timestamp(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    paths = _write_real_okx_report(btc_usdt_prices, tmp_path)
+    report = json.loads(paths["json"].read_text(encoding="utf-8"))
+    report["data_summary"]["evaluation_start"] = _without_explicit_offset(
+        report["data_summary"]["evaluation_start"]
+    )
+    paths["json"].write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="explicit UTC offset"):
+        verify_walk_forward_report(tmp_path)
+
+
+def test_verifier_rejects_naive_returns_timestamp(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    paths = _write_real_okx_report(btc_usdt_prices, tmp_path)
+    returns = pd.read_csv(paths["returns"])
+    returns.loc[0, "timestamp"] = _without_explicit_offset(returns.loc[0, "timestamp"])
+    returns.to_csv(paths["returns"], index=False)
+
+    with pytest.raises(ValueError, match="explicit UTC offset"):
+        verify_walk_forward_report(tmp_path)
