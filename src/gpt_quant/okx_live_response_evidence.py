@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -204,9 +205,16 @@ def write_okx_live_timing_response_evidence(
             raise FileExistsError("refusing to replace different OKX live timing evidence")
         return output, digest
 
-    temporary = output.with_name(f".{output.name}.{digest}.tmp")
+    temporary: Path | None = None
     try:
-        with temporary.open("xb") as handle:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=output.parent,
+            prefix=f".{output.name}.{digest}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
             handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
@@ -218,7 +226,8 @@ def write_okx_live_timing_response_evidence(
                     "refusing to replace different OKX live timing evidence"
                 ) from None
     finally:
-        temporary.unlink(missing_ok=True)
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
     return output, digest
 
