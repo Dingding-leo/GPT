@@ -1,0 +1,24 @@
+{
+  "bar": "1Dutc",
+  "columns": [
+    "timestamp",
+    "strategy_return",
+    "benchmark_volatility_targeted_long_return"
+  ],
+  "end": "2020-02-19 00:00:00+00:00",
+  "endpoint": "/api/v5/market/history-candles",
+  "extract_method": "first 40 chronologically ordered OOS rows; selected columns only",
+  "fixture_sha256": "20a7125cafcf4c4b88275193b6afcce9d7ea570ba7d60402b3cab301bebb6503",
+  "instrument_id": "BTC-USDT",
+  "market_type": "spot",
+  "provider": "OKX",
+  "rows": 40,
+  "source_artifact_id": 8550139614,
+  "source_artifact_name": "quant-research-source-1535-attempt-1",
+  "source_artifact_sha256": "e528db2a672d5880a9374c371df2250f51c89a4951b55fe3f2edde34a8db8662",
+  "source_code_commit": "a0ccd28e2f3a2cbe9e05077147cc70a506f68de2",
+  "source_returns_csv_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+  "source_snapshot_csv_sha256": "407aeba3d1ad4c8e8682a6a689c1c6327139f42bc7587aaae75c77fce047dec1",
+  "source_workflow_run_id": 29972290952,
+  "start": "2020-01-11 00:00:00+00:00"
+}
