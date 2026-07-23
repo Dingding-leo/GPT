@@ -8,6 +8,8 @@
 
 指南只接受真实交易所数据作为研究或绩效证据，并明确区分入口自动强制的 chronology 条件、selection/OOS 的初始仓位记账边界，以及仍需调用者独立核验的 provenance 边界。
 
+当前 `1Dutc` 信号、shift 后 close-to-close 记账、成本字段和 paper/live 禁止性边界，见 [`docs/LIVE_EXECUTION_BOUNDARY.md`](docs/LIVE_EXECUTION_BOUNDARY.md)。
+
 ## 当前研究对象
 
 默认真实数据实验使用 OKX 公共 REST API 的 `BTC-USDT` 与 `ETH-USDT` 现货日线：
