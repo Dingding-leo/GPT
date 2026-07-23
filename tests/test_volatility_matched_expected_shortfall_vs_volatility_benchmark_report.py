@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import hashlib
 import importlib.util
 import json
@@ -57,6 +58,13 @@ def _fixture_returns() -> tuple[np.ndarray, np.ndarray]:
 def _expected_shortfall(values: np.ndarray, tail_fraction: float) -> float:
     tail_count = math.ceil(len(values) * tail_fraction)
     return float(np.mean(np.sort(values)[:tail_count]))
+
+
+def _write_artifact_fixture(artifact_dir: Path, payload: bytes) -> None:
+    for market in ("BTC-USDT", "ETH-USDT"):
+        market_dir = artifact_dir / market
+        market_dir.mkdir(parents=True)
+        (market_dir / "walk_forward_returns.csv").write_bytes(payload)
 
 
 def test_volatility_matching_and_expected_shortfall_use_real_okx_returns() -> None:
@@ -161,27 +169,88 @@ def test_result_records_single_rejected_candidate_and_bound_provenance() -> None
     assert result["markets"]["ETH-USDT"]["ci_upper"] < 0.0
 
 
-def test_digest_mismatch_is_rejected_before_metric_calculation(
+def test_build_result_verifies_both_retained_payloads_before_parsing(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     analysis = _load_analysis()
-    copied = tmp_path / "returns.csv"
-    copied.write_bytes(FIXTURE_PATH.read_bytes())
-    monkeypatch.setitem(
-        analysis.EXPECTED_RETURN_FILE_SHA256,
-        "BTC-USDT",
-        FIXTURE_SHA256,
-    )
-    assert analysis.verify_return_file_sha256(copied, "BTC-USDT") == FIXTURE_SHA256
+    artifact_dir = tmp_path / "artifact"
+    payload = FIXTURE_PATH.read_bytes()
+    _write_artifact_fixture(artifact_dir, payload)
+    for market in analysis.MARKETS:
+        monkeypatch.setitem(analysis.EXPECTED_RETURN_FILE_SHA256, market, FIXTURE_SHA256)
+    monkeypatch.setattr(analysis, "RESAMPLES", 1)
 
-    contents = copied.read_text(encoding="utf-8")
-    copied.write_text(contents.replace("-0.0,", "-0.0001,", 1), encoding="utf-8")
+    read_counts = {market: 0 for market in analysis.MARKETS}
+    events: list[tuple[str, str]] = []
+    verified_payload_ids: dict[str, int] = {}
+    parsed_payload_ids: dict[str, int] = {}
+    original_read_bytes = Path.read_bytes
+    original_verify = analysis.verify_return_payload_sha256
+    original_load = analysis.load_returns
+
+    def counted_read_bytes(path: Path) -> bytes:
+        market = path.parent.name
+        if market in read_counts and path.name == "walk_forward_returns.csv":
+            read_counts[market] += 1
+        return original_read_bytes(path)
+
+    def recording_verify(return_payload: bytes, market: str) -> str:
+        events.append(("verify", market))
+        verified_payload_ids[market] = id(return_payload)
+        return original_verify(return_payload, market)
+
+    def recording_load(return_payload: bytes) -> pd.DataFrame:
+        market = analysis.MARKETS[len(parsed_payload_ids)]
+        events.append(("parse", market))
+        parsed_payload_ids[market] = id(return_payload)
+        return original_load(return_payload)
+
+    monkeypatch.setattr(Path, "read_bytes", counted_read_bytes)
+    monkeypatch.setattr(analysis, "verify_return_payload_sha256", recording_verify)
+    monkeypatch.setattr(analysis, "load_returns", recording_load)
+
+    result = analysis.build_result(artifact_dir)
+
+    assert events[:2] == [("verify", "BTC-USDT"), ("verify", "ETH-USDT")]
+    assert read_counts == {"BTC-USDT": 1, "ETH-USDT": 1}
+    assert parsed_payload_ids == verified_payload_ids
+    assert set(result["markets"]) == set(analysis.MARKETS)
+
+
+@pytest.mark.parametrize("corrupt_market", ("BTC-USDT", "ETH-USDT"))
+def test_digest_mismatch_is_rejected_before_parse_bootstrap_or_output(
+    corrupt_market: str,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    analysis = _load_analysis()
+    artifact_dir = tmp_path / "artifact"
+    payload = FIXTURE_PATH.read_bytes()
+    _write_artifact_fixture(artifact_dir, payload)
+    for market in analysis.MARKETS:
+        monkeypatch.setitem(analysis.EXPECTED_RETURN_FILE_SHA256, market, FIXTURE_SHA256)
+
+    corrupt_path = artifact_dir / corrupt_market / "walk_forward_returns.csv"
+    corrupt_path.write_bytes(payload + b"\n")
     monkeypatch.setattr(
         analysis,
         "load_returns",
-        lambda path: pytest.fail("metric input must not be parsed after digest mismatch"),
+        lambda return_payload: pytest.fail("unverified payload must not be parsed"),
+    )
+    monkeypatch.setattr(
+        analysis,
+        "bootstrap_volatility_matched_expected_shortfall_delta",
+        lambda *args, **kwargs: pytest.fail("bootstrap must not run after digest mismatch"),
+    )
+    output = tmp_path / "result.json"
+    monkeypatch.setattr(
+        analysis,
+        "parse_args",
+        lambda: argparse.Namespace(artifact_dir=str(artifact_dir), output=str(output)),
     )
 
-    with pytest.raises(ValueError, match="SHA-256 mismatch"):
-        analysis.verify_return_file_sha256(copied, "BTC-USDT")
+    with pytest.raises(ValueError, match=rf"{corrupt_market} return file SHA-256 mismatch"):
+        analysis.main()
+
+    assert not output.exists()
