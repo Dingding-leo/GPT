@@ -74,6 +74,17 @@ def test_completed_signal_cutoff_rejects_inconsistent_1dutc_window() -> None:
         _build(cutoff)
 
 
+def test_completed_signal_cutoff_rejects_misaligned_1dutc_window() -> None:
+    cutoff = _CompletedSignalCutoff(
+        bar_open_utc=datetime(2026, 7, 21, 0, 0, 1, tzinfo=UTC),
+        bar_close_utc=datetime(2026, 7, 22, 0, 0, 1, tzinfo=UTC),
+        signal_not_before_utc=datetime(2026, 7, 22, 0, 0, 2, tzinfo=UTC),
+    )
+
+    with pytest.raises(ValueError, match="align to UTC midnight"):
+        _build(cutoff)
+
+
 def test_completed_signal_cutoff_contract_and_position_limits_fail_closed() -> None:
     with pytest.raises(TypeError, match="CompletedSignalCutoff"):
         _build(object())
