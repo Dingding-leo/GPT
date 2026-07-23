@@ -147,6 +147,21 @@ def performance_metrics(
             frame["gross_strategy_return"],
             label="gross_strategy_return",
         )
+        missing_gross_inputs = {"position", "asset_return"} - set(frame.columns)
+        if missing_gross_inputs:
+            raise ValueError("gross_strategy_return requires position and asset_return")
+        position = _validated_returns(frame["position"], label="position")
+        asset_returns = _validated_returns(frame["asset_return"], label="asset_return")
+        expected_gross = position * asset_returns
+        if not np.allclose(
+            gross_returns.to_numpy(),
+            expected_gross.to_numpy(),
+            rtol=0.0,
+            atol=1e-12,
+        ):
+            raise ValueError(
+                "gross_strategy_return must equal position multiplied by asset_return"
+            )
         if "trading_cost" not in frame:
             raise ValueError("gross_strategy_return requires trading_cost")
         trading_cost = _validated_returns(frame["trading_cost"], label="trading_cost")
