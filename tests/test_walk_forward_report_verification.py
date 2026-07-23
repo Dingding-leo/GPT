@@ -7,7 +7,8 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from gpt_quant import StrategyConfig, run_walk_forward_research
+from gpt_quant import StrategyConfig, run_backtest, run_walk_forward_research
+from gpt_quant.metrics import performance_metrics
 from gpt_quant.walk_forward_report import write_walk_forward_report
 from gpt_quant.walk_forward_verify_gate import verify_walk_forward_report
 
@@ -142,7 +143,7 @@ def test_verifier_rejects_within_fold_delayed_position_drift(
     returns.loc[row - 1, "target_position"] += 0.1
     returns.to_csv(paths["returns"], index=False)
 
-    with pytest.raises(ValueError, match="delayed position"):
+    with pytest.raises(ValueError, match="source target_position"):
         verify_walk_forward_report(tmp_path)
 
 
@@ -150,16 +151,51 @@ def test_verifier_accepts_fold_boundary_model_switch_accounting(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
 ) -> None:
-    paths = _write_real_okx_report(btc_usdt_prices, tmp_path)
-    returns = pd.read_csv(paths["returns"])
-    boundary = int(returns.index[returns["fold"].ne(returns["fold"].shift())][1])
+    source_prices = btc_usdt_prices.iloc[:600]
+    snapshot_dir = tmp_path / "snapshot"
+    snapshot_dir.mkdir(parents=True)
+    snapshot_path = snapshot_dir / "okx-BTC-USDT-1Dutc.csv"
+    pd.DataFrame(
+        {
+            "timestamp": source_prices.index.map(lambda value: value.isoformat()),
+            "close": source_prices.to_numpy(copy=False),
+            "confirm": 1,
+        }
+    ).to_csv(snapshot_path, index=False)
 
-    returns.loc[boundary - 1, "target_position"] += 0.1
-    returns.to_csv(paths["returns"], index=False)
+    result = run_walk_forward_research(
+        source_prices,
+        base_config=StrategyConfig(
+            min_position=0.0,
+            transaction_cost_bps=5.0,
+            annualization=365,
+        ),
+        momentum_lookbacks=[21, 90],
+        reversal_lookbacks=[3, 10],
+        trend_weights=[0.55, 0.85],
+        selection_bars=300,
+        test_bars=100,
+        cost_multipliers=[1.0, 1.5, 2.0, 3.0],
+        provenance={
+            "provider": "OKX",
+            "instrument_id": "BTC-USDT",
+            "bar": "1Dutc",
+            "normalized_csv_sha256": hashlib.sha256(snapshot_path.read_bytes()).hexdigest(),
+        },
+    )
+    paths = write_walk_forward_report(result, tmp_path)
+    returns = pd.read_csv(paths["returns"])
+    third_fold_start = int(returns.index[returns["fold"].eq(3)][0])
+    assert returns.loc[third_fold_start, "position"] != pytest.approx(
+        returns.loc[third_fold_start - 1, "target_position"]
+    )
 
     verification = verify_walk_forward_report(tmp_path)
     assert verification["status"] == "passed"
-    assert verification["fold_boundary_position_transitions_verified"] == 1
+    assert verification["fold_boundary_position_transitions_verified"] == 2
+    assert verification["selected_folds_verified"] == 3
+    assert verification["selected_target_rows_verified"] == len(returns)
+    assert verification["selected_position_rows_verified"] == len(returns)
 
 
 def test_verifier_rejects_naive_report_timestamp(
@@ -190,4 +226,46 @@ def test_verifier_rejects_naive_returns_timestamp(
     returns.to_csv(paths["returns"], index=False)
 
     with pytest.raises(ValueError, match="explicit UTC offset"):
+        verify_walk_forward_report(tmp_path)
+
+
+def test_verifier_rejects_self_consistent_path_from_wrong_selected_model(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    paths = _write_real_okx_report(btc_usdt_prices, tmp_path)
+    report = json.loads(paths["json"].read_text(encoding="utf-8"))
+    returns = pd.read_csv(paths["returns"], float_precision="round_trip")
+
+    selected = StrategyConfig(**report["folds"][0]["selected_parameters"])
+    wrong = selected.with_overrides(momentum_lookback=42)
+    timestamps = pd.DatetimeIndex(pd.to_datetime(returns["timestamp"], utc=True))
+    wrong_frame = run_backtest(btc_usdt_prices.iloc[:500], wrong).frame.reindex(timestamps)
+    assert not wrong_frame["target_position"].equals(
+        pd.Series(returns["target_position"].to_numpy(), index=timestamps)
+    )
+
+    returns["target_position"] = wrong_frame["target_position"].to_numpy(copy=False)
+    returns["position"] = wrong_frame["position"].to_numpy(copy=False)
+    returns["turnover"] = returns["position"].diff().abs().fillna(returns["position"].abs())
+    returns["gross_strategy_return"] = returns["position"] * returns["asset_return"]
+    fee_bps = float(report["settings"]["base_config"]["transaction_cost_bps"])
+    returns["trading_cost"] = returns["turnover"] * fee_bps / 10_000.0
+    returns["strategy_return"] = (
+        returns["gross_strategy_return"] - returns["trading_cost"]
+    )
+    returns["nav"] = (1.0 + returns["strategy_return"]).cumprod()
+    returns.to_csv(paths["returns"], index=False)
+
+    annualization = int(report["settings"]["base_config"]["annualization"])
+    report["aggregate_metrics"] = performance_metrics(returns, annualization=annualization)
+    for fold in report["folds"]:
+        fold_frame = returns.loc[returns["fold"] == int(fold["fold"])]
+        fold["test_metrics"] = performance_metrics(fold_frame, annualization=annualization)
+    paths["json"].write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="fold 1 source target_position"):
         verify_walk_forward_report(tmp_path)
