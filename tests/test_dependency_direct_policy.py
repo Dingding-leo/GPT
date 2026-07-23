@@ -60,7 +60,10 @@ def test_current_direct_dependencies_are_approved_and_recorded(tmp_path: Path) -
     assert completed.returncode == 0, completed.stderr
     assert completed.stdout == ""
     assert json.loads(evidence_path.read_text(encoding="utf-8")) == {
-        "approved_direct_dependencies": ["numpy", "pandas", "pytest", "ruff", "setuptools"],
+        "approved_direct_dependencies": {
+            "build": ["setuptools"],
+            "project": ["numpy", "pandas", "pytest", "ruff"],
+        },
         "declared_direct_dependencies": {
             "build": ["setuptools"],
             "project": ["numpy", "pandas", "pytest", "ruff"],
@@ -87,6 +90,35 @@ def test_unapproved_direct_dependency_fails_before_evidence(
     assert completed.stdout == ""
     assert "unapproved direct dependency names" in completed.stderr
     assert "example-package" in completed.stderr
+    assert not evidence_path.parent.exists()
+
+
+@pytest.mark.parametrize(
+    ("requirement", "location", "scope"),
+    [
+        ("numpy>=1.26", "build", "build"),
+        ("setuptools>=69", "project", "project"),
+        ("setuptools>=69", "optional", "project"),
+    ],
+)
+def test_approved_name_in_wrong_scope_fails_before_evidence(
+    tmp_path: Path,
+    requirement: str,
+    location: str,
+    scope: str,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    evidence_path = tmp_path / "audit" / "direct-dependency-policy.json"
+    pyproject_path.write_text(
+        _pyproject_with_requirement(requirement, location=location),
+        encoding="utf-8",
+    )
+
+    completed = _run_policy(pyproject_path, evidence_path)
+
+    assert completed.returncode == 2
+    assert completed.stdout == ""
+    assert f"'{scope}'" in completed.stderr
     assert not evidence_path.parent.exists()
 
 
