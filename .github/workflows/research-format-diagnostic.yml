@@ -5,17 +5,19 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
+    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Check out repository
+      - name: Check out pull-request branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          ref: ${{ github.event.pull_request.head.ref }}
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -26,27 +28,58 @@ jobs:
       - name: Install Ruff
         run: python -m pip install "ruff>=0.9,<1"
 
-      - name: Capture focused Ruff diagnostics
+      - name: Wrap limitation strings and commit
         shell: bash
         run: |
-          set +e
-          ruff check --output-format concise \
-            reports/research/cross_market_maximin_shared_candidate/analysis.py \
-            reports/research/cross_market_maximin_shared_candidate/generate_result.py \
-            tests/test_cross_market_maximin_shared_candidate_report.py \
-            > ruff-diagnostic.txt 2>&1
-          ruff format --check \
-            reports/research/cross_market_maximin_shared_candidate/analysis.py \
-            reports/research/cross_market_maximin_shared_candidate/generate_result.py \
-            tests/test_cross_market_maximin_shared_candidate_report.py \
-            >> ruff-diagnostic.txt 2>&1
-          cat ruff-diagnostic.txt
-          exit 0
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
 
-      - name: Upload Ruff diagnostics
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: cross-market-maximin-ruff-diagnostic
-          path: ruff-diagnostic.txt
-          if-no-files-found: error
-          retention-days: 1
+          path = Path("reports/research/cross_market_maximin_shared_candidate/analysis.py")
+          text = path.read_text(encoding="utf-8")
+          old = '''        "limitations": [
+              "BTC-USDT and ETH-USDT are development markets and may be used only for architecture design.",
+              "SOL-USDT was not read or used and remains a consumed sealed holdout unavailable for tuning.",
+              "Mean-score and rank-sum rules are predeclared neighbourhood stresses, not separately selected architectures.",
+              "Moving-block resampling creates artificial joins and preserves dependence only within 20-session blocks.",
+              "Delay scenarios shift daily positions and do not model executable next-open fills.",
+              "The 7.5, 10 and 15 bps cases are aggregate repricings, not measured spread, slippage, impact or latency.",
+              "Capacity and prospective forward evidence remain unavailable.",
+          ],
+          '''
+          new = '''        "limitations": [
+              (
+                  "BTC-USDT and ETH-USDT are development markets and may be used only for "
+                  "architecture design."
+              ),
+              (
+                  "SOL-USDT was not read or used and remains a consumed sealed holdout "
+                  "unavailable for tuning."
+              ),
+              (
+                  "Mean-score and rank-sum rules are predeclared neighbourhood stresses, "
+                  "not separately selected architectures."
+              ),
+              (
+                  "Moving-block resampling creates artificial joins and preserves dependence "
+                  "only within 20-session blocks."
+              ),
+              "Delay scenarios shift daily positions and do not model executable next-open fills.",
+              (
+                  "The 7.5, 10 and 15 bps cases are aggregate repricings, not measured spread, "
+                  "slippage, impact or latency."
+              ),
+              "Capacity and prospective forward evidence remain unavailable.",
+          ],
+          '''
+          if old not in text:
+              raise SystemExit("expected limitation block not found")
+          path.write_text(text.replace(old, new), encoding="utf-8")
+          PY
+          ruff check --fix reports/research/cross_market_maximin_shared_candidate/analysis.py
+          ruff format reports/research/cross_market_maximin_shared_candidate/analysis.py
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add reports/research/cross_market_maximin_shared_candidate/analysis.py
+          git commit -m "style(research): wrap maximin limitation strings"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
