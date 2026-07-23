@@ -10,9 +10,7 @@ import pytest
 
 from gpt_quant.okx_execution_quote import fetch_okx_top_of_book
 
-_FIXTURE_DIR = (
-    Path(__file__).parent / "fixtures" / "okx" / "order-book-btc-usdt-docs-20210826"
-)
+_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "order-book-btc-usdt-docs-20210826"
 _RESPONSE_PATH = _FIXTURE_DIR / "response.json"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
 _EXPECTED_RESPONSE_SHA256 = "7d12a351f8f51320d1c8beee0063557e1c90388d66ac63412bf66ca544aeb3e3"
@@ -73,9 +71,7 @@ def test_fetch_okx_top_of_book_binds_real_public_response_to_exchange_time() -> 
         ),
     )
 
-    assert requested_urls == [
-        "https://example.test/api/v5/market/books?instId=BTC-USDT&sz=1"
-    ]
+    assert requested_urls == ["https://example.test/api/v5/market/books?instId=BTC-USDT&sz=1"]
     assert all("account" not in url and "trade" not in url for url in requested_urls)
     assert observation.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
     assert observation.exchange_time_observed_utc == datetime(
