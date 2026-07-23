@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from .experiment_registry import load_manifest_entries, validate_manifest_entry
+from .experiment_registry import _registry_lock, load_manifest_entries, validate_manifest_entry
 
 
 def _canonical_jsonl(entries: list[Mapping[str, Any]]) -> bytes:
@@ -27,23 +27,24 @@ def append_experiment_manifest(
 
     validated_entry = validate_manifest_entry(entry)
     output = Path(path)
-    existing_entries: list[dict[str, Any]] = []
-    if output.exists():
-        existing_entries = load_manifest_entries(output)
-        if output.read_bytes() != _canonical_jsonl(existing_entries):
-            raise ValueError(f"{output} is not canonical JSONL")
+    with _registry_lock(output):
+        existing_entries: list[dict[str, Any]] = []
+        if output.exists():
+            existing_entries = load_manifest_entries(output)
+            if output.read_bytes() != _canonical_jsonl(existing_entries):
+                raise ValueError(f"{output} is not canonical JSONL")
 
-    run_id = validated_entry["run_id"]
-    for existing in existing_entries:
-        if existing["run_id"] != run_id:
-            continue
-        if existing != validated_entry:
-            raise ValueError(f"manifest run_id collision for {run_id}")
-        return output, False
+        run_id = validated_entry["run_id"]
+        for existing in existing_entries:
+            if existing["run_id"] != run_id:
+                continue
+            if existing != validated_entry:
+                raise ValueError(f"manifest run_id collision for {run_id}")
+            return output, False
 
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("ab") as handle:
-        handle.write(_canonical_jsonl([validated_entry]))
-        handle.flush()
-        os.fsync(handle.fileno())
-    return output, True
+        output.parent.mkdir(parents=True, exist_ok=True)
+        with output.open("ab") as handle:
+            handle.write(_canonical_jsonl([validated_entry]))
+            handle.flush()
+            os.fsync(handle.fileno())
+        return output, True
