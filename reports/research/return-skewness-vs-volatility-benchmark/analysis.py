@@ -180,8 +180,7 @@ def build_result(artifact_dir: str | Path) -> dict[str, object]:
     if failed_markets:
         rejection_reason = (
             "The 95% paired moving-block-bootstrap lower bound for the strategy-minus-"
-            "benchmark adjusted-skewness delta was non-positive in: "
-            + ", ".join(failed_markets)
+            "benchmark adjusted-skewness delta was non-positive in: " + ", ".join(failed_markets)
         )
 
     return {
@@ -198,8 +197,7 @@ def build_result(artifact_dir: str | Path) -> dict[str, object]:
         "settings": {
             "benchmark": "volatility-targeted-long",
             "skewness_definition": (
-                "sqrt(n*(n-1))/(n-2) * mean((r-mean(r))^3) / "
-                "mean((r-mean(r))^2)^(3/2)"
+                "sqrt(n*(n-1))/(n-2) * mean((r-mean(r))^3) / mean((r-mean(r))^2)^(3/2)"
             ),
             "block_length_sessions": BLOCK_LENGTH,
             "resamples": RESAMPLES,
