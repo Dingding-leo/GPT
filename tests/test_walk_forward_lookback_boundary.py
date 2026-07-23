@@ -67,16 +67,44 @@ def test_walk_forward_rejects_lookback_without_delayed_selection_observation(
         )
 
 
-@pytest.mark.parametrize("dimension", _LOOKBACK_DIMENSIONS)
+@pytest.mark.parametrize(
+    ("dimension", "lookback"),
+    (("momentum", 248), ("reversal", 248), ("volatility", _SELECTION_BARS - 2)),
+)
 def test_walk_forward_accepts_last_executable_lookback_boundary(
     btc_usdt_prices: pd.Series,
     dimension: str,
+    lookback: int,
 ) -> None:
     result = _run_boundary_candidate(
         btc_usdt_prices,
         dimension=dimension,
-        lookback=_SELECTION_BARS - 2,
+        lookback=lookback,
     )
 
     assert len(result.folds) == 1
     assert result.folds[0]["candidates_tested"] == 1
+
+
+@pytest.mark.parametrize("dimension", ("momentum", "reversal"))
+@pytest.mark.parametrize("lookback", (250, 251))
+def test_walk_forward_rejects_underwarmed_longer_lookback_perturbation(
+    btc_usdt_prices: pd.Series,
+    monkeypatch: pytest.MonkeyPatch,
+    dimension: str,
+    lookback: int,
+) -> None:
+    def unexpected_backtest(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("perturbation warmup validation must run before cache population")
+
+    monkeypatch.setattr(walk_forward, "run_backtest", unexpected_backtest)
+
+    with pytest.raises(
+        ValueError,
+        match="longer-lookback perturbation",
+    ):
+        _run_boundary_candidate(
+            btc_usdt_prices,
+            dimension=dimension,
+            lookback=lookback,
+        )
