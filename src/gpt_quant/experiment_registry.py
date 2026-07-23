@@ -73,10 +73,7 @@ def _validate_digest_mapping(name: str, value: object) -> dict[str, str]:
 def _validate_utc_timestamp(value: object) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError("recorded_at_utc must be a non-empty string")
-    if value.endswith("Z"):
-        parsed_value = f"{value[:-1]}+00:00"
-    else:
-        parsed_value = value
+    parsed_value = f"{value[:-1]}+00:00" if value.endswith("Z") else value
     try:
         timestamp = datetime.fromisoformat(parsed_value)
     except ValueError as exc:
