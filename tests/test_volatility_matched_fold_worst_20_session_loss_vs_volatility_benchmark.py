@@ -156,5 +156,7 @@ def test_result_records_one_rejected_candidate_and_bound_provenance() -> None:
     assert btc["excluded_trailing_rows"] == eth["excluded_trailing_rows"] == 45
     assert btc["observed_mean_delta"] == pytest.approx(-0.01064436588127051)
     assert eth["observed_mean_delta"] == pytest.approx(-0.016774498228293185)
+    assert btc["mean_benchmark_volatility_scale"] == pytest.approx(0.4169751878662988)
+    assert eth["mean_benchmark_volatility_scale"] == pytest.approx(0.4192779692940194)
     assert btc["ci_lower"] < 0.0
     assert eth["ci_upper"] < 0.0
