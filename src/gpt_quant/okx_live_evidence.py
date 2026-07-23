@@ -64,9 +64,7 @@ def build_okx_live_timing_evidence(
             field="cutoff server-time response receipt",
         )
     )
-    signal_not_before = pd.Timestamp(
-        _utc_text(cutoff.signal_not_before_utc, field="signal cutoff")
-    )
+    signal_not_before = pd.Timestamp(_utc_text(cutoff.signal_not_before_utc, field="signal cutoff"))
 
     if request_started > response_received:
         raise ValueError("OKX server-time request timestamps are reversed")
@@ -117,9 +115,7 @@ def build_okx_live_timing_evidence(
         "server_round_trip_seconds": float(cutoff.server_round_trip_seconds),
         "midpoint_clock_skew_seconds": float(cutoff.midpoint_clock_skew_seconds),
         "max_server_round_trip_seconds": float(cutoff.max_server_round_trip_seconds),
-        "max_abs_midpoint_clock_skew_seconds": float(
-            cutoff.max_abs_midpoint_clock_skew_seconds
-        ),
+        "max_abs_midpoint_clock_skew_seconds": float(cutoff.max_abs_midpoint_clock_skew_seconds),
     }
 
 
@@ -191,10 +187,7 @@ def read_okx_live_timing_evidence(
         raise ValueError("OKX live timing evidence must be a JSON object")
     if _canonical_json_bytes(decoded) != payload:
         raise ValueError("OKX live timing evidence is not canonical JSON")
-    if (
-        decoded.get("schema_version") != _SCHEMA_VERSION
-        or decoded.get("provider") != _PROVIDER
-    ):
+    if decoded.get("schema_version") != _SCHEMA_VERSION or decoded.get("provider") != _PROVIDER:
         raise ValueError("unsupported OKX live timing evidence schema")
     source_url = decoded.get("source_url")
     if not isinstance(source_url, str) or not source_url.endswith(_PUBLIC_TIME_ENDPOINT):
