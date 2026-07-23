@@ -7,10 +7,7 @@ from pathlib import Path
 import pytest
 
 _REPORT_DIR = (
-    Path(__file__).parents[1]
-    / "reports"
-    / "research"
-    / "cross_market_maximin_shared_candidate"
+    Path(__file__).parents[1] / "reports" / "research" / "cross_market_maximin_shared_candidate"
 )
 _ANALYSIS_PATH = _REPORT_DIR / "analysis.py"
 _RESULT_PATH = _REPORT_DIR / "result.json"
@@ -63,12 +60,8 @@ def test_exact_5bps_metrics_and_gate_failures_are_persisted() -> None:
             values["total_return"]
         )
         assert market_result["metrics_5bps"]["sharpe"] == pytest.approx(values["sharpe"])
-        assert market_result["fold_stability"]["profitable_folds"] == values[
-            "profitable_folds"
-        ]
-        assert sum(
-            market_result["fold_selection_summary"]["selection_frequency"].values()
-        ) == 27
+        assert market_result["fold_stability"]["profitable_folds"] == values["profitable_folds"]
+        assert sum(market_result["fold_selection_summary"]["selection_frequency"].values()) == 27
 
     assert result["joint_gates"]["development_benchmark_relative_risk_adjusted"] == "fail"
     assert result["joint_gates"]["fold_stability"] == "fail"

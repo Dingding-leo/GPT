@@ -16,9 +16,7 @@ def compact_result(result: dict) -> dict:
                 key: data["volatility_targeted_long"][key]
                 for key in ("total_return", "cagr", "sharpe", "calmar", "max_drawdown")
             },
-            "bootstrap_vs_volatility_targeted_long": data[
-                "bootstrap_vs_volatility_targeted_long"
-            ],
+            "bootstrap_vs_volatility_targeted_long": data["bootstrap_vs_volatility_targeted_long"],
             "fold_stability": {
                 key: data["fold_stability"][key]
                 for key in (

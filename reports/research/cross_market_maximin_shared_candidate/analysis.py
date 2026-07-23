@@ -160,9 +160,7 @@ def load_canonical_returns(
         raise ValueError("unexpected evaluation start")
     if validated["timestamp"].iloc[-1] != EXPECTED_EVALUATION_END:
         raise ValueError("unexpected evaluation end")
-    return_columns = validated[
-        ["strategy_return", "benchmark_volatility_targeted_long_return"]
-    ]
+    return_columns = validated[["strategy_return", "benchmark_volatility_targeted_long_return"]]
     if (return_columns <= -1.0).any().any():
         raise ValueError("returns must remain greater than -100%")
     return validated.set_index("timestamp")
@@ -196,9 +194,9 @@ def build_target_position(
     reversal_score = -recent_return / (
         risk_scale.replace(0.0, np.nan) * math.sqrt(reversal_lookback)
     )
-    ensemble_score = (
-        trend_weight * trend_score + (1.0 - trend_weight) * reversal_score
-    ).clip(-4.0, 4.0)
+    ensemble_score = (trend_weight * trend_score + (1.0 - trend_weight) * reversal_score).clip(
+        -4.0, 4.0
+    )
     directional_signal = pd.Series(
         np.tanh(ensemble_score.to_numpy(dtype=float)),
         index=ensemble_score.index,
@@ -272,16 +270,12 @@ def return_metrics(returns: pd.Series | np.ndarray) -> dict[str, float | int]:
     annualized_mean = mean * ANNUALIZATION
     annualized_volatility = standard_deviation * math.sqrt(ANNUALIZATION)
     sharpe = (
-        mean / standard_deviation * math.sqrt(ANNUALIZATION)
-        if standard_deviation > 0.0
-        else 0.0
+        mean / standard_deviation * math.sqrt(ANNUALIZATION) if standard_deviation > 0.0 else 0.0
     )
     downside = np.minimum(values, 0.0)
     downside_deviation = float(np.sqrt(np.mean(np.square(downside))))
     sortino = (
-        mean / downside_deviation * math.sqrt(ANNUALIZATION)
-        if downside_deviation > 0.0
-        else 0.0
+        mean / downside_deviation * math.sqrt(ANNUALIZATION) if downside_deviation > 0.0 else 0.0
     )
     nav = np.concatenate(([1.0], np.cumprod(1.0 + values)))
     drawdown = nav / np.maximum.accumulate(nav) - 1.0
@@ -405,14 +399,11 @@ def build_shared_path(
                     reverse=True,
                 )
                 ranks[market] = {
-                    candidate: rank
-                    for rank, (_, candidate) in enumerate(ordered, start=1)
+                    candidate: rank for rank, (_, candidate) in enumerate(ordered, start=1)
                 }
             for item in scored:
                 candidate = item["candidate"]
-                item["market_ranks"] = {
-                    market: ranks[market][candidate] for market in MARKETS
-                }
+                item["market_ranks"] = {market: ranks[market][candidate] for market in MARKETS}
                 item["aggregate_score"] = -float(
                     sum(ranks[market][candidate] for market in MARKETS)
                 )
@@ -579,9 +570,9 @@ def noncircular_block_indices(
 ) -> np.ndarray:
     blocks_needed = math.ceil(observations / block_length)
     starts = rng.integers(0, observations - block_length + 1, size=blocks_needed)
-    return np.concatenate(
-        [np.arange(start, start + block_length) for start in starts]
-    )[:observations]
+    return np.concatenate([np.arange(start, start + block_length) for start in starts])[
+        :observations
+    ]
 
 
 def paired_metric_delta_bootstrap(
@@ -612,15 +603,13 @@ def paired_metric_delta_bootstrap(
     comparator_metrics = return_metrics(comparator_values)
     return {
         "sharpe_delta": {
-            "point": float(candidate_metrics["sharpe"])
-            - float(comparator_metrics["sharpe"]),
+            "point": float(candidate_metrics["sharpe"]) - float(comparator_metrics["sharpe"]),
             "lower": float(np.quantile(sharpe_deltas, alpha)),
             "upper": float(np.quantile(sharpe_deltas, 1.0 - alpha)),
             "probability_positive": float(np.mean(sharpe_deltas > 0.0)),
         },
         "calmar_delta": {
-            "point": float(candidate_metrics["calmar"])
-            - float(comparator_metrics["calmar"]),
+            "point": float(candidate_metrics["calmar"]) - float(comparator_metrics["calmar"]),
             "lower": float(np.quantile(calmar_deltas, alpha)),
             "upper": float(np.quantile(calmar_deltas, 1.0 - alpha)),
             "probability_positive": float(np.mean(calmar_deltas > 0.0)),
@@ -682,8 +671,7 @@ def analyze_market(
         for cost_bps in ALL_IN_COSTS_BPS
     }
     neighbourhood_metrics = {
-        name: _compact_metrics(frame_metrics(frame))
-        for name, frame in neighbourhoods.items()
+        name: _compact_metrics(frame_metrics(frame)) for name, frame in neighbourhoods.items()
     }
 
     delay_results: list[dict[str, Any]] = []
@@ -804,20 +792,15 @@ def analyze_market(
         and float(metrics["max_drawdown"]) > -0.40
         for metrics in neighbourhood_metrics.values()
     )
-    tail_passes = (
-        float(result["tail_risk"]["expected_shortfall_5pct"])
-        > float(result["tail_risk"]["benchmark_expected_shortfall_5pct"])
+    tail_passes = float(result["tail_risk"]["expected_shortfall_5pct"]) > float(
+        result["tail_risk"]["benchmark_expected_shortfall_5pct"]
     )
     result["gates"] = {
-        "development_benchmark_relative_risk_adjusted": (
-            "pass" if benchmark_passes else "fail"
-        ),
+        "development_benchmark_relative_risk_adjusted": ("pass" if benchmark_passes else "fail"),
         "fold_stability": "pass" if result["fold_stability"]["passes"] else "fail",
         "year_stability": "pass" if result["calendar_stability"]["passes"] else "fail",
         "turnover_and_5_7.5_10_15bps_viability": "pass" if cost_passes else "fail",
-        "parameter_neighbourhood_stability": (
-            "pass" if neighbourhood_passes else "fail"
-        ),
+        "parameter_neighbourhood_stability": ("pass" if neighbourhood_passes else "fail"),
         "tail_risk": "pass" if tail_passes else "fail",
         "execution_delay_robustness": (
             "pass" if result["execution_delay_scenarios"]["passes"] else "fail"
