@@ -39,6 +39,27 @@ def _validate_private_directory(descriptor: int) -> os.stat_result:
     return directory_stat
 
 
+def _fsync_parent_directory_entry(directory: Path) -> None:
+    parent = directory.parent
+    descriptor = os.open(
+        parent,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+    )
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISDIR(opened.st_mode):
+            raise ValueError("paper decision parent must be a regular directory")
+        current = os.stat(parent, follow_symlinks=False)
+        if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
+            raise RuntimeError("paper decision parent changed during store creation")
+        os.fsync(descriptor)
+        current = os.stat(parent, follow_symlinks=False)
+        if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
+            raise RuntimeError("paper decision parent changed during store creation")
+    finally:
+        os.close(descriptor)
+
+
 def _assert_directory_identity(directory: Path, opened: os.stat_result) -> None:
     current = os.stat(directory, follow_symlinks=False)
     if not stat.S_ISDIR(current.st_mode) or (opened.st_dev, opened.st_ino) != (
@@ -54,10 +75,13 @@ def _private_decision_directory(
     *,
     create: bool,
 ) -> Iterator[None]:
-    if create or not directory.exists():
+    directory_was_missing = not directory.exists()
+    if create or directory_was_missing:
         if directory.is_symlink():
             raise ValueError("paper decision directory must not be a symbolic link")
         directory.mkdir(parents=True, mode=0o700, exist_ok=True)
+        if directory_was_missing:
+            _fsync_parent_directory_entry(directory)
 
     descriptor = os.open(
         directory,
