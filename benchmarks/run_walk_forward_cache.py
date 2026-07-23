@@ -6,7 +6,8 @@ import hashlib
 import json
 import statistics
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
+from itertools import chain
 from pathlib import Path
 from typing import Any
 
@@ -54,12 +55,6 @@ def _settings(path: Path) -> dict[str, Any]:
     }
 
 
-def _cache_column_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> int:
-    """Count retained candidate-column buffers."""
-
-    return sum(int(frame.memory_usage(index=False, deep=True).sum()) for frame in cache.values())
-
-
 def _root_array(values: np.ndarray) -> np.ndarray:
     root = values
     while isinstance(root.base, np.ndarray):
@@ -67,22 +62,51 @@ def _root_array(values: np.ndarray) -> np.ndarray:
     return root
 
 
-def _cache_unique_index_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> int:
-    """Count each retained DatetimeIndex data buffer exactly once."""
+def _unique_root_array_bytes(arrays: Iterable[np.ndarray]) -> int:
+    """Count each retained NumPy root buffer exactly once."""
 
-    buffers: dict[int, int] = {}
+    buffers: dict[int, np.ndarray] = {}
+    for values in arrays:
+        root = _root_array(values)
+        buffers.setdefault(id(root), root)
+    return sum(int(root.nbytes) for root in buffers.values())
+
+
+def _cache_column_arrays(
+    cache: Mapping[StrategyConfig, pd.DataFrame],
+) -> Iterable[np.ndarray]:
+    for frame in cache.values():
+        for _, column in frame.items():
+            yield column.to_numpy(copy=False)
+
+
+def _cache_index_arrays(
+    cache: Mapping[StrategyConfig, pd.DataFrame],
+) -> Iterable[np.ndarray]:
     for frame in cache.values():
         if not isinstance(frame.index, pd.DatetimeIndex):
             raise TypeError("candidate cache index must be a DatetimeIndex")
-        root = _root_array(frame.index.asi8)
-        buffers.setdefault(id(root), int(root.nbytes))
-    return sum(buffers.values())
+        yield frame.index.asi8
+
+
+def _cache_column_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> int:
+    """Count each retained candidate-column root buffer exactly once."""
+
+    return _unique_root_array_bytes(_cache_column_arrays(cache))
+
+
+def _cache_unique_index_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> int:
+    """Count each retained DatetimeIndex root buffer exactly once."""
+
+    return _unique_root_array_bytes(_cache_index_arrays(cache))
 
 
 def _cache_retained_array_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> int:
-    """Count retained column buffers plus unique index data buffers."""
+    """Count each retained column or index root buffer exactly once."""
 
-    return _cache_column_bytes(cache) + _cache_unique_index_bytes(cache)
+    return _unique_root_array_bytes(
+        chain(_cache_column_arrays(cache), _cache_index_arrays(cache))
+    )
 
 
 def _legacy_candidate_window(
