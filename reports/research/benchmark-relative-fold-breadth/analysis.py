@@ -83,12 +83,9 @@ def load_complete_fold_deltas(
         raise ValueError("fold identifiers must be consecutive and start at one")
 
     fold_sizes = grouped.size()
-    complete_ids = fold_sizes.index[
-        fold_sizes == expected_fold_observations
-    ].to_numpy(dtype=int)
-    incomplete_ids = fold_sizes.index[
-        fold_sizes != expected_fold_observations
-    ].to_numpy(dtype=int)
+    complete_mask = fold_sizes == expected_fold_observations
+    complete_ids = fold_sizes.index[complete_mask].to_numpy(dtype=int)
+    incomplete_ids = fold_sizes.index[~complete_mask].to_numpy(dtype=int)
     if len(incomplete_ids) > 1 or (len(incomplete_ids) == 1 and incomplete_ids[0] != fold_ids[-1]):
         raise ValueError("only one trailing incomplete fold may be excluded")
     if (
