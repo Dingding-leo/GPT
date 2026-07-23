@@ -60,9 +60,9 @@ def _load_timestamp_workload(root: Path) -> list[tuple[pd.Series, str]]:
     workload: list[tuple[pd.Series, str]] = []
     for instrument in _INSTRUMENTS:
         returns = pd.read_csv(root / instrument / "walk_forward_returns.csv")["timestamp"]
-        snapshot = pd.read_csv(
-            root / instrument / "snapshot" / f"okx-{instrument}-1Dutc.csv"
-        )["timestamp"]
+        snapshot = pd.read_csv(root / instrument / "snapshot" / f"okx-{instrument}-1Dutc.csv")[
+            "timestamp"
+        ]
         workload.extend(
             [
                 (returns, "walk-forward returns timestamp"),
@@ -94,9 +94,7 @@ def _run_verifier_workload(
     try:
         result: list[dict[str, float | int | str]] = []
         for _ in range(repetitions):
-            result = [
-                verify_gate.verify_walk_forward_report(root / item) for item in _INSTRUMENTS
-            ]
+            result = [verify_gate.verify_walk_forward_report(root / item) for item in _INSTRUMENTS]
         return result
     finally:
         verify_gate._timestamp_index = original
@@ -186,12 +184,8 @@ def main() -> None:
             args.component_repetitions,
         )
 
-    baseline_indexes = _run_timestamp_workload(
-        _baseline_timestamp_index, timestamp_workload, 1
-    )
-    optimized_indexes = _run_timestamp_workload(
-        verify_gate._timestamp_index, timestamp_workload, 1
-    )
+    baseline_indexes = _run_timestamp_workload(_baseline_timestamp_index, timestamp_workload, 1)
+    optimized_indexes = _run_timestamp_workload(verify_gate._timestamp_index, timestamp_workload, 1)
     if len(baseline_indexes) != len(optimized_indexes) or not all(
         baseline.equals(optimized)
         for baseline, optimized in zip(baseline_indexes, optimized_indexes, strict=True)
@@ -257,12 +251,8 @@ def main() -> None:
             **_result(
                 verifier_baseline,
                 verifier_optimized,
-                _peak_bytes(
-                    lambda: _run_verifier_workload(root, _baseline_timestamp_index, 1)
-                ),
-                _peak_bytes(
-                    lambda: _run_verifier_workload(root, verify_gate._timestamp_index, 1)
-                ),
+                _peak_bytes(lambda: _run_verifier_workload(root, _baseline_timestamp_index, 1)),
+                _peak_bytes(lambda: _run_verifier_workload(root, verify_gate._timestamp_index, 1)),
             ),
         },
     }
