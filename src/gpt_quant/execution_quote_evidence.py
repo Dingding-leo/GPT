@@ -77,31 +77,46 @@ def _validate_directory_descriptor(descriptor: int) -> os.stat_result:
 
 
 def _open_private_directory(path: Path) -> tuple[int, os.stat_result]:
-    if path.is_symlink():
-        raise ValueError(f"{_ERROR_LABEL} directory must not be a symbolic link")
-    created = False
-    try:
-        path.mkdir(parents=True, mode=0o700)
-        created = True
-    except FileExistsError:
-        pass
+    if not path.name or path.name in {".", ".."}:
+        raise ValueError(f"{_ERROR_LABEL} path must name one directory")
     no_follow = getattr(os, "O_NOFOLLOW", 0)
     directory_only = getattr(os, "O_DIRECTORY", 0)
-    descriptor = os.open(path, os.O_RDONLY | directory_only | no_follow)
+    parent_descriptor = os.open(path.parent, os.O_RDONLY | directory_only | no_follow)
+    created = False
     try:
-        if created:
-            os.fchmod(descriptor, 0o700)
-        directory_stat = _validate_directory_descriptor(descriptor)
-        path_stat = os.stat(path, follow_symlinks=False)
-        if (
-            path_stat.st_dev != directory_stat.st_dev
-            or path_stat.st_ino != directory_stat.st_ino
-        ):
-            raise RuntimeError(f"{_ERROR_LABEL} directory path changed while opening")
-        return descriptor, directory_stat
-    except BaseException:
-        os.close(descriptor)
-        raise
+        try:
+            os.mkdir(path.name, 0o700, dir_fd=parent_descriptor)
+            created = True
+        except FileExistsError:
+            pass
+        descriptor = os.open(
+            path.name,
+            os.O_RDONLY | directory_only | no_follow,
+            dir_fd=parent_descriptor,
+        )
+        try:
+            if created:
+                os.fchmod(descriptor, 0o700)
+            directory_stat = _validate_directory_descriptor(descriptor)
+            path_stat = os.stat(
+                path.name,
+                dir_fd=parent_descriptor,
+                follow_symlinks=False,
+            )
+            if (
+                path_stat.st_dev != directory_stat.st_dev
+                or path_stat.st_ino != directory_stat.st_ino
+            ):
+                raise RuntimeError(f"{_ERROR_LABEL} directory path changed while opening")
+            if created:
+                os.fsync(descriptor)
+                os.fsync(parent_descriptor)
+            return descriptor, directory_stat
+        except BaseException:
+            os.close(descriptor)
+            raise
+    finally:
+        os.close(parent_descriptor)
 
 
 def _validate_regular_private_file(descriptor: int, *, label: str) -> os.stat_result:
