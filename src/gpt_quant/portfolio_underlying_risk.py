@@ -194,9 +194,7 @@ def _net_risk_contributions(
             "net_variance_contribution_fraction": variance_fraction,
         }
 
-    status = (
-        "measured" if annualized_variance > tolerance else "zero_portfolio_variance"
-    )
+    status = "measured" if annualized_variance > tolerance else "zero_portfolio_variance"
     summary: dict[str, float | str] = {
         "annualized_net_variance": annualized_variance,
         "annualized_net_volatility": annualized_volatility,
@@ -208,10 +206,7 @@ def _net_risk_contributions(
             )
         ),
         "net_variance_contribution_fraction_sum": float(
-            sum(
-                values["net_variance_contribution_fraction"]
-                for values in contributions.values()
-            )
+            sum(values["net_variance_contribution_fraction"] for values in contributions.values())
         ),
         "risk_contribution_status": status,
     }
