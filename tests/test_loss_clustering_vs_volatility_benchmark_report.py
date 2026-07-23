@@ -10,14 +10,9 @@ import pandas as pd
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_ANALYSIS_PATH = (
-    _ROOT / "reports/research/loss-clustering-vs-volatility-benchmark/analysis.py"
-)
+_ANALYSIS_PATH = _ROOT / "reports/research/loss-clustering-vs-volatility-benchmark/analysis.py"
 _RESULT_PATH = _ROOT / "reports/research/loss-clustering-vs-volatility-benchmark/result.json"
-_FIXTURE_DIR = (
-    _ROOT
-    / "tests/fixtures/okx_btc_usdt_oos_loss_clustering_20200111_20200219"
-)
+_FIXTURE_DIR = _ROOT / "tests/fixtures/okx_btc_usdt_oos_loss_clustering_20200111_20200219"
 _RETURNS_FIXTURE = _FIXTURE_DIR / "returns.csv"
 _METADATA_FIXTURE = _FIXTURE_DIR / "metadata.json"
 
@@ -29,9 +24,7 @@ _spec.loader.exec_module(analysis)
 
 def _real_fixture() -> pd.DataFrame:
     metadata = json.loads(_METADATA_FIXTURE.read_text(encoding="utf-8"))
-    assert hashlib.sha256(_RETURNS_FIXTURE.read_bytes()).hexdigest() == metadata[
-        "fixture_sha256"
-    ]
+    assert hashlib.sha256(_RETURNS_FIXTURE.read_bytes()).hexdigest() == metadata["fixture_sha256"]
     frame = pd.read_csv(_RETURNS_FIXTURE)
     assert len(frame) == metadata["rows"]
     assert frame["timestamp"].iloc[0] == metadata["start"]
