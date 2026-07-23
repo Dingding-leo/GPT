@@ -19,10 +19,7 @@ def _canonical_names(requirements: object, *, label: str) -> list[str]:
     ):
         raise ValueError(f"validated {label} requirements must be a list of strings")
     return sorted(
-        {
-            _canonical_requirement_name(requirement, label=label)
-            for requirement in requirements
-        }
+        {_canonical_requirement_name(requirement, label=label) for requirement in requirements}
     )
 
 
