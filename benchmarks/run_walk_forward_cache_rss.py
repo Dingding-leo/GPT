@@ -13,7 +13,6 @@ from pathlib import Path
 from typing import Any, Literal
 
 import pandas as pd
-
 import run_walk_forward_cache as cache_benchmark
 
 import gpt_quant.walk_forward as walk_forward
@@ -79,9 +78,7 @@ def _write_worker_outputs(
             {
                 "pre_workload_peak_rss_bytes": pre_workload_peak_rss_bytes,
                 "peak_rss_bytes": peak_rss_bytes,
-                "workload_peak_rss_increment_bytes": (
-                    peak_rss_bytes - pre_workload_peak_rss_bytes
-                ),
+                "workload_peak_rss_increment_bytes": (peak_rss_bytes - pre_workload_peak_rss_bytes),
             }
         ),
         encoding="utf-8",
@@ -114,9 +111,7 @@ def _subprocess_peak_result(
     measurement_path = result_path.with_suffix(".json")
     measurement = json.loads(measurement_path.read_text(encoding="utf-8"))
     peak_rss_bytes = int(measurement["peak_rss_bytes"])
-    workload_peak_rss_increment_bytes = int(
-        measurement["workload_peak_rss_increment_bytes"]
-    )
+    workload_peak_rss_increment_bytes = int(measurement["workload_peak_rss_increment_bytes"])
     with result_path.open("rb") as handle:
         result = pickle.load(handle)  # noqa: S301 - trusted file from this benchmark's child
     return peak_rss_bytes, workload_peak_rss_increment_bytes, result
@@ -142,16 +137,12 @@ def _paired_peak_rss_bytes(
                 baseline_peak, baseline_increment, baseline_result = _subprocess_peak_result(
                     "baseline", csv_path, config_path, baseline_path
                 )
-                optimized_peak, optimized_increment, optimized_result = (
-                    _subprocess_peak_result(
-                        "optimized", csv_path, config_path, optimized_path
-                    )
+                optimized_peak, optimized_increment, optimized_result = _subprocess_peak_result(
+                    "optimized", csv_path, config_path, optimized_path
                 )
             else:
-                optimized_peak, optimized_increment, optimized_result = (
-                    _subprocess_peak_result(
-                        "optimized", csv_path, config_path, optimized_path
-                    )
+                optimized_peak, optimized_increment, optimized_result = _subprocess_peak_result(
+                    "optimized", csv_path, config_path, optimized_path
                 )
                 baseline_peak, baseline_increment, baseline_result = _subprocess_peak_result(
                     "baseline", csv_path, config_path, baseline_path
@@ -216,14 +207,8 @@ def main() -> None:
     print(f"peak_rss_ratio={optimized_peak / baseline_peak:.3f}x")
     print(f"baseline_workload_peak_rss_increment_bytes={baseline_increment}")
     print(f"optimized_workload_peak_rss_increment_bytes={optimized_increment}")
-    print(
-        "workload_peak_rss_increment_increase_percent="
-        f"{incremental_increase * 100.0:.2f}"
-    )
-    print(
-        "workload_peak_rss_increment_ratio="
-        f"{optimized_increment / baseline_increment:.3f}x"
-    )
+    print(f"workload_peak_rss_increment_increase_percent={incremental_increase * 100.0:.2f}")
+    print(f"workload_peak_rss_increment_ratio={optimized_increment / baseline_increment:.3f}x")
 
 
 if __name__ == "__main__":
