@@ -1,0 +1,25 @@
+{
+  "columns": [
+    "timestamp",
+    "volume_quote",
+    "turnover",
+    "nav"
+  ],
+  "end": "2020-02-19T00:00:00+00:00",
+  "extraction": "30 prior completed daily quote-volume observations plus the first 40 canonical 5 bps OOS rows; values unchanged",
+  "fixture_sha256": "91c522da7c583f3d11fab766666a9c84a884d945960e4ec4e9b3e2587c5dfb05",
+  "instrument_id": "BTC-USDT",
+  "market_type": "spot",
+  "observations": 70,
+  "oos_observations": 40,
+  "provider": "OKX",
+  "source_artifact_id": 8581531945,
+  "source_artifact_name": "quant-research-source-392-attempt-1",
+  "source_artifact_sha256": "1ccdf6ad90250df0f4cc4cd2d8261f47ff29949b36fe78ab037db94910874cf0",
+  "source_returns_sha256": "04a0a5257d1e20f1eb88c70b8a0b010d21f0dc35ccb657ba39f14189e9f20790",
+  "source_snapshot_sha256": "407aeba3d1ad4c8e8682a6a689c1c6327139f42bc7587aaae75c77fce047dec1",
+  "source_workflow_run_id": 30052415258,
+  "start": "2019-12-12T00:00:00+00:00",
+  "timeframe": "1Dutc",
+  "usage": "deterministic capacity formula and no-future-liquidity regression only"
+}
