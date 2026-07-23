@@ -65,9 +65,11 @@ def test_fetch_reuses_canonical_snapshot_bytes_without_changing_evidence(
     assert snapshot.metadata["raw_pages_sha256"] == snapshot._source_raw_pages_sha256
 
     paths = write_okx_snapshot(snapshot, tmp_path / "snapshot")
-    assert hashlib.sha256(paths["candles"].read_bytes()).hexdigest() == snapshot.metadata[
-        "normalized_csv_sha256"
-    ]
-    assert hashlib.sha256(paths["raw"].read_bytes()).hexdigest() == snapshot.metadata[
-        "raw_pages_sha256"
-    ]
+    assert (
+        hashlib.sha256(paths["candles"].read_bytes()).hexdigest()
+        == snapshot.metadata["normalized_csv_sha256"]
+    )
+    assert (
+        hashlib.sha256(paths["raw"].read_bytes()).hexdigest()
+        == snapshot.metadata["raw_pages_sha256"]
+    )
