@@ -55,9 +55,7 @@ def test_metrics_reject_gross_return_disconnected_from_executed_position(
         btc_usdt_prices.iloc[:400],
         StrategyConfig(min_position=0.0, transaction_cost_bps=5.0, annualization=365),
     ).frame.copy()
-    active = frame.index[
-        frame["position"].abs().gt(0.0) & frame["asset_return"].abs().gt(0.0)
-    ]
+    active = frame.index[frame["position"].abs().gt(0.0) & frame["asset_return"].abs().gt(0.0)]
     assert not active.empty
 
     frame.at[active[0], "gross_strategy_return"] += 1e-4
