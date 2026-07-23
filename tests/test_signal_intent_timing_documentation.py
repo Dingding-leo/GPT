@@ -55,9 +55,7 @@ def test_documented_okx_timing_example_executes_persists_and_replays(tmp_path) -
     assert evidence["bar_close_utc"] == "2026-07-21T00:00:00+00:00"
     assert evidence["candle_observed_at_utc"] == "2026-07-21T11:59:59+00:00"
     assert evidence["exchange_server_time_utc"] == "2026-07-21T12:00:00.100000+00:00"
-    assert evidence["server_time_response_received_utc"] == (
-        "2026-07-21T12:00:00.200000+00:00"
-    )
+    assert evidence["server_time_response_received_utc"] == ("2026-07-21T12:00:00.200000+00:00")
     assert evidence["signal_not_before_utc"] == "2026-07-21T12:00:00.200000+00:00"
     assert evidence["availability_delay_seconds"] == pytest.approx(43200.1)
     assert evidence["server_round_trip_seconds"] == pytest.approx(0.2)
@@ -74,9 +72,7 @@ def test_documented_okx_timing_example_executes_persists_and_replays(tmp_path) -
     assert intent.strategy_revision == "a2b3e61a0591121346a6d29f1ddd3ad805aba68d"
     assert intent.signal_bar_open_utc == datetime(2026, 7, 20, tzinfo=UTC)
     assert intent.signal_bar_close_utc == datetime(2026, 7, 21, tzinfo=UTC)
-    assert intent.decision_not_before_utc == datetime(
-        2026, 7, 21, 12, 0, 0, 200000, tzinfo=UTC
-    )
+    assert intent.decision_not_before_utc == datetime(2026, 7, 21, 12, 0, 0, 200000, tzinfo=UTC)
     assert intent.expires_at_utc == datetime(2026, 7, 22, tzinfo=UTC)
     intent.assert_active_at(intent.decision_not_before_utc)
     with pytest.raises(ValueError, match="expired"):
@@ -99,14 +95,10 @@ def test_documented_okx_timing_example_executes_persists_and_replays(tmp_path) -
     binding = ExecutionQuoteBinding.from_mapping(first["execution_quote_binding"])
     assert binding.target_intent_id == intent.intent_id
     assert binding.quote_snapshot_id == quote.snapshot_id
-    assert binding.decision_at_utc == datetime(
-        2026, 7, 21, 12, 0, 0, 400000, tzinfo=UTC
-    )
+    assert binding.decision_at_utc == datetime(2026, 7, 21, 12, 0, 0, 400000, tzinfo=UTC)
     assert binding.maximum_age_ms == 200
     assert binding.instrument_snapshot_sha256 == quote.instrument_snapshot_sha256
-    assert Decimal(binding.observed_spread_bps) == Decimal(
-        quote_summary["observed_spread_bps"]
-    )
+    assert Decimal(binding.observed_spread_bps) == Decimal(quote_summary["observed_spread_bps"])
     assert ExecutionQuoteBinding.from_json_bytes(binding.to_json_bytes()) == binding
     binding.assert_reconstructs(intent, quote)
 
