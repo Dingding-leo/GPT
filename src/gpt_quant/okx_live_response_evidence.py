@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -262,7 +262,10 @@ def read_okx_live_timing_response_evidence(
         raise ValueError("OKX live timing evidence is missing the public-time response")
     response_json = _canonical_json_bytes(response)
     response_digest = decoded.get("server_time_response_sha256")
-    if not isinstance(response_digest, str) or hashlib.sha256(response_json).hexdigest() != response_digest:
+    if (
+        not isinstance(response_digest, str)
+        or hashlib.sha256(response_json).hexdigest() != response_digest
+    ):
         raise ValueError("OKX public-time response hash mismatch")
     validated_response = _decode_canonical_response(response_json)
     response_server_time = _response_server_time(validated_response)
