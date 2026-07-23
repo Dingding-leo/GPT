@@ -7,7 +7,12 @@ from typing import Any
 
 import pandas as pd
 
-from .okx import JSONGetter, OKXCandleSnapshot, _default_json_getter, _verified_snapshot_bytes
+from .okx import (
+    JSONGetter,
+    OKXCandleSnapshot,
+    _default_json_getter,
+    _verified_snapshot_bytes,
+)
 
 Clock = Callable[[], pd.Timestamp | str]
 _SERVER_TIME_ENDPOINT = "/api/v5/public/time"
