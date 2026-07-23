@@ -64,24 +64,28 @@ strategy_return_t = position_t * asset_return_t - trading_cost_t
 当前默认配置为：
 
 ```text
-transaction_cost_bps = 10.0
-cost_multipliers = [1.0, 2.0, 4.0]
+transaction_cost_bps = 5.0
+cost_multipliers = [1.0, 1.5, 2.0, 3.0]
 ```
 
-其含义是每单位绝对仓位变化按 `10 bps` 扣减，压力路径对应 `10 / 20 / 40 bps` 的同一线性换手成本模型。它不代表某个账户的真实费率。
+其含义是：
 
-当前模型不包含独立的：
+- 单边 `5 bps` 是每单位绝对仓位变化的交易所手续费研究基线；
+- 每个 fold 的候选选择与 OOS 评估都在该 `5 bps` 基线下完整重新执行；
+- `1.5 / 2.0 / 3.0` 倍只把已经选定的路径按单边 `7.5 / 10 / 15 bps` 重新计价，用于固定路径总成本敏感性；
+- 这些压力路径不会在每个成本水平重新选择候选，也不能被描述为独立测量了某项执行摩擦。
 
-- exchange fee；
+当前模型没有独立字段或观测证据来拆分：
+
 - bid-ask spread；
 - slippage；
 - market impact；
 - latency cost；
 - partial-fill 或 rejected-order cost。
 
-所以不得把当前默认配置描述为 `5 bps` 基线，也不得把成本压力描述为已经分别验证了 spread、slippage、impact 或 latency。
+所以允许描述“单边 5 bps 交易所手续费基线”，但不得把 `7.5 / 10 / 15 bps` 压力路径描述为已经分别验证了 spread、slippage、impact 或 latency，也不得把当前收盘价收益引擎描述为可执行成交模型。
 
-当仓库正式切换到单边 `5 bps` 基线时，必须用新配置重新执行完整 walk-forward 候选选择与 OOS 评估；只给已持久化仓位重新计费不能替代 full reselection。相关配置、报告、manifest、CI artifact 和本文档必须在同一可审计变更中同步更新。
+固定已选路径重新计价与完整 walk-forward 候选选择是两个不同证据边界。只有 `5 bps` 基线路径执行完整候选重选；任何其他成本情景都必须明确标记为 fixed-path repricing。
 
 ## 5. 当前允许和禁止的表述
 
@@ -89,7 +93,8 @@ cost_multipliers = [1.0, 2.0, 4.0]
 
 - “真实 OKX `1Dutc` 完整 K 线”；
 - “one-bar-delayed close-to-close research accounting”；
-- “每单位绝对仓位变化的线性研究成本”；
+- “单边 5 bps 交易所手续费基线”；
+- “7.5 / 10 / 15 bps 固定已选路径总成本敏感性”；
 - “研究系统尚未定义可执行成交价格”。
 
 禁止：
@@ -97,7 +102,8 @@ cost_multipliers = [1.0, 2.0, 4.0]
 - “next-open execution”；
 - “日线收盘后按该 close 成交”；
 - “已经 paper traded”；
-- “已经验证真实 spread/slippage/impact”；
+- “已经验证真实 spread/slippage/impact/latency”；
+- “7.5 / 10 / 15 bps 均完成重新选参”；
 - “可以直接连接账户实盘”。
 
 ## 6. paper/live 文档的前置门禁
@@ -118,10 +124,10 @@ cost_multipliers = [1.0, 2.0, 4.0]
 
 ## 7. 可执行审计命令
 
-检查当前 timeframe、成本和压力倍数：
+检查当前 timeframe、基线费用和压力倍数：
 
 ```bash
-python -c "import json,pathlib; c=json.loads(pathlib.Path('config/okx_research.json').read_text()); assert c['data']['bar']=='1Dutc'; assert c['strategy']['transaction_cost_bps']==10.0; assert c['robustness']['cost_multipliers']==[1.0,2.0,4.0]; print('bar=1Dutc cost_bps=10.0 multipliers=1,2,4')"
+python -c "import json,pathlib; c=json.loads(pathlib.Path('config/okx_research.json').read_text()); assert c['data']['bar']=='1Dutc'; assert c['strategy']['transaction_cost_bps']==5.0; assert c['robustness']['cost_multipliers']==[1.0,1.5,2.0,3.0]; print('bar=1Dutc fee_bps=5.0 total_cost_scenarios_bps=5,7.5,10,15')"
 ```
 
 检查当前记账实现仍然使用一根 bar shift、close-to-close return 和线性换手成本：
