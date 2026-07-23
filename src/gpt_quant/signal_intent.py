@@ -70,8 +70,21 @@ def build_target_position_intent(
     bar_duration = signal_bar_close - signal_bar_open
     if bar_duration <= timedelta(0):
         raise ValueError("signal cutoff bar_close_utc must be after bar_open_utc")
-    if bar == "1Dutc" and bar_duration != timedelta(days=1):
-        raise ValueError("1Dutc signal cutoff must cover exactly one UTC day")
+    if bar == "1Dutc":
+        if bar_duration != timedelta(days=1):
+            raise ValueError("1Dutc signal cutoff must cover exactly one UTC day")
+        if signal_bar_open != signal_bar_open.replace(
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+        ) or signal_bar_close != signal_bar_close.replace(
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+        ):
+            raise ValueError("1Dutc signal cutoff must align to UTC midnight")
 
     expires_at = signal_bar_close + bar_duration
     if decision_not_before >= expires_at:
