@@ -85,6 +85,10 @@ def test_attempt_binds_submission_fill_price_and_measured_latency() -> None:
 
     replayed = PaperExecutionAttempt.from_json_bytes(attempt.to_json_bytes())
     assert replayed == attempt
+    assert replayed.binding_id == binding.binding_id
+    assert replayed.quote_snapshot_id == quote.snapshot_id
+    assert replayed.reference_bid_price == quote.bid_price
+    assert replayed.reference_ask_price == quote.ask_price
     assert replayed.fill_price_convention == "market-vwap-at-touch-or-worse"
     assert replayed.decision_to_submission_latency_us == 50_000
     assert replayed.quote_observed_to_submission_latency_us == 150_000
