@@ -134,6 +134,37 @@ def test_stress_correlation_is_report_only_and_backed_by_real_returns(tmp_path: 
     assert result.concentration["passes"] is original_gate
 
 
+def test_stress_writers_preserve_custom_window_parameters(tmp_path: Path) -> None:
+    metadata, btc, eth = _fixture_inputs()
+    result = build_buy_and_hold_sleeve_portfolio(
+        {"BTC-USDT": btc, "ETH-USDT": eth},
+        initial_weights={"BTC-USDT": 0.5, "ETH-USDT": 0.5},
+        provenance=_provenance(metadata),
+    )
+
+    standalone_path = write_portfolio_stress_correlation_report(
+        result,
+        tmp_path / "standalone",
+        stress_fraction=0.10,
+        minimum_stress_observations=4,
+    )
+    standalone = json.loads(standalone_path.read_text(encoding="utf-8"))
+    assert standalone["method"]["stress_fraction"] == pytest.approx(0.10)
+    assert standalone["method"]["minimum_stress_observations"] == 4
+    assert standalone["data_summary"]["stress_window_observations"] == 4
+
+    bundle_paths = write_portfolio_risk_bundle(
+        result,
+        tmp_path / "bundle",
+        stress_fraction=0.125,
+        minimum_stress_observations=6,
+    )
+    bundled = json.loads(bundle_paths["stress_correlation"].read_text(encoding="utf-8"))
+    assert bundled["method"]["stress_fraction"] == pytest.approx(0.125)
+    assert bundled["method"]["minimum_stress_observations"] == 6
+    assert bundled["data_summary"]["stress_window_observations"] == 6
+
+
 def test_standalone_stress_writer_revalidates_verified_sources(tmp_path: Path) -> None:
     metadata = json.loads((_FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8"))
     instruments = metadata["instruments"]
