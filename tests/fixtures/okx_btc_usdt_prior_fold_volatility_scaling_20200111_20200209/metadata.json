@@ -1,0 +1,23 @@
+{
+  "end": "2020-02-09 00:00:00+00:00",
+  "fixture_sha256": "0e2fb51e97b7a7779955cb6b881398269c80a12507398781f1b18892f09c949f",
+  "instrument": "BTC-USDT",
+  "market_type": "spot",
+  "observations": 30,
+  "provider": "OKX",
+  "purpose": "Immutable real-return extract with structural 10-row fold labels for logic tests only; not performance evidence.",
+  "source_artifact_id": 8558445273,
+  "source_artifact_name": "quant-research-source-1826-attempt-1",
+  "source_artifact_sha256": "8c89b8ecc4904cba018ac95079305c46e25d92199242b95d3aeffaad1bc0799c",
+  "source_head_sha": "348cfd30df9a0665b5b129fba32edaafc8a2428e",
+  "source_return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+  "source_workflow_run_id": 29994613190,
+  "start": "2020-01-11 00:00:00+00:00",
+  "structural_fold_labels": [
+    1,
+    2,
+    3
+  ],
+  "structural_rows_per_fold": 10,
+  "timeframe": "1Dutc"
+}
