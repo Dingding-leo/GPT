@@ -185,9 +185,7 @@ def build_target_position(
         momentum_lookback,
         min_periods=momentum_lookback,
     ).std(ddof=0)
-    trend_score = (
-        trend_mean / trend_std.replace(0.0, np.nan) * math.sqrt(momentum_lookback)
-    )
+    trend_score = trend_mean / trend_std.replace(0.0, np.nan) * math.sqrt(momentum_lookback)
 
     recent_return = log_returns.rolling(
         reversal_lookback,
@@ -202,17 +200,15 @@ def build_target_position(
     )
 
     reversal_weight = 1.0 - trend_weight
-    ensemble_score = (
-        trend_weight * trend_score + reversal_weight * reversal_score
-    ).clip(-4.0, 4.0)
+    ensemble_score = (trend_weight * trend_score + reversal_weight * reversal_score).clip(-4.0, 4.0)
     directional_signal = pd.Series(
         np.tanh(ensemble_score.to_numpy(dtype=float)),
         index=ensemble_score.index,
     )
     realized_volatility = risk_scale * math.sqrt(ANNUALIZATION)
-    volatility_scalar = (
-        TARGET_VOLATILITY / realized_volatility.replace(0.0, np.nan)
-    ).clip(lower=0.0, upper=MAX_POSITION)
+    volatility_scalar = (TARGET_VOLATILITY / realized_volatility.replace(0.0, np.nan)).clip(
+        lower=0.0, upper=MAX_POSITION
+    )
     target = (directional_signal * volatility_scalar).clip(MIN_POSITION, MAX_POSITION)
     return target.replace([np.inf, -np.inf], np.nan).fillna(0.0)
 
@@ -344,8 +340,7 @@ def analyze_market(artifact_dir: Path, market: str) -> dict[str, Any]:
             sampled_adaptive
         )
         turnover_reductions[resample] = (
-            float(np.mean(adaptive_turnover[sampled] - ensemble_turnover[sampled]))
-            * ANNUALIZATION
+            float(np.mean(adaptive_turnover[sampled] - ensemble_turnover[sampled])) * ANNUALIZATION
         )
 
     mean_interval = interval(mean_deltas)
@@ -365,13 +360,9 @@ def analyze_market(artifact_dir: Path, market: str) -> dict[str, Any]:
         "constituent_candidates": len(candidate_grid()),
         **observed,
         "annualized_arithmetic_mean_delta_interval": mean_interval,
-        "annualized_arithmetic_mean_delta_probability_positive": float(
-            np.mean(mean_deltas > 0.0)
-        ),
+        "annualized_arithmetic_mean_delta_probability_positive": float(np.mean(mean_deltas > 0.0)),
         "annualized_sharpe_delta_interval": sharpe_interval,
-        "annualized_sharpe_delta_probability_positive": float(
-            np.mean(sharpe_deltas > 0.0)
-        ),
+        "annualized_sharpe_delta_probability_positive": float(np.mean(sharpe_deltas > 0.0)),
         "annualized_turnover_reduction_interval": turnover_interval,
         "annualized_turnover_reduction_probability_positive": float(
             np.mean(turnover_reductions > 0.0)
@@ -428,9 +419,7 @@ def build_result(artifact_dir: Path) -> dict[str, Any]:
                 "confidence": CONFIDENCE,
                 "seeds": SEEDS,
             },
-            "pass_rule": (
-                "both primary metric 95% lower bounds must be positive in both markets"
-            ),
+            "pass_rule": ("both primary metric 95% lower bounds must be positive in both markets"),
         },
         "candidate_accounting": {
             "searched": 1,
