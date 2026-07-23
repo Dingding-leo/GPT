@@ -71,6 +71,7 @@ def test_canonical_baseline_selects_every_fold_under_five_bps(
     ]
 
     assert result.settings["candidate_count"] == 27
+    assert all(fold["candidates_tested"] == 27 for fold in result.folds)
     assert result.settings["base_config"]["transaction_cost_bps"] == 5.0
     assert selected_fold_fees == {5.0}
     assert result.cost_stress_metrics["1x"] == pytest.approx(result.aggregate_metrics)
