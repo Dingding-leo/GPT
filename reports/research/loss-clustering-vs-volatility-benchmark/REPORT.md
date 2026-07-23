@@ -18,6 +18,7 @@ A defensive long/cash process should do more than scale individual losses. If it
 - Loss clustering is the count of loss-to-loss transitions divided by the count of prior-loss observations.
 - Paired non-circular moving-block bootstrap with 20-session blocks, 2,000 resamples, 95% confidence, and fixed market-specific seeds.
 - Transitions across sampled block joins are excluded so artificial joins cannot create or break loss sequences.
+- A one-observation remainder is redistributed across the final two sampled blocks, preventing singleton blocks that cannot contain a transition.
 - Exactly one joint candidate was tested. No alternate sign threshold, transition definition, benchmark, block length, resample count, seed, market subset, fee, delay, fold rule, or acceptance threshold was selected after observing the result.
 
 ## Results
