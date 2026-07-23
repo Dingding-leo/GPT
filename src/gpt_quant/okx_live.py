@@ -87,12 +87,31 @@ def _required_finite_number(value: Any, *, field: str) -> float:
     return number
 
 
-def _validated_server_time_sample(
+def validate_okx_server_time_sample(
     sample: OKXServerTimeSample,
     *,
     max_round_trip_seconds: float,
     max_abs_clock_skew_seconds: float,
 ) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, float, float]:
+    """Revalidate and normalize one persisted OKX public-time observation.
+
+    The caller supplies the exact policy bounds that governed the observation. This
+    makes downstream market-data records independently reconstructable instead of
+    trusting copied round-trip or clock-skew scalars.
+    """
+    round_trip_bound = _required_finite_number(
+        max_round_trip_seconds,
+        field="max_round_trip_seconds",
+    )
+    if round_trip_bound <= 0:
+        raise ValueError("max_round_trip_seconds must be positive")
+    clock_skew_bound = _required_finite_number(
+        max_abs_clock_skew_seconds,
+        field="max_abs_clock_skew_seconds",
+    )
+    if clock_skew_bound < 0:
+        raise ValueError("max_abs_clock_skew_seconds cannot be negative")
+
     if not sample.base_url or any(character.isspace() for character in sample.base_url):
         raise ValueError(
             "OKX server-time sample base_url must be a non-empty URL without whitespace"
@@ -126,7 +145,7 @@ def _validated_server_time_sample(
         raise ValueError("OKX server-time round trip cannot be negative")
     if abs(recorded_round_trip - expected_round_trip) > 1e-9:
         raise ValueError("OKX server-time round trip does not match its timestamps")
-    if recorded_round_trip > max_round_trip_seconds:
+    if recorded_round_trip > round_trip_bound:
         raise ValueError("OKX server-time round trip exceeds the live cutoff bound")
 
     midpoint = local_started + (local_received - local_started) / 2
@@ -137,7 +156,7 @@ def _validated_server_time_sample(
     )
     if abs(recorded_clock_skew - expected_clock_skew) > 1e-9:
         raise ValueError("OKX midpoint clock skew does not match its timestamps")
-    if abs(recorded_clock_skew) > max_abs_clock_skew_seconds:
+    if abs(recorded_clock_skew) > clock_skew_bound:
         raise ValueError("local clock skew from OKX exceeds the live cutoff bound")
 
     return (
@@ -168,11 +187,20 @@ def sample_okx_server_time(
 
     if not base_url or any(character.isspace() for character in base_url):
         raise ValueError("base_url must be a non-empty URL without whitespace")
-    if timeout <= 0:
+    timeout_seconds = _required_finite_number(timeout, field="timeout")
+    if timeout_seconds <= 0:
         raise ValueError("timeout must be positive")
-    if max_round_trip_seconds <= 0:
+    round_trip_bound = _required_finite_number(
+        max_round_trip_seconds,
+        field="max_round_trip_seconds",
+    )
+    if round_trip_bound <= 0:
         raise ValueError("max_round_trip_seconds must be positive")
-    if max_abs_clock_skew_seconds < 0:
+    clock_skew_bound = _required_finite_number(
+        max_abs_clock_skew_seconds,
+        field="max_abs_clock_skew_seconds",
+    )
+    if clock_skew_bound < 0:
         raise ValueError("max_abs_clock_skew_seconds cannot be negative")
 
     getter = get_json or _default_json_getter
@@ -181,7 +209,7 @@ def sample_okx_server_time(
     endpoint = f"{normalized_base_url}{_SERVER_TIME_ENDPOINT}"
 
     local_started = _required_utc_timestamp(clock(), field="local request start")
-    payload = dict(getter(endpoint, timeout))
+    payload = dict(getter(endpoint, timeout_seconds))
     local_received = _required_utc_timestamp(clock(), field="local response receipt")
     if local_received < local_started:
         raise ValueError("local clock moved backward during OKX server-time request")
@@ -203,11 +231,11 @@ def sample_okx_server_time(
         raise ValueError("OKX server time is outside the supported timestamp range") from exc
 
     round_trip_seconds = (local_received - local_started).total_seconds()
-    if round_trip_seconds > max_round_trip_seconds:
+    if round_trip_seconds > round_trip_bound:
         raise ValueError("OKX server-time round trip exceeds the configured bound")
     midpoint = local_started + (local_received - local_started) / 2
     clock_skew_seconds = (server_time - midpoint).total_seconds()
-    if abs(clock_skew_seconds) > max_abs_clock_skew_seconds:
+    if abs(clock_skew_seconds) > clock_skew_bound:
         raise ValueError("local clock skew from OKX exceeds the configured bound")
 
     return OKXServerTimeSample(
@@ -236,9 +264,17 @@ def build_okx_completed_bar_cutoff(
     makes no fill-price, spread, slippage, impact, latency, or order-acceptance claim.
     """
 
-    if max_round_trip_seconds <= 0:
+    round_trip_bound = _required_finite_number(
+        max_round_trip_seconds,
+        field="max_round_trip_seconds",
+    )
+    if round_trip_bound <= 0:
         raise ValueError("max_round_trip_seconds must be positive")
-    if max_abs_clock_skew_seconds < 0:
+    clock_skew_bound = _required_finite_number(
+        max_abs_clock_skew_seconds,
+        field="max_abs_clock_skew_seconds",
+    )
+    if clock_skew_bound < 0:
         raise ValueError("max_abs_clock_skew_seconds cannot be negative")
     _verified_snapshot_bytes(snapshot)
     (
@@ -247,10 +283,10 @@ def build_okx_completed_bar_cutoff(
         exchange_observed_at,
         server_round_trip_seconds,
         midpoint_clock_skew_seconds,
-    ) = _validated_server_time_sample(
+    ) = validate_okx_server_time_sample(
         server_time_sample,
-        max_round_trip_seconds=max_round_trip_seconds,
-        max_abs_clock_skew_seconds=max_abs_clock_skew_seconds,
+        max_round_trip_seconds=round_trip_bound,
+        max_abs_clock_skew_seconds=clock_skew_bound,
     )
 
     metadata = snapshot.metadata
@@ -325,6 +361,6 @@ def build_okx_completed_bar_cutoff(
         availability_delay_seconds=availability_delay_seconds,
         server_round_trip_seconds=server_round_trip_seconds,
         midpoint_clock_skew_seconds=midpoint_clock_skew_seconds,
-        max_server_round_trip_seconds=float(max_round_trip_seconds),
-        max_abs_midpoint_clock_skew_seconds=float(max_abs_clock_skew_seconds),
+        max_server_round_trip_seconds=round_trip_bound,
+        max_abs_midpoint_clock_skew_seconds=clock_skew_bound,
     )
