@@ -55,10 +55,7 @@ def _utc_timestamp(value: object, label: str) -> pd.Timestamp:
         raise ValueError(f"{label} must be a valid timestamp") from exc
     if pd.isna(parsed):
         raise ValueError(f"{label} must be a valid timestamp")
-    if parsed.tzinfo is None:
-        parsed = parsed.tz_localize("UTC")
-    else:
-        parsed = parsed.tz_convert("UTC")
+    parsed = parsed.tz_localize("UTC") if parsed.tzinfo is None else parsed.tz_convert("UTC")
     return parsed
 
 
@@ -158,9 +155,7 @@ def verify_walk_forward_report(
         raise ValueError("walk-forward returns CSV is unreadable") from exc
     missing_columns = sorted(_REQUIRED_RETURN_COLUMNS - set(persisted.columns))
     if missing_columns:
-        raise ValueError(
-            f"walk-forward returns CSV is missing required columns: {missing_columns}"
-        )
+        raise ValueError(f"walk-forward returns CSV is missing required columns: {missing_columns}")
     if persisted.empty:
         raise ValueError("walk-forward returns CSV cannot be empty")
 
@@ -175,10 +170,7 @@ def verify_walk_forward_report(
     numeric_names = sorted(_REQUIRED_RETURN_COLUMNS - {"timestamp"})
     numeric = {name: _numeric_column(persisted, name) for name in numeric_names}
     fold_values = numeric["fold"].to_numpy(copy=False)
-    if (
-        not np.equal(fold_values, np.floor(fold_values)).all()
-        or (fold_values <= 0).any()
-    ):
+    if not np.equal(fold_values, np.floor(fold_values)).all() or (fold_values <= 0).any():
         raise ValueError("walk-forward fold identifiers must be positive integers")
     persisted["fold"] = fold_values.astype(int)
     for name, values in numeric.items():
