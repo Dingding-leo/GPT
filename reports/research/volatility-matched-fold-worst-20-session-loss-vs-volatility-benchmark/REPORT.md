@@ -40,7 +40,10 @@ by the benchmark sample standard deviation, both with `ddof=1`.
 - 26 complete 90-session folds; one trailing 45-session fold excluded;
 - 71 overlapping 20-session windows evaluated inside each complete fold;
 - no window crosses a fold boundary;
-- volatility scale recomputed separately inside each complete fold;
+- volatility scale recomputed separately inside each complete fold before window
+  compounding;
+- the bootstrap resamples the 26 observed paired fold deltas and does not recompute
+  a scale across artificial block joins;
 - non-circular moving-block bootstrap over consecutive fold deltas;
 - block length: three folds;
 - resamples: 2,000;
