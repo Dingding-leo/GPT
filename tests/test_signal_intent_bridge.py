@@ -56,6 +56,15 @@ def test_completed_signal_cutoff_maps_to_one_deterministic_intent_window() -> No
     assert intent.signal_bar_open_utc.astimezone(adelaide).hour == 9
 
 
+def test_completed_signal_cutoff_rejects_activation_at_bar_close() -> None:
+    cutoff = _CompletedSignalCutoff(
+        signal_not_before_utc=datetime(2026, 7, 22, tzinfo=UTC),
+    )
+
+    with pytest.raises(ValueError, match="after the signal bar close"):
+        _build(cutoff)
+
+
 def test_completed_signal_cutoff_rejects_stale_activation() -> None:
     cutoff = _CompletedSignalCutoff(
         signal_not_before_utc=datetime(2026, 7, 23, tzinfo=UTC),
