@@ -1,0 +1,56 @@
+{
+  "data": {
+    "inst_id": "SOL-USDT",
+    "bar": "1Dutc",
+    "base_url": "https://www.okx.com",
+    "limit": 100,
+    "max_pages": 40,
+    "pause_seconds": 0.12,
+    "start": "2019-01-01",
+    "end": "2026-07-22T00:00:00Z"
+  },
+  "strategy": {
+    "momentum_lookback": 90,
+    "reversal_lookback": 5,
+    "volatility_lookback": 30,
+    "target_volatility": 0.5,
+    "max_abs_position": 1.0,
+    "min_position": 0.0,
+    "trend_weight": 0.7,
+    "reversal_weight": 0.3,
+    "transaction_cost_bps": 5.0,
+    "annualization": 365
+  },
+  "search": {
+    "momentum_lookbacks": [30, 90, 180],
+    "reversal_lookbacks": [2, 5, 10],
+    "trend_weights": [0.55, 0.7, 0.85],
+    "selection_bars": 730,
+    "test_bars": 90
+  },
+  "robustness": {
+    "cost_multipliers": [1.0, 1.5, 2.0, 3.0]
+  },
+  "sealed_holdout": {
+    "architecture_base_sha": "9ab1bafddcc67ac78d4c42cd1bfb9e6e96b97449",
+    "candidate_count": 1,
+    "development_markets": ["BTC-USDT", "ETH-USDT"],
+    "untouched_market": "SOL-USDT",
+    "data_cutoff_utc": "2026-07-22T00:00:00Z",
+    "no_same_market_retuning": true,
+    "bootstrap_block_length": 20,
+    "bootstrap_resamples": 2000,
+    "bootstrap_confidence": 0.95,
+    "bootstrap_seed": 2026072405,
+    "gates": {
+      "annualized_turnover_max": 20.0,
+      "maximum_drawdown_floor": -0.35,
+      "complete_years_min": 4,
+      "profitable_complete_year_ratio_min": 0.60,
+      "worst_complete_year_floor": -0.20,
+      "cost_stress_bps": [5.0, 7.5, 10.0, 15.0],
+      "benchmark": "volatility_targeted_long",
+      "benchmark_relative_bootstrap_metrics": ["sharpe", "calmar"]
+    }
+  }
+}
