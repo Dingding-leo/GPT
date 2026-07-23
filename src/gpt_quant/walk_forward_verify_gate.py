@@ -9,8 +9,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .backtest import run_backtest
 from .config import StrategyConfig
+from .features import build_target_position
 from .walk_forward_verify import verify_walk_forward_report as _verify_report_metrics
 
 _ACCOUNTING_TOLERANCE = 1e-12
@@ -253,9 +253,9 @@ def _validate_selected_position_paths(
 
         expected_path = selected_path_cache.get(selected_config)
         if expected_path is None:
-            expected_path = run_backtest(source_close, selected_config).frame.loc[
-                :, ["target_position", "position"]
-            ]
+            target_position = build_target_position(source_close, selected_config)
+            position = target_position.shift(1).fillna(0.0).rename("position")
+            expected_path = pd.concat([target_position, position], axis=1)
             selected_path_cache[selected_config] = expected_path
         expected_fold = expected_path.loc[test_start:test_end]
         if not expected_fold.index.equals(fold_frame.index):
