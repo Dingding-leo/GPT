@@ -120,6 +120,22 @@ def test_committed_result_records_supported_subgate_and_live_rejection() -> None
         assert len(market_result["year_records"]) == 7
 
 
+def test_committed_path_counts_remain_bound_to_canonical_artifact() -> None:
+    result = json.loads(_RESULT_PATH.read_text(encoding="utf-8"))
+    btc = result["markets"]["BTC-USDT"]["path_metrics"]
+    eth = result["markets"]["ETH-USDT"]["path_metrics"]
+
+    assert btc["position_adjustment_count"] == 1316
+    assert btc["holding_episode_count"] == 71
+    assert btc["open_holding_episode_count"] == 0
+    assert np.isclose(btc["total_absolute_turnover"], 107.3270862978828)
+
+    assert eth["position_adjustment_count"] == 1416
+    assert eth["holding_episode_count"] == 97
+    assert eth["open_holding_episode_count"] == 1
+    assert np.isclose(eth["total_absolute_turnover"], 113.05210057082107)
+
+
 def test_validator_rejects_position_turnover_mismatch(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
