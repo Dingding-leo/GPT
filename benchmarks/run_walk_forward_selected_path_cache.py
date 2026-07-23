@@ -194,8 +194,12 @@ def main() -> None:
     root = args.artifact_dir
     _verify_input_hashes(root)
 
-    baseline = lambda: _run_verifier(root, _baseline_selected_position_paths)
-    optimized = lambda: _run_verifier(root, verify_gate._validate_selected_position_paths)
+    def baseline() -> list[dict[str, object]]:
+        return _run_verifier(root, _baseline_selected_position_paths)
+
+    def optimized() -> list[dict[str, object]]:
+        return _run_verifier(root, verify_gate._validate_selected_position_paths)
+
     if baseline() != optimized():
         raise AssertionError("cached verifier output differs from the per-fold baseline")
 
