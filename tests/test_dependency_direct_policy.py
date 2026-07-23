@@ -102,6 +102,36 @@ def test_unapproved_direct_dependency_fails_before_evidence(
 
 
 @pytest.mark.parametrize(
+    ("requirement", "location", "label"),
+    [
+        ("setuptools[test]>=69", "build", "[build-system].requires"),
+        ("pandas[all]>=2.1,<3", "runtime", "[project].dependencies"),
+        ("pytest[dev]>=8,<10", "optional", "[project.optional-dependencies].dev"),
+    ],
+)
+def test_requested_dependency_extras_fail_before_evidence(
+    tmp_path: Path,
+    requirement: str,
+    location: str,
+    label: str,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    evidence_path = tmp_path / "audit" / "direct-dependency-policy.json"
+    pyproject_path.write_text(
+        _pyproject_with_requirement(requirement, location=location),
+        encoding="utf-8",
+    )
+
+    completed = _run_policy(pyproject_path, evidence_path)
+
+    assert completed.returncode == 2
+    assert completed.stdout == ""
+    assert f"requested dependency extras are not allowed in {label}" in completed.stderr
+    assert requirement in completed.stderr
+    assert not evidence_path.parent.exists()
+
+
+@pytest.mark.parametrize(
     ("requirement", "location", "scope"),
     [
         ("numpy>=1.26", "build", "build"),
