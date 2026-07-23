@@ -7,7 +7,7 @@ import pandas as pd
 
 
 def validate_prices(prices: pd.Series, *, minimum_rows: int = 50) -> pd.Series:
-    """Return a validated, strictly positive, chronologically ordered price series."""
+    """Return validated positive prices with a unique increasing UTC index."""
 
     if not isinstance(prices, pd.Series):
         raise TypeError("prices must be a pandas Series")
@@ -26,6 +26,10 @@ def validate_prices(prices: pd.Series, *, minimum_rows: int = 50) -> pd.Series:
             clean.index = pd.to_datetime(clean.index, utc=True, errors="raise")
         except (TypeError, ValueError) as exc:
             raise ValueError("price index must be datetime-like") from exc
+    elif clean.index.tz is None:
+        clean.index = clean.index.tz_localize("UTC")
+    else:
+        clean.index = clean.index.tz_convert("UTC")
     if clean.index.hasnans:
         raise ValueError("price index must not contain missing timestamps")
     if clean.index.has_duplicates:

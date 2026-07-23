@@ -96,6 +96,22 @@ def test_report_persists_recomputable_position_path_diagnostics(
     assert "not exchange orders or fills" in markdown
 
 
+def test_report_normalizes_previously_valid_naive_price_index_to_utc(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    prices = btc_usdt_prices.copy()
+    prices.index = prices.index.tz_localize(None)
+
+    result = _real_okx_result(prices)
+    paths = write_walk_forward_report(result, tmp_path)
+    payload = json.loads(paths["json"].read_text(encoding="utf-8"))
+
+    assert str(result.combined_frame.index.tz) == "UTC"
+    assert payload["path_diagnostics"]["evaluation_start"].endswith("+00:00")
+    assert payload["path_diagnostics"]["evaluation_end"].endswith("+00:00")
+
+
 def test_position_path_diagnostics_reject_turnover_not_derived_from_position(
     btc_usdt_prices: pd.Series,
 ) -> None:
