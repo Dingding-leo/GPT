@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import stat
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -138,6 +139,9 @@ def test_target_intent_journal_preserves_old_state_when_publication_fails(
     before = path.read_bytes()
 
     def fail_publish(*args: object, **kwargs: object) -> None:
+        lock_path = _lock_path(path)
+        assert lock_path.is_file()
+        assert stat.S_IMODE(lock_path.stat().st_mode) == 0o600
         raise OSError("simulated publication failure")
 
     monkeypatch.setattr(journal_module, "publish_payloads_atomically", fail_publish)
