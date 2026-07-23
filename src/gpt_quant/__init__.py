@@ -23,7 +23,8 @@ from .reproducibility import (
     file_sha256,
     resolve_git_commit,
 )
-from .research import ResearchResult, run_holdout_research, write_research_report
+from .research import ResearchResult, run_holdout_research
+from .research_report import write_research_report
 from .walk_forward import WalkForwardResult, run_walk_forward_research
 from .walk_forward_report import write_walk_forward_report
 
