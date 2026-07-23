@@ -110,10 +110,7 @@ def calendar_years(frame: pd.DataFrame) -> list[dict[str, Any]]:
                 "year": int(year),
                 "return": total_return(group),
                 "partial": not (
-                    start.month == 1
-                    and start.day == 1
-                    and end.month == 12
-                    and end.day == 31
+                    start.month == 1 and start.day == 1 and end.month == 12 and end.day == 31
                 ),
             }
         )
@@ -239,8 +236,7 @@ def evaluate(
     thresholds = sealed["gates"]
     year_stability = (
         len(complete_years) >= int(thresholds["complete_years_min"])
-        and profitable_year_ratio
-        >= float(thresholds["profitable_complete_year_ratio_min"])
+        and profitable_year_ratio >= float(thresholds["profitable_complete_year_ratio_min"])
         and min((record["return"] for record in complete_years), default=-math.inf)
         > float(thresholds["worst_complete_year_floor"])
     )
@@ -252,9 +248,7 @@ def evaluate(
         }
         for multiplier, values in report["cost_stress_metrics"].items()
     }
-    benchmark_es = expected_shortfall(
-        frame["benchmark_volatility_targeted_long_return"]
-    )
+    benchmark_es = expected_shortfall(frame["benchmark_volatility_targeted_long_return"])
     strategy_es = expected_shortfall(frame["strategy_return"])
     baseline_integrity = (
         float(config["strategy"]["transaction_cost_bps"]) == 5.0
@@ -269,8 +263,7 @@ def evaluate(
     )
     fold_stability = bool(report["fold_stability"]["passes"])
     turnover_cost = (
-        float(aggregate["annualized_turnover"])
-        <= float(thresholds["annualized_turnover_max"])
+        float(aggregate["annualized_turnover"]) <= float(thresholds["annualized_turnover_max"])
         and cost_stress["15 bps"]["total_return"] > 0.0
         and cost_stress["15 bps"]["sharpe"] > 0.0
     )
@@ -282,8 +275,7 @@ def evaluate(
     )
     tail_risk = (
         float(aggregate["max_drawdown"]) > float(benchmark["max_drawdown"])
-        and float(aggregate["max_drawdown"])
-        >= float(thresholds["maximum_drawdown_floor"])
+        and float(aggregate["max_drawdown"]) >= float(thresholds["maximum_drawdown_floor"])
         and strategy_es > benchmark_es
     )
     retrospective_checks = {
@@ -345,17 +337,13 @@ def evaluate(
             "returns_sha256": file_sha256(paths["returns"]),
             "bootstrap_sha256": file_sha256(paths["bootstrap"]),
             "effective_config_sha256": file_sha256(paths["config"]),
-            "snapshot_sha256": report["data_summary"]["provenance"][
-                "normalized_csv_sha256"
-            ],
+            "snapshot_sha256": report["data_summary"]["provenance"]["normalized_csv_sha256"],
         },
         "metrics_5bps": {
             "gross_total_return": float(aggregate["gross_total_return"]),
             "net_total_return": float(aggregate["net_total_return"]),
             "cagr": float(aggregate["cagr"]),
-            "annualized_arithmetic_mean": float(
-                aggregate["annualized_arithmetic_mean"]
-            ),
+            "annualized_arithmetic_mean": float(aggregate["annualized_arithmetic_mean"]),
             "sharpe": float(aggregate["sharpe"]),
             "sortino": float(aggregate["sortino"]),
             "calmar": float(aggregate["calmar"]),
@@ -365,9 +353,7 @@ def evaluate(
             "exchange_fee_sum": float(aggregate["exchange_fee_sum"]),
         },
         "benchmark": {key: float(value) for key, value in benchmark.items()},
-        "benchmark_bootstrap": {
-            metric: comparison[metric] for metric in ("sharpe", "calmar")
-        },
+        "benchmark_bootstrap": {metric: comparison[metric] for metric in ("sharpe", "calmar")},
         "fold_stability": report["fold_stability"],
         "calendar_years": years,
         "cost_stress": cost_stress,
@@ -407,9 +393,7 @@ def main() -> int:
     output.mkdir(parents=True, exist_ok=True)
     result_path = output / "result.json"
     report_path = output / "REPORT.md"
-    result_path.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    result_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     report_path.write_text(_markdown(payload), encoding="utf-8")
     print(f"holdout_verdict={payload['verdict']}")
     print(f"overall_live_eligible={str(payload['overall_live_eligible']).lower()}")
