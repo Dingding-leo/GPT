@@ -8,6 +8,7 @@ import pytest
 
 from gpt_quant import StrategyConfig, run_walk_forward_research
 from gpt_quant.walk_forward import _selection_frequency_records
+from gpt_quant.walk_forward_diagnostics import walk_forward_path_diagnostics
 from gpt_quant.walk_forward_report import write_walk_forward_report
 
 
@@ -122,6 +123,10 @@ def test_programmatic_and_persisted_payloads_share_structured_identity(
     legacy_frequency = dict(result.parameter_stability["selection_frequency"])
 
     programmatic = result.to_dict()
+    programmatic["path_diagnostics"] = walk_forward_path_diagnostics(
+        result.combined_frame,
+        annualization=365,
+    )
     paths = write_walk_forward_report(result, tmp_path)
     persisted = json.loads(paths["json"].read_text(encoding="utf-8"))
     stability = persisted["parameter_stability"]
