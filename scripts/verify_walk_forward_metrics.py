@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 import math
 import sys
+from collections import Counter
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -143,6 +145,17 @@ def _validate_declared_data_coverage(
         raise ValueError("data_summary source boundaries do not match declared 1Dutc coverage")
 
 
+def _validate_unique_csv_columns(path: Path) -> None:
+    with path.open("r", encoding="utf-8", newline="") as handle:
+        try:
+            header = next(csv.reader(handle))
+        except StopIteration as exc:
+            raise ValueError("returns CSV cannot be empty") from exc
+    duplicates = sorted(name for name, count in Counter(header).items() if count > 1)
+    if duplicates:
+        raise ValueError(f"returns CSV contains duplicate column names: {duplicates}")
+
+
 def verify_walk_forward_metrics(
     report_json: str | Path,
     returns_csv: str | Path,
@@ -165,6 +178,7 @@ def verify_walk_forward_metrics(
 
     expected_metrics = _mapping(report.get("aggregate_metrics"), "aggregate_metrics")
     data_summary = _mapping(report.get("data_summary"), "data_summary")
+    _validate_unique_csv_columns(returns_path)
     frame = pd.read_csv(returns_path)
     missing = sorted(set(_REQUIRED_RETURN_COLUMNS) - set(frame.columns))
     if missing:
