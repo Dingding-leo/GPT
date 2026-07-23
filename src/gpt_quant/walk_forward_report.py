@@ -116,7 +116,23 @@ def write_walk_forward_report(
             + " |"
         )
 
+    strategy_metrics = result.aggregate_metrics
+    fee_bps = float(result.settings["base_config"]["transaction_cost_bps"])
     lines += [
+        "",
+        "## Gross, net and exchange-fee decomposition",
+        "",
+        f"- Gross compounded return: `{strategy_metrics['gross_total_return']:.6f}`",
+        f"- Net compounded return: `{strategy_metrics['net_total_return']:.6f}`",
+        f"- Compounded exchange-fee drag: "
+        f"`{strategy_metrics['compounded_exchange_fee_drag']:.6f}`",
+        f"- Sum of per-bar exchange-fee deductions: "
+        f"`{strategy_metrics['exchange_fee_sum']:.6f}`",
+        f"- Gross annualized arithmetic mean: "
+        f"`{strategy_metrics['gross_annualized_arithmetic_mean']:.6f}`",
+        f"- Net annualized arithmetic mean: "
+        f"`{strategy_metrics['net_annualized_arithmetic_mean']:.6f}`",
+        f"- Declared one-way exchange fee: `{fee_bps:g} bps` per unit of absolute turnover",
         "",
         "## Cost and parameter stress",
         "",
@@ -142,7 +158,12 @@ def write_walk_forward_report(
         "- Test folds do not overlap; model switches incur boundary turnover costs.",
         "- OOS fold results are used only as a post-evaluation robustness gate, not for selection.",
         f"- {instrument} is tested long/cash only, with no leverage or synthetic shorting.",
-        "- Close-price tests do not reproduce order-book liquidity or guaranteed fills.",
+        "- Gross return is executed position multiplied by close-to-close asset return before fees.",
+        "- Net return subtracts the declared exchange fee from gross return on each bar.",
+        "- Compounded fee drag is gross compounded return minus net compounded return; "
+        "it is not the arithmetic fee sum.",
+        "- Close-price tests do not reproduce spread, slippage, impact, latency, "
+        "order-book liquidity or guaranteed fills.",
         "",
     ]
     paths["markdown"].write_text("\n".join(lines), encoding="utf-8")
