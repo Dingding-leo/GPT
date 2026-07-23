@@ -145,6 +145,9 @@ def test_result_records_one_rejected_candidate_and_bound_provenance() -> None:
         "rejected": 1,
     }
     assert result["verdict"] == "rejected"
+    assert result["settings"]["benchmark_volatility_matching"] == (
+        "scale each complete fold by strategy sample std / benchmark sample std, ddof=1"
+    )
     assert result["provenance"]["source_workflow_run_id"] == 29982033676
     assert result["provenance"]["source_artifact_id"] == 8553558024
     assert result["provenance"]["source_artifact_sha256"] == (
