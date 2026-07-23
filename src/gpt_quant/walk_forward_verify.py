@@ -164,23 +164,15 @@ def _path_diagnostics(
             completed_episodes += 1
             exit_row = last_active + 1
             episode_returns = persisted["strategy_return"].iloc[start : exit_row + 1]
-            completed_episode_returns.append(
-                float((1.0 + episode_returns).prod() - 1.0)
-            )
+            completed_episode_returns.append(float((1.0 + episode_returns).prod() - 1.0))
         else:
             open_episodes += 1
         row += 1
 
-    positive_episode_profit = sum(
-        value for value in completed_episode_returns if value > 0.0
-    )
-    negative_episode_loss = -sum(
-        value for value in completed_episode_returns if value < 0.0
-    )
+    positive_episode_profit = sum(value for value in completed_episode_returns if value > 0.0)
+    negative_episode_loss = -sum(value for value in completed_episode_returns if value < 0.0)
     if negative_episode_loss > 0.0:
-        episode_profit_factor: float | str = (
-            positive_episode_profit / negative_episode_loss
-        )
+        episode_profit_factor: float | str = positive_episode_profit / negative_episode_loss
     elif positive_episode_profit > 0.0:
         episode_profit_factor = "unbounded"
     else:
@@ -225,9 +217,7 @@ def _path_diagnostics(
     return {
         "diagnostic_schema": "persisted_path_v1",
         "position_adjustment_threshold": _POSITION_ADJUSTMENT_THRESHOLD,
-        "material_position_adjustment_threshold": (
-            _MATERIAL_POSITION_ADJUSTMENT_THRESHOLD
-        ),
+        "material_position_adjustment_threshold": (_MATERIAL_POSITION_ADJUSTMENT_THRESHOLD),
         "active_position_threshold": _ACTIVE_POSITION_THRESHOLD,
         "drawdown_threshold": _DRAWDOWN_THRESHOLD,
         "total_absolute_turnover": float(turnover.sum()),
