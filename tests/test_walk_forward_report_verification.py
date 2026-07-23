@@ -46,6 +46,7 @@ def test_persisted_walk_forward_report_recomputes_from_real_okx_data(
 
     verification = verify_walk_forward_report(tmp_path)
     returns = pd.read_csv(paths["returns"])
+    expected_turnover = returns["position"].diff().fillna(returns["position"]).abs()
 
     assert verification["status"] == "passed"
     assert verification["observations"] == len(returns)
@@ -60,6 +61,12 @@ def test_persisted_walk_forward_report_recomputes_from_real_okx_data(
         "trading_cost",
         "strategy_return",
     } <= set(returns.columns)
+    assert np.allclose(
+        returns["turnover"],
+        expected_turnover,
+        rtol=0.0,
+        atol=1e-12,
+    )
     assert np.allclose(
         returns["gross_strategy_return"],
         returns["position"] * returns["asset_return"],
@@ -101,4 +108,36 @@ def test_persisted_walk_forward_verifier_rejects_fee_accounting_drift(
     returns.to_csv(paths["returns"], index=False)
 
     with pytest.raises(ValueError, match="exchange_fee_cost"):
+        verify_walk_forward_report(tmp_path)
+
+
+def test_persisted_walk_forward_verifier_rejects_turnover_path_drift(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    paths = _write_real_report(btc_usdt_prices, tmp_path)
+    returns = pd.read_csv(paths["returns"])
+    changed_row = int(returns["turnover"].gt(0.0).to_numpy().argmax())
+    extra_turnover = 0.25
+    extra_fee = extra_turnover * 5.0 / 10_000.0
+    returns.loc[changed_row, "turnover"] += extra_turnover
+    returns.loc[changed_row, "exchange_fee_cost"] += extra_fee
+    returns.loc[changed_row, "trading_cost"] += extra_fee
+    returns.loc[changed_row, "strategy_return"] -= extra_fee
+    returns.to_csv(paths["returns"], index=False)
+
+    with pytest.raises(ValueError, match="turnover"):
+        verify_walk_forward_report(tmp_path)
+
+
+def test_persisted_walk_forward_verifier_rejects_position_delay_drift(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    paths = _write_real_report(btc_usdt_prices, tmp_path)
+    returns = pd.read_csv(paths["returns"])
+    returns.loc[0, "target_position"] += 0.1
+    returns.to_csv(paths["returns"], index=False)
+
+    with pytest.raises(ValueError, match="fold 1 position"):
         verify_walk_forward_report(tmp_path)
