@@ -201,10 +201,7 @@ def test_bundle_failure_preserves_prior_generation_and_caller_owned_files(
         def fail_stress_commit(source: str | Path, destination: str | Path) -> None:
             nonlocal final_replacements
             destination_path = Path(destination)
-            if (
-                destination_path.parent == output_dir
-                and destination_path.name in _REPORT_FILENAMES
-            ):
+            if destination_path.parent == output_dir and destination_path.name in _REPORT_FILENAMES:
                 final_replacements += 1
                 if final_replacements == 4:
                     raise OSError("simulated stress diagnostic bundle commit failure")
@@ -220,9 +217,7 @@ def test_bundle_failure_preserves_prior_generation_and_caller_owned_files(
         *_REPORT_FILENAMES,
         sentinel.name,
     }
-    assert not any(
-        path.name.startswith(".portfolio-risk-bundle-") for path in output_dir.iterdir()
-    )
+    assert not any(path.name.startswith(".portfolio-risk-bundle-") for path in output_dir.iterdir())
     assert sentinel.read_bytes() == sentinel_payload
     for name, path in original_paths.items():
         assert path.read_bytes() == original_payloads[name]
