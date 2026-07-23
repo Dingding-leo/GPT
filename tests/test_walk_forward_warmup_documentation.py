@@ -45,7 +45,7 @@ def test_walk_forward_warmup_guide_matches_enforced_delayed_boundary() -> None:
     assert "target_position.shift(1)" in backtest
 
     guard = "if longest_lookback > selection_bars - 2:"
-    candidate_cache = "candidate_frame_cache: dict[StrategyConfig, pd.DataFrame] = {}"
+    first_candidate_backtest = "selection_frame = _run_cached_candidate_window("
     fold_initialization = "folds: list[dict[str, Any]] = []"
     assert "def _longer_lookbacks(" in walk_forward
     assert "max(candidate.volatility_lookback, *_longer_lookbacks(candidate))" in walk_forward
@@ -53,7 +53,7 @@ def test_walk_forward_warmup_guide_matches_enforced_delayed_boundary() -> None:
     assert "at least one one-bar-delayed" in walk_forward
     assert "selection-window observation after every candidate lookback" in walk_forward
     assert "and longer-lookback perturbation" in walk_forward
-    assert walk_forward.index(guard) < walk_forward.index(candidate_cache)
+    assert walk_forward.index(guard) < walk_forward.index(first_candidate_backtest)
     assert walk_forward.index(guard) < walk_forward.index(fold_initialization)
 
     for dimension in ("momentum", "reversal", "volatility"):
