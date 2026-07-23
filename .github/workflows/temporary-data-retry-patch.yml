@@ -1,0 +1,121 @@
+# materializer trigger
+name: Temporary Data Retry Patch
+
+on:
+  push:
+    branches:
+      - auto/data/20260723-07-lock-okx-transport-retries
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out target branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: auto/data/20260723-07-lock-okx-transport-retries
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Apply bounded Retry-After overflow fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/gpt_quant/okx.py')
+          source_text = source.read_text(encoding='utf-8')
+          old = '''    server_delay: float | None = None
+              if value.isascii() and value.isdecimal():
+                  server_delay = float(int(value))
+              else:
+          '''
+          new = '''    server_delay: float | None = None
+              if value.isascii() and value.isdecimal():
+                  normalized_digits = value.lstrip("0") or "0"
+                  if len(normalized_digits) > len(str(int(_MAX_RETRY_DELAY_SECONDS))):
+                      server_delay = _MAX_RETRY_DELAY_SECONDS
+                  else:
+                      server_delay = float(int(normalized_digits))
+              else:
+          '''
+          if old not in source_text:
+              raise SystemExit('source patch target not found')
+          source.write_text(source_text.replace(old, new), encoding='utf-8')
+
+          tests = Path('tests/test_okx_transport_retries.py')
+          test_text = tests.read_text(encoding='utf-8')
+          marker = '''def test_public_downloader_honors_retry_after_http_date(
+              monkeypatch: pytest.MonkeyPatch,
+          ) -> None:
+          '''
+          inserted = '''def test_public_downloader_caps_oversized_retry_after_without_integer_parsing(
+              monkeypatch: pytest.MonkeyPatch,
+          ) -> None:
+              payload = _real_okx_payload()
+              attempts = 0
+              sleeps: list[float] = []
+
+              def fake_urlopen(request: Any, timeout: float) -> _Response:
+                  nonlocal attempts
+                  attempts += 1
+                  _assert_request_contract(request, timeout)
+                  if attempts == 1:
+                      raise HTTPError(
+                          request.full_url,
+                          429,
+                          "rate limited",
+                          hdrs={"Retry-After": "9" * 10_000},
+                          fp=None,
+                      )
+                  return _Response.from_payload(payload)
+
+              monkeypatch.setattr(okx, "urlopen", fake_urlopen)
+              monkeypatch.setattr(okx.time, "sleep", sleeps.append)
+
+              snapshot = _download_with_default_transport()
+
+              assert attempts == 2
+              assert sleeps == [5.0]
+              assert snapshot.metadata["raw_rows"] == 5
+
+
+          '''
+          if marker not in test_text:
+              raise SystemExit('test patch target not found')
+          tests.write_text(test_text.replace(marker, inserted + marker), encoding='utf-8')
+
+          Path('.github/workflows/temporary-data-retry-patch.yml').unlink()
+          PY
+
+      - name: Install and verify focused change
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'pip==26.1.2'
+          python -m pip install -e '.[dev]'
+          ruff format src/gpt_quant/okx.py tests/test_okx_transport_retries.py
+          ruff check src/gpt_quant/okx.py tests/test_okx_transport_retries.py
+          ruff format --check src/gpt_quant/okx.py tests/test_okx_transport_retries.py
+          pytest -q tests/test_okx_transport_retries.py
+
+      - name: Commit focused repair
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/gpt_quant/okx.py tests/test_okx_transport_retries.py .github/workflows/temporary-data-retry-patch.yml
+          git commit -m 'fix(data): bound oversized Retry-After values'
+          git push origin HEAD:auto/data/20260723-07-lock-okx-transport-retries
