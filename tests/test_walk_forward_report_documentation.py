@@ -9,6 +9,10 @@ ROOT = Path(__file__).resolve().parents[1]
 GUIDE = ROOT / "docs" / "WALK_FORWARD_REPORT_AUDIT.md"
 WALK_FORWARD = ROOT / "src" / "gpt_quant" / "walk_forward.py"
 REPORT_WRITER = ROOT / "src" / "gpt_quant" / "walk_forward_report.py"
+METRICS = ROOT / "src" / "gpt_quant" / "metrics.py"
+RESEARCH = ROOT / "src" / "gpt_quant" / "research.py"
+HOLDOUT_CLI = ROOT / "scripts" / "run_research.py"
+INSOLVENCY_TEST = ROOT / "tests" / "test_insolvency_validation.py"
 
 
 def _documented_audit_code() -> str:
@@ -114,3 +118,39 @@ def test_parameter_stability_guide_matches_report_write_boundary() -> None:
     assert report_writer.index("payload = result.to_dict()") < report_writer.index(
         "output.mkdir(parents=True, exist_ok=True)"
     )
+
+
+def test_solvency_guide_matches_metric_and_holdout_report_boundaries() -> None:
+    guide = GUIDE.read_text(encoding="utf-8")
+    metrics = METRICS.read_text(encoding="utf-8")
+    research = RESEARCH.read_text(encoding="utf-8")
+    holdout_cli = HOLDOUT_CLI.read_text(encoding="utf-8")
+    insolvency_test = INSOLVENCY_TEST.read_text(encoding="utf-8")
+
+    for claim in (
+        "strategy_return <= -1.0",
+        "strategy return must remain greater than -100%; insolvency occurs at",
+        "未来才发生的破产不会污染在它之前单独提交",
+        "run_holdout_research()` 成功返回后写 `latest.json` 与 `latest.md`",
+        "pytest tests/test_insolvency_validation.py",
+        "结构性修改只用于 fail-closed 验证，不用于计算或报告绩效",
+    ):
+        assert claim in guide
+
+    assert "insolvent = returns <= -1.0" in metrics
+    assert metrics.index("_validate_solvent_returns(returns)") < metrics.index(
+        "total_growth ="
+    )
+    assert research.index("metrics = performance_metrics(validation_frame") < research.index(
+        "score = _selection_score(metrics)"
+    )
+    assert holdout_cli.index("result = run_holdout_research(") < holdout_cli.index(
+        "write_research_report(result"
+    )
+
+    for evidence in (
+        "btc_usdt_prices",
+        "test_metrics_before_future_insolvency_remain_valid",
+        "test_performance_metrics_rejects_insolvent_repriced_frame",
+    ):
+        assert evidence in insolvency_test
