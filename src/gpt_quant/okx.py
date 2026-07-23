@@ -7,6 +7,7 @@ from collections.abc import Callable, Mapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from itertools import pairwise
 from pathlib import Path
 from typing import Any
@@ -31,6 +32,8 @@ _COLUMNS = (
     "confirm",
 )
 _MILLISECONDS_PER_DAY = 86_400_000
+_MAX_RETRY_DELAY_SECONDS = 5.0
+_RETRYABLE_HTTP_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
 
 @dataclass(frozen=True, slots=True)
@@ -118,6 +121,36 @@ def _fixed_bar_step_seconds(bar: str) -> int | None:
     return int(normalized[:-1]) * multiplier
 
 
+def _retry_delay_seconds(error: Exception, *, attempt: int) -> float:
+    baseline = 0.5 * (2**attempt)
+    if not isinstance(error, HTTPError) or error.headers is None:
+        return baseline
+
+    retry_after = error.headers.get("Retry-After")
+    if retry_after is None:
+        return baseline
+    value = str(retry_after).strip()
+    if not value:
+        return baseline
+
+    server_delay: float | None = None
+    if value.isascii() and value.isdecimal():
+        server_delay = float(int(value))
+    else:
+        try:
+            retry_at = parsedate_to_datetime(value)
+        except (TypeError, ValueError, OverflowError):
+            retry_at = None
+        if retry_at is not None:
+            if retry_at.tzinfo is None:
+                retry_at = retry_at.replace(tzinfo=UTC)
+            server_delay = retry_at.timestamp() - time.time()
+
+    if server_delay is None or not np.isfinite(server_delay) or server_delay <= baseline:
+        return baseline
+    return min(server_delay, _MAX_RETRY_DELAY_SECONDS)
+
+
 def _default_json_getter(url: str, timeout: float) -> Mapping[str, Any]:
     request = Request(
         url,
@@ -136,13 +169,13 @@ def _default_json_getter(url: str, timeout: float) -> Mapping[str, Any]:
             return payload
         except HTTPError as exc:
             last_error = exc
-            if exc.code not in {408, 429, 500, 502, 503, 504} or attempt == 2:
+            if exc.code not in _RETRYABLE_HTTP_STATUS_CODES or attempt == 2:
                 raise RuntimeError(f"OKX HTTP error {exc.code}") from exc
         except (URLError, TimeoutError, json.JSONDecodeError) as exc:
             last_error = exc
             if attempt == 2:
                 raise RuntimeError("OKX request failed after retries") from exc
-        time.sleep(0.5 * (2**attempt))
+        time.sleep(_retry_delay_seconds(last_error, attempt=attempt))
     raise RuntimeError("OKX request failed") from last_error
 
 
