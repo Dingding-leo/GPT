@@ -16,6 +16,7 @@ _EXTRA_NAME = _DISTRIBUTION_NAME
 _EXTRA_SEPARATOR = re.compile(r"[-_.]+")
 _MARKER_IDENTIFIER = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
 _WINDOWS_PATH = re.compile(r"^[A-Za-z]:[\\/]")
+_SHA256_HEX = re.compile(r"^[0-9A-Fa-f]{64}$")
 _ALLOWED_MARKER_VARIABLES = frozenset({"python_version"})
 _MARKER_KEYWORDS = frozenset({"and", "in", "not", "or"})
 _REQUIRED_PYTHON = ">=3.11,<3.15"
@@ -291,8 +292,9 @@ def lock_resolution_report(
             raise ValueError("pip resolution omitted archive information")
         hashes = archive_info.get("hashes")
         sha256 = hashes.get("sha256") if isinstance(hashes, dict) else None
-        if not isinstance(sha256, str) or len(sha256) != 64:
-            raise ValueError("pip resolution omitted an artifact SHA-256")
+        if not isinstance(sha256, str) or _SHA256_HEX.fullmatch(sha256) is None:
+            raise ValueError("pip resolution omitted a valid artifact SHA-256")
+        sha256 = sha256.lower()
 
         canonical_name = _EXTRA_SEPARATOR.sub("-", name).lower()
         existing = resolved.get(canonical_name)
