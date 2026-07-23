@@ -182,16 +182,15 @@ def build_underlying_sleeve_risk(
         raise ValueError("provenance hashes must match underlying path hashes")
     weights = _weights(names, initial_weights)
     paths = {
-        name: _load_path(sleeve_paths[name], expected_sha256[name], tolerance)
-        for name in names
+        name: _load_path(sleeve_paths[name], expected_sha256[name], tolerance) for name in names
     }
     index = paths[names[0]].index
     if any(not paths[name].index.equals(index) for name in names[1:]):
         raise ValueError("underlying sleeve path indexes must match exactly")
 
     position = pd.DataFrame({name: paths[name]["position"] for name in names})
-    turnover = pd.DataFrame({name: pathsname]["turnover"] for name in names})
-    gross = pd.DataFrame({name: pathsname]["gross_strategy_return"] for name in names})
+    turnover = pd.DataFrame({name: paths[name]["turnover"] for name in names})
+    gross = pd.DataFrame({name: paths[name]["gross_strategy_return"] for name in names})
     fee = pd.DataFrame({name: paths[name]["trading_cost"] for name in names})
     net = pd.DataFrame({name: paths[name]["strategy_return"] for name in names})
 
@@ -239,7 +238,7 @@ def build_underlying_sleeve_risk(
             "gross_total_return": _total_return(gross[name]),
             "net_total_return": _total_return(net[name]),
             "compounded_exchange_fee_drag": _total_return(gross[name]) - _total_return(net[name]),
-            "source_sha256": pathsname].attrs["source_sha256"],
+            "source_sha256": paths[name].attrs["source_sha256"],
         }
 
     portfolio_metrics: dict[str, float | int | str] = {
@@ -273,7 +272,7 @@ def build_underlying_sleeve_risk(
     frame["portfolio_gross_return"] = portfolio_gross
     frame["portfolio_net_return"] = portfolio_net
 
-    timestamp = generated_at_utc or datetime.now(UTB).isoformat()
+    timestamp = generated_at_utc or datetime.now(UTC).isoformat()
     payload = {
         "schema": "portfolio_underlying_path_risk_v1",
         "generated_at_utc": timestamp,
@@ -285,7 +284,7 @@ def build_underlying_sleeve_risk(
         },
         "settings": {
             "annualization": annualization,
-            "initial_weights": {name: float(weightsname]) for name in names},
+            "initial_weights": {name: float(weights[name]) for name in names},
             "position_adjustment_threshold": threshold,
             "position_interpretation": "research position; not an exchange order or fill",
             "portfolio_exposure_method": "start-of-bar sleeve weight times absolute position",
@@ -308,14 +307,14 @@ def build_underlying_sleeve_risk(
         },
     }
     sources = {
-        name: (paths[name].attrs["source_path"], pathsname].attrs["source_sha256"])
+        name: (paths[name].attrs["source_path"], paths[name].attrs["source_sha256"])
         for name in names
     }
     return UnderlyingSleeveRiskResult(
         payload=payload,
         frame=frame,
         _sources=sources,
-        _weights={name: float(weightsname]) for name in names},
+        _weights={name: float(weights[name]) for name in names},
         _annualization=annualization,
         _tolerance=tolerance,
     )
