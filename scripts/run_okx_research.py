@@ -133,6 +133,28 @@ def _build_effective_config(
     }
 
 
+def _write_effective_config_snapshot(
+    output: str | Path,
+    effective_config: dict[str, Any],
+) -> Path:
+    """Persist the exact executed configuration using deterministic canonical JSON."""
+
+    output_path = Path(output)
+    output_path.mkdir(parents=True, exist_ok=True)
+    config_path = output_path / "effective_config.json"
+    payload = (
+        json.dumps(
+            effective_config,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "\n"
+    )
+    config_path.write_text(payload, encoding="utf-8")
+    return config_path
+
+
 def main() -> int:
     args = parse_args()
     experiment = load_json(args.config)
@@ -215,7 +237,12 @@ def main() -> int:
         },
         result_settings=result.settings,
     )
-    artifacts = {**snapshot_paths, **report_paths}
+    effective_config_path = _write_effective_config_snapshot(output, effective_config)
+    artifacts = {
+        **snapshot_paths,
+        **report_paths,
+        "effective_config": effective_config_path,
+    }
     manifest_entry = build_experiment_manifest_entry(
         effective_config=effective_config,
         data_hashes={
