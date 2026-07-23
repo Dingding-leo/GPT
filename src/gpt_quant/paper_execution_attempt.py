@@ -421,6 +421,7 @@ def record_paper_execution_attempt(
     if not isinstance(quote, ExecutionQuoteSnapshot):
         raise TypeError("quote must be an ExecutionQuoteSnapshot")
     binding.assert_reconstructs(intent, quote)
+    intent.assert_active_at(submitted_at_utc)
     if binding.quote_snapshot_id != quote.snapshot_id:
         raise ValueError("execution quote binding does not reference the supplied quote")
     if binding.instrument_id != quote.instrument_id:
