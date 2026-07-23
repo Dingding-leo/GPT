@@ -48,6 +48,28 @@ def test_metrics_reject_inconsistent_gross_net_fee_decomposition(
         performance_metrics(frame, annualization=365)
 
 
+def test_metrics_reject_gross_return_disconnected_from_executed_position(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    frame = run_backtest(
+        btc_usdt_prices.iloc[:400],
+        StrategyConfig(min_position=0.0, transaction_cost_bps=5.0, annualization=365),
+    ).frame.copy()
+    active = frame.index[
+        frame["position"].abs().gt(0.0) & frame["asset_return"].abs().gt(0.0)
+    ]
+    assert not active.empty
+
+    frame.at[active[0], "gross_strategy_return"] += 1e-4
+    frame.at[active[0], "strategy_return"] += 1e-4
+
+    with pytest.raises(
+        ValueError,
+        match="gross_strategy_return must equal position multiplied by asset_return",
+    ):
+        performance_metrics(frame, annualization=365)
+
+
 def test_report_metrics_recompute_from_persisted_gross_net_fee_columns(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
