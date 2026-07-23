@@ -8,7 +8,8 @@ on:
       - ".github/workflows/sealed-sol-holdout.yml"
       - "config/okx_sealed_holdout_sol.json"
       - "scripts/evaluate_sealed_okx_holdout.py"
-      - "reports/research/sol-sealed-holdout/PREDECLARATION.md"
+      - "reports/research/sol-sealed-holdout/**"
+      - "tests/test_sol_sealed_holdout_report.py"
 
 permissions:
   contents: read
@@ -45,15 +46,8 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Apply temporary Ruff diagnostic
-        run: |
-          ruff check . --fix
-          ruff format .
-          ruff check .
-          ruff format --check .
-          mkdir -p reports/research/sol-sealed-holdout/diagnostic
-          cp scripts/evaluate_sealed_okx_holdout.py \
-            reports/research/sol-sealed-holdout/diagnostic/evaluate_sealed_okx_holdout.py
+      - name: Lint and formatting
+        run: ruff check . && ruff format --check .
 
       - name: Test repository
         run: pytest
@@ -102,6 +96,5 @@ jobs:
           path: |
             reports/sealed/
             reports/research/sol-sealed-holdout/generated/
-            reports/research/sol-sealed-holdout/diagnostic/
           if-no-files-found: error
           retention-days: 14
