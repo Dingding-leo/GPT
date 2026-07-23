@@ -84,9 +84,7 @@ def load_complete_fold_deltas(
     fold_sizes = grouped.size()
     complete_ids = fold_sizes.index[fold_sizes == EXPECTED_FOLD_OBSERVATIONS].to_numpy(dtype=int)
     incomplete_ids = fold_sizes.index[fold_sizes != EXPECTED_FOLD_OBSERVATIONS].to_numpy(dtype=int)
-    if len(incomplete_ids) > 1 or (
-        len(incomplete_ids) == 1 and incomplete_ids[0] != fold_ids[-1]
-    ):
+    if len(incomplete_ids) > 1 or (len(incomplete_ids) == 1 and incomplete_ids[0] != fold_ids[-1]):
         raise ValueError("only one trailing incomplete fold may be excluded")
     if len(complete_ids) != expected_complete_folds:
         raise ValueError(
