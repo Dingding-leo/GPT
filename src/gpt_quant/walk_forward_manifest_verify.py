@@ -36,7 +36,11 @@ def _sha256_digest(value: object, label: str) -> str:
 
 
 def _git_commit(value: object) -> str:
-    if not isinstance(value, str) or len(value) not in {40, 64} or set(value) - _HEX_DIGITS:
+    if (
+        not isinstance(value, str)
+        or len(value) not in {40, 64}
+        or set(value) - _HEX_DIGITS
+    ):
         raise ValueError("manifest code_commit must be a lowercase hexadecimal commit id")
     return value
 
@@ -65,7 +69,9 @@ def _load_manifest(path: Path) -> list[Mapping[str, Any]]:
         try:
             entry = json.loads(line)
         except json.JSONDecodeError as exc:
-            raise ValueError(f"experiment manifest line {line_number} is invalid JSON") from exc
+            raise ValueError(
+                f"experiment manifest line {line_number} is invalid JSON"
+            ) from exc
         entries.append(_mapping(entry, f"experiment manifest line {line_number}"))
     if not entries:
         raise ValueError("experiment manifest cannot be empty")
@@ -94,21 +100,32 @@ def verify_walk_forward_manifest(
     bar = _required_text(provenance.get("bar"), "bar")
     snapshot_path = snapshot_dir / f"okx-{instrument_id}-{bar}.csv"
     if not returns_path.is_file() or not snapshot_path.is_file():
-        raise ValueError("manifest verification requires persisted returns and normalized snapshot")
+        raise ValueError(
+            "manifest verification requires persisted returns and normalized snapshot"
+        )
 
     config_data = _mapping(effective_config.get("data"), "effective configuration data")
     if config_data.get("inst_id") != instrument_id or config_data.get("bar") != bar:
         raise ValueError("effective configuration instrument/bar does not match report provenance")
-    if _mapping(effective_config.get("strategy"), "effective configuration strategy") != _mapping(
-        settings.get("base_config"), "walk-forward base_config"
-    ):
+    config_strategy = _mapping(
+        effective_config.get("strategy"),
+        "effective configuration strategy",
+    )
+    report_strategy = _mapping(settings.get("base_config"), "walk-forward base_config")
+    if config_strategy != report_strategy:
         raise ValueError("effective configuration strategy does not match walk-forward settings")
-    robustness = _mapping(effective_config.get("robustness"), "effective configuration robustness")
+    robustness = _mapping(
+        effective_config.get("robustness"),
+        "effective configuration robustness",
+    )
     if robustness.get("cost_multipliers") != settings.get("cost_multipliers"):
         raise ValueError("effective configuration cost sensitivities do not match report settings")
 
     candidate_count = _positive_integer(settings.get("candidate_count"), "candidate_count")
-    result_classification = _required_text(report.get("robustness_status"), "robustness_status")
+    result_classification = _required_text(
+        report.get("robustness_status"),
+        "robustness_status",
+    )
     actual_artifact_hashes = {
         "candles": file_sha256(snapshot_path),
         "effective_config": file_sha256(effective_config_path),
@@ -134,7 +151,10 @@ def verify_walk_forward_manifest(
         artifact_hashes = _mapping(entry.get("artifact_sha256"), "manifest artifact_sha256")
         if data_hashes.get("normalized_csv") != normalized_csv_sha256:
             continue
-        if all(artifact_hashes.get(key) == actual_artifact_hashes[key] for key in _REQUIRED_ARTIFACT_KEYS):
+        if all(
+            artifact_hashes.get(key) == actual_artifact_hashes[key]
+            for key in _REQUIRED_ARTIFACT_KEYS
+        ):
             matching.append(entry)
 
     if len(matching) != 1:
@@ -143,11 +163,19 @@ def verify_walk_forward_manifest(
             f"returns, configuration, and normalized snapshot; found {len(matching)}"
         )
     entry = matching[0]
-    if _positive_integer(entry.get("candidate_count"), "manifest candidate_count") != candidate_count:
+    manifest_candidate_count = _positive_integer(
+        entry.get("candidate_count"),
+        "manifest candidate_count",
+    )
+    if manifest_candidate_count != candidate_count:
         raise ValueError("manifest candidate_count does not match walk-forward settings")
     if entry.get("result_classification") != result_classification:
         raise ValueError("manifest result_classification does not match walk-forward report")
-    if _sha256_digest(entry.get("config_sha256"), "manifest config_sha256") != config_sha256:
+    manifest_config_sha256 = _sha256_digest(
+        entry.get("config_sha256"),
+        "manifest config_sha256",
+    )
+    if manifest_config_sha256 != config_sha256:
         raise ValueError("manifest config_sha256 does not match effective configuration")
 
     return {
@@ -155,7 +183,10 @@ def verify_walk_forward_manifest(
             entry.get("schema_version"), "manifest schema_version"
         ),
         "manifest_sha256": file_sha256(manifest_path),
-        "manifest_experiment_id": _required_text(entry.get("experiment_id"), "experiment_id"),
+        "manifest_experiment_id": _required_text(
+            entry.get("experiment_id"),
+            "experiment_id",
+        ),
         "manifest_run_id": _required_text(entry.get("run_id"), "run_id"),
         "manifest_code_commit": _git_commit(entry.get("code_commit")),
         "manifest_candidate_count": candidate_count,
