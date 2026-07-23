@@ -61,6 +61,32 @@ def test_real_okx_fixture_provenance_and_delay_accounting() -> None:
     )
 
 
+def test_one_bar_delay_reconstructs_canonical_5bps_path_from_cash() -> None:
+    analysis = _load_analysis()
+    frame = pd.read_csv(_FIXTURE_DIR / "returns.csv")
+
+    baseline = analysis.build_delayed_returns(
+        frame,
+        total_delay_bars=1,
+        all_in_cost_bps=5.0,
+    )
+    expected_position = frame["position"].astype(float)
+    expected_turnover = expected_position.diff().abs()
+    expected_turnover.iloc[0] = abs(expected_position.iloc[0])
+    expected_gross = expected_position * frame["asset_return"].astype(float)
+    expected_cost = expected_turnover * 0.0005
+
+    assert baseline["delayed_position"].to_numpy() == pytest.approx(
+        expected_position.to_numpy()
+    )
+    assert baseline["turnover"].to_numpy() == pytest.approx(expected_turnover.to_numpy())
+    assert baseline["gross_return"].to_numpy() == pytest.approx(expected_gross.to_numpy())
+    assert baseline["cost"].to_numpy() == pytest.approx(expected_cost.to_numpy())
+    assert baseline["net_return"].to_numpy() == pytest.approx(
+        (expected_gross - expected_cost).to_numpy()
+    )
+
+
 def test_paired_moving_block_bootstrap_is_deterministic() -> None:
     analysis = _load_analysis()
     frame = pd.read_csv(_FIXTURE_DIR / "returns.csv")
