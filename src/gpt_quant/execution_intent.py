@@ -90,6 +90,15 @@ def _canonical_json_bytes(payload: Mapping[str, object]) -> bytes:
     ).encode("utf-8")
 
 
+def _reject_duplicate_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"target-position intent JSON contains duplicate field {key!r}")
+        result[key] = value
+    return result
+
+
 @dataclass(frozen=True, slots=True)
 class TargetPositionIntent:
     """Immutable, replayable strategy target awaiting execution translation.
@@ -258,8 +267,22 @@ class TargetPositionIntent:
 
     @classmethod
     def from_json_bytes(cls, value: bytes | str) -> TargetPositionIntent:
+        if isinstance(value, bytes):
+            try:
+                serialized = value.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ValueError("target-position intent JSON is unreadable") from exc
+        elif isinstance(value, str):
+            serialized = value
+        else:
+            raise ValueError("target-position intent JSON is unreadable")
+
         try:
-            payload = json.loads(value)
-        except (TypeError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+            payload = json.loads(serialized, object_pairs_hook=_reject_duplicate_fields)
+        except (ValueError, json.JSONDecodeError) as exc:
             raise ValueError("target-position intent JSON is unreadable") from exc
-        return cls.from_mapping(payload)
+
+        intent = cls.from_mapping(payload)
+        if serialized.encode("utf-8") != intent.to_json_bytes():
+            raise ValueError("target-position intent JSON must use canonical encoding")
+        return intent
