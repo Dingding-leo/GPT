@@ -20,18 +20,24 @@ def _run_policy(pyproject_path: Path, evidence_path: Path) -> subprocess.Complet
     )
 
 
-def _pyproject_with_requirement(requirement: str, *, location: str) -> str:
+def _pyproject_with_requirement(
+    requirement: str | None,
+    *,
+    location: str,
+    optional_extra_name: str = "dev",
+) -> str:
     build_requirements = ["setuptools>=69"]
-    project_requirements = ["numpy>=1.26,<3", "pandas>=2.1,<3"]
+    runtime_requirements = ["numpy>=1.26,<3", "pandas>=2.1,<3"]
     optional_requirements = ["pytest>=8,<10", "ruff>=0.9,<1"]
-    if location == "build":
-        build_requirements.append(requirement)
-    elif location == "project":
-        project_requirements.append(requirement)
-    elif location == "optional":
-        optional_requirements.append(requirement)
-    else:
-        raise AssertionError(f"unsupported location: {location}")
+    if requirement is not None:
+        if location == "build":
+            build_requirements.append(requirement)
+        elif location == "runtime":
+            runtime_requirements.append(requirement)
+        elif location == "optional":
+            optional_requirements.append(requirement)
+        else:
+            raise AssertionError(f"unsupported location: {location}")
 
     def toml_list(values: list[str]) -> str:
         return ", ".join(json.dumps(value) for value in values)
@@ -45,10 +51,10 @@ build-backend = "setuptools.build_meta"
 name = "direct-policy-test"
 version = "1.0.0"
 requires-python = ">=3.11,<3.15"
-dependencies = [{toml_list(project_requirements)}]
+dependencies = [{toml_list(runtime_requirements)}]
 
 [project.optional-dependencies]
-dev = [{toml_list(optional_requirements)}]
+{optional_extra_name} = [{toml_list(optional_requirements)}]
 """.lstrip()
 
 
@@ -62,17 +68,19 @@ def test_current_direct_dependencies_are_approved_and_recorded(tmp_path: Path) -
     assert json.loads(evidence_path.read_text(encoding="utf-8")) == {
         "approved_direct_dependencies": {
             "build": ["setuptools"],
-            "project": ["numpy", "pandas", "pytest", "ruff"],
+            "optional:dev": ["pytest", "ruff"],
+            "runtime": ["numpy", "pandas"],
         },
         "declared_direct_dependencies": {
             "build": ["setuptools"],
-            "project": ["numpy", "pandas", "pytest", "ruff"],
+            "optional:dev": ["pytest", "ruff"],
+            "runtime": ["numpy", "pandas"],
         },
-        "schema_version": 1,
+        "schema_version": 2,
     }
 
 
-@pytest.mark.parametrize("location", ["build", "project", "optional"])
+@pytest.mark.parametrize("location", ["build", "runtime", "optional"])
 def test_unapproved_direct_dependency_fails_before_evidence(
     tmp_path: Path,
     location: str,
@@ -97,8 +105,9 @@ def test_unapproved_direct_dependency_fails_before_evidence(
     ("requirement", "location", "scope"),
     [
         ("numpy>=1.26", "build", "build"),
-        ("setuptools>=69", "project", "project"),
-        ("setuptools>=69", "optional", "project"),
+        ("setuptools>=69", "runtime", "runtime"),
+        ("setuptools>=69", "optional", "optional:dev"),
+        ("numpy>=1.26", "optional", "optional:dev"),
     ],
 )
 def test_approved_name_in_wrong_scope_fails_before_evidence(
@@ -119,6 +128,73 @@ def test_approved_name_in_wrong_scope_fails_before_evidence(
     assert completed.returncode == 2
     assert completed.stdout == ""
     assert f"'{scope}'" in completed.stderr
+    assert not evidence_path.parent.exists()
+
+
+@pytest.mark.parametrize(
+    ("requirement", "location", "label", "canonical_name"),
+    [
+        ("Setuptools<100", "build", "[build-system].requires", "setuptools"),
+        ("NumPy<3", "runtime", "[project].dependencies", "numpy"),
+        ("PYTEST<10", "optional", "[project.optional-dependencies].dev", "pytest"),
+    ],
+)
+def test_duplicate_canonical_name_in_one_scope_fails_before_evidence(
+    tmp_path: Path,
+    requirement: str,
+    location: str,
+    label: str,
+    canonical_name: str,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    evidence_path = tmp_path / "audit" / "direct-dependency-policy.json"
+    pyproject_path.write_text(
+        _pyproject_with_requirement(requirement, location=location),
+        encoding="utf-8",
+    )
+
+    completed = _run_policy(pyproject_path, evidence_path)
+
+    assert completed.returncode == 2
+    assert completed.stdout == ""
+    assert f"{label} must declare each canonical dependency name at most once" in completed.stderr
+    assert canonical_name in completed.stderr
+    assert not evidence_path.parent.exists()
+
+
+def test_duplicate_name_cannot_hide_runtime_promotion(tmp_path: Path) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    evidence_path = tmp_path / "audit" / "direct-dependency-policy.json"
+    pyproject_path.write_text(
+        _pyproject_with_requirement("pytest>=8,<10", location="runtime"),
+        encoding="utf-8",
+    )
+
+    completed = _run_policy(pyproject_path, evidence_path)
+
+    assert completed.returncode == 2
+    assert completed.stdout == ""
+    assert "must not be repeated across declaration scopes" in completed.stderr
+    assert "pytest" in completed.stderr
+    assert "optional:dev" in completed.stderr
+    assert "runtime" in completed.stderr
+    assert not evidence_path.parent.exists()
+
+
+def test_unapproved_optional_scope_fails_before_evidence(tmp_path: Path) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    evidence_path = tmp_path / "audit" / "direct-dependency-policy.json"
+    pyproject_path.write_text(
+        _pyproject_with_requirement(None, location="runtime", optional_extra_name="qa"),
+        encoding="utf-8",
+    )
+
+    completed = _run_policy(pyproject_path, evidence_path)
+
+    assert completed.returncode == 2
+    assert completed.stdout == ""
+    assert "unapproved direct dependency declaration scopes" in completed.stderr
+    assert "optional:qa" in completed.stderr
     assert not evidence_path.parent.exists()
 
 
