@@ -901,12 +901,27 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
         "live_eligible": False,
         "verdict": "supported" if freeze_eligible else "rejected",
         "limitations": [
-            "BTC-USDT and ETH-USDT are development markets and may be used only for architecture design.",
-            "SOL-USDT was not read or used and remains a consumed sealed holdout unavailable for tuning.",
-            "Mean-score and rank-sum rules are predeclared neighbourhood stresses, not separately selected architectures.",
-            "Moving-block resampling creates artificial joins and preserves dependence only within 20-session blocks.",
+            (
+                "BTC-USDT and ETH-USDT are development markets and may be used only for "
+                "architecture design."
+            ),
+            (
+                "SOL-USDT was not read or used and remains a consumed sealed holdout "
+                "unavailable for tuning."
+            ),
+            (
+                "Mean-score and rank-sum rules are predeclared neighbourhood stresses, "
+                "not separately selected architectures."
+            ),
+            (
+                "Moving-block resampling creates artificial joins and preserves dependence "
+                "only within 20-session blocks."
+            ),
             "Delay scenarios shift daily positions and do not model executable next-open fills.",
-            "The 7.5, 10 and 15 bps cases are aggregate repricings, not measured spread, slippage, impact or latency.",
+            (
+                "The 7.5, 10 and 15 bps cases are aggregate repricings, not measured spread, "
+                "slippage, impact or latency."
+            ),
             "Capacity and prospective forward evidence remain unavailable.",
         ],
     }
