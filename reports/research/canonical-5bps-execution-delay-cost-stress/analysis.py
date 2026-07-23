@@ -73,19 +73,12 @@ def validate_frame(frame: pd.DataFrame) -> pd.DataFrame:
         raise ValueError(f"returns file is missing columns: {sorted(missing)}")
 
     raw_timestamp = frame["timestamp"].astype("string")
-    explicit_zone = raw_timestamp.str.contains(
-        r"(?:Z|[+-]\d{2}:?\d{2})$", regex=True, na=False
-    )
+    explicit_zone = raw_timestamp.str.contains(r"(?:Z|[+-]\d{2}:?\d{2})$", regex=True, na=False)
     if not bool(explicit_zone.all()):
         raise ValueError("timestamps must include an explicit timezone offset")
 
-    result = pd.DataFrame(
-        {"timestamp": pd.to_datetime(raw_timestamp, utc=True, errors="raise")}
-    )
-    if (
-        result["timestamp"].duplicated().any()
-        or not result["timestamp"].is_monotonic_increasing
-    ):
+    result = pd.DataFrame({"timestamp": pd.to_datetime(raw_timestamp, utc=True, errors="raise")})
+    if result["timestamp"].duplicated().any() or not result["timestamp"].is_monotonic_increasing:
         raise ValueError("timestamps must be unique and strictly increasing")
     if len(result) > 1:
         cadence = result["timestamp"].diff().iloc[1:]
@@ -235,9 +228,7 @@ def compact_scenario(metrics: dict[str, Any], *, baseline: bool = False) -> dict
         "total_return": metrics["total_return"],
         "sharpe": metrics["sharpe"],
         "max_drawdown": metrics["max_drawdown"],
-        "annualized_mean_95pct_lower": metrics["bootstrap_95pct"][
-            "annualized_arithmetic_mean"
-        ][0],
+        "annualized_mean_95pct_lower": metrics["bootstrap_95pct"]["annualized_arithmetic_mean"][0],
         "sharpe_95pct_lower": metrics["bootstrap_95pct"]["sharpe"][0],
         "passes_delay_gate": metrics["passes_delay_gate"],
         "failed_checks": metrics["failed_checks"],
@@ -255,9 +246,7 @@ def compact_scenario(metrics: dict[str, Any], *, baseline: bool = False) -> dict
 
 def analyze_market(frame: pd.DataFrame, *, seed: int) -> dict[str, Any]:
     scenario_specs = [(1, BASELINE_FEE_BPS)] + [
-        (delay, cost)
-        for delay in LIVE_CRITICAL_DELAYS
-        for cost in ALL_IN_COSTS_BPS
+        (delay, cost) for delay in LIVE_CRITICAL_DELAYS for cost in ALL_IN_COSTS_BPS
     ]
     scenario_frames = {
         scenario_name(delay, cost): build_delayed_returns(
@@ -286,9 +275,7 @@ def analyze_market(frame: pd.DataFrame, *, seed: int) -> dict[str, Any]:
             "positive_point_total_return": metrics["total_return"] > 0.0,
             "positive_point_sharpe": metrics["sharpe"] > 0.0,
             "max_drawdown_floor": metrics["max_drawdown"] >= MAX_DRAWDOWN_FLOOR,
-            "positive_mean_lower_bound": (
-                intervals[name]["annualized_arithmetic_mean"][0] > 0.0
-            ),
+            "positive_mean_lower_bound": (intervals[name]["annualized_arithmetic_mean"][0] > 0.0),
             "positive_sharpe_lower_bound": intervals[name]["sharpe"][0] > 0.0,
         }
         scenario_passes = all(checks.values()) if live_critical else None
@@ -304,9 +291,7 @@ def analyze_market(frame: pd.DataFrame, *, seed: int) -> dict[str, Any]:
         )
         scenarios[name] = metrics
         if live_critical and not scenario_passes:
-            failed_scenarios.append(
-                {"scenario": name, "failed_checks": metrics["failed_checks"]}
-            )
+            failed_scenarios.append({"scenario": name, "failed_checks": metrics["failed_checks"]})
 
     return {
         "baseline_5bps": compact_scenario(
@@ -378,8 +363,7 @@ def analyze_artifact(artifact_dir: Path) -> dict[str, Any]:
         "candidate_accounting": {
             "strategy_candidates_searched": 1,
             "stress_scenarios_per_market": len(LIVE_CRITICAL_DELAYS) * len(ALL_IN_COSTS_BPS),
-            "live_critical_scenarios_per_market": len(LIVE_CRITICAL_DELAYS)
-            * len(ALL_IN_COSTS_BPS),
+            "live_critical_scenarios_per_market": len(LIVE_CRITICAL_DELAYS) * len(ALL_IN_COSTS_BPS),
             "passed": 1 if delay_gate_passes else 0,
             "rejected": 0 if delay_gate_passes else 1,
         },
