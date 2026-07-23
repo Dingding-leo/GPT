@@ -16,6 +16,7 @@ _RESPONSE_PATH = _FIXTURE_DIR / "response.json"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
 _EXPECTED_RESPONSE_SHA256 = "7d12a351f8f51320d1c8beee0063557e1c90388d66ac63412bf66ca544aeb3e3"
 _INSTRUMENT_SNAPSHOT_SHA256 = "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"
+_BASE_URL = "https://www.okx.com"
 
 
 def _fixture_response() -> bytes:
@@ -38,7 +39,7 @@ def _observation():
     return fetch_okx_top_of_book(
         instrument_id="BTC-USDT",
         instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
-        base_url="https://example.test",
+        base_url=_BASE_URL,
         maximum_quote_age_ms=200,
         get_bytes=lambda url, timeout: _fixture_response(),
         get_json=lambda url, timeout: {
@@ -112,12 +113,21 @@ def test_top_of_book_replay_rejects_weakened_policy_and_altered_identity() -> No
         ReconstructableOKXTopOfBookEvidence.from_json_bytes(_serialized(altered_id))
 
 
+def test_top_of_book_replay_rejects_untrusted_origin() -> None:
+    evidence = ReconstructableOKXTopOfBookEvidence(observation=_observation())
+    payload = _canonical_payload(evidence)
+    payload["base_url"] = "https://169.254.169.254"
+
+    with pytest.raises(ValueError, match="trusted public OKX HTTPS origin"):
+        ReconstructableOKXTopOfBookEvidence.from_json_bytes(_serialized(payload))
+
+
 def test_top_of_book_replay_rejects_duplicate_and_noncanonical_json() -> None:
     evidence = ReconstructableOKXTopOfBookEvidence(observation=_observation())
     canonical = evidence.to_json_bytes()
     duplicate = canonical.replace(
         b'{"base_url":',
-        b'{"base_url":"https://example.test","base_url":',
+        b'{"base_url":"https://www.okx.com","base_url":',
         1,
     )
     with pytest.raises(ValueError, match="duplicate field 'base_url'"):
