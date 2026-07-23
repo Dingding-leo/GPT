@@ -4,35 +4,79 @@ import pandas as pd
 import pytest
 
 import gpt_quant.walk_forward as walk_forward
-from gpt_quant import StrategyConfig, run_walk_forward_research
+from gpt_quant import StrategyConfig, WalkForwardResult, run_walk_forward_research
+
+_SELECTION_BARS = 300
+_TEST_BARS = 100
+_LOOKBACK_DIMENSIONS = ("momentum", "reversal", "volatility")
 
 
-@pytest.mark.parametrize("reversal_lookback", [300, 301])
-def test_walk_forward_rejects_reversal_lookbacks_without_selection_warmup(
+def _run_boundary_candidate(
+    prices: pd.Series,
+    *,
+    dimension: str,
+    lookback: int,
+) -> WalkForwardResult:
+    base_config = StrategyConfig(
+        min_position=0.0,
+        transaction_cost_bps=10.0,
+        annualization=365,
+    )
+    momentum_lookbacks = [21]
+    reversal_lookbacks = [5]
+    if dimension == "momentum":
+        momentum_lookbacks = [lookback]
+    elif dimension == "reversal":
+        reversal_lookbacks = [lookback]
+    elif dimension == "volatility":
+        base_config = base_config.with_overrides(volatility_lookback=lookback)
+    else:
+        raise AssertionError(f"unsupported lookback dimension: {dimension}")
+
+    return run_walk_forward_research(
+        prices.iloc[: _SELECTION_BARS + _TEST_BARS],
+        base_config=base_config,
+        momentum_lookbacks=momentum_lookbacks,
+        reversal_lookbacks=reversal_lookbacks,
+        trend_weights=[0.7],
+        selection_bars=_SELECTION_BARS,
+        test_bars=_TEST_BARS,
+        cost_multipliers=[1.0, 2.0],
+    )
+
+
+@pytest.mark.parametrize("dimension", _LOOKBACK_DIMENSIONS)
+def test_walk_forward_rejects_lookback_without_delayed_selection_observation(
     btc_usdt_prices: pd.Series,
     monkeypatch: pytest.MonkeyPatch,
-    reversal_lookback: int,
+    dimension: str,
 ) -> None:
     def unexpected_backtest(*_args: object, **_kwargs: object) -> None:
-        pytest.fail("lookback validation must run before any candidate backtest")
+        pytest.fail("warmup validation must run before any candidate backtest")
 
     monkeypatch.setattr(walk_forward, "run_backtest", unexpected_backtest)
 
     with pytest.raises(
         ValueError,
-        match="selection_bars must exceed every candidate lookback",
+        match="at least one one-bar-delayed selection-window observation",
     ):
-        run_walk_forward_research(
-            btc_usdt_prices.iloc[:400],
-            base_config=StrategyConfig(
-                min_position=0.0,
-                transaction_cost_bps=10.0,
-                annualization=365,
-            ),
-            momentum_lookbacks=[21],
-            reversal_lookbacks=[reversal_lookback],
-            trend_weights=[0.7],
-            selection_bars=300,
-            test_bars=100,
-            cost_multipliers=[1.0, 2.0],
+        _run_boundary_candidate(
+            btc_usdt_prices,
+            dimension=dimension,
+            lookback=_SELECTION_BARS - 1,
         )
+
+
+@pytest.mark.parametrize("dimension", _LOOKBACK_DIMENSIONS)
+def test_walk_forward_accepts_last_executable_lookback_boundary(
+    btc_usdt_prices: pd.Series,
+    dimension: str,
+) -> None:
+    result = _run_boundary_candidate(
+        btc_usdt_prices,
+        dimension=dimension,
+        lookback=_SELECTION_BARS - 2,
+    )
+
+    assert len(result.folds) == 1
+    assert result.folds[0]["candidates_tested"] == 1
