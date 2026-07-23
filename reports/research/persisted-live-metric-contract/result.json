@@ -1,0 +1,202 @@
+{
+  "candidate_accounting": {
+    "passed": 1,
+    "rejected": 0,
+    "searched": 1
+  },
+  "canonical_signature": "canonical-5bps-path-derived-live-metrics-reconstructability-v1|markets=BTC-USDT,ETH-USDT|source=verified-persisted-walk-forward-csv-artifact-8574277655|fee=5bps-one-way|adjustment-threshold=1e-12|episode=contiguous-abs-position-above-threshold|completed-episode-return=entry-through-first-cash-bar-including-exit-fee|calendar=compounded-net-return-with-partial-first-last-labels|claim=all-issue306-path-derived-metrics-reconstructable-in-both-markets|candidate_count=1",
+  "definitions": {
+    "adjustment_threshold": 1e-12,
+    "bar_hit_rate": "positive share among nonzero net-return bars",
+    "calendar_return": "compounded net daily return with incomplete periods labelled partial",
+    "completed_episode_return": "compounded net return from first active bar through first subsequent cash bar, including entry and exit fee",
+    "holding_duration": "active-position bars only",
+    "holding_episode": "contiguous bars with absolute executed position above threshold",
+    "profit_factor": "sum positive completed-episode returns divided by absolute sum negative completed-episode returns; null when there are no losing completed episodes",
+    "underwater_duration": "consecutive daily OOS observations below the running peak"
+  },
+  "hypothesis": "The canonical 5 bps persisted CSV contains sufficient evidence to independently reconstruct every path-derived live-readiness metric required by issue #306.",
+  "hypothesis_passes": true,
+  "limitations": [
+    "Production JSON and Markdown still do not persist the complete metric contract.",
+    "Episodes are research constructs rather than exchange order or fill records.",
+    "BTC-USDT and ETH-USDT remain development markets.",
+    "Spread, slippage, impact, latency, capacity and prospective evidence are absent."
+  ],
+  "live_eligible": false,
+  "live_gate_status": {
+    "benchmark_relative_risk_adjusted": "fail",
+    "capacity": "blocked",
+    "corrected_5bps_full_reselection": "pass",
+    "execution_delay_robustness": "fail",
+    "fold_stability": "fail",
+    "formal_persisted_metric_contract": "fail",
+    "parameter_neighbourhood_stability": "pass",
+    "path_derived_metric_reconstructability": "pass",
+    "prospective_forward_validation": "blocked",
+    "separate_spread_slippage_impact_latency": "blocked",
+    "tail_risk": "pass",
+    "turnover_and_5_7_5_10_15bps_viability": "pass",
+    "untouched_market_validation": "blocked",
+    "year_stability": "fail"
+  },
+  "markets": {
+    "BTC-USDT": {
+      "aggregate_metrics_reconciled": true,
+      "all_required_path_metrics_reconstructable": true,
+      "benchmark_relative_risk_adjusted_passes": false,
+      "complete_year_stability_passes": false,
+      "fifteen_bps_selected_path_viable": true,
+      "fold_stability_passes": false,
+      "hashes": {
+        "report": "96d399156dcd0cb9eb81f0de69502f6bf9bcd114fc8e6c39efb5d561ad49e2a1",
+        "returns": "04a0a5257d1e20f1eb88c70b8a0b010d21f0dc35ccb657ba39f14189e9f20790"
+      },
+      "headline_5bps_metrics": {
+        "annualized_turnover": 16.425319286678082,
+        "calmar": 0.5100604649374121,
+        "fold_count": 27,
+        "max_drawdown": -0.28406667926943896,
+        "net_cagr": 0.14489118250139676,
+        "net_total_return": 1.4209166759944116,
+        "profitable_folds": 12,
+        "sharpe": 0.7067199135624009,
+        "sortino": 1.0868167004256746
+      },
+      "missing_path_metrics": [],
+      "path_metrics": {
+        "annualized_position_adjustment_count": 201.40041928721175,
+        "average_absolute_exposure": 0.26136902767943837,
+        "average_holding_duration_bars": 17.535211267605632,
+        "bar_hit_rate_nonzero_net_return": 0.4749240121580547,
+        "completed_holding_episode_count": 71,
+        "completed_holding_episode_profit_factor": 2.229830817676069,
+        "current_absolute_exposure": 0.0,
+        "current_drawdown": -0.20463625874944646,
+        "current_underwater_duration_bars": 582,
+        "episode_return_includes_exit_fee": true,
+        "evaluation_end": "2026-07-22T00:00:00+00:00",
+        "evaluation_start": "2020-01-11T00:00:00+00:00",
+        "flat_months": 15,
+        "flat_years": 0,
+        "holding_episode_count": 71,
+        "holding_episode_win_rate": 0.38028169014084506,
+        "longest_underwater_duration_bars": 784,
+        "losing_months": 35,
+        "losing_years": 3,
+        "maximum_absolute_exposure": 0.9847155347433925,
+        "maximum_drawdown": -0.28406667926943896,
+        "maximum_holding_duration_bars": 149,
+        "median_holding_duration_bars": 4.0,
+        "observations": 2385,
+        "open_holding_episode_count": 0,
+        "partial_month_labels": [
+          "2020-01",
+          "2026-07"
+        ],
+        "partial_year_labels": [
+          "2020",
+          "2026"
+        ],
+        "position_adjustment_count": 1316,
+        "position_adjustment_threshold": 1e-12,
+        "profit_factor_status": "finite",
+        "profitable_months": 29,
+        "profitable_years": 4,
+        "total_absolute_turnover": 107.3270862978828
+      },
+      "year_records": [
+        {"net_return": 0.3336278624589004, "partial": true, "period": "2020"},
+        {"net_return": 0.3754861972484571, "partial": false, "period": "2021"},
+        {"net_return": -0.21238877857066762, "partial": false, "period": "2022"},
+        {"net_return": 0.27896263310448677, "partial": false, "period": "2023"},
+        {"net_return": 0.5109208356249686, "partial": false, "period": "2024"},
+        {"net_return": -0.037209230563644, "partial": false, "period": "2025"},
+        {"net_return": -0.09937174912078883, "partial": true, "period": "2026"}
+      ]
+    },
+    "ETH-USDT": {
+      "aggregate_metrics_reconciled": true,
+      "all_required_path_metrics_reconstructable": true,
+      "benchmark_relative_risk_adjusted_passes": false,
+      "complete_year_stability_passes": false,
+      "fifteen_bps_selected_path_viable": true,
+      "fold_stability_passes": true,
+      "hashes": {
+        "report": "8418fb845b9f1c9119dcf39d8352ab1ff293af055ad8484700d13d4d7840c1ee",
+        "returns": "4b69db4a44644a5f830e1518aca93356c0eeacf502dc00ba990bd992b9bd387f"
+      },
+      "headline_5bps_metrics": {
+        "annualized_turnover": 17.301474510838442,
+        "calmar": 0.41366169610346815,
+        "fold_count": 27,
+        "max_drawdown": -0.291805680958381,
+        "net_cagr": 0.12070883291787138,
+        "net_total_return": 1.1057078943260983,
+        "profitable_folds": 17,
+        "sharpe": 0.5794669646974057,
+        "sortino": 0.8518351446613307
+      },
+      "missing_path_metrics": [],
+      "path_metrics": {
+        "annualized_position_adjustment_count": 216.70440251572327,
+        "average_absolute_exposure": 0.21217457317120852,
+        "average_holding_duration_bars": 13.608247422680412,
+        "bar_hit_rate_nonzero_net_return": 0.4872881355932203,
+        "completed_holding_episode_count": 96,
+        "completed_holding_episode_profit_factor": 2.008162603363473,
+        "current_absolute_exposure": 0.6108428047756704,
+        "current_drawdown": -0.20870171144078042,
+        "current_underwater_duration_bars": 343,
+        "episode_return_includes_exit_fee": true,
+        "evaluation_end": "2026-07-22T00:00:00+00:00",
+        "evaluation_start": "2020-01-11T00:00:00+00:00",
+        "flat_months": 17,
+        "flat_years": 0,
+        "holding_episode_count": 97,
+        "holding_episode_win_rate": 0.5625,
+        "longest_underwater_duration_bars": 792,
+        "losing_months": 29,
+        "losing_years": 3,
+        "maximum_absolute_exposure": 0.9567346874163711,
+        "maximum_drawdown": -0.291805680958381,
+        "maximum_holding_duration_bars": 84,
+        "median_holding_duration_bars": 3.0,
+        "observations": 2385,
+        "open_holding_episode_count": 1,
+        "partial_month_labels": [
+          "2020-01",
+          "2026-07"
+        ],
+        "partial_year_labels": [
+          "2020",
+          "2026"
+        ],
+        "position_adjustment_count": 1416,
+        "position_adjustment_threshold": 1e-12,
+        "profit_factor_status": "finite",
+        "profitable_months": 33,
+        "profitable_years": 4,
+        "total_absolute_turnover": 113.05210057082107
+      },
+      "year_records": [
+        {"net_return": 0.15672875157719335, "partial": true, "period": "2020"},
+        {"net_return": 0.6620575440078793, "partial": false, "period": "2021"},
+        {"net_return": -0.09136741228380674, "partial": false, "period": "2022"},
+        {"net_return": 0.19491368831377387, "partial": false, "period": "2023"},
+        {"net_return": -0.1890308277438807, "partial": false, "period": "2024"},
+        {"net_return": 0.39418120120184885, "partial": false, "period": "2025"},
+        {"net_return": -0.10777964672194573, "partial": true, "period": "2026"}
+      ]
+    }
+  },
+  "source": {
+    "artifact_id": 8574277655,
+    "artifact_name": "quant-research-source-2350-attempt-1",
+    "artifact_sha256": "c80382a4f310828d1bba27f8cbecd41379d379d7dd1f3244434fb57f4d574c72",
+    "current_main_commit": "82bd124f49b0d183ce723303b114bbe934b10cb6",
+    "source_code_commit": "ce3eae5c0eeb663e87f523c9fe540b33638515eb",
+    "workflow_run_id": 30033465689
+  },
+  "verdict": "supported"
+}
