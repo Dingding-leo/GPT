@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from math import isfinite
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from .execution_quote import ExecutionQuoteSnapshot
@@ -240,9 +240,45 @@ def _default_raw_bytes_getter(url: str, timeout: float) -> bytes:
 
 
 def _required_base_url(value: object) -> str:
+    error = "base_url must be a trusted public OKX HTTPS origin"
     if not isinstance(value, str) or not value or any(character.isspace() for character in value):
-        raise ValueError("base_url must be a non-empty URL without whitespace")
-    return value.rstrip("/")
+        raise ValueError(error)
+
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError(error) from exc
+
+    hostname = parsed.hostname
+    if (
+        parsed.scheme.lower() != "https"
+        or parsed.username is not None
+        or parsed.password is not None
+        or port is not None
+        or hostname is None
+        or not hostname.isascii()
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+    ):
+        raise ValueError(error)
+
+    normalized_hostname = hostname.lower()
+    labels = normalized_hostname.split(".")
+    if any(
+        not label
+        or len(label) > 63
+        or label.startswith("-")
+        or label.endswith("-")
+        or any(character not in "abcdefghijklmnopqrstuvwxyz0123456789-" for character in label)
+        for label in labels
+    ):
+        raise ValueError(error)
+    if normalized_hostname != "okx.com" and not normalized_hostname.endswith(".okx.com"):
+        raise ValueError(error)
+
+    return f"https://{normalized_hostname}"
 
 
 def _required_utc_datetime(value: object, *, field: str) -> datetime:
