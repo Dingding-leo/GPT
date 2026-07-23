@@ -71,9 +71,9 @@ def _cached_backtest_selected_position_paths(
     indexed = persisted.copy()
     indexed.index = persisted_index
     indexed["fold"] = fold_values.to_numpy(dtype=int, copy=False)
-    indexed["target_position"] = verify_gate._numeric(
-        persisted, "target_position"
-    ).to_numpy(copy=False)
+    indexed["target_position"] = verify_gate._numeric(persisted, "target_position").to_numpy(
+        copy=False
+    )
     indexed["position"] = verify_gate._numeric(persisted, "position").to_numpy(copy=False)
 
     expected_fold_ids: list[int] = []
