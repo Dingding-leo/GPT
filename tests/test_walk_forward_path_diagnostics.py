@@ -76,9 +76,10 @@ def test_report_persists_recomputable_position_path_diagnostics(
         abs(result.combined_frame["position"].iloc[-1]),
         abs=1e-12,
     )
-    assert expected["completed_holding_episode_count"] + expected[
-        "open_holding_episode_count"
-    ] == expected["holding_episode_count"]
+    assert (
+        expected["completed_holding_episode_count"] + expected["open_holding_episode_count"]
+        == expected["holding_episode_count"]
+    )
 
     markdown = paths["markdown"].read_text(encoding="utf-8")
     assert "## Position-path diagnostics" in markdown
