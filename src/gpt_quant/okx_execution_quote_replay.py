@@ -12,7 +12,7 @@ from math import isfinite
 from .execution_quote import ExecutionQuoteSnapshot
 from .okx_execution_quote import OKXTopOfBookObservation
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 _DECIMAL_PATTERN = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 _PAYLOAD_KEYS = {
@@ -32,6 +32,8 @@ _PAYLOAD_KEYS = {
     "max_server_round_trip_seconds",
     "max_abs_midpoint_clock_skew_seconds",
     "maximum_quote_age_ms",
+    "raw_server_time_response_json_utf8",
+    "server_time_response_sha256",
     "raw_response_json_utf8",
     "quote",
 }
@@ -167,6 +169,10 @@ class ReconstructableOKXTopOfBookEvidence:
                 field_name="max_abs_midpoint_clock_skew_seconds",
             ),
             "maximum_quote_age_ms": observation.maximum_quote_age_ms,
+            "raw_server_time_response_json_utf8": (
+                observation.raw_server_time_response_json.decode("utf-8")
+            ),
+            "server_time_response_sha256": observation.server_time_response_sha256,
             "raw_response_json_utf8": observation.raw_response_json.decode("utf-8"),
             "quote": observation.quote.to_dict(),
         }
@@ -189,6 +195,17 @@ class ReconstructableOKXTopOfBookEvidence:
             raise ValueError("OKX quote replay fields do not match schema")
         if payload["schema_version"] != _SCHEMA_VERSION:
             raise ValueError("unsupported OKX quote replay schema")
+        raw_server_time_response = payload["raw_server_time_response_json_utf8"]
+        if not isinstance(raw_server_time_response, str):
+            raise ValueError("raw_server_time_response_json_utf8 must be UTF-8 text")
+        server_time_response_sha256 = payload["server_time_response_sha256"]
+        if (
+            not isinstance(server_time_response_sha256, str)
+            or _SHA256_PATTERN.fullmatch(server_time_response_sha256) is None
+            or hashlib.sha256(raw_server_time_response.encode("utf-8")).hexdigest()
+            != server_time_response_sha256
+        ):
+            raise ValueError("OKX public-time response SHA-256 does not match its bytes")
         raw_response = payload["raw_response_json_utf8"]
         if not isinstance(raw_response, str):
             raise ValueError("raw_response_json_utf8 must be UTF-8 text")
@@ -240,6 +257,7 @@ class ReconstructableOKXTopOfBookEvidence:
                 field_name="max_abs_midpoint_clock_skew_seconds",
             ),
             maximum_quote_age_ms=payload["maximum_quote_age_ms"],
+            raw_server_time_response_json=raw_server_time_response.encode("utf-8"),
             raw_response_json=raw_response.encode("utf-8"),
             quote=ExecutionQuoteSnapshot.from_mapping(payload["quote"]),
         )
