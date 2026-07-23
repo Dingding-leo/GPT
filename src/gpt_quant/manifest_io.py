@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -24,20 +25,43 @@ def _canonical_jsonl(entries: list[Mapping[str, Any]]) -> bytes:
     )
 
 
+def _write_manifest_atomic(path: Path, payload: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=path.parent,
+            prefix=f".{path.name}.tmp-",
+            delete=False,
+        ) as handle:
+            temporary = Path(handle.name)
+            handle.write(payload)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        _fsync_directory(path.parent)
+        temporary = None
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+
+
 def append_experiment_manifest(
     path: str | Path,
     entry: Mapping[str, Any],
 ) -> tuple[Path, bool]:
-    """Append one validated canonical manifest record with idempotent run IDs."""
+    """Atomically append one validated canonical record with idempotent run IDs."""
 
     validated_entry = validate_manifest_entry(entry)
     output = Path(path)
     with _registry_lock(output):
-        created = not output.exists()
         existing_entries: list[dict[str, Any]] = []
-        if not created:
+        existing_payload = b""
+        if output.exists():
             existing_entries = load_manifest_entries(output)
-            if output.read_bytes() != _canonical_jsonl(existing_entries):
+            existing_payload = output.read_bytes()
+            if existing_payload != _canonical_jsonl(existing_entries):
                 raise ValueError(f"{output} is not canonical JSONL")
 
         run_id = validated_entry["run_id"]
@@ -48,11 +72,6 @@ def append_experiment_manifest(
                 raise ValueError(f"manifest run_id collision for {run_id}")
             return output, False
 
-        output.parent.mkdir(parents=True, exist_ok=True)
-        with output.open("ab") as handle:
-            handle.write(_canonical_jsonl([validated_entry]))
-            handle.flush()
-            os.fsync(handle.fileno())
-        if created:
-            _fsync_directory(output.parent)
+        payload = existing_payload + _canonical_jsonl([validated_entry])
+        _write_manifest_atomic(output, payload)
         return output, True
