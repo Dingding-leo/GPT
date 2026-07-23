@@ -12,16 +12,12 @@ import pandas as pd
 import pytest
 
 _ROOT = Path(__file__).parents[1]
-_ANALYSIS_PATH = (
-    _ROOT / "reports/research/expected-shortfall-vs-buy-and-hold/analysis.py"
-)
+_ANALYSIS_PATH = _ROOT / "reports/research/expected-shortfall-vs-buy-and-hold/analysis.py"
 _RESULT_PATH = _ANALYSIS_PATH.with_name("result.json")
 _FIXTURE_PATH = _ROOT / "tests/fixtures/okx_btc_usdt_oos_returns_20200111_20200219.csv"
 _METADATA_PATH = _FIXTURE_PATH.with_suffix(".metadata.json")
 
-_SPEC = importlib.util.spec_from_file_location(
-    "expected_shortfall_analysis", _ANALYSIS_PATH
-)
+_SPEC = importlib.util.spec_from_file_location("expected_shortfall_analysis", _ANALYSIS_PATH)
 assert _SPEC is not None and _SPEC.loader is not None
 _ANALYSIS = importlib.util.module_from_spec(_SPEC)
 _SPEC.loader.exec_module(_ANALYSIS)
@@ -29,10 +25,7 @@ _SPEC.loader.exec_module(_ANALYSIS)
 
 def _fixture() -> pd.DataFrame:
     metadata = json.loads(_METADATA_PATH.read_text(encoding="utf-8"))
-    assert (
-        hashlib.sha256(_FIXTURE_PATH.read_bytes()).hexdigest()
-        == metadata["fixture_sha256"]
-    )
+    assert hashlib.sha256(_FIXTURE_PATH.read_bytes()).hexdigest() == metadata["fixture_sha256"]
     frame = pd.read_csv(_FIXTURE_PATH)
     assert len(frame) == metadata["rows"]
     assert frame["timestamp"].iloc[0] == metadata["start"]
@@ -105,14 +98,10 @@ def test_artifact_hash_mismatch_fails_before_analysis_or_output(
     for market in _ANALYSIS.MARKETS:
         market_dir = artifact_dir / market
         market_dir.mkdir(parents=True)
-        (market_dir / "walk_forward_returns.csv").write_bytes(
-            _FIXTURE_PATH.read_bytes()
-        )
+        (market_dir / "walk_forward_returns.csv").write_bytes(_FIXTURE_PATH.read_bytes())
 
     altered = _fixture().copy()
-    altered.loc[0, "strategy_return"] = (
-        float(altered.loc[0, "strategy_return"]) + 0.0001
-    )
+    altered.loc[0, "strategy_return"] = float(altered.loc[0, "strategy_return"]) + 0.0001
     altered.to_csv(artifact_dir / "BTC-USDT" / "walk_forward_returns.csv", index=False)
 
     monkeypatch.setattr(
@@ -124,9 +113,7 @@ def test_artifact_hash_mismatch_fails_before_analysis_or_output(
     def fail_if_analyzed(*args: object, **kwargs: object) -> dict[str, float]:
         raise AssertionError("hash verification must happen before analysis")
 
-    monkeypatch.setattr(
-        _ANALYSIS, "bootstrap_expected_shortfall_delta", fail_if_analyzed
-    )
+    monkeypatch.setattr(_ANALYSIS, "bootstrap_expected_shortfall_delta", fail_if_analyzed)
     output = tmp_path / "result" / "result.json"
     monkeypatch.setattr(
         _ANALYSIS,
