@@ -240,8 +240,9 @@ def _path_diagnostics(
         "completed_holding_episode_count": completed_episodes,
         "open_holding_episode_count": open_episodes,
         "holding_duration_basis": (
-            "active_bars; open episode truncated at evaluation_end; "
-            "completed episode PnL includes the first cash bar exit fee"
+            "abs(position) > active_position_threshold; open episode truncated at "
+            "evaluation_end; completed episode PnL includes the first inactive bar "
+            "so transition cost is included"
         ),
         "average_holding_duration_bars": average_holding_bars,
         "median_holding_duration_bars": median_holding_bars,
