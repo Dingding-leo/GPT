@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
-from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
 
 import pandas as pd
 import pytest
@@ -17,11 +15,11 @@ from gpt_quant.okx_live import OKXServerTimeSample
 _FIXTURE_DIR = Path(__file__).parent / "fixtures/okx/public_instruments_btc_usdt_20251125"
 
 
-def _real_okx_payload() -> dict[str, Any]:
+def _real_okx_response_bytes() -> bytes:
     metadata = json.loads((_FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8"))
     response_bytes = (_FIXTURE_DIR / "response.json").read_bytes()
     assert hashlib.sha256(response_bytes).hexdigest() == metadata["fixture_sha256"]
-    return json.loads(response_bytes)
+    return response_bytes
 
 
 def _clock(*values: datetime):
@@ -47,7 +45,7 @@ def _snapshot(started: datetime):
     return fetch_okx_spot_instrument_snapshot(
         inst_id="BTC-USDT",
         server_time_sample=sample,
-        get_json=lambda _url, _timeout: deepcopy(_real_okx_payload()),
+        get_bytes=lambda _url, _timeout: _real_okx_response_bytes(),
         now=_clock(started, received),
     )
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from copy import deepcopy
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -19,11 +19,19 @@ from gpt_quant.okx_live import OKXServerTimeSample
 _FIXTURE_DIR = Path(__file__).parent / "fixtures/okx/public_instruments_btc_usdt_20251125"
 
 
-def _real_okx_payload() -> dict[str, Any]:
+def _real_okx_response_bytes() -> bytes:
     metadata = json.loads((_FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8"))
     response_bytes = (_FIXTURE_DIR / "response.json").read_bytes()
     assert hashlib.sha256(response_bytes).hexdigest() == metadata["fixture_sha256"]
-    return json.loads(response_bytes)
+    return response_bytes
+
+
+def _real_okx_payload() -> dict[str, Any]:
+    return json.loads(_real_okx_response_bytes())
+
+
+def _response_bytes(payload: dict[str, Any]) -> bytes:
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
 
 
 def _clock(*values: datetime):
@@ -52,19 +60,31 @@ def _server_time_sample(
     )
 
 
-def _snapshot(payload: dict[str, Any] | None = None):
+def _snapshot(
+    payload: dict[str, Any] | None = None,
+    *,
+    response_bytes: bytes | None = None,
+):
     started = datetime(2026, 7, 24, 0, 0, tzinfo=UTC)
     received = started + timedelta(milliseconds=125)
     requests: list[tuple[str, float]] = []
 
-    def get_json(url: str, timeout: float):
+    raw_response = (
+        response_bytes
+        if response_bytes is not None
+        else _response_bytes(payload)
+        if payload is not None
+        else _real_okx_response_bytes()
+    )
+
+    def get_bytes(url: str, timeout: float):
         requests.append((url, timeout))
-        return deepcopy(payload or _real_okx_payload())
+        return raw_response
 
     snapshot = fetch_okx_spot_instrument_snapshot(
         inst_id="BTC-USDT",
         server_time_sample=_server_time_sample(instrument_received=received),
-        get_json=get_json,
+        get_bytes=get_bytes,
         now=_clock(started, received),
     )
     return snapshot, requests
@@ -83,6 +103,11 @@ def test_real_okx_spot_constraints_are_exact_and_hash_bound(tmp_path: Path) -> N
     assert snapshot.tick_size == "0.1"
     assert snapshot.lot_size == "0.00000001"
     assert snapshot.minimum_order_size_base == "0.00001"
+    assert snapshot.raw_response_json == _real_okx_response_bytes()
+    assert (
+        snapshot.raw_response_sha256
+        == "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"
+    )
     assert snapshot.tick_size_decimal.is_finite()
     assert snapshot.valid_until_utc is None
     assert snapshot.exchange_observed_at_utc > snapshot.response_received_utc
@@ -97,6 +122,32 @@ def test_real_okx_spot_constraints_are_exact_and_hash_bound(tmp_path: Path) -> N
     assert "minimum quote notional" in metadata["limitations"][0]
 
     assert write_okx_spot_instrument_snapshot(snapshot, tmp_path) == paths
+
+
+def test_snapshot_fields_are_replayed_from_exact_provider_bytes() -> None:
+    snapshot, _ = _snapshot()
+
+    with pytest.raises(
+        ValueError,
+        match="tick_size does not match the exact OKX instrument response",
+    ):
+        replace(snapshot, tick_size="999999")
+
+
+def test_duplicate_constraint_field_is_rejected_before_snapshot_creation() -> None:
+    response_bytes = _real_okx_response_bytes()
+    conflicting_response = response_bytes.replace(
+        b'"tickSz":"0.1"',
+        b'"tickSz":"999999","tickSz":"0.1"',
+        1,
+    )
+    assert conflicting_response != response_bytes
+    assert hashlib.sha256(conflicting_response).hexdigest() != hashlib.sha256(
+        response_bytes
+    ).hexdigest()
+
+    with pytest.raises(ValueError, match="duplicate field 'tickSz'"):
+        _snapshot(response_bytes=conflicting_response)
 
 
 def test_non_live_or_invalid_constraints_fail_closed() -> None:
@@ -137,7 +188,7 @@ def test_exchange_time_rejects_locally_future_but_already_effective_change() -> 
         fetch_okx_spot_instrument_snapshot(
             inst_id="BTC-USDT",
             server_time_sample=sample,
-            get_json=lambda _url, _timeout: deepcopy(payload),
+            get_bytes=lambda _url, _timeout: _response_bytes(payload),
             now=_clock(started, received),
         )
 
@@ -150,7 +201,7 @@ def test_server_time_must_follow_response_and_match_base_url() -> None:
         fetch_okx_spot_instrument_snapshot(
             inst_id="BTC-USDT",
             server_time_sample=sample,
-            get_json=lambda _url, _timeout: _real_okx_payload(),
+            get_bytes=lambda _url, _timeout: _real_okx_response_bytes(),
             now=_clock(started, received),
         )
 
@@ -162,7 +213,7 @@ def test_server_time_must_follow_response_and_match_base_url() -> None:
         fetch_okx_spot_instrument_snapshot(
             inst_id="BTC-USDT",
             server_time_sample=wrong_base,
-            get_json=lambda _url, _timeout: _real_okx_payload(),
+            get_bytes=lambda _url, _timeout: _real_okx_response_bytes(),
             now=_clock(started, received),
         )
 

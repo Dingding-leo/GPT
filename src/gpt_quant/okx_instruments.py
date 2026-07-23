@@ -10,12 +10,14 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
-from .okx import JSONGetter, _default_json_getter
 from .okx_live import OKXServerTimeSample, _validated_server_time_sample
 
+RawBytesGetter = Callable[[str, float], bytes]
 Clock = Callable[[], datetime]
 _ENDPOINT = "/api/v5/public/instruments"
+_MAX_RESPONSE_BYTES = 1_000_000
 _SCHEMA_VERSION = 1
 _SUPPORTED_UPCOMING_FIELDS = frozenset({"tickSz", "minSz", "maxMktSz"})
 
@@ -32,6 +34,22 @@ class OKXUpcomingInstrumentChange:
             "new_value": self.new_value,
             "effective_at_utc": _format_utc(self.effective_at_utc),
         }
+
+
+@dataclass(frozen=True, slots=True)
+class _ParsedSpotInstrument:
+    instrument_id: str
+    base_currency: str
+    quote_currency: str
+    state: str
+    tick_size: str
+    lot_size: str
+    minimum_order_size_base: str
+    listed_at_utc: datetime | None
+    continuous_trading_started_at_utc: datetime | None
+    expires_at_utc: datetime | None
+    valid_until_utc: datetime | None
+    upcoming_changes: tuple[OKXUpcomingInstrumentChange, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -60,6 +78,38 @@ class OKXSpotInstrumentSnapshot:
     valid_until_utc: datetime | None
     upcoming_changes: tuple[OKXUpcomingInstrumentChange, ...]
     raw_response_json: bytes
+
+    def __post_init__(self) -> None:
+        raw_response = _required_raw_response(self.raw_response_json)
+        object.__setattr__(self, "raw_response_json", raw_response)
+        observed_at = _required_utc_datetime(
+            self.exchange_observed_at_utc,
+            field="exchange_observed_at_utc",
+        )
+        object.__setattr__(self, "exchange_observed_at_utc", observed_at)
+        replayed = _parse_spot_instrument_response(
+            raw_response,
+            inst_id=self.instrument_id,
+            observed_at=observed_at,
+        )
+        for field_name in (
+            "instrument_id",
+            "base_currency",
+            "quote_currency",
+            "state",
+            "tick_size",
+            "lot_size",
+            "minimum_order_size_base",
+            "listed_at_utc",
+            "continuous_trading_started_at_utc",
+            "expires_at_utc",
+            "valid_until_utc",
+            "upcoming_changes",
+        ):
+            if getattr(self, field_name) != getattr(replayed, field_name):
+                raise ValueError(
+                    f"{field_name} does not match the exact OKX instrument response"
+                )
 
     @property
     def tick_size_decimal(self) -> Decimal:
@@ -125,6 +175,50 @@ class OKXSpotInstrumentSnapshot:
     @property
     def metadata_sha256(self) -> str:
         return hashlib.sha256(self.metadata_bytes()).hexdigest()
+
+
+def _default_raw_bytes_getter(url: str, timeout: float) -> bytes:
+    request = Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "gpt-quant-lab/0.2 (+https://github.com/Dingding-leo/GPT)",
+        },
+    )
+    with urlopen(request, timeout=timeout) as response:  # noqa: S310
+        payload = response.read(_MAX_RESPONSE_BYTES + 1)
+    if len(payload) > _MAX_RESPONSE_BYTES:
+        raise RuntimeError("OKX instrument response exceeds the configured safety limit")
+    return payload
+
+
+def _required_raw_response(value: object) -> bytes:
+    if not isinstance(value, bytes) or not value or len(value) > _MAX_RESPONSE_BYTES:
+        raise ValueError("OKX instrument response must be non-empty bounded bytes")
+    try:
+        value.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("OKX instrument response must be UTF-8 JSON") from exc
+    return value
+
+
+def _reject_duplicate_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"OKX instrument JSON contains duplicate field {key!r}")
+        result[key] = value
+    return result
+
+
+def _parse_json_response(value: bytes) -> Mapping[str, object]:
+    try:
+        payload = json.loads(value.decode("utf-8"), object_pairs_hook=_reject_duplicate_fields)
+    except json.JSONDecodeError as exc:
+        raise ValueError("OKX instrument response is not valid JSON") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError("OKX instrument response must be a JSON object")
+    return payload
 
 
 def _current_utc_datetime() -> datetime:
@@ -231,68 +325,21 @@ def _validate_instrument_id(inst_id: str) -> tuple[str, str]:
     return parts[0], parts[1]
 
 
-def fetch_okx_spot_instrument_snapshot(
+def _parse_spot_instrument_response(
+    raw_response: bytes,
     *,
     inst_id: str,
-    base_url: str = "https://www.okx.com",
-    server_time_sample: OKXServerTimeSample,
-    timeout: float = 20.0,
-    max_server_round_trip_seconds: float = 2.0,
-    max_abs_midpoint_clock_skew_seconds: float = 5.0,
-    get_json: JSONGetter | None = None,
-    now: Clock | None = None,
-) -> OKXSpotInstrumentSnapshot:
-    """Fetch fail-closed spot sizing constraints from OKX's public endpoint."""
-
+    observed_at: datetime,
+) -> _ParsedSpotInstrument:
     expected_base, expected_quote = _validate_instrument_id(inst_id)
-    if (
-        not isinstance(base_url, str)
-        or not base_url
-        or any(character.isspace() for character in base_url)
-    ):
-        raise ValueError("base_url must be a non-empty URL without whitespace")
-    if timeout <= 0:
-        raise ValueError("timeout must be positive")
-    if max_server_round_trip_seconds <= 0:
-        raise ValueError("max_server_round_trip_seconds must be positive")
-    if max_abs_midpoint_clock_skew_seconds < 0:
-        raise ValueError("max_abs_midpoint_clock_skew_seconds cannot be negative")
-
-    normalized_base_url = base_url.rstrip("/")
-    endpoint = f"{normalized_base_url}{_ENDPOINT}"
-    query = urlencode({"instType": "SPOT", "instId": inst_id})
-    getter = get_json or _default_json_getter
-    clock = now or _current_utc_datetime
-
-    request_started = _required_utc_datetime(clock(), field="request start")
-    payload = dict(getter(f"{endpoint}?{query}", timeout))
-    response_received = _required_utc_datetime(clock(), field="response receipt")
-    if response_received < request_started:
-        raise ValueError("local clock moved backward during OKX instrument request")
-
-    (
-        server_request_started,
-        server_response_received,
-        exchange_observed_at,
-        server_round_trip_seconds,
-        midpoint_clock_skew_seconds,
-    ) = _validated_server_time_sample(
-        server_time_sample,
-        max_round_trip_seconds=max_server_round_trip_seconds,
-        max_abs_clock_skew_seconds=max_abs_midpoint_clock_skew_seconds,
-    )
-    if server_time_sample.base_url != normalized_base_url:
-        raise ValueError("OKX instrument and server-time observations must use the same base URL")
-    if server_request_started.to_pydatetime() < response_received:
-        raise ValueError("OKX server time must be sampled after the instrument response")
-    exchange_observed = exchange_observed_at.to_pydatetime()
-    server_response_received_at = server_response_received.to_pydatetime()
-
-    if str(payload.get("code", "")) != "0":
+    payload = _parse_json_response(_required_raw_response(raw_response))
+    if payload.get("code") != "0":
         raise RuntimeError(
-            f"OKX API error code={str(payload.get('code', ''))!r} "
-            f"message={str(payload.get('msg', ''))!r}"
+            f"OKX API error code={payload.get('code')!r} "
+            f"message={payload.get('msg')!r}"
         )
+    if not isinstance(payload.get("msg"), str):
+        raise ValueError("OKX instrument response message must be a string")
     data = payload.get("data")
     if not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], Mapping):
         raise RuntimeError("OKX instrument response must contain exactly one object")
@@ -323,30 +370,21 @@ def fetch_okx_spot_instrument_snapshot(
     )
     expires_at = _optional_unix_milliseconds(instrument.get("expTime"), field="expTime")
 
-    if listed_at is not None and listed_at > exchange_observed:
+    if listed_at is not None and listed_at > observed_at:
         raise ValueError("OKX live instrument has a future listing time")
-    if continuous_started is not None and continuous_started > exchange_observed:
+    if continuous_started is not None and continuous_started > observed_at:
         raise ValueError("OKX live instrument has not reached continuous trading")
-    if expires_at is not None and expires_at <= exchange_observed:
+    if expires_at is not None and expires_at <= observed_at:
         raise ValueError("OKX spot instrument is expired or offline")
 
     upcoming_changes, valid_until = _parse_upcoming_changes(
         instrument.get("upcChg"),
-        observed_at=exchange_observed,
+        observed_at=observed_at,
     )
     if expires_at is not None:
         valid_until = expires_at if valid_until is None else min(valid_until, expires_at)
 
-    return OKXSpotInstrumentSnapshot(
-        base_url=normalized_base_url,
-        request_started_utc=request_started,
-        response_received_utc=response_received,
-        exchange_observed_at_utc=exchange_observed,
-        server_time_response_received_utc=server_response_received_at,
-        server_round_trip_seconds=server_round_trip_seconds,
-        midpoint_clock_skew_seconds=midpoint_clock_skew_seconds,
-        max_server_round_trip_seconds=max_server_round_trip_seconds,
-        max_abs_midpoint_clock_skew_seconds=max_abs_midpoint_clock_skew_seconds,
+    return _ParsedSpotInstrument(
         instrument_id=instrument_id,
         base_currency=base_currency,
         quote_currency=quote_currency,
@@ -359,7 +397,95 @@ def fetch_okx_spot_instrument_snapshot(
         expires_at_utc=expires_at,
         valid_until_utc=valid_until,
         upcoming_changes=upcoming_changes,
-        raw_response_json=_canonical_json_bytes(payload),
+    )
+
+
+def fetch_okx_spot_instrument_snapshot(
+    *,
+    inst_id: str,
+    base_url: str = "https://www.okx.com",
+    server_time_sample: OKXServerTimeSample,
+    timeout: float = 20.0,
+    max_server_round_trip_seconds: float = 2.0,
+    max_abs_midpoint_clock_skew_seconds: float = 5.0,
+    get_bytes: RawBytesGetter | None = None,
+    now: Clock | None = None,
+) -> OKXSpotInstrumentSnapshot:
+    """Fetch fail-closed spot sizing constraints from OKX's public endpoint."""
+
+    _validate_instrument_id(inst_id)
+    if (
+        not isinstance(base_url, str)
+        or not base_url
+        or any(character.isspace() for character in base_url)
+    ):
+        raise ValueError("base_url must be a non-empty URL without whitespace")
+    if timeout <= 0:
+        raise ValueError("timeout must be positive")
+    if max_server_round_trip_seconds <= 0:
+        raise ValueError("max_server_round_trip_seconds must be positive")
+    if max_abs_midpoint_clock_skew_seconds < 0:
+        raise ValueError("max_abs_midpoint_clock_skew_seconds cannot be negative")
+
+    normalized_base_url = base_url.rstrip("/")
+    endpoint = f"{normalized_base_url}{_ENDPOINT}"
+    query = urlencode({"instType": "SPOT", "instId": inst_id})
+    getter = get_bytes or _default_raw_bytes_getter
+    clock = now or _current_utc_datetime
+
+    request_started = _required_utc_datetime(clock(), field="request start")
+    raw_response = _required_raw_response(getter(f"{endpoint}?{query}", timeout))
+    response_received = _required_utc_datetime(clock(), field="response receipt")
+    if response_received < request_started:
+        raise ValueError("local clock moved backward during OKX instrument request")
+
+    (
+        server_request_started,
+        server_response_received,
+        exchange_observed_at,
+        server_round_trip_seconds,
+        midpoint_clock_skew_seconds,
+    ) = _validated_server_time_sample(
+        server_time_sample,
+        max_round_trip_seconds=max_server_round_trip_seconds,
+        max_abs_clock_skew_seconds=max_abs_midpoint_clock_skew_seconds,
+    )
+    if server_time_sample.base_url != normalized_base_url:
+        raise ValueError("OKX instrument and server-time observations must use the same base URL")
+    if server_request_started.to_pydatetime() < response_received:
+        raise ValueError("OKX server time must be sampled after the instrument response")
+    exchange_observed = exchange_observed_at.to_pydatetime()
+    server_response_received_at = server_response_received.to_pydatetime()
+
+    parsed = _parse_spot_instrument_response(
+        raw_response,
+        inst_id=inst_id,
+        observed_at=exchange_observed,
+    )
+
+    return OKXSpotInstrumentSnapshot(
+        base_url=normalized_base_url,
+        request_started_utc=request_started,
+        response_received_utc=response_received,
+        exchange_observed_at_utc=exchange_observed,
+        server_time_response_received_utc=server_response_received_at,
+        server_round_trip_seconds=server_round_trip_seconds,
+        midpoint_clock_skew_seconds=midpoint_clock_skew_seconds,
+        max_server_round_trip_seconds=max_server_round_trip_seconds,
+        max_abs_midpoint_clock_skew_seconds=max_abs_midpoint_clock_skew_seconds,
+        instrument_id=parsed.instrument_id,
+        base_currency=parsed.base_currency,
+        quote_currency=parsed.quote_currency,
+        state=parsed.state,
+        tick_size=parsed.tick_size,
+        lot_size=parsed.lot_size,
+        minimum_order_size_base=parsed.minimum_order_size_base,
+        listed_at_utc=parsed.listed_at_utc,
+        continuous_trading_started_at_utc=parsed.continuous_trading_started_at_utc,
+        expires_at_utc=parsed.expires_at_utc,
+        valid_until_utc=parsed.valid_until_utc,
+        upcoming_changes=parsed.upcoming_changes,
+        raw_response_json=raw_response,
     )
 
 
