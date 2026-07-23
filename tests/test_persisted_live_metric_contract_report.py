@@ -75,6 +75,17 @@ def test_path_diagnostics_reconstruct_from_real_okx_returns(
     )
 
 
+def test_reconciliation_rejects_report_value_that_disagrees_with_real_okx_path(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    frame = _real_okx_frame(btc_usdt_prices)
+    aggregate_metrics = _ANALYSIS._performance(frame)
+    aggregate_metrics["net_total_return"] += 0.01
+
+    with pytest.raises(ValueError, match="aggregate metric net_total_return does not reconcile"):
+        _ANALYSIS._reconcile({"aggregate_metrics": aggregate_metrics}, frame)
+
+
 def test_episode_profit_factor_zero_loss_behavior_is_declared() -> None:
     result = json.loads(_RESULT_PATH.read_text(encoding="utf-8"))
     definition = result["definitions"]["profit_factor"]
@@ -97,6 +108,8 @@ def test_committed_result_records_supported_subgate_and_live_rejection() -> None
     assert result["live_gate_status"]["benchmark_relative_risk_adjusted"] == "fail"
     assert result["live_gate_status"]["fold_stability"] == "fail"
     assert result["live_gate_status"]["year_stability"] == "fail"
+    assert result["markets"]["BTC-USDT"]["fold_stability_passes"] is False
+    assert result["markets"]["ETH-USDT"]["fold_stability_passes"] is True
     for market in _ANALYSIS.MARKETS:
         market_result = result["markets"][market]
         assert market_result["all_required_path_metrics_reconstructable"] is True
