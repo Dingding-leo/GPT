@@ -21,6 +21,31 @@ def test_validate_prices_preserves_valid_real_series(btc_usdt_prices: pd.Series)
     pd.testing.assert_series_equal(validated, prices)
 
 
+def test_validate_prices_localizes_naive_real_index_to_utc(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    prices = _real_price_window(btc_usdt_prices)
+    prices.index = prices.index.tz_localize(None)
+
+    validated = validate_prices(prices)
+
+    expected = prices.copy()
+    expected.index = expected.index.tz_localize("UTC")
+    pd.testing.assert_series_equal(validated, expected)
+
+
+def test_validate_prices_converts_aware_real_index_to_utc_without_changing_instants(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    expected = _real_price_window(btc_usdt_prices)
+    prices = expected.copy()
+    prices.index = prices.index.tz_convert("Australia/Adelaide")
+
+    validated = validate_prices(prices)
+
+    pd.testing.assert_series_equal(validated, expected)
+
+
 @pytest.mark.parametrize(
     "bad_value",
     [math.nan, math.inf, -math.inf, "not-a-number"],
