@@ -74,7 +74,7 @@ def _required_real(value: object, *, field_name: str) -> float:
     parsed = float(value)
     if not math.isfinite(parsed):
         raise ValueError(f"{field_name} must be a finite real number")
-    return parsed
+    return 0.0 if parsed == 0.0 else parsed
 
 
 def _format_utc(value: datetime) -> str:
