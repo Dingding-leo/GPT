@@ -72,17 +72,13 @@ def _unique_root_array_bytes(arrays: Iterable[np.ndarray]) -> int:
     return sum(int(root.nbytes) for root in buffers.values())
 
 
-def _cache_column_arrays(
-    cache: Mapping[StrategyConfig, pd.DataFrame],
-) -> Iterable[np.ndarray]:
+def _cache_column_arrays(cache: Mapping[StrategyConfig, pd.DataFrame]) -> Iterable[np.ndarray]:
     for frame in cache.values():
         for _, column in frame.items():
             yield column.to_numpy(copy=False)
 
 
-def _cache_index_arrays(
-    cache: Mapping[StrategyConfig, pd.DataFrame],
-) -> Iterable[np.ndarray]:
+def _cache_index_arrays(cache: Mapping[StrategyConfig, pd.DataFrame]) -> Iterable[np.ndarray]:
     for frame in cache.values():
         if not isinstance(frame.index, pd.DatetimeIndex):
             raise TypeError("candidate cache index must be a DatetimeIndex")
