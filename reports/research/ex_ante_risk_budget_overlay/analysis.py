@@ -519,9 +519,7 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
                 "fold_stability": "pass" if fold["passes"] else "fail",
                 "year_stability": "pass" if calendar["passes"] else "fail",
                 "turnover_and_5_7.5_10_15bps_viability": "pass" if cost_passes else "fail",
-                "parameter_neighbourhood_stability": (
-                    "pass" if neighbourhood_passes else "fail"
-                ),
+                "parameter_neighbourhood_stability": ("pass" if neighbourhood_passes else "fail"),
                 "tail_risk": "pass" if tail_passes else "fail",
                 "execution_delay_robustness": "pass" if delay_passes else "fail",
             }
