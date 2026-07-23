@@ -6,13 +6,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+from gpt_quant.walk_forward_report import write_walk_forward_report
 
 from gpt_quant import (
     StrategyConfig,
     run_walk_forward_research,
     verify_walk_forward_report,
 )
-from gpt_quant.walk_forward_report import write_walk_forward_report
 
 
 def _write_real_report(btc_usdt_prices: pd.Series, output: Path) -> dict[str, Path]:
@@ -132,15 +132,11 @@ def test_persisted_walk_forward_verifier_reconstructs_path_diagnostics(
     assert verification["material_position_adjustment_threshold"] == material_threshold
     assert verification["active_position_threshold"] == active_threshold
     assert verification["drawdown_threshold"] == threshold
-    assert verification["position_adjustment_count"] == int(
-        returns["turnover"].gt(threshold).sum()
-    )
+    assert verification["position_adjustment_count"] == int(returns["turnover"].gt(threshold).sum())
     assert verification["material_position_adjustment_count"] == int(
         returns["turnover"].gt(material_threshold).sum()
     )
-    assert verification["total_absolute_turnover"] == pytest.approx(
-        returns["turnover"].sum()
-    )
+    assert verification["total_absolute_turnover"] == pytest.approx(returns["turnover"].sum())
     assert verification["annualized_instrument_turnover"] == pytest.approx(
         returns["turnover"].mean() * 365
     )
@@ -148,8 +144,7 @@ def test_persisted_walk_forward_verifier_reconstructs_path_diagnostics(
     assert verification["completed_holding_episode_count"] == int(completed.sum())
     assert verification["open_holding_episode_count"] == int(active.iloc[-1])
     assert verification["completed_holding_episode_win_rate"] == pytest.approx(
-        sum(value > 0.0 for value in completed_episode_returns)
-        / len(completed_episode_returns)
+        sum(value > 0.0 for value in completed_episode_returns) / len(completed_episode_returns)
     )
     assert verification["completed_holding_episode_profit_factor"] == pytest.approx(
         positive_profit / negative_loss
@@ -169,14 +164,12 @@ def test_persisted_walk_forward_verifier_reconstructs_path_diagnostics(
     assert verification["current_underwater_duration_bars"] == (
         runs[-1] if len(runs) and bool(underwater[-1]) else 0
     )
-    assert (
-        verification["evaluation_start"]
-        == pd.Timestamp(returns["timestamp"].iloc[0]).isoformat()
-    )
-    assert (
-        verification["evaluation_end"]
-        == pd.Timestamp(returns["timestamp"].iloc[-1]).isoformat()
-    )
+    assert verification["evaluation_start"] == pd.Timestamp(
+        returns["timestamp"].iloc[0]
+    ).isoformat()
+    assert verification["evaluation_end"] == pd.Timestamp(
+        returns["timestamp"].iloc[-1]
+    ).isoformat()
 
 
 def test_persisted_walk_forward_verifier_rejects_report_metric_drift(
