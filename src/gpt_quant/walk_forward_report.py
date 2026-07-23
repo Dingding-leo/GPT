@@ -48,6 +48,12 @@ def write_walk_forward_report(
     buy_hold_flags = assessment["beats_buy_and_hold"]
     buy_hold_differences = assessment["strategy_minus_buy_and_hold"]
     instrument = str(provenance.get("instrument_id", "Instrument"))
+    partial_month_labels = ", ".join(
+        str(value) for value in path_diagnostics["partial_month_labels"]
+    ) or "none"
+    partial_year_labels = ", ".join(
+        str(value) for value in path_diagnostics["partial_year_labels"]
+    ) or "none"
     lines = [
         "# OKX Walk-Forward Research Report",
         "",
@@ -185,6 +191,19 @@ def write_walk_forward_report(
         f"- Current / longest underwater duration in bars: "
         f"`{path_diagnostics['current_underwater_duration_bars']}` / "
         f"`{path_diagnostics['longest_underwater_duration_bars']}`",
+        f"- Profitable / losing / flat UTC calendar months: "
+        f"`{path_diagnostics['profitable_month_count']}` / "
+        f"`{path_diagnostics['losing_month_count']}` / "
+        f"`{path_diagnostics['flat_month_count']}`",
+        f"- Partial UTC calendar months: `{path_diagnostics['partial_month_count']}` "
+        f"(`{partial_month_labels}`)",
+        f"- Profitable / losing / flat UTC calendar years: "
+        f"`{path_diagnostics['profitable_year_count']}` / "
+        f"`{path_diagnostics['losing_year_count']}` / "
+        f"`{path_diagnostics['flat_year_count']}`",
+        f"- Partial UTC calendar years: `{path_diagnostics['partial_year_count']}` "
+        f"(`{partial_year_labels}`)",
+        f"- Calendar-period return basis: `{path_diagnostics['calendar_period_return_basis']}`",
         "- These are inferred position-path transitions, not exchange orders or fills.",
         "",
         "## Cost and parameter stress",
