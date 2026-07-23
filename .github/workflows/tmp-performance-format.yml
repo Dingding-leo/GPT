@@ -18,14 +18,19 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - name: Show canonical formatting
+      - name: Format exact performance files
         run: |
           python -m pip install "ruff>=0.9,<1"
           ruff format \
             src/gpt_quant/walk_forward_verify_gate.py \
             tests/test_walk_forward_selected_path_cache.py \
             benchmarks/run_walk_forward_target_only_verify.py
-          git diff -- \
-            src/gpt_quant/walk_forward_verify_gate.py \
-            tests/test_walk_forward_selected_path_cache.py \
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: temporary-performance-formatted-files
+          path: |
+            src/gpt_quant/walk_forward_verify_gate.py
+            tests/test_walk_forward_selected_path_cache.py
             benchmarks/run_walk_forward_target_only_verify.py
+          if-no-files-found: error
+          retention-days: 1
