@@ -9,12 +9,8 @@ from gpt_quant.execution_quote import ExecutionQuoteSnapshot
 from gpt_quant.execution_quote_binding import bind_execution_quote
 from gpt_quant.paper_execution_attempt import record_paper_execution_attempt
 
-_REAL_OKX_RESPONSE_SHA256 = (
-    "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
-)
-_REAL_OKX_INSTRUMENT_SHA256 = (
-    "fa567055978b3974e728664af9e90f52dbedf1ee6864a1cdd4cb6f6a462de521"
-)
+_REAL_OKX_RESPONSE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
+_REAL_OKX_INSTRUMENT_SHA256 = "fa567055978b3974e728664af9e90f52dbedf1ee6864a1cdd4cb6f6a462de521"
 _SOURCE_DATA_SHA256 = "429abcbe5deb56ad6c7e1790cea101644a9fedd622f40de64eec5fd1ac3c4187"
 _CONFIG_SHA256 = "6b06037376bce5df483311704f7b701c5e03a2a2735b2dd3361036fccd94da1a"
 
