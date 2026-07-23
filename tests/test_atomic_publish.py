@@ -40,6 +40,32 @@ def test_atomic_publisher_rejects_invalid_contract_before_touching_filesystem(
     assert not output.exists()
 
 
+def test_atomic_publisher_rejects_symlink_output_directory_before_staging(
+    tmp_path: Path,
+) -> None:
+    external_output = tmp_path / "operator-artifacts"
+    external_output.mkdir()
+    sentinel = external_output / "operator-note.txt"
+    sentinel.write_bytes(b"operator-owned\n")
+    output = tmp_path / "artifacts"
+    output.symlink_to(external_output, target_is_directory=True)
+
+    with pytest.raises(ValueError, match="output directory must not be a symbolic link"):
+        publish_payloads_atomically(
+            output,
+            {"json": output / "result.json", "markdown": output / "result.md"},
+            {"json": b"new-json\n", "markdown": b"new-markdown\n"},
+            commit_order=("json", "markdown"),
+            staging_prefix=".atomic-test-",
+            error_label="test artifact",
+        )
+
+    assert output.is_symlink()
+    assert output.resolve() == external_output.resolve()
+    assert sentinel.read_bytes() == b"operator-owned\n"
+    assert {path.name for path in external_output.iterdir()} == {"operator-note.txt"}
+
+
 def test_atomic_publisher_rejects_symlink_destination_before_staging(tmp_path: Path) -> None:
     output = tmp_path / "artifacts"
     output.mkdir()
