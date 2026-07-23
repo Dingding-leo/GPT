@@ -45,28 +45,8 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Generate canonical Ruff patch
-        run: |
-          ruff check --fix --exit-zero \
-            src/gpt_quant/execution_quote_evidence.py \
-            tests/test_execution_quote_evidence.py
-          ruff format \
-            src/gpt_quant/execution_quote_evidence.py \
-            tests/test_execution_quote_evidence.py
-          git diff -- \
-            src/gpt_quant/execution_quote_evidence.py \
-            tests/test_execution_quote_evidence.py > ruff.patch
-
-      - name: Upload canonical Ruff patch
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ruff-patch-${{ github.run_number }}-attempt-${{ github.run_attempt }}
-          path: ruff.patch
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Require clean Ruff patch
-        run: test ! -s ruff.patch
+      - name: Lint and formatting
+        run: ruff check . && ruff format --check .
 
       - name: Test against public OKX data
         env:
