@@ -1,0 +1,141 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "prior-fold-volatility-matched-expected-shortfall-vs-volatility-benchmark-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=volatility-targeted-long-scaled-in-fold-t-by-sample-volatility-ratio-estimated-from-complete-fold-t-minus-1|volatility=sample-standard-deviation-ddof1|evaluation=complete-folds-2-through-26|trailing-short-fold=excluded|metric=mean-worst-ceil-5pct-returns|tail-fraction=0.05|claim=strategy-minus-scaled-benchmark-expected-shortfall>0-in-both-markets|resampling=noncircular-moving-block-bootstrap-over-observed-complete-folds|fold-block-length=3|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072321,ETH-USDT:2026072322|candidate_count=1",
+  "failure_reasons": [
+    "BTC-USDT lower confidence bound was not positive",
+    "ETH-USDT lower confidence bound was not positive"
+  ],
+  "hypothesis": "BTC-USDT and ETH-USDT strategy returns have less severe 5% expected shortfall than volatility-targeted long when each current fold's benchmark is scaled using only the immediately preceding complete fold's realised volatility ratio.",
+  "markets": {
+    "BTC-USDT": {
+      "confidence_interval": {
+        "lower": -0.0041367196591912325,
+        "upper": 0.007836136029802824
+      },
+      "delta": 0.0018776043972987336,
+      "evaluation_folds": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "evaluation_observations": 2250,
+      "excluded_folds": [
+        1,
+        27
+      ],
+      "market": "BTC-USDT",
+      "passes": false,
+      "prior_fold_scale_max": 0.8693814196363954,
+      "prior_fold_scale_mean": 0.4235108407168788,
+      "prior_fold_scale_min": 0.0,
+      "probability_delta_positive": 0.734,
+      "return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "scaled_benchmark_expected_shortfall": -0.02996786745875066,
+      "strategy_expected_shortfall": -0.028090263061451928
+    },
+    "ETH-USDT": {
+      "confidence_interval": {
+        "lower": -0.0075420816415632695,
+        "upper": 0.003479418016631402
+      },
+      "delta": -0.0026647148555189286,
+      "evaluation_folds": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26
+      ],
+      "evaluation_observations": 2250,
+      "excluded_folds": [
+        1,
+        27
+      ],
+      "market": "ETH-USDT",
+      "passes": false,
+      "prior_fold_scale_max": 0.7999744191207934,
+      "prior_fold_scale_mean": 0.42625225901417474,
+      "prior_fold_scale_min": 0.09547736343815323,
+      "probability_delta_positive": 0.208,
+      "return_file_sha256": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047",
+      "scaled_benchmark_expected_shortfall": -0.030248625877568564,
+      "strategy_expected_shortfall": -0.03291334073308749
+    }
+  },
+  "method": {
+    "complete_fold_size": 90,
+    "confidence": 0.95,
+    "first_complete_fold": "used only to estimate fold-2 scale",
+    "fold_block_length": 3,
+    "resamples": 2000,
+    "scaling": "current fold benchmark multiplied by prior complete fold strategy-volatility / benchmark-volatility",
+    "seeds": {
+      "BTC-USDT": 2026072321,
+      "ETH-USDT": 2026072322
+    },
+    "tail_fraction": 0.05,
+    "trailing_short_fold": "excluded",
+    "volatility": "sample standard deviation, ddof=1"
+  },
+  "source": {
+    "artifact_id": 8558445273,
+    "artifact_name": "quant-research-source-1826-attempt-1",
+    "artifact_sha256": "8c89b8ecc4904cba018ac95079305c46e25d92199242b95d3aeffaad1bc0799c",
+    "market_type": "spot",
+    "provider": "OKX",
+    "return_file_sha256": {
+      "BTC-USDT": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "ETH-USDT": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047"
+    },
+    "source_head_sha": "348cfd30df9a0665b5b129fba32edaafc8a2428e",
+    "timeframe": "1Dutc",
+    "workflow_run_id": 29994613190
+  },
+  "verdict": "rejected"
+}
