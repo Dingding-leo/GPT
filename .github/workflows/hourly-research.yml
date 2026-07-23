@@ -87,6 +87,15 @@ jobs:
               --manifest-path reports/okx/experiment-manifest.jsonl
           done
 
+      - name: Build verified 5 bps launch evidence
+        id: five_bps_evidence
+        run: |
+          python -m gpt_quant.five_bps_evidence \
+            --reports-root reports/okx \
+            --source-head-sha "$LIVE_READINESS_HEAD_SHA" \
+            --tested-sha "$LIVE_READINESS_TESTED_SHA" \
+            --output-path reports/live_readiness/five_bps_walk_forward.json
+
       - name: Hash portfolio return inputs
         id: return-hashes
         shell: bash
@@ -156,7 +165,7 @@ jobs:
         if: ${{ !cancelled() }}
         env:
           LIVE_READINESS_CI_STATUS_JSON: >-
-            {"python_setup":"${{ steps.python_setup.outcome }}","install":"${{ steps.install.outcome }}","lint_format":"${{ steps.lint_format.outcome }}","tests":"${{ steps.tests.outcome }}","walk_forward":"${{ steps.walk_forward.outcome }}","walk_forward_verification":"${{ steps.walk_forward_verification.outcome }}","return_hashes":"${{ steps.return-hashes.outcome }}","source_artifact":"${{ steps.source-artifact.outcome }}","portfolio_risk":"${{ steps.portfolio_risk.outcome }}","portfolio_artifact":"${{ steps.portfolio_artifact.outcome }}"}
+            {"python_setup":"${{ steps.python_setup.outcome }}","install":"${{ steps.install.outcome }}","lint_format":"${{ steps.lint_format.outcome }}","tests":"${{ steps.tests.outcome }}","walk_forward":"${{ steps.walk_forward.outcome }}","walk_forward_verification":"${{ steps.walk_forward_verification.outcome }}","five_bps_evidence":"${{ steps.five_bps_evidence.outcome }}","return_hashes":"${{ steps.return-hashes.outcome }}","source_artifact":"${{ steps.source-artifact.outcome }}","portfolio_risk":"${{ steps.portfolio_risk.outcome }}","portfolio_artifact":"${{ steps.portfolio_artifact.outcome }}"}
         run: |
           PYTHONPATH=src python -m gpt_quant.live_readiness \
             --head-sha "$LIVE_READINESS_HEAD_SHA" \
@@ -170,7 +179,9 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.LIVE_READINESS_ARTIFACT_NAME }}
-          path: reports/live-readiness-gate/
+          path: |
+            reports/live-readiness-gate/
+            reports/live_readiness/five_bps_walk_forward.json
           if-no-files-found: error
           retention-days: 30
 
@@ -178,7 +189,7 @@ jobs:
         if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.enforce_live_readiness }}
         env:
           LIVE_READINESS_CI_STATUS_JSON: >-
-            {"python_setup":"${{ steps.python_setup.outcome }}","install":"${{ steps.install.outcome }}","lint_format":"${{ steps.lint_format.outcome }}","tests":"${{ steps.tests.outcome }}","walk_forward":"${{ steps.walk_forward.outcome }}","walk_forward_verification":"${{ steps.walk_forward_verification.outcome }}","return_hashes":"${{ steps.return-hashes.outcome }}","source_artifact":"${{ steps.source-artifact.outcome }}","portfolio_risk":"${{ steps.portfolio_risk.outcome }}","portfolio_artifact":"${{ steps.portfolio_artifact.outcome }}"}
+            {"python_setup":"${{ steps.python_setup.outcome }}","install":"${{ steps.install.outcome }}","lint_format":"${{ steps.lint_format.outcome }}","tests":"${{ steps.tests.outcome }}","walk_forward":"${{ steps.walk_forward.outcome }}","walk_forward_verification":"${{ steps.walk_forward_verification.outcome }}","five_bps_evidence":"${{ steps.five_bps_evidence.outcome }}","return_hashes":"${{ steps.return-hashes.outcome }}","source_artifact":"${{ steps.source-artifact.outcome }}","portfolio_risk":"${{ steps.portfolio_risk.outcome }}","portfolio_artifact":"${{ steps.portfolio_artifact.outcome }}"}
         run: |
           PYTHONPATH=src python -m gpt_quant.live_readiness \
             --head-sha "$LIVE_READINESS_HEAD_SHA" \
