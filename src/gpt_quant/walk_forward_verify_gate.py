@@ -150,11 +150,15 @@ def _validate_source_returns(
     if not confirm.eq(1).all():
         raise ValueError("normalized OKX snapshot must contain completed candles only")
 
-    source_close = pd.Series(snapshot_close.to_numpy(copy=False), index=snapshot_index, name="close")
+    source_close = pd.Series(
+        snapshot_close.to_numpy(copy=False), index=snapshot_index, name="close"
+    )
     aligned_close = source_close.reindex(persisted_index)
     expected_asset_return = source_close.pct_change().fillna(0.0).reindex(persisted_index)
     if aligned_close.isna().any() or expected_asset_return.isna().any():
-        raise ValueError("walk-forward timestamps are not fully covered by the normalized OKX snapshot")
+        raise ValueError(
+            "walk-forward timestamps are not fully covered by the normalized OKX snapshot"
+        )
 
     persisted_close = _numeric(persisted, "close")
     persisted_asset_return = _numeric(persisted, "asset_return")
