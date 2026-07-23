@@ -169,12 +169,14 @@ def test_persisted_walk_forward_verifier_reconstructs_path_diagnostics(
     assert verification["current_underwater_duration_bars"] == (
         runs[-1] if len(runs) and bool(underwater[-1]) else 0
     )
-    assert verification["evaluation_start"] == pd.Timestamp(
-        returns["timestamp"].iloc[0]
-    ).isoformat()
-    assert verification["evaluation_end"] == pd.Timestamp(
-        returns["timestamp"].iloc[-1]
-    ).isoformat()
+    assert (
+        verification["evaluation_start"]
+        == pd.Timestamp(returns["timestamp"].iloc[0]).isoformat()
+    )
+    assert (
+        verification["evaluation_end"]
+        == pd.Timestamp(returns["timestamp"].iloc[-1]).isoformat()
+    )
 
 
 def test_persisted_walk_forward_verifier_rejects_report_metric_drift(
