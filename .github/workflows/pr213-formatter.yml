@@ -1,9 +1,8 @@
 name: PR213 Formatter
 
 on:
-  push:
-    branches:
-      - auto/performance/20260723-11-cache-memory-evidence
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
