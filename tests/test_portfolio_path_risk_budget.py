@@ -14,12 +14,7 @@ from gpt_quant.portfolio_path_risk_budget import (
 )
 from gpt_quant.portfolio_underlying_risk import build_underlying_sleeve_risk
 
-_FIXTURE_DIR = (
-    Path(__file__).parent
-    / "fixtures"
-    / "okx"
-    / "btc_eth_full_path_20200111_20200219"
-)
+_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc_eth_full_path_20200111_20200219"
 
 
 def _underlying_result():
@@ -28,10 +23,7 @@ def _underlying_result():
         name: _FIXTURE_DIR / details["fixture_file"]
         for name, details in metadata["instruments"].items()
     }
-    hashes = {
-        name: details["fixture_sha256"]
-        for name, details in metadata["instruments"].items()
-    }
+    hashes = {name: details["fixture_sha256"] for name, details in metadata["instruments"].items()}
     provenance = {
         key: metadata[key]
         for key in (
@@ -75,9 +67,7 @@ def test_real_okx_path_budget_recomputes_tail_drawdown_and_cost_boundary(
     tail_observations = max(1, math.ceil(len(net_return) * 0.05))
     sorted_returns = np.sort(net_return.to_numpy(), kind="stable")
 
-    assert result.metrics["annualized_net_volatility"] == pytest.approx(
-        annualized_volatility
-    )
+    assert result.metrics["annualized_net_volatility"] == pytest.approx(annualized_volatility)
     assert result.metrics["maximum_drawdown"] == pytest.approx(float(drawdown.min()))
     assert result.metrics["current_drawdown"] == pytest.approx(float(drawdown.iloc[-1]))
     assert result.metrics["historical_expected_shortfall_95"] == pytest.approx(
@@ -91,9 +81,7 @@ def test_real_okx_path_budget_recomputes_tail_drawdown_and_cost_boundary(
     assert result.payload["cost_attribution"]["exchange_fee"]["one_way_bps"] == 5.0
     assert result.payload["cost_attribution"]["spread"] == {"status": "not_modeled"}
     assert result.payload["cost_attribution"]["slippage"] == {"status": "not_modeled"}
-    assert result.payload["cost_attribution"]["market_impact"] == {
-        "status": "not_modeled"
-    }
+    assert result.payload["cost_attribution"]["market_impact"] == {"status": "not_modeled"}
     assert result.payload["cost_attribution"]["latency"] == {"status": "not_modeled"}
     assert result.payload["cost_attribution"]["all_in_fixed_path_sensitivity_bps"] == [
         7.5,
@@ -145,9 +133,7 @@ def test_hourly_workflow_enforces_explicit_underlying_path_budgets() -> None:
 
     assert 'MAX_ANNUALIZED_NET_VOLATILITY: "0.50"' in workflow
     assert 'MAXIMUM_DRAWDOWN_FLOOR: "-0.40"' in workflow
-    assert (
-        '--max-annualized-net-volatility "$MAX_ANNUALIZED_NET_VOLATILITY"' in block
-    )
+    assert '--max-annualized-net-volatility "$MAX_ANNUALIZED_NET_VOLATILITY"' in block
     assert '--maximum-drawdown-floor "$MAXIMUM_DRAWDOWN_FLOOR"' in block
     assert "--fail-on-reject" in block
     assert "portfolio_path_risk_budget.json" not in workflow
