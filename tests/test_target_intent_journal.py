@@ -19,10 +19,15 @@ _CONFIG_SHA256 = "a0340ca26a0c5e7d0d609ddf69bcb3e4e643a93ab009f27ee03e8ea322aed8
 _REVISION = "bd3bf844d0c37e2e65d6591cb2a3c4a03e6e45c3"
 
 
-def _intent(*, day: int = 22, target_position: float = 0.5) -> TargetPositionIntent:
+def _intent(
+    *,
+    day: int = 22,
+    target_position: float = 0.5,
+    decision_delay_seconds: int = 3,
+) -> TargetPositionIntent:
     signal_open = datetime(2026, 7, day, tzinfo=UTC)
     signal_close = signal_open + timedelta(days=1)
-    decision_time = signal_close + timedelta(seconds=3)
+    decision_time = signal_close + timedelta(seconds=decision_delay_seconds)
     return TargetPositionIntent(
         instrument_id="BTC-USDT",
         bar="1Dutc",
@@ -83,10 +88,29 @@ def test_target_intent_journal_rejects_conflicting_target_for_one_signal(
     record_target_position_intent(path, first)
     before = path.read_bytes()
 
-    with pytest.raises(ValueError, match="conflicting targets"):
+    with pytest.raises(ValueError, match="conflicting intents"):
         record_target_position_intent(path, conflicting)
 
     assert path.read_bytes() == before
+    assert not _lock_path(path).exists()
+
+
+def test_target_intent_journal_rejects_retry_with_new_observation_time(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "target-intents.jsonl"
+    first = _intent(target_position=0.25, decision_delay_seconds=3)
+    retry = _intent(target_position=0.25, decision_delay_seconds=9)
+    assert retry.intent_id != first.intent_id
+
+    record_target_position_intent(path, first)
+    before = path.read_bytes()
+
+    with pytest.raises(ValueError, match="conflicting intents"):
+        record_target_position_intent(path, retry)
+
+    assert path.read_bytes() == before
+    assert load_target_position_intent_journal(path).intents == (first,)
     assert not _lock_path(path).exists()
 
 
