@@ -54,9 +54,7 @@ def build_okx_live_timing_evidence(
     server_time = pd.Timestamp(_utc_text(sample.server_time_utc, field="server time"))
     bar_open = pd.Timestamp(_utc_text(cutoff.bar_open_utc, field="bar open"))
     bar_close = pd.Timestamp(_utc_text(cutoff.bar_close_utc, field="bar close"))
-    observed_at = pd.Timestamp(
-        _utc_text(cutoff.observed_at_utc, field="candle observation")
-    )
+    observed_at = pd.Timestamp(_utc_text(cutoff.observed_at_utc, field="candle observation"))
     exchange_observed_at = pd.Timestamp(
         _utc_text(cutoff.exchange_observed_at_utc, field="exchange observation")
     )
