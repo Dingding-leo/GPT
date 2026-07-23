@@ -6,6 +6,7 @@ _REPRODUCTION_PATH = _REPOSITORY_ROOT / "docs" / "REPRODUCTION.md"
 _WORKFLOW_PATH = _REPOSITORY_ROOT / ".github" / "workflows" / "hourly-research.yml"
 _PORTFOLIO_SCRIPT_PATH = _REPOSITORY_ROOT / "scripts" / "run_portfolio_risk.py"
 _PORTFOLIO_STRESS_PATH = _REPOSITORY_ROOT / "src" / "gpt_quant" / "portfolio_stress.py"
+_ATOMIC_PUBLISH_PATH = _REPOSITORY_ROOT / "src" / "gpt_quant" / "_atomic_publish.py"
 _BUNDLE_RECOVERY_TEST_PATH = _REPOSITORY_ROOT / "tests" / "test_portfolio_stress_correlation.py"
 _INCOMPLETE_ROLLBACK_TEST_PATH = (
     _REPOSITORY_ROOT / "tests" / "test_portfolio_stress_bundle_incomplete_rollback.py"
@@ -25,6 +26,7 @@ def test_docs_match_four_file_portfolio_artifact_bundle() -> None:
     workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
     script = _PORTFOLIO_SCRIPT_PATH.read_text(encoding="utf-8")
     stress_module = _PORTFOLIO_STRESS_PATH.read_text(encoding="utf-8")
+    atomic_publish = _ATOMIC_PUBLISH_PATH.read_text(encoding="utf-8")
     recovery_test = _BUNDLE_RECOVERY_TEST_PATH.read_text(encoding="utf-8")
     incomplete_rollback_test = _INCOMPLETE_ROLLBACK_TEST_PATH.read_text(encoding="utf-8")
 
@@ -67,21 +69,29 @@ def test_docs_match_four_file_portfolio_artifact_bundle() -> None:
     for claim in (
         "staged_paths = write_portfolio_risk_report(result, staging)",
         'staged_paths["stress_correlation"] = write_portfolio_stress_correlation_report(',
-        "for name in _PORTFOLIO_BUNDLE_FILENAMES:",
-        "os.replace(staged_paths[name], destinations[name])",
-        "for name in reversed(replaced):",
-        "portfolio bundle commit failed and rollback was incomplete",
+        "return publish_staged_paths_atomically(",
+        "commit_order=tuple(_PORTFOLIO_BUNDLE_FILENAMES)",
+        'staging_prefix=".portfolio-risk-bundle-"',
+        'error_label="portfolio bundle"',
     ):
         assert claim in bundle
+
+    for claim in (
+        "for name in ordered_names:",
+        "os.replace(staged_paths[name], paths[name])",
+        "for name in reversed(replaced):",
+        'f"{error_label} commit failed and rollback was incomplete: {details}"',
+    ):
+        assert claim in atomic_publish
 
     assert bundle.index(
         "staged_paths = write_portfolio_risk_report(result, staging)"
     ) < bundle.index(
         'staged_paths["stress_correlation"] = write_portfolio_stress_correlation_report('
     )
-    assert bundle.index("os.replace(staged_paths[name], destinations[name])") < bundle.index(
-        "for name in reversed(replaced):"
-    )
+    assert atomic_publish.index(
+        "os.replace(staged_paths[name], paths[name])"
+    ) < atomic_publish.index("for name in reversed(replaced):")
 
     assert "if final_replacements == 4" in recovery_test
     assert "for name, path in original_paths.items()" in recovery_test
