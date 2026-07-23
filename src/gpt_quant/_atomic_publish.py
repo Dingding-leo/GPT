@@ -26,7 +26,9 @@ def _validated_contract(
     if not staging_prefix or Path(staging_prefix).name != staging_prefix:
         raise ValueError("staging_prefix must be a non-empty filename prefix")
     if any(path.parent != output for path in paths.values()):
-        raise ValueError(f"{error_label} destinations must be direct children of the output directory")
+        raise ValueError(
+            f"{error_label} destinations must be direct children of the output directory"
+        )
     return ordered_names
 
 
