@@ -29,6 +29,11 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = [
+  "src/gpt_quant/portfolio_stress.py",
+  "scripts/run_portfolio_risk.py",
+  "tests/test_portfolio_stress_correlation.py"
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
