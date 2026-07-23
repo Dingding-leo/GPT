@@ -268,6 +268,55 @@ def _validate_private_file(descriptor: int, label: str) -> os.stat_result:
     return file_stat
 
 
+
+
+def _validate_private_directory(descriptor: int) -> os.stat_result:
+    directory_stat = os.fstat(descriptor)
+    if not stat.S_ISDIR(directory_stat.st_mode):
+        raise ValueError("paper decision directory must be a regular directory")
+    if hasattr(os, "geteuid") and directory_stat.st_uid != os.geteuid():
+        raise ValueError("paper decision directory must be owned by the current user")
+    if stat.S_IMODE(directory_stat.st_mode) & 0o022:
+        raise ValueError("paper decision directory must not be group/world writable")
+    return directory_stat
+
+
+def _assert_directory_identity(directory: Path, opened: os.stat_result) -> None:
+    current = os.stat(directory, follow_symlinks=False)
+    if not stat.S_ISDIR(current.st_mode) or (opened.st_dev, opened.st_ino) != (
+        current.st_dev,
+        current.st_ino,
+    ):
+        raise RuntimeError("paper decision directory changed during operation")
+
+
+@contextmanager
+def _private_decision_directory(
+    directory: Path,
+    *,
+    create: bool,
+) -> Iterator[tuple[int, os.stat_result] | None]:
+    if create:
+        if directory.is_symlink():
+            raise ValueError("paper decision directory must not be a symbolic link")
+        directory.mkdir(parents=True, mode=0o700, exist_ok=True)
+    elif not directory.exists():
+        yield None
+        return
+
+    descriptor = os.open(
+        directory,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+    )
+    try:
+        opened = _validate_private_directory(descriptor)
+        _assert_directory_identity(directory, opened)
+        yield descriptor, opened
+        _assert_directory_identity(directory, opened)
+    finally:
+        os.close(descriptor)
+
+
 def load_paper_order_decision(path: str | Path) -> PaperOrderDecision:
     decision_path = Path(path)
     descriptor = os.open(
@@ -346,24 +395,14 @@ def _find_target(path: str | Path, decision: PaperOrderDecision) -> TargetPositi
     return target
 
 
-def _fsync_directory(directory: Path) -> None:
-    descriptor = os.open(
-        directory,
-        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
-    )
-    try:
-        opened = os.fstat(descriptor)
-        if not stat.S_ISDIR(opened.st_mode):
-            raise ValueError("paper decision directory must be a regular directory")
-        current = os.stat(directory, follow_symlinks=False)
-        if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
-            raise RuntimeError("paper decision directory changed during publication")
-        os.fsync(descriptor)
-        current = os.stat(directory, follow_symlinks=False)
-        if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
-            raise RuntimeError("paper decision directory changed during publication")
-    finally:
-        os.close(descriptor)
+def _fsync_directory(
+    directory: Path,
+    descriptor: int,
+    opened: os.stat_result,
+) -> None:
+    _assert_directory_identity(directory, opened)
+    os.fsync(descriptor)
+    _assert_directory_identity(directory, opened)
 
 
 def record_paper_order_decision(
@@ -376,39 +415,44 @@ def record_paper_order_decision(
     if not isinstance(decision, PaperOrderDecision):
         raise TypeError("decision must be a PaperOrderDecision")
     directory = Path(decision_directory)
-    if directory.is_symlink():
-        raise ValueError("paper decision directory must not be a symbolic link")
-    directory.mkdir(parents=True, exist_ok=True)
-    path = directory / f"{decision.target_intent_id}.json"
-    with _decision_lock(path):
-        _find_target(target_journal_path, decision)
-        if path.exists():
-            existing = load_paper_order_decision(path)
-            if existing.to_json_bytes() != decision.to_json_bytes():
-                raise ValueError(f"{_ERROR} conflicts with the consumed target intent")
-            return existing
+    with _private_decision_directory(directory, create=True) as directory_state:
+        if directory_state is None:  # pragma: no cover - create=True always opens the directory
+            raise RuntimeError("paper decision directory was not created")
+        directory_descriptor, opened_directory = directory_state
+        path = directory / f"{decision.target_intent_id}.json"
+        with _decision_lock(path):
+            _find_target(target_journal_path, decision)
+            if path.exists():
+                existing = load_paper_order_decision(path)
+                if existing.to_json_bytes() != decision.to_json_bytes():
+                    raise ValueError(f"{_ERROR} conflicts with the consumed target intent")
+                return existing
 
-        descriptor, temporary_name = tempfile.mkstemp(prefix=".paper-decision-", dir=directory)
-        temporary = Path(temporary_name)
-        try:
-            os.fchmod(descriptor, 0o600)
-            payload = decision.to_json_bytes()
-            written = 0
-            while written < len(payload):
-                written += os.write(descriptor, payload[written:])
-            os.fsync(descriptor)
-            os.close(descriptor)
-            descriptor = -1
-            os.replace(temporary, path)
-            _fsync_directory(directory)
-        finally:
-            if descriptor >= 0:
+            descriptor, temporary_name = tempfile.mkstemp(
+                prefix=".paper-decision-",
+                dir=directory,
+            )
+            temporary = Path(temporary_name)
+            try:
+                os.fchmod(descriptor, 0o600)
+                payload = decision.to_json_bytes()
+                written = 0
+                while written < len(payload):
+                    written += os.write(descriptor, payload[written:])
+                os.fsync(descriptor)
                 os.close(descriptor)
-            temporary.unlink(missing_ok=True)
-        replayed = load_paper_order_decision(path)
-        if replayed != decision:
-            raise RuntimeError(f"{_ERROR} replay differs after publication")
-        return replayed
+                descriptor = -1
+                _assert_directory_identity(directory, opened_directory)
+                os.replace(temporary, path)
+                _fsync_directory(directory, directory_descriptor, opened_directory)
+            finally:
+                if descriptor >= 0:
+                    os.close(descriptor)
+                temporary.unlink(missing_ok=True)
+            replayed = load_paper_order_decision(path)
+            if replayed != decision:
+                raise RuntimeError(f"{_ERROR} replay differs after publication")
+            return replayed
 
 
 def replay_paper_order_decision_store(
@@ -421,18 +465,17 @@ def replay_paper_order_decision_store(
     target_by_id = {target.intent_id: target for target in targets}
     decisions_by_target: dict[str, PaperOrderDecision] = {}
     directory = Path(decision_directory)
-    if directory.exists():
-        if directory.is_symlink() or not directory.is_dir():
-            raise ValueError("paper decision directory must be a regular directory")
-        for path in sorted(directory.glob("*.json")):
-            decision = load_paper_order_decision(path)
-            target = target_by_id.get(decision.target_intent_id)
-            if target is None or path.name != f"{decision.target_intent_id}.json":
-                raise ValueError(f"{_ERROR} store references an unknown target intent")
-            if decision.target_intent_id in decisions_by_target:
-                raise ValueError(f"{_ERROR} store contains a duplicate target decision")
-            _validate_decision_target(target, decision)
-            decisions_by_target[decision.target_intent_id] = decision
+    with _private_decision_directory(directory, create=False) as directory_state:
+        if directory_state is not None:
+            for path in sorted(directory.glob("*.json")):
+                decision = load_paper_order_decision(path)
+                target = target_by_id.get(decision.target_intent_id)
+                if target is None or path.name != f"{decision.target_intent_id}.json":
+                    raise ValueError(f"{_ERROR} store references an unknown target intent")
+                if decision.target_intent_id in decisions_by_target:
+                    raise ValueError(f"{_ERROR} store contains a duplicate target decision")
+                _validate_decision_target(target, decision)
+                decisions_by_target[decision.target_intent_id] = decision
 
     decisions = tuple(
         decisions_by_target[target.intent_id]
