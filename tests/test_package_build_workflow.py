@@ -77,7 +77,7 @@ def test_package_workflow_includes_declared_minimum_python() -> None:
     pyproject = tomllib.loads(_PYPROJECT_PATH.read_text(encoding="utf-8"))
 
     requires_python = pyproject["project"]["requires-python"]
-    minimum_match = re.fullmatch(r">=(\d+\.\d+)", requires_python)
+    minimum_match = re.search(r"(?:^|,)>=(\d+\.\d+)(?=,|$)", requires_python)
     assert minimum_match is not None
     minimum_python = minimum_match.group(1)
     ruff_target = pyproject["tool"]["ruff"]["target-version"]
