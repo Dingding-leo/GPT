@@ -6,7 +6,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
+from decimal import Context, Decimal, ROUND_HALF_EVEN, localcontext
 from fractions import Fraction
 
 from .execution_intent import TargetPositionIntent
