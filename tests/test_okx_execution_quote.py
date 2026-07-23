@@ -131,7 +131,9 @@ def test_fresh_quote_survives_bounded_slow_local_clock() -> None:
     )
 
     evidence = ReconstructableOKXTopOfBookEvidence(observation=observation)
-    replayed = ReconstructableOKXTopOfBookEvidence.from_json_bytes(evidence.to_json_bytes())
+    replayed = ReconstructableOKXTopOfBookEvidence.from_json_bytes(
+        evidence.to_json_bytes()
+    )
     assert replayed.observation == observation
 
 
