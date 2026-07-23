@@ -1,0 +1,58 @@
+name: PR213 Formatting Diagnostic
+
+on:
+  push:
+    branches:
+      - auto/performance/20260723-11-cache-memory-evidence
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e ".[dev]"
+
+      - name: Format diagnostic files
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            benchmarks/run_walk_forward_cache_peak.py
+            tests/test_walk_forward_cache_peak_benchmark.py
+          )
+          ruff check --fix "${files[@]}" || true
+          ruff format "${files[@]}"
+          mkdir -p formatted/benchmarks formatted/tests
+          cp benchmarks/run_walk_forward_cache_peak.py formatted/benchmarks/
+          cp tests/test_walk_forward_cache_peak_benchmark.py formatted/tests/
+          {
+            ruff check "${files[@]}"
+            ruff format --check "${files[@]}"
+          } > formatted/ruff-report.txt 2>&1
+
+      - name: Upload formatted files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr213-formatted-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: formatted/
+          if-no-files-found: error
+          retention-days: 1
