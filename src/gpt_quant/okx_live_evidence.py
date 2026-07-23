@@ -45,14 +45,18 @@ def build_okx_live_timing_evidence(
     if sample.endpoint != _PUBLIC_TIME_ENDPOINT:
         raise ValueError("OKX server-time evidence must use the public time endpoint")
 
-    request_started = pd.Timestamp(_utc_text(sample.local_request_started_utc, field="request start"))
+    request_started = pd.Timestamp(
+        _utc_text(sample.local_request_started_utc, field="request start")
+    )
     response_received = pd.Timestamp(
         _utc_text(sample.local_response_received_utc, field="response receipt")
     )
     server_time = pd.Timestamp(_utc_text(sample.server_time_utc, field="server time"))
     bar_open = pd.Timestamp(_utc_text(cutoff.bar_open_utc, field="bar open"))
     bar_close = pd.Timestamp(_utc_text(cutoff.bar_close_utc, field="bar close"))
-    observed_at = pd.Timestamp(_utc_text(cutoff.observed_at_utc, field="candle observation"))
+    observed_at = pd.Timestamp(
+        _utc_text(cutoff.observed_at_utc, field="candle observation")
+    )
     exchange_observed_at = pd.Timestamp(
         _utc_text(cutoff.exchange_observed_at_utc, field="exchange observation")
     )
@@ -189,8 +193,12 @@ def read_okx_live_timing_evidence(
         raise ValueError("OKX live timing evidence must be a JSON object")
     if _canonical_json_bytes(decoded) != payload:
         raise ValueError("OKX live timing evidence is not canonical JSON")
-    if decoded.get("schema_version") != _SCHEMA_VERSION or decoded.get("provider") != _PROVIDER:
+    if (
+        decoded.get("schema_version") != _SCHEMA_VERSION
+        or decoded.get("provider") != _PROVIDER
+    ):
         raise ValueError("unsupported OKX live timing evidence schema")
-    if decoded.get("source_url", "").endswith(_PUBLIC_TIME_ENDPOINT) is False:
+    source_url = decoded.get("source_url")
+    if not isinstance(source_url, str) or not source_url.endswith(_PUBLIC_TIME_ENDPOINT):
         raise ValueError("OKX live timing evidence source is not the public time endpoint")
     return decoded
