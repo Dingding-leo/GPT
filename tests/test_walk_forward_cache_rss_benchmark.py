@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import pickle
 from pathlib import Path
 from types import ModuleType
 
@@ -33,12 +35,12 @@ def test_paired_rss_benchmark_alternates_order_and_checks_each_pair(
         csv_path: Path,
         config_path: Path,
         result_path: Path,
-    ) -> tuple[int, object]:
+    ) -> tuple[int, int, object]:
         del csv_path, config_path, result_path
         calls.append(mode)
         if mode == "baseline":
-            return 200, baseline_result
-        return 600, optimized_result
+            return 200, 40, baseline_result
+        return 600, 300, optimized_result
 
     def assert_equal(baseline_value: object, optimized_value: object) -> None:
         calls.append("equivalence")
@@ -48,7 +50,12 @@ def test_paired_rss_benchmark_alternates_order_and_checks_each_pair(
     monkeypatch.setattr(benchmark, "_subprocess_peak_result", subprocess_peak_result)
     monkeypatch.setattr(benchmark.cache_benchmark, "_assert_equal", assert_equal)
 
-    baseline_peak, optimized_peak = benchmark._paired_peak_rss_bytes(
+    (
+        baseline_peak,
+        optimized_peak,
+        baseline_increment,
+        optimized_increment,
+    ) = benchmark._paired_peak_rss_bytes(
         tmp_path / "prices.csv",
         tmp_path / "config.json",
         repetitions=3,
@@ -67,6 +74,46 @@ def test_paired_rss_benchmark_alternates_order_and_checks_each_pair(
     ]
     assert baseline_peak == 200
     assert optimized_peak == 600
+    assert baseline_increment == 40
+    assert optimized_increment == 300
+
+
+def test_worker_records_workload_peak_increment_before_serialization(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    benchmark = _load_rss_benchmark_module(monkeypatch)
+    result = {"result": "exact"}
+    peaks = iter((100, 175))
+    result_path = tmp_path / "result.pickle"
+
+    monkeypatch.setattr(
+        benchmark,
+        "_load_worker_inputs",
+        lambda csv_path, config_path: (object(), {"config": "exact"}),
+    )
+    monkeypatch.setattr(
+        benchmark,
+        "_worker_result",
+        lambda mode, prices, settings: result,
+    )
+    monkeypatch.setattr(benchmark, "_peak_rss_bytes", lambda: next(peaks))
+
+    benchmark._write_worker_outputs(
+        "optimized",
+        tmp_path / "prices.csv",
+        tmp_path / "config.json",
+        result_path,
+    )
+
+    measurement = json.loads(result_path.with_suffix(".json").read_text())
+    assert measurement == {
+        "pre_workload_peak_rss_bytes": 100,
+        "peak_rss_bytes": 175,
+        "workload_peak_rss_increment_bytes": 75,
+    }
+    with result_path.open("rb") as handle:
+        assert pickle.load(handle) == result
 
 
 def test_paired_rss_benchmark_rejects_empty_measurement(
