@@ -23,15 +23,17 @@ jobs:
           python-version: "3.12"
 
       - name: Capture canonical Ruff formatting
+        shell: bash
         run: |
+          set -o pipefail
           python -m pip install "ruff>=0.9,<1"
-          ruff format --diff . > ruff-format.diff
-          test -s ruff-format.diff
+          ruff format --check . 2>&1 | tee ruff-format.txt || true
+          test -s ruff-format.txt
 
-      - name: Upload formatting diff
+      - name: Upload formatting output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ruff-format-diagnostic-${{ github.run_number }}
-          path: ruff-format.diff
+          path: ruff-format.txt
           if-no-files-found: error
           retention-days: 1
