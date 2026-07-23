@@ -121,6 +121,29 @@ def test_committed_result_records_supported_subgate_and_live_rejection() -> None
         assert len(market_result["year_records"]) == 7
 
 
+def test_year_stability_failure_uses_complete_calendar_years() -> None:
+    result = json.loads(_RESULT_PATH.read_text(encoding="utf-8"))
+    expected_losing_complete_years = {
+        "BTC-USDT": {"2022", "2025"},
+        "ETH-USDT": {"2022", "2024"},
+    }
+
+    assert result["live_gate_status"]["year_stability"] == "fail"
+    for market, expected_losing_years in expected_losing_complete_years.items():
+        market_result = result["markets"][market]
+        complete_years = [
+            record for record in market_result["year_records"] if not record["partial"]
+        ]
+        losing_complete_years = {
+            record["period"] for record in complete_years if record["net_return"] <= 0.0
+        }
+
+        assert len(complete_years) == 5
+        assert losing_complete_years == expected_losing_years
+        assert market_result["path_metrics"]["partial_year_labels"] == ["2020", "2026"]
+        assert market_result["complete_year_stability_passes"] is False
+
+
 def test_committed_path_counts_remain_bound_to_canonical_artifact() -> None:
     result = json.loads(_RESULT_PATH.read_text(encoding="utf-8"))
     btc = result["markets"]["BTC-USDT"]["path_metrics"]
