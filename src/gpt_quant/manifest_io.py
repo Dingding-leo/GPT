@@ -9,6 +9,7 @@ from typing import Any
 
 from .experiment_registry import (
     _fsync_directory,
+    _lock_path,
     _registry_lock,
     load_manifest_entries,
     validate_manifest_entry,
@@ -25,7 +26,26 @@ def _canonical_jsonl(entries: list[Mapping[str, Any]]) -> bytes:
     )
 
 
+def _validate_owned_file(path: Path, *, label: str) -> None:
+    if path.is_symlink():
+        raise ValueError(f"{label} must not be a symbolic link")
+    if not path.exists():
+        return
+    if not path.is_file():
+        raise ValueError(f"{label} must be a regular file")
+    if path.stat().st_nlink > 1:
+        raise ValueError(f"{label} must not be a hard-linked file")
+
+
+def _validate_manifest_publication_path(path: Path) -> None:
+    if path.parent.is_symlink():
+        raise ValueError("manifest output directory must not be a symbolic link")
+    _validate_owned_file(path, label="manifest destination")
+    _validate_owned_file(_lock_path(path), label="manifest lock")
+
+
 def _write_manifest_atomic(path: Path, payload: bytes) -> None:
+    _validate_manifest_publication_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
     try:
@@ -39,6 +59,7 @@ def _write_manifest_atomic(path: Path, payload: bytes) -> None:
             handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
+        _validate_manifest_publication_path(path)
         os.replace(temporary, path)
         _fsync_directory(path.parent)
         temporary = None
@@ -55,7 +76,9 @@ def append_experiment_manifest(
 
     validated_entry = validate_manifest_entry(entry)
     output = Path(path)
+    _validate_manifest_publication_path(output)
     with _registry_lock(output):
+        _validate_manifest_publication_path(output)
         existing_entries: list[dict[str, Any]] = []
         existing_payload = b""
         if output.exists():
