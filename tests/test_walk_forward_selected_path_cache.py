@@ -58,9 +58,7 @@ def test_verifier_reuses_one_source_path_per_selected_config(
     paths = _write_repeated_selection_report(btc_usdt_prices, tmp_path)
     report = json.loads(paths["json"].read_text(encoding="utf-8"))
     assert len(report["folds"]) == 2
-    assert report["folds"][0]["selected_parameters"] == report["folds"][1][
-        "selected_parameters"
-    ]
+    assert report["folds"][0]["selected_parameters"] == report["folds"][1]["selected_parameters"]
 
     original = verify_gate.run_backtest
     calls: list[tuple[pd.Timestamp, pd.Timestamp, StrategyConfig]] = []
