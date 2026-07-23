@@ -132,9 +132,5 @@ def test_result_records_single_rejected_candidate_and_bound_provenance() -> None
     assert result["markets"]["ETH-USDT"]["observations"] == 2385
     assert result["markets"]["BTC-USDT"]["ci_lower"] > 0.0
     assert result["markets"]["ETH-USDT"]["ci_lower"] <= 0.0
-    assert result["markets"]["BTC-USDT"]["observed_delta"] == pytest.approx(
-        0.4288754936776258
-    )
-    assert result["markets"]["ETH-USDT"]["observed_delta"] == pytest.approx(
-        0.3502239741818459
-    )
+    assert result["markets"]["BTC-USDT"]["observed_delta"] == pytest.approx(0.4288754936776258)
+    assert result["markets"]["ETH-USDT"]["observed_delta"] == pytest.approx(0.3502239741818459)
