@@ -45,6 +45,21 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
+      - name: Apply canonical formatting diagnostic
+        run: |
+          ruff check . --fix
+          ruff format .
+
+      - name: Upload canonical formatting diagnostic
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: canonical-format-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: |
+            src/gpt_quant/okx_execution_quote.py
+            tests/test_okx_execution_quote.py
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
