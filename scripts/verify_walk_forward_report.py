@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-from gpt_quant.walk_forward_verify import verify_walk_forward_report
+from gpt_quant.walk_forward_verify_gate import verify_walk_forward_report
 
 
 def parse_args() -> argparse.Namespace:
