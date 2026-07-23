@@ -90,7 +90,7 @@ def test_five_bps_baseline_reselects_instead_of_repricing_ten_bps_path(
     search = experiment["search"]
     robustness = experiment["robustness"]
 
-    prices = btc_usdt_prices.iloc[210:600]
+    prices = btc_usdt_prices.iloc[175:565]
     common_arguments = {
         "momentum_lookbacks": search["momentum_lookbacks"],
         "reversal_lookbacks": search["reversal_lookbacks"],
