@@ -93,8 +93,7 @@ def test_execution_quote_store_replays_one_deterministic_root(tmp_path: Path) ->
     assert replayed == complete
     assert replayed.to_bytes() == expected_payload
     assert all(
-        record.source_response_bytes == _REAL_OKX_ORDER_BOOK_RESPONSE
-        for record in replayed.records
+        record.source_response_bytes == _REAL_OKX_ORDER_BOOK_RESPONSE for record in replayed.records
     )
     assert all(
         record.instrument_snapshot_bytes == _REAL_OKX_INSTRUMENT_RESPONSE
