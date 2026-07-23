@@ -196,10 +196,7 @@ def _recover_stale_stages(directory_descriptor: int) -> None:
             if stat.S_IMODE(staged_stat.st_mode) != 0o600:
                 raise ValueError(f"{_ERROR_LABEL} staged snapshot must use mode 0600")
             path_stat = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
-            if (
-                path_stat.st_dev != staged_stat.st_dev
-                or path_stat.st_ino != staged_stat.st_ino
-            ):
+            if path_stat.st_dev != staged_stat.st_dev or path_stat.st_ino != staged_stat.st_ino:
                 raise RuntimeError(f"{_ERROR_LABEL} staged snapshot changed during recovery")
             if staged_stat.st_nlink == 2:
                 chunks: list[bytes] = []
