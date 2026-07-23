@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import os
 import stat
 from datetime import UTC, datetime, timedelta
@@ -14,6 +16,7 @@ from gpt_quant.paper_decision_store import (
     load_paper_order_decision,
     pending_target_position_intents,
     record_paper_order_decision,
+    replay_paper_order_decision_store,
 )
 from gpt_quant.target_intent_journal import record_target_position_intent
 
@@ -204,4 +207,72 @@ def test_store_rejects_unknown_decision_file(tmp_path: Path) -> None:
     os.chmod(unexpected, 0o600)
 
     with pytest.raises(ValueError, match="unknown target intent"):
+        pending_target_position_intents(target_path, decision_directory)
+
+
+def test_replay_is_target_ordered_and_content_addressed(tmp_path: Path) -> None:
+    target_path, decision_directory, first_target = _paths(tmp_path)
+    second_open = first_target.signal_bar_open_utc + timedelta(days=1)
+    second_target = TargetPositionIntent(
+        instrument_id=first_target.instrument_id,
+        bar=first_target.bar,
+        strategy_id=first_target.strategy_id,
+        strategy_revision=first_target.strategy_revision,
+        source_data_sha256=first_target.source_data_sha256,
+        config_sha256=first_target.config_sha256,
+        signal_bar_open_utc=second_open,
+        signal_bar_close_utc=second_open + timedelta(days=1),
+        decision_not_before_utc=second_open + timedelta(days=1, seconds=1),
+        expires_at_utc=second_open + timedelta(days=2),
+        target_position=0.25,
+        minimum_position=0.0,
+        maximum_position=1.0,
+    )
+    record_target_position_intent(target_path, second_target)
+    second_decision = _decision(second_target, quantity="0.002")
+    first_decision = _decision(first_target)
+
+    record_paper_order_decision(target_path, decision_directory, second_decision)
+    record_paper_order_decision(target_path, decision_directory, first_decision)
+    replay = replay_paper_order_decision_store(target_path, decision_directory)
+
+    assert replay.decisions == (first_decision, second_decision)
+    assert replay.pending_target_intents == ()
+    assert replay.target_journal_sha256 == hashlib.sha256(
+        first_target.to_json_bytes() + second_target.to_json_bytes()
+    ).hexdigest()
+    expected_evidence = {
+        "schema_version": 1,
+        "target_journal_sha256": replay.target_journal_sha256,
+        "decision_ids": [first_decision.decision_id, second_decision.decision_id],
+        "pending_target_intent_ids": [],
+    }
+    expected_bytes = json.dumps(
+        expected_evidence,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+    assert replay.store_sha256 == hashlib.sha256(expected_bytes).hexdigest()
+    assert replay_paper_order_decision_store(target_path, decision_directory) == replay
+
+
+def test_replay_rejects_canonical_decision_that_precedes_target_activation(
+    tmp_path: Path,
+) -> None:
+    target_path, decision_directory, target = _paths(tmp_path)
+    decision_directory.mkdir()
+    invalid = _decision(
+        target,
+        outcome="rejected",
+        decided_at=target.signal_bar_close_utc,
+        market_observed_at=target.signal_bar_close_utc,
+    )
+    path = decision_directory / f"{target.intent_id}.json"
+    path.write_bytes(invalid.to_json_bytes())
+    os.chmod(path, 0o600)
+
+    with pytest.raises(ValueError, match="cannot precede target activation"):
+        replay_paper_order_decision_store(target_path, decision_directory)
+    with pytest.raises(ValueError, match="cannot precede target activation"):
         pending_target_position_intents(target_path, decision_directory)
