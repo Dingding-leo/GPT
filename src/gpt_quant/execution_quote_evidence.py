@@ -20,6 +20,7 @@ from .execution_quote import ExecutionQuoteSnapshot
 _ERROR_LABEL = "execution quote evidence store"
 _LOCK_NAME = ".execution-quote-evidence.lock"
 _JSON_NAME = re.compile(r"([0-9a-f]{64})\.json")
+_STAGE_NAME = re.compile(r"\.execution-quote-[0-9]+-[0-9a-f]{16}\.tmp")
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,6 +171,77 @@ def _read_snapshot_file(directory_descriptor: int, name: str) -> ExecutionQuoteS
     return snapshot
 
 
+def _recover_stale_stages(directory_descriptor: int) -> None:
+    recovered = False
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    nonblock = getattr(os, "O_NONBLOCK", 0)
+    for name in sorted(os.listdir(directory_descriptor)):
+        if _STAGE_NAME.fullmatch(name) is None:
+            continue
+        descriptor = os.open(
+            name,
+            os.O_RDONLY | no_follow | nonblock,
+            dir_fd=directory_descriptor,
+        )
+        try:
+            staged_stat = os.fstat(descriptor)
+            if not stat.S_ISREG(staged_stat.st_mode) or staged_stat.st_nlink not in {1, 2}:
+                raise ValueError(
+                    f"{_ERROR_LABEL} staged snapshot must be a regular file with one or two links"
+                )
+            if hasattr(os, "geteuid") and staged_stat.st_uid != os.geteuid():
+                raise ValueError(
+                    f"{_ERROR_LABEL} staged snapshot must be owned by the current user"
+                )
+            if stat.S_IMODE(staged_stat.st_mode) != 0o600:
+                raise ValueError(f"{_ERROR_LABEL} staged snapshot must use mode 0600")
+            path_stat = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+            if (
+                path_stat.st_dev != staged_stat.st_dev
+                or path_stat.st_ino != staged_stat.st_ino
+            ):
+                raise RuntimeError(f"{_ERROR_LABEL} staged snapshot changed during recovery")
+            if staged_stat.st_nlink == 2:
+                chunks: list[bytes] = []
+                while True:
+                    chunk = os.read(descriptor, 1024 * 1024)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                after_stat = os.fstat(descriptor)
+                if (
+                    after_stat.st_dev != staged_stat.st_dev
+                    or after_stat.st_ino != staged_stat.st_ino
+                    or after_stat.st_size != staged_stat.st_size
+                ):
+                    raise RuntimeError(f"{_ERROR_LABEL} staged snapshot changed during recovery")
+                snapshot = ExecutionQuoteSnapshot.from_json_bytes(b"".join(chunks))
+                destination_name = f"{snapshot.snapshot_id}.json"
+                try:
+                    destination_stat = os.stat(
+                        destination_name,
+                        dir_fd=directory_descriptor,
+                        follow_symlinks=False,
+                    )
+                except FileNotFoundError as exc:
+                    raise ValueError(
+                        f"{_ERROR_LABEL} published stage is missing its canonical destination"
+                    ) from exc
+                if (
+                    destination_stat.st_dev != staged_stat.st_dev
+                    or destination_stat.st_ino != staged_stat.st_ino
+                ):
+                    raise ValueError(
+                        f"{_ERROR_LABEL} published stage does not link its canonical destination"
+                    )
+        finally:
+            os.close(descriptor)
+        os.unlink(name, dir_fd=directory_descriptor)
+        recovered = True
+    if recovered:
+        os.fsync(directory_descriptor)
+
+
 def _load_from_descriptor(directory_descriptor: int) -> ExecutionQuoteEvidenceStore:
     names = sorted(name for name in os.listdir(directory_descriptor) if name != _LOCK_NAME)
     snapshots = tuple(_read_snapshot_file(directory_descriptor, name) for name in names)
@@ -201,6 +273,7 @@ def _exclusive_store_lock(path: Path) -> Iterator[tuple[int, os.stat_result]]:
         except BlockingIOError as exc:
             raise RuntimeError(f"{_ERROR_LABEL} writer lock is already held") from exc
         acquired = True
+        _recover_stale_stages(directory_descriptor)
         yield directory_descriptor, directory_stat
     finally:
         if acquired:
