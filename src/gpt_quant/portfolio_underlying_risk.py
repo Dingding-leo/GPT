@@ -182,8 +182,7 @@ def build_underlying_sleeve_risk(
         raise ValueError("provenance hashes must match underlying path hashes")
     weights = _weights(names, initial_weights)
     paths = {
-        name: _load_path(sleeve_paths[name], expected_sha256[name], tolerance)
-        for name in names
+        name: _load_path(sleeve_paths[name], expected_sha256[name], tolerance) for name in names
     }
     index = paths[names[0]].index
     if any(not paths[name].index.equals(index) for name in names[1:]):
@@ -238,8 +237,7 @@ def build_underlying_sleeve_risk(
             "exchange_fee_sum": float(fee[name].sum()),
             "gross_total_return": _total_return(gross[name]),
             "net_total_return": _total_return(net[name]),
-            "compounded_exchange_fee_drag": _total_return(gross[name])
-            - _total_return(net[name]),
+            "compounded_exchange_fee_drag": _total_return(gross[name]) - _total_return(net[name]),
             "source_sha256": paths[name].attrs["source_sha256"],
         }
 
@@ -251,12 +249,8 @@ def build_underlying_sleeve_risk(
         "current_absolute_market_exposure": current_exposure,
         "maximum_start_of_bar_absolute_market_exposure": float(portfolio_exposure.max()),
         "total_weighted_underlying_turnover": float(portfolio_turnover.sum()),
-        "annualized_weighted_underlying_turnover": float(
-            portfolio_turnover.mean() * annualization
-        ),
-        "underlying_adjustment_observation_count": int(
-            (turnover.gt(threshold).any(axis=1)).sum()
-        ),
+        "annualized_weighted_underlying_turnover": float(portfolio_turnover.mean() * annualization),
+        "underlying_adjustment_observation_count": int((turnover.gt(threshold).any(axis=1)).sum()),
         "portfolio_exchange_fee_sum": float(portfolio_fee.sum()),
         "gross_total_return": _total_return(portfolio_gross),
         "net_total_return": _total_return(portfolio_net),
@@ -338,9 +332,7 @@ def write_underlying_sleeve_risk_report(
         initial_weights=result._weights,
         provenance=result.payload["data_summary"]["provenance"],
         annualization=result._annualization,
-        adjustment_threshold=float(
-            result.payload["settings"]["position_adjustment_threshold"]
-        ),
+        adjustment_threshold=float(result.payload["settings"]["position_adjustment_threshold"]),
         accounting_tolerance=result._tolerance,
         generated_at_utc=result.generated_at_utc,
     )
