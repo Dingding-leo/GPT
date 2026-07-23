@@ -75,6 +75,18 @@ def test_verifier_recomputes_persisted_real_okx_report(
     assert verification["folds"] == returns["fold"].nunique()
     assert verification["fold_boundary_position_transitions_verified"] == 1
     assert verification["within_fold_delayed_position_rows_verified"] == len(returns) - 2
+    assert verification["source_selected_config_folds_verified"] == returns["fold"].nunique()
+    assert verification["source_target_position_rows_verified"] == len(returns)
+    assert verification["source_delayed_position_rows_verified"] == len(returns)
+    assert verification["source_selected_model_switches_verified"] == 0
+    assert (
+        verification["target_position_source"]
+        == "immutable_normalized_okx_close_and_persisted_selected_config"
+    )
+    assert (
+        verification["executed_position_timing"]
+        == "selected_config_target_from_immediately_preceding_source_bar"
+    )
     assert verification["accounting_tolerance"] == 1e-12
     assert verification["metric_tolerance"] == 1e-9
     assert verification["source_price_rows_verified"] == len(returns)
@@ -142,24 +154,39 @@ def test_verifier_rejects_within_fold_delayed_position_drift(
     returns.loc[row - 1, "target_position"] += 0.1
     returns.to_csv(paths["returns"], index=False)
 
-    with pytest.raises(ValueError, match="delayed position"):
+    with pytest.raises(ValueError, match="source target_position"):
         verify_walk_forward_report(tmp_path)
 
 
-def test_verifier_accepts_fold_boundary_model_switch_accounting(
+def test_verifier_rejects_fold_boundary_target_drift(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
 ) -> None:
     paths = _write_real_okx_report(btc_usdt_prices, tmp_path)
     returns = pd.read_csv(paths["returns"])
     boundary = int(returns.index[returns["fold"].ne(returns["fold"].shift())][1])
-
     returns.loc[boundary - 1, "target_position"] += 0.1
     returns.to_csv(paths["returns"], index=False)
 
-    verification = verify_walk_forward_report(tmp_path)
-    assert verification["status"] == "passed"
-    assert verification["fold_boundary_position_transitions_verified"] == 1
+    with pytest.raises(ValueError, match="source target_position"):
+        verify_walk_forward_report(tmp_path)
+
+
+def test_verifier_rejects_selected_configuration_drift(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    paths = _write_real_okx_report(btc_usdt_prices, tmp_path)
+    report = json.loads(paths["json"].read_text(encoding="utf-8"))
+    selected = report["folds"][0]["selected_parameters"]
+    selected["momentum_lookback"] = int(selected["momentum_lookback"]) + 1
+    paths["json"].write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="source target_position"):
+        verify_walk_forward_report(tmp_path)
 
 
 def test_verifier_rejects_naive_report_timestamp(
