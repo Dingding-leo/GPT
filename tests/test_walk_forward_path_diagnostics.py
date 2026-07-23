@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import json
 from pathlib import Path
 
@@ -33,7 +34,7 @@ def _real_okx_result(prices: pd.Series):
     )
 
 
-def _path_diagnostics(frame: pd.DataFrame) -> dict[str, float | int | str | bool]:
+def _path_diagnostics(frame: pd.DataFrame) -> dict[str, object]:
     return walk_forward_path_diagnostics(
         frame,
         annualization=365,
@@ -42,17 +43,74 @@ def _path_diagnostics(frame: pd.DataFrame) -> dict[str, float | int | str | bool
     )
 
 
-def _assert_diagnostics_equal(
-    actual: dict[str, float | int | str | bool],
-    expected: dict[str, float | int | str | bool],
-) -> None:
-    assert actual.keys() == expected.keys()
-    for key, expected_value in expected.items():
-        actual_value = actual[key]
-        if isinstance(expected_value, float):
-            assert actual_value == pytest.approx(expected_value, abs=1e-12)
+def _assert_diagnostics_equal(actual: object, expected: object) -> None:
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict)
+        assert actual.keys() == expected.keys()
+        for key, expected_value in expected.items():
+            _assert_diagnostics_equal(actual[key], expected_value)
+    elif isinstance(expected, list):
+        assert isinstance(actual, list)
+        assert len(actual) == len(expected)
+        for actual_value, expected_value in zip(actual, expected, strict=True):
+            _assert_diagnostics_equal(actual_value, expected_value)
+    elif isinstance(expected, float):
+        assert actual == pytest.approx(expected, abs=1e-12)
+    else:
+        assert actual == expected
+
+
+def _independent_calendar_records(
+    frame: pd.DataFrame,
+    *,
+    period: str,
+) -> list[dict[str, object]]:
+    index = frame.index.tz_convert("UTC")
+    labels = index.strftime("%Y-%m" if period == "month" else "%Y")
+    records: list[dict[str, object]] = []
+    for label in dict.fromkeys(labels):
+        mask = labels == label
+        observed = index[mask]
+        returns = frame.loc[mask, "strategy_return"]
+        if period == "month":
+            year, month = (int(part) for part in label.split("-"))
+            start = pd.Timestamp(year=year, month=month, day=1, tz="UTC")
+            end = pd.Timestamp(
+                year=year,
+                month=month,
+                day=calendar.monthrange(year, month)[1],
+                tz="UTC",
+            )
         else:
-            assert actual_value == expected_value
+            year = int(label)
+            start = pd.Timestamp(year=year, month=1, day=1, tz="UTC")
+            end = pd.Timestamp(year=year, month=12, day=31, tz="UTC")
+        complete = (
+            len(observed) == int((end - start).days) + 1
+            and observed.equals(observed.normalize())
+            and observed[0] == start
+            and observed[-1] == end
+            and observed.to_series().diff().dropna().eq(pd.Timedelta(days=1)).all()
+        )
+        net_total_return = float((1.0 + returns).prod() - 1.0)
+        if net_total_return > 1e-12:
+            classification = "profitable"
+        elif net_total_return < -1e-12:
+            classification = "losing"
+        else:
+            classification = "flat"
+        records.append(
+            {
+                "period": label,
+                "coverage": "complete" if complete else "partial",
+                "observations": len(observed),
+                "evaluation_start": observed[0].isoformat(),
+                "evaluation_end": observed[-1].isoformat(),
+                "net_total_return": net_total_return,
+                "classification": classification,
+            }
+        )
+    return records
 
 
 def test_report_persists_recomputable_position_path_diagnostics(
@@ -90,9 +148,34 @@ def test_report_persists_recomputable_position_path_diagnostics(
         == expected["holding_episode_count"]
     )
 
+    expected_months = _independent_calendar_records(result.combined_frame, period="month")
+    expected_years = _independent_calendar_records(result.combined_frame, period="year")
+    _assert_diagnostics_equal(expected["calendar_months"], expected_months)
+    _assert_diagnostics_equal(expected["calendar_years"], expected_years)
+    assert (
+        expected["profitable_month_count"]
+        + expected["losing_month_count"]
+        + expected["flat_month_count"]
+        == len(expected_months)
+    )
+    assert (
+        expected["profitable_year_count"]
+        + expected["losing_year_count"]
+        + expected["flat_year_count"]
+        == len(expected_years)
+    )
+    assert expected["partial_month_labels"] == [
+        record["period"] for record in expected_months if record["coverage"] == "partial"
+    ]
+    assert expected["partial_year_labels"] == [
+        record["period"] for record in expected_years if record["coverage"] == "partial"
+    ]
+
     markdown = paths["markdown"].read_text(encoding="utf-8")
     assert "## Position-path diagnostics" in markdown
     assert "Configured position limits pass" in markdown
+    assert "Profitable / losing / flat UTC calendar months" in markdown
+    assert "Partial UTC calendar years" in markdown
     assert "not exchange orders or fills" in markdown
 
 
