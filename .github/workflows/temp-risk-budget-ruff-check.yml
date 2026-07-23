@@ -23,20 +23,20 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Capture focused Ruff diagnostics
+      - name: Capture repository-wide Ruff diagnostics
         shell: bash
         run: |
           set -euo pipefail
           python -m pip install -e ".[dev]"
-          ruff check --output-format=json \
-            reports/research/ex_ante_risk_budget_overlay/analysis.py \
-            tests/test_ex_ante_risk_budget_overlay_report.py \
-            > /tmp/risk-budget-ruff.json || true
+          ruff check --output-format=json . > /tmp/ruff-check.json || true
+          ruff format --check . > /tmp/ruff-format.txt 2>&1 || true
 
       - name: Upload Ruff diagnostics
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: risk-budget-ruff-${{ github.run_number }}-attempt-${{ github.run_attempt }}
-          path: /tmp/risk-budget-ruff.json
+          name: repository-ruff-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: |
+            /tmp/ruff-check.json
+            /tmp/ruff-format.txt
           if-no-files-found: error
           retention-days: 1
