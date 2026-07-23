@@ -92,9 +92,10 @@ def test_selection_verifier_reruns_every_real_okx_candidate(
         verification["selection_source"]
         == "immutable_normalized_okx_close_and_effective_config_full_5bps_reselection"
     )
-    assert verification["effective_config_sha256"] == hashlib.sha256(
-        paths["effective_config"].read_bytes()
-    ).hexdigest()
+    assert (
+        verification["effective_config_sha256"]
+        == hashlib.sha256(paths["effective_config"].read_bytes()).hexdigest()
+    )
 
 
 def test_selection_verifier_rejects_self_consistent_nonwinning_path(
@@ -119,9 +120,7 @@ def test_selection_verifier_rejects_self_consistent_nonwinning_path(
     ).frame
     fold_mask = returns["fold"].eq(int(first_fold["fold"]))
     assert int(fold_mask.sum()) == len(wrong_frame)
-    returns.loc[fold_mask, "target_position"] = wrong_frame["target_position"].to_numpy(
-        copy=False
-    )
+    returns.loc[fold_mask, "target_position"] = wrong_frame["target_position"].to_numpy(copy=False)
     returns.loc[fold_mask, "position"] = wrong_frame["position"].to_numpy(copy=False)
     returns["turnover"] = returns["position"].diff().abs().fillna(returns["position"].abs())
     returns["gross_strategy_return"] = returns["position"] * returns["asset_return"]
