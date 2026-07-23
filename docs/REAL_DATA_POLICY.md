@@ -47,3 +47,25 @@ Executable verification from a checkout with development dependencies installed:
 ```bash
 pytest tests/test_okx_snapshot_integrity.py
 ```
+
+## Sealed holdout report publication and recovery
+
+`write_research_report()` renders `latest.json` and `latest.md` completely in memory before modifying the destination. It stages both payloads in a temporary directory on the destination filesystem, then publishes JSON first and Markdown second with `os.replace`.
+
+If staging or a later replacement fails, the publisher rolls completed replacements back in reverse order. A failed first publication leaves no partial report files and removes a newly created output directory when it is empty. A failed replacement of an existing valid report restores the prior JSON and Markdown bytes exactly.
+
+If restoration itself fails, the publisher preserves the original commit exception as the cause and raises:
+
+```text
+research report commit failed and rollback was incomplete
+```
+
+After that error, the destination must be treated as an indeterminate sealed-holdout report generation and regenerated before either file is used as evidence. This is handled-failure recovery, not atomic two-file visibility, concurrent-writer synchronization, or an `fsync` crash-durability guarantee.
+
+The recovery matrix uses the immutable real OKX BTC-USDT `1Dutc` fixture and valid `run_holdout_research()` results. It changes only the transaction-cost configuration for the replacement result so exact prior-byte restoration cannot pass vacuously; it does not generate or alter market observations.
+
+Executable verification:
+
+```bash
+pytest tests/test_research_report_failure_recovery.py
+```
