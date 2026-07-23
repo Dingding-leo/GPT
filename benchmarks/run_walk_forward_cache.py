@@ -10,16 +10,18 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 import gpt_quant.walk_forward as walk_forward
 from gpt_quant import StrategyConfig, load_price_csv
 
+CandidateCache = dict[StrategyConfig, pd.DataFrame]
 CandidateWindow = Callable[
     [
         pd.Series,
         pd.Series,
-        dict[StrategyConfig, pd.DataFrame],
+        CandidateCache,
         StrategyConfig,
         pd.Timestamp,
         pd.Timestamp,
@@ -52,10 +54,41 @@ def _settings(path: Path) -> dict[str, Any]:
     }
 
 
+def _cache_column_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> int:
+    """Count retained candidate-column buffers."""
+
+    return sum(int(frame.memory_usage(index=False, deep=True).sum()) for frame in cache.values())
+
+
+def _root_array(values: np.ndarray) -> np.ndarray:
+    root = values
+    while isinstance(root.base, np.ndarray):
+        root = root.base
+    return root
+
+
+def _cache_unique_index_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> int:
+    """Count each retained DatetimeIndex data buffer exactly once."""
+
+    buffers: dict[int, int] = {}
+    for frame in cache.values():
+        if not isinstance(frame.index, pd.DatetimeIndex):
+            raise TypeError("candidate cache index must be a DatetimeIndex")
+        root = _root_array(frame.index.asi8)
+        buffers.setdefault(id(root), int(root.nbytes))
+    return sum(buffers.values())
+
+
+def _cache_retained_array_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> int:
+    """Count retained column buffers plus unique index data buffers."""
+
+    return _cache_column_bytes(cache) + _cache_unique_index_bytes(cache)
+
+
 def _legacy_candidate_window(
     point_in_time_history: pd.Series,
     complete_history: pd.Series,
-    cache: dict[StrategyConfig, pd.DataFrame],
+    cache: CandidateCache,
     config: StrategyConfig,
     start: pd.Timestamp,
     end: pd.Timestamp,
@@ -67,6 +100,29 @@ def _legacy_candidate_window(
         config,
         start,
         end,
+        previous_position,
+    )
+
+
+def _full_frame_cached_candidate_window(
+    point_in_time_history: pd.Series,
+    complete_history: pd.Series,
+    cache: CandidateCache,
+    config: StrategyConfig,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    previous_position: float,
+) -> pd.DataFrame:
+    """Reference the cache layout before rebuilt NAV was removed."""
+
+    del point_in_time_history
+    template = cache.get(config)
+    if template is None:
+        template = walk_forward.run_backtest(complete_history, config).frame
+        cache[config] = template
+    return walk_forward._rebase_test_window(
+        template.loc[start:end],
+        config,
         previous_position,
     )
 
@@ -156,23 +212,97 @@ def main() -> None:
     csv_path = Path(args.csv)
     prices = load_price_csv(csv_path)
     settings = _settings(Path(args.config))
+    optimized_cache: CandidateCache | None = None
+    latest_optimized_result: walk_forward.WalkForwardResult | None = None
+    optimized_helper = walk_forward._run_cached_candidate_window
 
     def baseline() -> walk_forward.WalkForwardResult:
         return _run_with_candidate_window(prices, settings, _legacy_candidate_window)
 
+    def capture_optimized_cache(
+        point_in_time_history: pd.Series,
+        complete_history: pd.Series,
+        cache: CandidateCache,
+        config: StrategyConfig,
+        start: pd.Timestamp,
+        end: pd.Timestamp,
+        previous_position: float,
+    ) -> pd.DataFrame:
+        nonlocal optimized_cache
+        optimized_cache = cache
+        return optimized_helper(
+            point_in_time_history,
+            complete_history,
+            cache,
+            config,
+            start,
+            end,
+            previous_position,
+        )
+
     def optimized() -> walk_forward.WalkForwardResult:
-        return _run_with_candidate_window(
+        nonlocal latest_optimized_result
+        latest_optimized_result = _run_with_candidate_window(
             prices,
             settings,
-            walk_forward._run_cached_candidate_window,
+            capture_optimized_cache,
         )
+        return latest_optimized_result
 
     baseline_median, optimized_median = _paired_medians(
         baseline,
         optimized,
         args.repetitions,
     )
+    if optimized_cache is None or latest_optimized_result is None:
+        raise RuntimeError("optimized benchmark did not populate the candidate cache")
+
+    full_frame_cache: CandidateCache | None = None
+
+    def capture_full_frame_cache(
+        point_in_time_history: pd.Series,
+        complete_history: pd.Series,
+        cache: CandidateCache,
+        config: StrategyConfig,
+        start: pd.Timestamp,
+        end: pd.Timestamp,
+        previous_position: float,
+    ) -> pd.DataFrame:
+        nonlocal full_frame_cache
+        full_frame_cache = cache
+        return _full_frame_cached_candidate_window(
+            point_in_time_history,
+            complete_history,
+            cache,
+            config,
+            start,
+            end,
+            previous_position,
+        )
+
+    full_frame_result = _run_with_candidate_window(
+        prices,
+        settings,
+        capture_full_frame_cache,
+    )
+    if full_frame_cache is None:
+        raise RuntimeError("full-frame benchmark did not populate the candidate cache")
+    _assert_equal(full_frame_result, latest_optimized_result)
+
+    full_frame_column_bytes = _cache_column_bytes(full_frame_cache)
+    optimized_column_bytes = _cache_column_bytes(optimized_cache)
+    full_frame_index_bytes = _cache_unique_index_bytes(full_frame_cache)
+    optimized_index_bytes = _cache_unique_index_bytes(optimized_cache)
+    full_frame_retained_bytes = _cache_retained_array_bytes(full_frame_cache)
+    optimized_retained_bytes = _cache_retained_array_bytes(optimized_cache)
+    if full_frame_column_bytes <= optimized_column_bytes:
+        raise AssertionError("optimized cache did not reduce retained candidate columns")
+    if full_frame_index_bytes != optimized_index_bytes:
+        raise AssertionError("cache layouts retained different index buffers")
+
     reduction = 1.0 - optimized_median / baseline_median
+    column_reduction = 1.0 - optimized_column_bytes / full_frame_column_bytes
+    retained_reduction = 1.0 - optimized_retained_bytes / full_frame_retained_bytes
     print(f"csv_sha256={_sha256(csv_path)}")
     print(f"observations={len(prices)}")
     print("equivalence=exact")
@@ -180,6 +310,14 @@ def main() -> None:
     print(f"optimized_median_seconds={optimized_median:.9f}")
     print(f"reduction_percent={reduction * 100.0:.2f}")
     print(f"speedup={baseline_median / optimized_median:.3f}x")
+    print(f"cache_entries={len(optimized_cache)}")
+    print(f"full_frame_cache_column_bytes={full_frame_column_bytes}")
+    print(f"optimized_cache_column_bytes={optimized_column_bytes}")
+    print(f"cache_column_reduction_percent={column_reduction * 100.0:.2f}")
+    print(f"cache_unique_index_bytes={optimized_index_bytes}")
+    print(f"full_frame_cache_retained_array_bytes={full_frame_retained_bytes}")
+    print(f"optimized_cache_retained_array_bytes={optimized_retained_bytes}")
+    print(f"cache_retained_array_reduction_percent={retained_reduction * 100.0:.2f}")
 
 
 if __name__ == "__main__":
