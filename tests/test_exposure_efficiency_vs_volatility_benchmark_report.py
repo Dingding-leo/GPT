@@ -11,18 +11,10 @@ import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
 _ANALYSIS_PATH = (
-    _ROOT
-    / "reports"
-    / "research"
-    / "exposure-efficiency-vs-volatility-benchmark"
-    / "analysis.py"
+    _ROOT / "reports" / "research" / "exposure-efficiency-vs-volatility-benchmark" / "analysis.py"
 )
 _RESULT_PATH = _ANALYSIS_PATH.with_name("result.json")
-_FIXTURE_DIR = (
-    Path(__file__).parent
-    / "fixtures"
-    / "okx_btc_usdt_oos_exposure_20200111_20200219"
-)
+_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx_btc_usdt_oos_exposure_20200111_20200219"
 
 
 def _load_analysis():
@@ -55,14 +47,10 @@ def test_real_fixture_metric_and_provenance() -> None:
         frame["benchmark_position"].to_numpy(dtype=float),
     )
     expected_strategy = (
-        module.ANNUALIZATION
-        * frame["strategy_return"].sum()
-        / frame["strategy_position"].sum()
+        module.ANNUALIZATION * frame["strategy_return"].sum() / frame["strategy_position"].sum()
     )
     expected_benchmark = (
-        module.ANNUALIZATION
-        * frame["benchmark_return"].sum()
-        / frame["benchmark_position"].sum()
+        module.ANNUALIZATION * frame["benchmark_return"].sum() / frame["benchmark_position"].sum()
     )
     assert strategy == pytest.approx(expected_strategy, abs=1e-15)
     assert benchmark == pytest.approx(expected_benchmark, abs=1e-15)
