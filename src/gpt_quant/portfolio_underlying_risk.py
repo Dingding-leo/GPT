@@ -119,6 +119,9 @@ def _load_path(
         if not np.isfinite(values).all():
             raise ValueError(f"{column} must contain finite numeric values")
         frame[column] = values
+    position = frame["position"]
+    if bool((position < -tolerance).any()) or bool((position > 1.0 + tolerance).any()):
+        raise ValueError("position must remain within long-only spot bounds [0, 1]")
     if (frame[["turnover", "trading_cost"]] < 0.0).any().any():
         raise ValueError("turnover and trading_cost must be non-negative")
     if (frame[["gross_strategy_return", "strategy_return"]] <= -1.0).any().any():
