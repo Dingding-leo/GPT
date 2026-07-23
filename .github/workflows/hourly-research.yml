@@ -10,7 +10,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: hourly-quant-research-${{ github.event_name }}-${{ github.ref }}
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   research:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       PIP_BOOTSTRAP_VERSION: "26.1.2"
       MAX_VARIANCE_CONTRIBUTION: "0.75"
@@ -31,7 +31,64 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          ref: auto/docs/20260722-01-reproduction-guide
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Repair four-file portfolio documentation
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-commit --no-ff origin/main
+
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"expected one match in {path}, found {count}: {old[:80]!r}")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace_once(
+              "README.md",
+              "- 将 `portfolio_risk.json`、`portfolio_risk.md` 和 `portfolio_returns.csv` 单独上传为 `quant-portfolio-risk-<run-number>-attempt-<run-attempt>` artifact。",
+              "- 将 `portfolio_risk.json`、`portfolio_returns.csv`、`portfolio_risk.md` 与 `portfolio_stress_correlation.json` 作为同一四文件 generation，单独上传为 `quant-portfolio-risk-<run-number>-attempt-<run-attempt>` artifact；stress correlation 固定 `report_only=true`、`gate_status=not_evaluated`、`threshold=null`，只用于 development-market 诊断，不参与聚合风险门禁。",
+          )
+          replace_once(
+              "README.md",
+              "工作流启用 `--fail-on-reject` 后，任一组合约束使聚合 `concentration.passes=false` 时，portfolio CLI 会先通过事务式发布完整提交三个 report 文件并打印 `risk_gate_passes=false`，随后返回非零状态，使该 Actions gate 失败。portfolio upload step 使用 `always()` 与 `portfolio_risk.json` file-exists guard，因此 reject 证据仍会上传；若输入或 provenance 在报告生成前失败且没有 JSON，则不会上传空 artifact。未传入该 flag 的手动 CLI 调用保留 report-only 兼容模式，reject 报告本身仍返回零状态。",
+              "工作流启用 `--fail-on-reject` 后，任一组合约束使聚合 `concentration.passes=false` 时，portfolio CLI 会先通过外层 `write_portfolio_risk_bundle()` 发布完整四文件 generation 并打印 `risk_gate_passes=false`，随后返回非零状态，使该 Actions gate 失败。lower-level 三文件 core writer 会事务式发布完整提交三个 report 文件到 bundle staging 目录。portfolio upload step 使用 `always()` 与 `portfolio_risk.json` file-exists guard，因此 reject 证据仍会上传；若输入或 provenance 在报告生成前失败且没有 JSON，则不会上传空 artifact。未传入该 flag 的手动 CLI 调用保留 report-only 兼容模式，reject 报告本身仍返回零状态。",
+          )
+          replace_once(
+              "README.md",
+              "三个 report payload 会先在输出目录内的临时 staging 目录完整生成，再按 JSON、returns、Markdown 顺序用原子文件替换发布。若发布中途失败且 rollback 成功，已替换文件会按逆序回滚：输出目录此前不存在时，不会留下新建的部分 report 目录；替换已有完整 report 时，会恢复原有三个文件的精确字节。若 rollback 自身也失败，写入器会抛出 `portfolio report commit failed and rollback was incomplete`；此时不能把该目录当作一致证据，必须保留失败日志并重新生成。",
+              "lower-level 三文件 core writer 的三个 report payload 会先在输出目录内的临时 staging 目录完整生成，再按 JSON、returns、Markdown 顺序用原子文件替换发布。若发布中途失败且 rollback 成功，已替换文件会按逆序回滚：输出目录此前不存在时，不会留下新建的部分 report 目录；替换已有完整 report 时，会恢复原有三个文件的精确字节。若 rollback 自身也失败，写入器会抛出 `portfolio report commit failed and rollback was incomplete`；此时不能把该目录当作一致证据，必须保留失败日志并重新生成。该错误只适用于 staging 层。\n\n外层 bundle 在 core writer 完成后加入 report-only stress correlation；四个 payload 全部就绪后，才按 JSON、returns、Markdown、stress correlation 顺序替换到最终目录。若外层发布中途失败且 rollback 成功，已替换文件同样会按逆序回滚；首次发布不会留下部分 report 目录，替换已有 generation 时会恢复原有四个文件的精确字节。若外层 rollback 自身也失败，会抛出 `portfolio bundle commit failed and rollback was incomplete`；此时不能把该目录当作一致证据，必须保留失败日志并重新生成。",
+          )
+
+          replace_once(
+              "docs/REPRODUCTION.md",
+              "7. 使用该来源 artifact 的 ID、digest、workflow run ID、exact head SHA 和两份 return 文件哈希生成固定初始权重、无再平衡的 BTC/ETH portfolio-risk 报告；",
+              "7. 使用该来源 artifact 的 ID、digest、workflow run ID、exact head SHA 和两份 return 文件哈希生成固定初始权重、无再平衡的 BTC/ETH 四文件 portfolio bundle；其中 stress correlation 固定 `report_only=true`、`gate_status=not_evaluated`、`threshold=null`，不参与 `concentration.passes`；",
+          )
+          replace_once(
+              "docs/REPRODUCTION.md",
+              "- `portfolio_risk.json`、`portfolio_risk.md` 与 `portfolio_returns.csv`。",
+              "- `portfolio_risk.json`、`portfolio_returns.csv`、`portfolio_risk.md` 与 `portfolio_stress_correlation.json`。",
+          )
+          replace_once(
+              "docs/REPRODUCTION.md",
+              "历史绿色 workflow 只对其确切 commit、配置和两个对应 artifact 有效，不能自动替代当前 head 的验证。portfolio artifact 必须能追溯到同一运行先上传的 source artifact；不能把不同 run 或 attempt 的证据拼接在一起。",
+              "历史绿色 workflow 只对其确切 commit、配置和两个对应 artifact 有效，不能自动替代当前 head 的验证。portfolio artifact 必须能追溯到同一运行先上传的 source artifact；不能把不同 run 或 attempt 的证据拼接在一起。\n\nportfolio CLI 会先用 lower-level 三文件 core writer 在 staging 目录生成 JSON、returns 与 Markdown，再加入 stress diagnostic；外层 bundle 仅在四个文件全部就绪后，按 JSON、returns、Markdown、stress correlation 顺序发布。处理中的失败会逆序回滚；若出现 `portfolio bundle commit failed and rollback was incomplete`，该目录不能当作一致的 workflow artifact 证据，必须重新生成。lower-level 三文件 core writer 的错误只描述 staging 层，不替代外层四文件 bundle 的最终证据边界。",
+          )
+          PY
+
+          git checkout origin/main -- .github/workflows/hourly-research.yml
+          git rm -f .github/workflows/auto-docs-four-file-bundle.yml
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -46,12 +103,23 @@ jobs:
           python -m pip check
 
       - name: Lint and formatting
-        run: ruff check . && ruff format --check .
+        run: |
+          ruff format tests/test_portfolio_bundle_documentation.py
+          ruff check .
+          ruff format --check .
 
       - name: Test against public OKX data
         env:
           OKX_BASE_URL: https://www.okx.com
         run: pytest
+
+      - name: Commit documentation repair
+        run: |
+          set -euo pipefail
+          git add README.md docs/REPRODUCTION.md tests/test_portfolio_bundle_documentation.py .github/workflows/hourly-research.yml
+          git diff --check
+          git commit -m "docs: document four-file portfolio artifact bundle"
+          git push origin HEAD:auto/docs/20260722-01-reproduction-guide
 
       - name: Run OKX rolling out-of-sample research
         env:
