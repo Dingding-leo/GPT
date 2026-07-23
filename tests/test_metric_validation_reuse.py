@@ -37,6 +37,9 @@ def test_validated_drawdown_reuse_preserves_real_okx_metrics(
     values = returns.to_numpy(copy=False)
     original_values = values.copy()
 
+    oracle_nav = np.concatenate(([1.0], np.cumprod(1.0 + values)))
+    oracle_drawdown = oracle_nav / np.maximum.accumulate(oracle_nav) - 1.0
+    expected = float(oracle_drawdown.min())
     reused = _max_drawdown_from_validated_values(values)
     public = max_drawdown_from_returns(result.frame["strategy_return"])
 
@@ -52,5 +55,6 @@ def test_validated_drawdown_reuse_preserves_real_okx_metrics(
 
     assert np.shares_memory(values, returns.to_numpy(copy=False))
     np.testing.assert_array_equal(values, original_values)
-    assert reused == public
-    assert calculated["max_drawdown"] == reused
+    assert reused == expected
+    assert public == expected
+    assert calculated["max_drawdown"] == expected
