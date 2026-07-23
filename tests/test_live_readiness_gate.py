@@ -38,14 +38,20 @@ def _successful_ci_checks() -> dict[str, str]:
     return {name: "success" for name in live_readiness._REQUIRED_CI_CHECKS}
 
 
-def _write_complete_evidence(repo_root: Path, *, head_sha: str) -> None:
+def _write_complete_evidence(
+    repo_root: Path, *, head_sha: str, tested_sha: str | None = None
+) -> None:
+    tested_revision = tested_sha or head_sha
     _write_json(
         repo_root / "config/okx_research.json",
         {"strategy": {"transaction_cost_bps": 5.0}},
     )
     _write_safe_workflow(repo_root)
     for _, (relative_path, expected) in live_readiness._REQUIRED_EVIDENCE.items():
-        _write_json(repo_root / relative_path, {"head_sha": head_sha, **expected})
+        _write_json(
+            repo_root / relative_path,
+            {"head_sha": head_sha, "tested_sha": tested_revision, **expected},
+        )
 
 
 def test_live_readiness_gate_reports_current_launch_blockers(tmp_path: Path) -> None:
@@ -158,7 +164,7 @@ def test_live_readiness_gate_rejects_evidence_tested_on_different_sha(
 ) -> None:
     head_sha = "b" * 40
     tested_sha = "e" * 40
-    _write_complete_evidence(tmp_path, head_sha=head_sha)
+    _write_complete_evidence(tmp_path, head_sha=head_sha, tested_sha=tested_sha)
 
     result = live_readiness.evaluate_live_readiness(
         tmp_path,
@@ -284,16 +290,19 @@ def test_hourly_workflow_publishes_and_optionally_enforces_live_readiness() -> N
     )
     assert "LIVE_READINESS_TESTED_SHA: ${{ github.sha }}" in workflow
     assert "Write live-readiness blocker summary" in workflow
+    assert "Build verified 5 bps launch evidence" in workflow
     assert "Upload live-readiness blocker summary" in workflow
     assert "Enforce fail-closed live-readiness gate" in workflow
     assert workflow.count("PYTHONPATH=src python -m gpt_quant.live_readiness") == 2
     assert workflow.count('--head-sha "$LIVE_READINESS_HEAD_SHA"') == 2
-    assert workflow.count('--tested-sha "$LIVE_READINESS_TESTED_SHA"') == 2
+    assert workflow.count('--tested-sha "$LIVE_READINESS_TESTED_SHA"') == 3
     assert workflow.count('--ci-status-json "$LIVE_READINESS_CI_STATUS_JSON"') == 2
     assert "steps.walk_forward_verification.outcome" in workflow
+    assert "steps.five_bps_evidence.outcome" in workflow
     assert "steps.portfolio_artifact.outcome" in workflow
     assert "--report-only" in workflow
     assert "!cancelled() && github.event_name == 'workflow_dispatch'" in workflow
+    assert "reports/live_readiness/five_bps_walk_forward.json" in workflow
     assert "retention-days: 30" in workflow
     assert "secrets." not in workflow
     assert "/api/v5/account" not in workflow
