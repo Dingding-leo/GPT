@@ -8,12 +8,13 @@ from copy import deepcopy
 from dataclasses import dataclass
 from numbers import Real
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
+from ._atomic_publish import publish_staged_paths_atomically
 from .portfolio import (
     PortfolioRiskResult,
     _validate_result_against_verified_sources,
@@ -282,57 +283,27 @@ def write_portfolio_risk_bundle(
         raise TypeError("result must be a PortfolioRiskResult")
 
     output = Path(output_dir)
-    output_preexisted = output.exists()
-    output.mkdir(parents=True, exist_ok=True)
     destinations = {
         name: output / filename for name, filename in _PORTFOLIO_BUNDLE_FILENAMES.items()
     }
-    previous_payloads = {
-        name: path.read_bytes() if path.exists() else None for name, path in destinations.items()
-    }
 
-    try:
-        with TemporaryDirectory(prefix=".portfolio-risk-bundle-", dir=output) as staging_name:
-            staging = Path(staging_name)
-            staged_paths = write_portfolio_risk_report(result, staging)
-            staged_paths["stress_correlation"] = write_portfolio_stress_correlation_report(
-                result,
-                staging,
-                stress_fraction=stress_fraction,
-                minimum_stress_observations=minimum_stress_observations,
-            )
-            if set(staged_paths) != set(destinations):
-                raise ValueError("portfolio bundle must exactly match the report file set")
+    def stage_bundle(staging: Path) -> dict[str, Path]:
+        staged_paths = write_portfolio_risk_report(result, staging)
+        staged_paths["stress_correlation"] = write_portfolio_stress_correlation_report(
+            result,
+            staging,
+            stress_fraction=stress_fraction,
+            minimum_stress_observations=minimum_stress_observations,
+        )
+        if set(staged_paths) != set(destinations):
+            raise ValueError("portfolio bundle must exactly match the report file set")
+        return staged_paths
 
-            replaced: list[str] = []
-            try:
-                for name in _PORTFOLIO_BUNDLE_FILENAMES:
-                    os.replace(staged_paths[name], destinations[name])
-                    replaced.append(name)
-            except BaseException as commit_error:
-                rollback_errors: list[str] = []
-                for name in reversed(replaced):
-                    destination = destinations[name]
-                    previous_payload = previous_payloads[name]
-                    try:
-                        if previous_payload is None:
-                            destination.unlink(missing_ok=True)
-                        else:
-                            restore_path = staging / f"restore-{destination.name}"
-                            restore_path.write_bytes(previous_payload)
-                            os.replace(restore_path, destination)
-                    except OSError as rollback_error:
-                        rollback_errors.append(f"{name}: {rollback_error}")
-                if rollback_errors:
-                    details = "; ".join(rollback_errors)
-                    raise RuntimeError(
-                        f"portfolio bundle commit failed and rollback was incomplete: {details}"
-                    ) from commit_error
-                raise
-    except BaseException:
-        if not output_preexisted:
-            with suppress(OSError):
-                output.rmdir()
-        raise
-
-    return destinations
+    return publish_staged_paths_atomically(
+        output,
+        destinations,
+        stage_paths=stage_bundle,
+        commit_order=tuple(_PORTFOLIO_BUNDLE_FILENAMES),
+        staging_prefix=".portfolio-risk-bundle-",
+        error_label="portfolio bundle",
+    )
