@@ -304,7 +304,7 @@ def _run_cached_candidate_window(
     del point_in_time_history  # Retained for exact legacy benchmark substitution.
     template = cache.get(config)
     if template is None:
-        template = run_backtest(complete_history, config).frame
+        template = run_backtest(complete_history, config).frame.drop(columns="nav")
         cache[config] = template
     return _rebase_test_window(template.loc[start:end], config, previous_position)
 
