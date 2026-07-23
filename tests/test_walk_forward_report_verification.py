@@ -9,7 +9,7 @@ import pytest
 
 from gpt_quant import StrategyConfig, run_walk_forward_research
 from gpt_quant.walk_forward_report import write_walk_forward_report
-from gpt_quant.walk_forward_verify import verify_walk_forward_report
+from gpt_quant.walk_forward_verify_gate import verify_walk_forward_report
 
 
 def _write_real_okx_report(prices: pd.Series, output: Path) -> dict[str, Path]:
