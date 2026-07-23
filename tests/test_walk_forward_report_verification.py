@@ -9,7 +9,7 @@ import pytest
 
 from gpt_quant import StrategyConfig, run_walk_forward_research
 from gpt_quant.walk_forward_report import write_walk_forward_report
-from gpt_quant.walk_forward_verify import verify_walk_forward_report
+from gpt_quant.walk_forward_verify_gate import verify_walk_forward_report
 
 
 def _write_real_okx_report(prices: pd.Series, output: Path) -> dict[str, Path]:
@@ -59,6 +59,8 @@ def test_verifier_recomputes_persisted_real_okx_report(
     assert verification["folds"] == returns["fold"].nunique()
     assert verification["fold_boundary_position_transitions_verified"] == 1
     assert verification["within_fold_delayed_position_rows_verified"] == len(returns) - 2
+    assert verification["accounting_tolerance"] == 1e-12
+    assert verification["metric_tolerance"] == 1e-9
     assert (
         verification["report_json_sha256"] == hashlib.sha256(paths["json"].read_bytes()).hexdigest()
     )
