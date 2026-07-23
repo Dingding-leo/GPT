@@ -1,0 +1,78 @@
+{
+  "canonical_signature": "vol-target-worst-decile-tail-delta-v1|markets=BTC-USDT,ETH-USDT|benchmark=vol-targeted-long|tail=0.10|metric=conditional-mean-return-delta|block=20|resamples=2000|confidence=0.95|seed=20260722|candidate_count=0",
+  "hypothesis": "For both BTC-USDT and ETH-USDT, the strategy has a positive conditional mean return delta versus volatility-targeted long on that benchmark's worst-decile OOS days, with a 95% paired moving-block-bootstrap lower bound above zero.",
+  "joint_verdict": "supported",
+  "markets": {
+    "BTC-USDT": {
+      "best_decile_secondary": {
+        "benchmark_mean": 0.04825279849413874,
+        "benchmark_threshold": 0.029302856095621638,
+        "ci_lower": -0.034783474412309806,
+        "ci_median": -0.030676877361285673,
+        "ci_upper": -0.026476627283748937,
+        "observations": 234,
+        "observed_delta": -0.030808635186077446,
+        "probability_positive": 0.0,
+        "strategy_beats_benchmark_ratio": 0.0,
+        "strategy_mean": 0.017444163308061297
+      },
+      "end": "2026-06-07T00:00:00+00:00",
+      "observations": 2340,
+      "source_file_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "start": "2020-01-11T00:00:00+00:00",
+      "worst_decile": {
+        "benchmark_mean": -0.04529292091167251,
+        "benchmark_threshold": -0.02511835689902786,
+        "ci_lower": 0.026149688934648623,
+        "ci_median": 0.030916258119481347,
+        "ci_upper": 0.036694054278487126,
+        "lower_bound_positive": true,
+        "observations": 234,
+        "observed_delta": 0.03127691681158385,
+        "probability_positive": 1.0,
+        "strategy_beats_benchmark_ratio": 1.0,
+        "strategy_mean": -0.014016004100088656
+      }
+    },
+    "ETH-USDT": {
+      "best_decile_secondary": {
+        "benchmark_mean": 0.053741647662409325,
+        "benchmark_threshold": 0.03296545945567556,
+        "ci_lower": -0.039894015833369816,
+        "ci_median": -0.03582970231382654,
+        "ci_upper": -0.03194254366532462,
+        "observations": 234,
+        "observed_delta": -0.036303147002215014,
+        "probability_positive": 0.0,
+        "strategy_beats_benchmark_ratio": 0.0,
+        "strategy_mean": 0.01743850066019431
+      },
+      "end": "2026-06-07T00:00:00+00:00",
+      "observations": 2340,
+      "source_file_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "start": "2020-01-11T00:00:00+00:00",
+      "worst_decile": {
+        "benchmark_mean": -0.04887827046855805,
+        "benchmark_threshold": -0.02923249009865395,
+        "ci_lower": 0.026936622088111067,
+        "ci_median": 0.032152870509753184,
+        "ci_upper": 0.03765808695312318,
+        "lower_bound_positive": true,
+        "observations": 234,
+        "observed_delta": 0.03264447253648391,
+        "probability_positive": 1.0,
+        "strategy_beats_benchmark_ratio": 1.0,
+        "strategy_mean": -0.01623379793207414
+      }
+    }
+  },
+  "settings": {
+    "block_length": 20,
+    "candidate_count": 0,
+    "confidence": 0.95,
+    "resamples": 2000,
+    "seed": 20260722,
+    "tail_fraction": 0.1,
+    "tail_threshold_recomputed_per_resample": true
+  }
+}
