@@ -45,48 +45,13 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Apply canonical formatting diagnostic
-        run: |
-          ruff check . --fix
-          ruff format .
-
-      - name: Upload canonical formatting diagnostic
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: canonical-format-${{ github.run_number }}-attempt-${{ github.run_attempt }}
-          path: |
-            src/gpt_quant/okx_execution_quote.py
-            tests/test_okx_execution_quote.py
-          if-no-files-found: error
-          retention-days: 1
-
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
       - name: Test against public OKX data
-        id: tests
         env:
           OKX_BASE_URL: https://www.okx.com
-        shell: bash
-        run: |
-          set +e
-          pytest > pytest-pr358.log 2>&1
-          status=$?
-          cat pytest-pr358.log
-          printf 'status=%s\n' "$status" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Upload test diagnostic
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: pytest-pr358-${{ github.run_number }}-attempt-${{ github.run_attempt }}
-          path: pytest-pr358.log
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Fail on test failure
-        if: ${{ steps.tests.outputs.status != '0' }}
-        run: exit 1
+        run: pytest
 
       - name: Run OKX rolling out-of-sample research
         env:
