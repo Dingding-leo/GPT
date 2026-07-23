@@ -38,7 +38,7 @@ def _observation():
     return fetch_okx_top_of_book(
         instrument_id="BTC-USDT",
         instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
-        base_url="https://example.test",
+        base_url="https://test.okx.com",
         maximum_quote_age_ms=200,
         get_bytes=lambda url, timeout: _fixture_response(),
         get_json=lambda url, timeout: {
@@ -117,7 +117,7 @@ def test_top_of_book_replay_rejects_duplicate_and_noncanonical_json() -> None:
     canonical = evidence.to_json_bytes()
     duplicate = canonical.replace(
         b'{"base_url":',
-        b'{"base_url":"https://example.test","base_url":',
+        b'{"base_url":"https://test.okx.com","base_url":',
         1,
     )
     with pytest.raises(ValueError, match="duplicate field 'base_url'"):
