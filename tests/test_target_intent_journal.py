@@ -52,6 +52,7 @@ def test_target_intent_journal_is_deterministic_and_idempotent(
 
     expected = earlier.to_json_bytes() + later.to_json_bytes()
     assert path.read_bytes() == expected
+    assert journal.to_bytes() == expected
     assert journal.intents == (earlier, later)
     assert journal.count == 2
     assert journal.sha256 == hashlib.sha256(expected).hexdigest()
