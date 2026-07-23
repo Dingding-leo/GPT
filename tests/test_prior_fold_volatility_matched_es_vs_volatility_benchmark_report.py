@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -102,6 +103,97 @@ def test_fold_validation_rejects_oversized_trailing_fold() -> None:
             analysis.complete_folds(oversized)
     finally:
         analysis.COMPLETE_FOLD_SIZE = original_size
+
+
+@pytest.mark.parametrize(
+    ("loader_name", "fixture_name", "expected_hashes"),
+    [
+        ("load_returns", "returns.csv", "EXPECTED_RETURN_FILE_SHA256"),
+        ("load_snapshot", "snapshot.csv", "EXPECTED_SNAPSHOT_FILE_SHA256"),
+    ],
+)
+def test_verified_loader_parses_the_retained_payload(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    loader_name: str,
+    fixture_name: str,
+    expected_hashes: str,
+) -> None:
+    source = _FIXTURE_DIR / fixture_name
+    target = tmp_path / fixture_name
+    target.write_bytes(source.read_bytes())
+    expected_hash = analysis.file_sha256(target)
+    monkeypatch.setitem(getattr(analysis, expected_hashes), "BTC-USDT", expected_hash)
+
+    original_read_bytes = Path.read_bytes
+    original_write_bytes = Path.write_bytes
+
+    def read_then_replace(path: Path) -> bytes:
+        payload = original_read_bytes(path)
+        if path == target:
+            original_write_bytes(path, b"replaced,after,verification\n")
+        return payload
+
+    monkeypatch.setattr(Path, "read_bytes", read_then_replace)
+    frame = getattr(analysis, loader_name)(target, "BTC-USDT")
+
+    assert not frame.empty
+    assert target.read_text(encoding="utf-8") == "replaced,after,verification\n"
+
+
+@pytest.mark.parametrize(
+    ("bad_market", "bad_kind"),
+    [
+        ("BTC-USDT", "return"),
+        ("BTC-USDT", "snapshot"),
+        ("ETH-USDT", "return"),
+        ("ETH-USDT", "snapshot"),
+    ],
+)
+def test_build_result_rejects_any_source_before_parsing_or_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    bad_market: str,
+    bad_kind: str,
+) -> None:
+    processing_calls: list[str] = []
+
+    def fake_read_verified_payload(
+        path: str | Path,
+        *,
+        expected_sha256: str,
+        label: str,
+        verify_hash: bool = True,
+    ) -> tuple[bytes, str]:
+        del expected_sha256, verify_hash
+        source_kind = "return" if Path(path).name == "walk_forward_returns.csv" else "snapshot"
+        market = next(candidate for candidate in analysis.MARKETS if candidate in str(path))
+        if (market, source_kind) == (bad_market, bad_kind):
+            raise ValueError(f"{label} SHA-256 mismatch")
+        return b"verified", "0" * 64
+
+    def unexpected_processing(*args: object, **kwargs: object) -> object:
+        del args, kwargs
+        processing_calls.append("started")
+        raise AssertionError("parsing or inference started before all sources passed preflight")
+
+    monkeypatch.setattr(analysis, "_read_verified_payload", fake_read_verified_payload)
+    monkeypatch.setattr(analysis, "_parse_returns", unexpected_processing)
+    monkeypatch.setattr(analysis, "_parse_snapshot", unexpected_processing)
+    monkeypatch.setattr(analysis, "reconstruct_volatility_benchmark", unexpected_processing)
+    monkeypatch.setattr(analysis, "analyze_market", unexpected_processing)
+
+    output = tmp_path / "result.json"
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["analysis.py", "--artifact-dir", str(tmp_path), "--output", str(output)],
+    )
+    with pytest.raises(ValueError, match="SHA-256 mismatch"):
+        analysis.main()
+
+    assert processing_calls == []
+    assert not output.exists()
 
 
 def test_result_records_cost_reconstruction_candidate_accounting_and_rejection() -> None:
