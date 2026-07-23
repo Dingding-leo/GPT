@@ -15,6 +15,16 @@ from gpt_quant.walk_forward_report import write_walk_forward_report
 from gpt_quant.walk_forward_verify import verify_walk_forward_report as direct_verify
 
 
+def _shift_numeric_csv_cell(path: Path, *, row: int, column: str, delta: float) -> None:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    header = lines[0].split(",")
+    column_index = header.index(column)
+    cells = lines[row + 1].split(",")
+    cells[column_index] = repr(float(cells[column_index]) + delta)
+    lines[row + 1] = ",".join(cells)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def test_verifier_keeps_delay_checks_within_each_selected_fold(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
@@ -39,6 +49,7 @@ def test_verifier_keeps_delay_checks_within_each_selected_fold(
         },
     )
     paths = write_walk_forward_report(result, tmp_path)
+    original_bytes = paths["returns"].read_bytes()
     original = pd.read_csv(paths["returns"])
     fold_boundaries = np.flatnonzero(original["fold"].ne(original["fold"].shift()).to_numpy())
     assert len(fold_boundaries) == 2
@@ -47,15 +58,22 @@ def test_verifier_keeps_delay_checks_within_each_selected_fold(
     second_fold_start = int(fold_boundaries[1])
     previous_fold_last_row = second_fold_start - 1
 
-    boundary_copy = original.copy()
-    boundary_copy.loc[previous_fold_last_row, "target_position"] += 0.1
-    boundary_copy.to_csv(paths["returns"], index=False)
+    _shift_numeric_csv_cell(
+        paths["returns"],
+        row=previous_fold_last_row,
+        column="target_position",
+        delta=0.1,
+    )
     verification = verify_walk_forward_report(tmp_path)
     assert verification["status"] == "passed"
 
-    within_fold_copy = original.copy()
+    paths["returns"].write_bytes(original_bytes)
     within_fold_target_row = previous_fold_last_row - 1
-    within_fold_copy.loc[within_fold_target_row, "target_position"] += 0.1
-    within_fold_copy.to_csv(paths["returns"], index=False)
+    _shift_numeric_csv_cell(
+        paths["returns"],
+        row=within_fold_target_row,
+        column="target_position",
+        delta=0.1,
+    )
     with pytest.raises(ValueError, match="fold 1 position"):
         verify_walk_forward_report(tmp_path)
