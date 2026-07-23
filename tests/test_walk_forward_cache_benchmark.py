@@ -119,17 +119,20 @@ def test_cache_memory_benchmark_measures_nav_omission(
     full_frame_retained_bytes = benchmark._cache_retained_array_bytes(full_frame_cache)
     optimized_retained_bytes = benchmark._cache_retained_array_bytes(optimized_cache)
 
+    nav_bytes = len(complete_history) * 8
     assert "nav" in full_frame_cache[config].columns
     assert "nav" not in optimized_cache[config].columns
-    assert full_frame_column_bytes - optimized_column_bytes == len(complete_history) * 8
+    assert full_frame_column_bytes - optimized_column_bytes == nav_bytes
     assert full_frame_index_bytes == btc_usdt_prices.index.nbytes
     assert optimized_index_bytes == full_frame_index_bytes
     assert full_frame_retained_bytes == full_frame_column_bytes + full_frame_index_bytes
     assert optimized_retained_bytes == optimized_column_bytes + optimized_index_bytes
-    assert full_frame_retained_bytes - optimized_retained_bytes == len(complete_history) * 8
-    assert 1.0 - optimized_column_bytes / full_frame_column_bytes == pytest.approx(0.125)
+    assert full_frame_retained_bytes - optimized_retained_bytes == nav_bytes
+    assert 1.0 - optimized_column_bytes / full_frame_column_bytes == pytest.approx(
+        nav_bytes / full_frame_column_bytes
+    )
     assert 1.0 - optimized_retained_bytes / full_frame_retained_bytes == pytest.approx(
-        (len(complete_history) * 8) / full_frame_retained_bytes
+        nav_bytes / full_frame_retained_bytes
     )
 
 

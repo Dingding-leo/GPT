@@ -23,17 +23,15 @@ def max_drawdown_from_returns(returns: pd.Series) -> float:
     return float(drawdown.min())
 
 
-def _invalid_return_error(series: pd.Series, position: int) -> ValueError:
+def _invalid_return_error(series: pd.Series, position: int, *, label: str) -> ValueError:
     index_value = series.index[position]
     location = (
         index_value.isoformat() if isinstance(index_value, pd.Timestamp) else str(index_value)
     )
-    return ValueError(
-        f"strategy_return must contain finite real numbers; invalid value at {location}"
-    )
+    return ValueError(f"{label} must contain finite real numbers; invalid value at {location}")
 
 
-def _validated_returns(series: pd.Series) -> pd.Series:
+def _validated_returns(series: pd.Series, *, label: str = "strategy_return") -> pd.Series:
     values = series.to_numpy(copy=False)
     kind = values.dtype.kind
 
@@ -44,14 +42,14 @@ def _validated_returns(series: pd.Series) -> pd.Series:
             if not isinstance(value, Number) or isinstance(
                 value, bool | np.bool_ | complex | np.complexfloating
             ):
-                raise _invalid_return_error(series, position)
+                raise _invalid_return_error(series, position, label=label)
         float_values = np.asarray(values, dtype=float)
     else:
-        raise _invalid_return_error(series, 0)
+        raise _invalid_return_error(series, 0, label=label)
 
     invalid_positions = np.flatnonzero(~np.isfinite(float_values))
     if invalid_positions.size:
-        raise _invalid_return_error(series, int(invalid_positions[0]))
+        raise _invalid_return_error(series, int(invalid_positions[0]), label=label)
     return pd.Series(float_values, index=series.index, name=series.name, copy=False)
 
 
@@ -63,6 +61,11 @@ def _validate_solvent_returns(returns: pd.Series) -> None:
         raise ValueError(
             f"strategy return must remain greater than -100%; insolvency occurs at {location}"
         )
+
+
+def _compounded_return(returns: pd.Series) -> tuple[float, float]:
+    growth = float((1.0 + returns).prod())
+    return growth, growth - 1.0
 
 
 def performance_metrics(
@@ -83,13 +86,13 @@ def performance_metrics(
     _validate_solvent_returns(returns)
     n = int(len(returns))
 
-    total_growth = float((1.0 + returns).prod())
-    total_return = total_growth - 1.0
+    total_growth, total_return = _compounded_return(returns)
     years = n / ann
     cagr = total_growth ** (1.0 / years) - 1.0 if total_growth > 0 else -1.0
 
     daily_mean = float(returns.mean())
     daily_std = float(returns.std(ddof=0))
+    annualized_arithmetic_mean = daily_mean * ann
     annualized_volatility = daily_std * math.sqrt(ann)
     sharpe = daily_mean / daily_std * math.sqrt(ann) if daily_std > 0 else 0.0
 
@@ -119,10 +122,14 @@ def performance_metrics(
     active_returns = returns[returns != 0.0]
     hit_rate = float((active_returns > 0.0).mean()) if len(active_returns) else 0.0
 
-    values: Mapping[str, float | int] = {
+    values: dict[str, float | int] = {
         "observations": n,
         "total_return": total_return,
+        "net_total_return": total_return,
         "cagr": cagr,
+        "net_cagr": cagr,
+        "annualized_arithmetic_mean": annualized_arithmetic_mean,
+        "net_annualized_arithmetic_mean": annualized_arithmetic_mean,
         "annualized_volatility": annualized_volatility,
         "sharpe": sharpe,
         "sortino": sortino,
@@ -131,8 +138,55 @@ def performance_metrics(
         "annualized_turnover": turnover,
         "average_abs_exposure": exposure,
         "cost_drag_sum": cost_drag,
+        "exchange_fee_sum": cost_drag,
         "hit_rate": hit_rate,
     }
+
+    if "gross_strategy_return" in frame:
+        gross_returns = _validated_returns(
+            frame["gross_strategy_return"],
+            label="gross_strategy_return",
+        )
+        missing_gross_inputs = {"position", "asset_return"} - set(frame.columns)
+        if missing_gross_inputs:
+            raise ValueError("gross_strategy_return requires position and asset_return")
+        position = _validated_returns(frame["position"], label="position")
+        asset_returns = _validated_returns(frame["asset_return"], label="asset_return")
+        expected_gross = position * asset_returns
+        if not np.allclose(
+            gross_returns.to_numpy(),
+            expected_gross.to_numpy(),
+            rtol=0.0,
+            atol=1e-12,
+        ):
+            raise ValueError("gross_strategy_return must equal position multiplied by asset_return")
+        if "trading_cost" not in frame:
+            raise ValueError("gross_strategy_return requires trading_cost")
+        trading_cost = _validated_returns(frame["trading_cost"], label="trading_cost")
+        if (trading_cost < 0.0).any():
+            raise ValueError("trading_cost must be non-negative")
+        expected_net = gross_returns - trading_cost
+        if not np.allclose(
+            returns.to_numpy(),
+            expected_net.to_numpy(),
+            rtol=0.0,
+            atol=1e-12,
+        ):
+            raise ValueError("strategy_return must equal gross_strategy_return minus trading_cost")
+
+        gross_growth, gross_total_return = _compounded_return(gross_returns)
+        gross_cagr = gross_growth ** (1.0 / years) - 1.0 if gross_growth > 0 else -1.0
+        values.update(
+            {
+                "gross_total_return": gross_total_return,
+                "gross_cagr": gross_cagr,
+                "gross_annualized_arithmetic_mean": float(gross_returns.mean()) * ann,
+                "compounded_exchange_fee_drag": gross_total_return - total_return,
+            }
+        )
+
+    typed_values: Mapping[str, float | int] = values
     return {
-        key: int(value) if isinstance(value, int) else float(value) for key, value in values.items()
+        key: int(value) if isinstance(value, int) else float(value)
+        for key, value in typed_values.items()
     }

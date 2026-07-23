@@ -182,3 +182,34 @@ def test_report_writer_preserves_legacy_output_from_real_okx_result(
     )
     assert json_path.read_text(encoding="utf-8") == expected_json
     assert markdown_path.read_text(encoding="utf-8") == _legacy_markdown(result)
+
+
+def test_holdout_report_preserves_benchmark_gross_fee_decomposition(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    result = _real_result(btc_usdt_prices)
+    required = {
+        "gross_total_return",
+        "net_total_return",
+        "gross_cagr",
+        "net_cagr",
+        "gross_annualized_arithmetic_mean",
+        "net_annualized_arithmetic_mean",
+        "exchange_fee_sum",
+        "compounded_exchange_fee_drag",
+    }
+
+    assert required <= set(result.holdout_metrics)
+    assert required <= set(result.benchmark_holdout_metrics)
+    assert float(result.benchmark_holdout_metrics["exchange_fee_sum"]) > 0.0
+    assert float(result.benchmark_holdout_metrics["compounded_exchange_fee_drag"]) > 0.0
+
+    _, markdown_path = write_research_report(result, tmp_path)
+    markdown = markdown_path.read_text(encoding="utf-8")
+    for key in required:
+        expected_row = (
+            f"| {key} | {_format_metric(result.holdout_metrics[key])} | "
+            f"{_format_metric(result.benchmark_holdout_metrics[key])} |"
+        )
+        assert expected_row in markdown

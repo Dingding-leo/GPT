@@ -32,7 +32,8 @@ def run_backtest(
     asset_return = clean.pct_change().fillna(0.0).rename("asset_return")
     turnover = position.diff().abs().fillna(position.abs()).rename("turnover")
     trading_cost = (turnover * config.transaction_cost_bps / 10_000.0).rename("trading_cost")
-    strategy_return = (position * asset_return - trading_cost).rename("strategy_return")
+    gross_strategy_return = (position * asset_return).rename("gross_strategy_return")
+    strategy_return = (gross_strategy_return - trading_cost).rename("strategy_return")
 
     frame = pd.concat(
         [
@@ -41,6 +42,7 @@ def run_backtest(
             target_position,
             position,
             turnover,
+            gross_strategy_return,
             trading_cost,
             strategy_return,
         ],
