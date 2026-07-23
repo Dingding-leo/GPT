@@ -8,7 +8,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from numbers import Real
 from pathlib import Path
-from tempfile import NamedTemporaryFile, TemporaryDirectory
+from tempfile import NamedTemporaryFile
 from typing import Any
 
 import numpy as np
