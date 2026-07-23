@@ -8,8 +8,9 @@ import tracemalloc
 from collections.abc import Callable
 from pathlib import Path
 
-import gpt_quant.walk_forward as walk_forward
 import run_walk_forward_cache as cache_benchmark
+
+import gpt_quant.walk_forward as walk_forward
 from gpt_quant import load_price_csv
 
 Workload = Callable[[], walk_forward.WalkForwardResult]
