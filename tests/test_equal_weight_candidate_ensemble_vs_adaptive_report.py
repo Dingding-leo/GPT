@@ -15,6 +15,7 @@ _ANALYSIS_PATH = (
     _ROOT / "reports" / "research" / "equal-weight-candidate-ensemble-vs-adaptive" / "analysis.py"
 )
 _RESULT_PATH = _ANALYSIS_PATH.with_name("result.json")
+_CONFIG_PATH = _ROOT / "config" / "okx_research.json"
 
 _spec = importlib.util.spec_from_file_location("equal_weight_candidate_ensemble", _ANALYSIS_PATH)
 assert _spec is not None and _spec.loader is not None
@@ -79,6 +80,35 @@ def test_noncircular_block_indices_are_seeded_and_contiguous() -> None:
         block = first[start : start + 7]
         if len(block) > 1:
             np.testing.assert_array_equal(np.diff(block), np.ones(len(block) - 1, dtype=int))
+
+
+def test_ensemble_definition_matches_declared_repository_config() -> None:
+    declared = json.loads(_CONFIG_PATH.read_text(encoding="utf-8"))
+    strategy = declared["strategy"]
+    search = declared["search"]
+
+    assert tuple(search["momentum_lookbacks"]) == analysis.MOMENTUM_LOOKBACKS
+    assert tuple(search["reversal_lookbacks"]) == analysis.REVERSAL_LOOKBACKS
+    assert tuple(search["trend_weights"]) == analysis.TREND_WEIGHTS
+    assert strategy["volatility_lookback"] == analysis.VOLATILITY_LOOKBACK
+    assert strategy["target_volatility"] == analysis.TARGET_VOLATILITY
+    assert strategy["max_abs_position"] == analysis.MAX_POSITION
+    assert strategy["min_position"] == analysis.MIN_POSITION
+    assert strategy["transaction_cost_bps"] == analysis.TRANSACTION_COST_BPS
+    assert strategy["annualization"] == analysis.ANNUALIZATION
+
+    expected = [
+        {
+            "momentum_lookback": momentum,
+            "reversal_lookback": reversal,
+            "trend_weight": weight,
+            "reversal_weight": round(1.0 - weight, 10),
+        }
+        for momentum in search["momentum_lookbacks"]
+        for reversal in search["reversal_lookbacks"]
+        for weight in search["trend_weights"]
+    ]
+    assert analysis.candidate_grid() == expected
 
 
 def test_result_records_complete_grid_candidate_accounting_and_rejection() -> None:
