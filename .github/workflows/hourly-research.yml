@@ -28,6 +28,8 @@ jobs:
     timeout-minutes: 15
     env:
       PIP_BOOTSTRAP_VERSION: "26.1.2"
+      BUILD_FRONTEND_VERSION: "1.5.0"
+      BUILD_BACKEND_VERSION: "83.0.0"
       MAX_VARIANCE_CONTRIBUTION: "0.75"
       MAX_PAIRWISE_CORRELATION: "0.90"
       SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
@@ -51,10 +53,36 @@ jobs:
 
       - name: Install project
         id: install
+        shell: bash
         run: |
+          set -euo pipefail
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install \
+            "build==${BUILD_FRONTEND_VERSION}" \
+            "setuptools==${BUILD_BACKEND_VERSION}"
           python -m pip install -e ".[dev]"
           python -m pip check
+          python -c 'import os, setuptools; assert setuptools.__version__ == os.environ["BUILD_BACKEND_VERSION"]'
+
+          rm -rf dist /tmp/gpt-live-readiness-wheel-venv
+          python -m build --wheel --no-isolation
+          shopt -s nullglob
+          wheels=(dist/gpt_quant_lab-*.whl)
+          test "${#wheels[@]}" -eq 1
+          python -m venv /tmp/gpt-live-readiness-wheel-venv
+          /tmp/gpt-live-readiness-wheel-venv/bin/pip install "${wheels[0]}"
+          /tmp/gpt-live-readiness-wheel-venv/bin/pip check
+          /tmp/gpt-live-readiness-wheel-venv/bin/python - <<'PY'
+          from pathlib import Path
+
+          import gpt_quant
+
+          module_path = Path(gpt_quant.__file__).resolve()
+          venv_path = Path("/tmp/gpt-live-readiness-wheel-venv").resolve()
+          if not module_path.is_relative_to(venv_path):
+              raise SystemExit(f"gpt_quant imported outside release wheel venv: {module_path}")
+          print(module_path)
+          PY
 
       - name: Lint and formatting
         id: lint_format
