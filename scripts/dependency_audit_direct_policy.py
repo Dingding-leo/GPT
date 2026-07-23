@@ -19,15 +19,26 @@ _APPROVED_DIRECT_DEPENDENCIES = {
 }
 
 
+def _reject_requested_extras(requirement: str, *, label: str) -> None:
+    requirement_without_marker = requirement.partition(";")[0]
+    if "[" in requirement_without_marker or "]" in requirement_without_marker:
+        raise ValueError(
+            f"requested dependency extras are not allowed in {label}: {requirement!r}; "
+            "approve the resulting direct dependencies explicitly instead"
+        )
+
+
 def _canonical_names(requirements: object, *, label: str) -> list[str]:
     if not isinstance(requirements, list) or not all(
         isinstance(requirement, str) for requirement in requirements
     ):
         raise ValueError(f"validated {label} requirements must be a list of strings")
 
-    canonical_names = [
-        _canonical_requirement_name(requirement, label=label) for requirement in requirements
-    ]
+    canonical_names = []
+    for requirement in requirements:
+        _reject_requested_extras(requirement, label=label)
+        canonical_names.append(_canonical_requirement_name(requirement, label=label))
+
     counts: dict[str, int] = {}
     for name in canonical_names:
         counts[name] = counts.get(name, 0) + 1

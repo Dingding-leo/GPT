@@ -25,10 +25,16 @@ def _validated_contract(
         raise ValueError(f"{error_label} destination paths must be unique")
     if not staging_prefix or Path(staging_prefix).name != staging_prefix:
         raise ValueError("staging_prefix must be a non-empty filename prefix")
+    if output.is_symlink():
+        raise ValueError(f"{error_label} output directory must not be a symbolic link")
     if any(path.parent != output for path in paths.values()):
         raise ValueError(
             f"{error_label} destinations must be direct children of the output directory"
         )
+    if any(path.is_symlink() for path in paths.values()):
+        raise ValueError(f"{error_label} destinations must not be symbolic links")
+    if any(path.is_file() and path.stat().st_nlink > 1 for path in paths.values()):
+        raise ValueError(f"{error_label} destinations must not be hard-linked files")
     return ordered_names
 
 
