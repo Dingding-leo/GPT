@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -20,10 +20,10 @@ def _intent(**overrides: object) -> TargetPositionIntent:
         "strategy_revision": _MAIN_REVISION,
         "source_data_sha256": _SOURCE_ARTIFACT_SHA256,
         "config_sha256": _CONFIG_SHA256,
-        "signal_bar_open_utc": datetime(2026, 7, 22, tzinfo=timezone.utc),
-        "signal_bar_close_utc": datetime(2026, 7, 23, tzinfo=timezone.utc),
-        "decision_not_before_utc": datetime(2026, 7, 23, 0, 0, 3, tzinfo=timezone.utc),
-        "expires_at_utc": datetime(2026, 7, 24, tzinfo=timezone.utc),
+        "signal_bar_open_utc": datetime(2026, 7, 22, tzinfo=UTC),
+        "signal_bar_close_utc": datetime(2026, 7, 23, tzinfo=UTC),
+        "decision_not_before_utc": datetime(2026, 7, 23, 0, 0, 3, tzinfo=UTC),
+        "expires_at_utc": datetime(2026, 7, 24, tzinfo=UTC),
         "target_position": 0.5393,
         "minimum_position": 0.0,
         "maximum_position": 1.0,
@@ -71,11 +71,9 @@ def test_target_position_intent_detects_payload_tampering() -> None:
 
 def test_target_position_intent_fails_closed_on_invalid_live_boundaries() -> None:
     with pytest.raises(ValueError, match="cannot precede"):
-        _intent(
-            decision_not_before_utc=datetime(2026, 7, 22, 23, 59, 59, tzinfo=timezone.utc)
-        )
+        _intent(decision_not_before_utc=datetime(2026, 7, 22, 23, 59, 59, tzinfo=UTC))
     with pytest.raises(ValueError, match="expires_at_utc"):
-        _intent(expires_at_utc=datetime(2026, 7, 23, 0, 0, 3, tzinfo=timezone.utc))
+        _intent(expires_at_utc=datetime(2026, 7, 23, 0, 0, 3, tzinfo=UTC))
     with pytest.raises(ValueError, match="declared position limits"):
         _intent(target_position=1.01)
     with pytest.raises(ValueError, match="finite real"):
@@ -94,5 +92,5 @@ def test_target_position_intent_fails_closed_on_invalid_live_boundaries() -> Non
     with pytest.raises(ValueError, match="unexpected"):
         TargetPositionIntent.from_mapping(payload)
 
-    expired = _intent(expires_at_utc=datetime(2026, 7, 23, 0, 0, 4, tzinfo=timezone.utc))
+    expired = _intent(expires_at_utc=datetime(2026, 7, 23, 0, 0, 4, tzinfo=UTC))
     assert expired.expires_at_utc - expired.decision_not_before_utc == timedelta(seconds=1)
