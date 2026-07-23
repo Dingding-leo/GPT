@@ -153,6 +153,41 @@ def test_underlying_risk_rejects_self_consistent_hash_for_corrupted_turnover(
         )
 
 
+@pytest.mark.parametrize("invalid_position", [-0.25, 1.25])
+def test_underlying_risk_rejects_self_consistent_out_of_bounds_spot_position(
+    tmp_path: Path,
+    invalid_position: float,
+) -> None:
+    paths, hashes, provenance = _fixture_inputs()
+    corrupted = tmp_path / "btc.csv"
+    frame = pd.read_csv(paths["BTC-USDT"])
+    frame.loc[10, "position"] = invalid_position
+    frame["turnover"] = frame["position"].diff().abs()
+    frame.loc[0, "turnover"] = abs(float(frame.loc[0, "position"]))
+    frame["gross_strategy_return"] = frame["position"] * frame["asset_return"]
+    frame["trading_cost"] = frame["turnover"] * 0.0005
+    frame["strategy_return"] = frame["gross_strategy_return"] - frame["trading_cost"]
+    frame["nav"] = (1.0 + frame["strategy_return"]).cumprod()
+    frame.to_csv(corrupted, index=False)
+    corrupted_hash = hashlib.sha256(corrupted.read_bytes()).hexdigest()
+    altered_paths = dict(paths)
+    altered_hashes = dict(hashes)
+    altered_paths["BTC-USDT"] = corrupted
+    altered_hashes["BTC-USDT"] = corrupted_hash
+    provenance["return_file_sha256"] = altered_hashes
+
+    with pytest.raises(
+        ValueError,
+        match=r"position must remain within long-only spot bounds \[0, 1\]",
+    ):
+        build_underlying_sleeve_risk(
+            altered_paths,
+            expected_sha256=altered_hashes,
+            initial_weights={"BTC-USDT": 0.5, "ETH-USDT": 0.5},
+            provenance=provenance,
+        )
+
+
 def test_underlying_risk_requires_declared_five_bps_fee_baseline() -> None:
     paths, hashes, provenance = _fixture_inputs()
 
