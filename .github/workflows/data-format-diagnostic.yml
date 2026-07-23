@@ -22,35 +22,43 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Apply repository Ruff rules
+      - name: Capture repository Ruff output
+        shell: bash
         run: |
+          set -u
           python -m pip install "ruff==0.12.11"
+          : > ruff-output.txt
           ruff check --fix \
             src/gpt_quant/okx_instruments.py \
             tests/test_okx_instruments.py \
             tests/test_okx_instrument_decimal_contract.py \
-            tests/test_okx_instrument_archive.py
+            tests/test_okx_instrument_archive.py \
+            >> ruff-output.txt 2>&1 || true
           ruff format \
             src/gpt_quant/okx_instruments.py \
             tests/test_okx_instruments.py \
             tests/test_okx_instrument_decimal_contract.py \
-            tests/test_okx_instrument_archive.py
+            tests/test_okx_instrument_archive.py \
+            >> ruff-output.txt 2>&1
           ruff check \
             src/gpt_quant/okx_instruments.py \
             tests/test_okx_instruments.py \
             tests/test_okx_instrument_decimal_contract.py \
-            tests/test_okx_instrument_archive.py
+            tests/test_okx_instrument_archive.py \
+            >> ruff-output.txt 2>&1 || true
           ruff format --check \
             src/gpt_quant/okx_instruments.py \
             tests/test_okx_instruments.py \
             tests/test_okx_instrument_decimal_contract.py \
-            tests/test_okx_instrument_archive.py
+            tests/test_okx_instrument_archive.py \
+            >> ruff-output.txt 2>&1 || true
 
       - name: Upload formatted files
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: data-formatted-files
           path: |
+            ruff-output.txt
             src/gpt_quant/okx_instruments.py
             tests/test_okx_instruments.py
             tests/test_okx_instrument_decimal_contract.py
