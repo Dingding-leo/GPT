@@ -21,6 +21,7 @@ _FILL_PRICE_CONVENTION = "market-vwap-at-touch-or-worse"
 _FIELDS = {
     "schema_version",
     "binding_id",
+    "target_intent_id",
     "quote_snapshot_id",
     "instrument_id",
     "decision_at_utc",
@@ -138,6 +139,7 @@ class PaperExecutionAttempt:
     """
 
     binding_id: str
+    target_intent_id: str
     quote_snapshot_id: str
     instrument_id: str
     decision_at_utc: datetime
@@ -164,6 +166,11 @@ class PaperExecutionAttempt:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "binding_id", _hash(self.binding_id, "binding_id"))
+        object.__setattr__(
+            self,
+            "target_intent_id",
+            _hash(self.target_intent_id, "target_intent_id"),
+        )
         object.__setattr__(
             self,
             "quote_snapshot_id",
@@ -262,6 +269,7 @@ class PaperExecutionAttempt:
         return {
             "schema_version": self.schema_version,
             "binding_id": self.binding_id,
+            "target_intent_id": self.target_intent_id,
             "quote_snapshot_id": self.quote_snapshot_id,
             "instrument_id": self.instrument_id,
             "decision_at_utc": _format_utc(self.decision_at_utc),
@@ -309,6 +317,7 @@ class PaperExecutionAttempt:
             raise TypeError("quote must be an ExecutionQuoteSnapshot")
         binding.assert_reconstructs(intent, quote)
         expected = record_paper_execution_attempt(
+            intent,
             binding,
             quote,
             submitted_at_utc=self.submitted_at_utc,
@@ -346,6 +355,7 @@ class PaperExecutionAttempt:
             raise ValueError("unsupported paper fill-price convention")
         attempt = cls(
             binding_id=value["binding_id"],
+            target_intent_id=value["target_intent_id"],
             quote_snapshot_id=value["quote_snapshot_id"],
             instrument_id=value["instrument_id"],
             decision_at_utc=value["decision_at_utc"],
@@ -389,6 +399,7 @@ class PaperExecutionAttempt:
 
 
 def record_paper_execution_attempt(
+    intent: TargetPositionIntent,
     binding: ExecutionQuoteBinding,
     quote: ExecutionQuoteSnapshot,
     *,
@@ -403,24 +414,26 @@ def record_paper_execution_attempt(
 ) -> PaperExecutionAttempt:
     """Create one auditable paper submission outcome from exact quote evidence."""
 
+    if not isinstance(intent, TargetPositionIntent):
+        raise TypeError("intent must be a TargetPositionIntent")
     if not isinstance(binding, ExecutionQuoteBinding):
         raise TypeError("binding must be an ExecutionQuoteBinding")
     if not isinstance(quote, ExecutionQuoteSnapshot):
         raise TypeError("quote must be an ExecutionQuoteSnapshot")
+    binding.assert_reconstructs(intent, quote)
     if binding.quote_snapshot_id != quote.snapshot_id:
         raise ValueError("execution quote binding does not reference the supplied quote")
     if binding.instrument_id != quote.instrument_id:
         raise ValueError("execution quote binding instrument does not match the supplied quote")
     if binding.quote_observed_at_utc != quote.observed_at_utc:
-        raise ValueError(
-            "execution quote binding observation time does not match the supplied quote"
-        )
+        raise ValueError("execution quote binding observation time does not match the supplied quote")
     if binding.quote_received_at_utc != quote.received_at_utc:
         raise ValueError("execution quote binding receipt time does not match the supplied quote")
     if binding.instrument_snapshot_sha256 != quote.instrument_snapshot_sha256:
         raise ValueError("execution quote binding instrument evidence does not match")
     return PaperExecutionAttempt(
         binding_id=binding.binding_id,
+        target_intent_id=intent.intent_id,
         quote_snapshot_id=quote.snapshot_id,
         instrument_id=quote.instrument_id,
         decision_at_utc=binding.decision_at_utc,
