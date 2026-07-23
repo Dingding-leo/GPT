@@ -1,9 +1,8 @@
 name: CI Ruff Diagnostic
 
 on:
-  push:
-    branches:
-      - auto/ci/20260724-07-pr358-format-gate
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
