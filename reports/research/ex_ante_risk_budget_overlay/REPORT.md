@@ -154,7 +154,7 @@ benchmark-relative performance or execution-delay robustness.
 sha256sum /path/to/quant-research-source-348.zip
 unzip -q /path/to/quant-research-source-348.zip -d /tmp/qr348
 
-python reports/research/ex_ante_risk_budget_overlay/generate_result.py \
+python reports/research/ex_ante_risk_budget_overlay/analysis.py \
   --artifact-dir /tmp/qr348 \
   --output /tmp/recomputed-risk-budget.json
 
