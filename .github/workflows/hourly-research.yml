@@ -43,6 +43,7 @@ jobs:
         run: |
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
+          python -m pip check
 
       - name: Lint and formatting
         run: ruff check . && ruff format --check .

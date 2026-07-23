@@ -22,6 +22,16 @@ def max_drawdown_from_returns(returns: pd.Series) -> float:
     return float(drawdown.min())
 
 
+def _validate_solvent_returns(returns: pd.Series) -> None:
+    insolvent = returns <= -1.0
+    if insolvent.any():
+        first = insolvent[insolvent].index[0]
+        location = first.isoformat() if isinstance(first, pd.Timestamp) else str(first)
+        raise ValueError(
+            f"strategy return must remain greater than -100%; insolvency occurs at {location}"
+        )
+
+
 def performance_metrics(
     result: BacktestResult | pd.DataFrame,
     *,
@@ -35,6 +45,7 @@ def performance_metrics(
         result.config.annualization if isinstance(result, BacktestResult) else 252
     )
     returns = pd.to_numeric(frame["strategy_return"], errors="coerce").fillna(0.0)
+    _validate_solvent_returns(returns)
     n = int(len(returns))
     if n == 0:
         raise ValueError("cannot calculate metrics for an empty frame")

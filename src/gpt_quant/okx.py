@@ -371,8 +371,6 @@ def fetch_okx_history_candles(
         and start_timestamp > end_timestamp
     ):
         raise ValueError("start must not be after end")
-    if end_timestamp is None and as_of_timestamp is None and get_json is None:
-        as_of_timestamp = _current_utc_timestamp()
 
     getter = get_json or _default_json_getter
     endpoint = f"{base_url.rstrip('/')}{_ENDPOINT}"
@@ -474,6 +472,8 @@ def fetch_okx_history_candles(
         requested_end=end_timestamp,
         expected_step_seconds=declared_step_seconds,
     )
+    if end_timestamp is None and as_of_timestamp is None and get_json is None:
+        as_of_timestamp = _current_utc_timestamp()
     freshness_age_seconds, freshness_max_age_seconds = _validate_open_ended_freshness(
         candles,
         requested_end=end_timestamp,
