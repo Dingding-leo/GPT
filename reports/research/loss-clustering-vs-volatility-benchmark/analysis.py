@@ -115,13 +115,16 @@ def sampled_block_indices(
     if block_length < 2 or block_length > observation_count:
         raise ValueError("block_length must be between two and observation_count")
     block_count = math.ceil(observation_count / block_length)
-    remaining = observation_count
+    lengths = [block_length] * (block_count - 1)
+    lengths.append(observation_count - sum(lengths))
+    if lengths[-1] == 1:
+        lengths[-2] -= 1
+        lengths[-1] += 1
+
     blocks: list[np.ndarray] = []
-    for _ in range(block_count):
-        length = min(block_length, remaining)
+    for length in lengths:
         start = int(rng.integers(0, observation_count - length + 1))
         blocks.append(np.arange(start, start + length, dtype=int))
-        remaining -= length
     return blocks
 
 
