@@ -247,6 +247,16 @@ class PaperOrderDecision:
         return decision
 
 
+@dataclass(frozen=True, slots=True)
+class PaperDecisionStoreReplay:
+    """Deterministic replay inventory bound to the canonical target journal."""
+
+    decisions: tuple[PaperOrderDecision, ...]
+    pending_target_intents: tuple[TargetPositionIntent, ...]
+    target_journal_sha256: str
+    store_sha256: str
+
+
 def _validate_private_file(descriptor: int, label: str) -> os.stat_result:
     file_stat = os.fstat(descriptor)
     if not stat.S_ISREG(file_stat.st_mode) or file_stat.st_nlink != 1:
@@ -311,10 +321,11 @@ def _decision_lock(path: Path) -> Iterator[None]:
         os.close(descriptor)
 
 
-def _find_target(path: str | Path, decision: PaperOrderDecision) -> TargetPositionIntent:
-    intents = load_target_position_intent_journal(path).intents
-    target = next((item for item in intents if item.intent_id == decision.target_intent_id), None)
-    if target is None:
+def _validate_decision_target(
+    target: TargetPositionIntent,
+    decision: PaperOrderDecision,
+) -> None:
+    if target.intent_id != decision.target_intent_id:
         raise ValueError(f"{_ERROR} references an unknown target intent")
     if target.instrument_id != decision.instrument_id:
         raise ValueError(f"{_ERROR} instrument does not match target intent")
@@ -324,6 +335,14 @@ def _find_target(path: str | Path, decision: PaperOrderDecision) -> TargetPositi
         target.assert_active_at(decision.decided_at_utc)
         if decision.market_observed_at_utc < target.decision_not_before_utc:
             raise ValueError("planned paper decision requires a post-activation market snapshot")
+
+
+def _find_target(path: str | Path, decision: PaperOrderDecision) -> TargetPositionIntent:
+    intents = load_target_position_intent_journal(path).intents
+    target = next((item for item in intents if item.intent_id == decision.target_intent_id), None)
+    if target is None:
+        raise ValueError(f"{_ERROR} references an unknown target intent")
+    _validate_decision_target(target, decision)
     return target
 
 
@@ -371,24 +390,60 @@ def record_paper_order_decision(
         return replayed
 
 
+def replay_paper_order_decision_store(
+    target_journal_path: str | Path,
+    decision_directory: str | Path,
+) -> PaperDecisionStoreReplay:
+    """Replay every durable decision in target-journal order and hash the result."""
+
+    targets = load_target_position_intent_journal(target_journal_path).intents
+    target_by_id = {target.intent_id: target for target in targets}
+    decisions_by_target: dict[str, PaperOrderDecision] = {}
+    directory = Path(decision_directory)
+    if directory.exists():
+        if directory.is_symlink() or not directory.is_dir():
+            raise ValueError("paper decision directory must be a regular directory")
+        for path in sorted(directory.glob("*.json")):
+            decision = load_paper_order_decision(path)
+            target = target_by_id.get(decision.target_intent_id)
+            if target is None or path.name != f"{decision.target_intent_id}.json":
+                raise ValueError(f"{_ERROR} store references an unknown target intent")
+            if decision.target_intent_id in decisions_by_target:
+                raise ValueError(f"{_ERROR} store contains a duplicate target decision")
+            _validate_decision_target(target, decision)
+            decisions_by_target[decision.target_intent_id] = decision
+
+    decisions = tuple(
+        decisions_by_target[target.intent_id]
+        for target in targets
+        if target.intent_id in decisions_by_target
+    )
+    pending = tuple(target for target in targets if target.intent_id not in decisions_by_target)
+    target_journal_sha256 = hashlib.sha256(
+        b"".join(target.to_json_bytes() for target in targets)
+    ).hexdigest()
+    replay_evidence = {
+        "schema_version": 1,
+        "target_journal_sha256": target_journal_sha256,
+        "decision_ids": [decision.decision_id for decision in decisions],
+        "pending_target_intent_ids": [target.intent_id for target in pending],
+    }
+    store_sha256 = hashlib.sha256(_json_bytes(replay_evidence)).hexdigest()
+    return PaperDecisionStoreReplay(
+        decisions=decisions,
+        pending_target_intents=pending,
+        target_journal_sha256=target_journal_sha256,
+        store_sha256=store_sha256,
+    )
+
+
 def pending_target_position_intents(
     target_journal_path: str | Path,
     decision_directory: str | Path,
 ) -> tuple[TargetPositionIntent, ...]:
-    """Return target intents without a durable paper decision file."""
+    """Return target intents without a replay-validated durable paper decision file."""
 
-    targets = load_target_position_intent_journal(target_journal_path).intents
-    directory = Path(decision_directory)
-    if not directory.exists():
-        return targets
-    target_by_id = {target.intent_id: target for target in targets}
-    consumed: set[str] = set()
-    for path in sorted(directory.glob("*.json")):
-        decision = load_paper_order_decision(path)
-        target = target_by_id.get(decision.target_intent_id)
-        if target is None or path.name != f"{decision.target_intent_id}.json":
-            raise ValueError(f"{_ERROR} store references an unknown target intent")
-        if target.instrument_id != decision.instrument_id:
-            raise ValueError(f"{_ERROR} instrument does not match target intent")
-        consumed.add(decision.target_intent_id)
-    return tuple(target for target in targets if target.intent_id not in consumed)
+    return replay_paper_order_decision_store(
+        target_journal_path,
+        decision_directory,
+    ).pending_target_intents
