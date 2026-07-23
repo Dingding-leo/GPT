@@ -33,6 +33,7 @@ _COLUMNS = (
 )
 _MILLISECONDS_PER_DAY = 86_400_000
 _MAX_RETRY_DELAY_SECONDS = 5.0
+_OPEN_ENDED_FRESHNESS_GRACE_SECONDS = 5 * 60
 _RETRYABLE_HTTP_STATUS_CODES = frozenset({408, 429, 500, 502, 503, 504})
 
 
@@ -76,6 +77,10 @@ def _timestamp_utc(value: pd.Timestamp | str | None) -> pd.Timestamp | None:
     if timestamp.tzinfo is None:
         return timestamp.tz_localize("UTC")
     return timestamp.tz_convert("UTC")
+
+
+def _current_utc_timestamp() -> pd.Timestamp:
+    return pd.Timestamp.now(tz="UTC")
 
 
 def _canonical_json_bytes(value: Any) -> bytes:
@@ -223,6 +228,28 @@ def _validate_requested_end_coverage(
         raise ValueError("OKX download does not cover the requested end boundary")
 
 
+def _validate_open_ended_freshness(
+    candles: pd.DataFrame,
+    *,
+    requested_end: pd.Timestamp | None,
+    checked_at: pd.Timestamp | None,
+    expected_step_seconds: int,
+) -> tuple[float | None, float | None]:
+    """Reject stale open-ended downloads while allowing the currently forming bar."""
+
+    if requested_end is not None or checked_at is None:
+        return None, None
+    latest = candles.index[-1]
+    age = checked_at - latest
+    if age < pd.Timedelta(0):
+        raise ValueError("OKX download contains a completed candle after the freshness reference")
+    max_age_seconds = 2 * expected_step_seconds + _OPEN_ENDED_FRESHNESS_GRACE_SECONDS
+    age_seconds = age.total_seconds()
+    if age_seconds >= max_age_seconds:
+        raise ValueError("OKX open-ended download is stale")
+    return age_seconds, float(max_age_seconds)
+
+
 def parse_okx_candle_rows(rows: Sequence[Sequence[Any]]) -> pd.DataFrame:
     """Parse and strictly validate raw OKX candle rows."""
 
@@ -297,6 +324,7 @@ def fetch_okx_history_candles(
     max_pages: int = 40,
     pause_seconds: float = 0.12,
     timeout: float = 20.0,
+    as_of: pd.Timestamp | str | None = None,
     get_json: JSONGetter | None = None,
 ) -> OKXCandleSnapshot:
     """Download completed historical candles from OKX's unauthenticated REST API.
@@ -306,8 +334,9 @@ def fetch_okx_history_candles(
     A requested ``start`` is a completeness boundary: exhausting ``max_pages`` before
     reaching it raises instead of silently returning a truncated research sample.
     Raw pagination overlaps must agree exactly, and fixed-width bars must be continuous
-    at the declared cadence. Calendar bars fail closed until calendar-aware continuity
-    validation is implemented.
+    at the declared cadence. Open-ended live downloads must include the latest completed
+    bar; injected getters can provide ``as_of`` to validate the same rule deterministically.
+    Calendar bars fail closed until calendar-aware continuity validation is implemented.
     """
 
     if not inst_id or any(character.isspace() for character in inst_id):
@@ -328,9 +357,14 @@ def fetch_okx_history_candles(
         raise ValueError("pause_seconds cannot be negative")
     if timeout <= 0:
         raise ValueError("timeout must be positive")
+    if as_of is not None and get_json is None:
+        raise ValueError("as_of is only valid with an injected get_json")
 
     start_timestamp = _timestamp_utc(start)
     end_timestamp = _timestamp_utc(end)
+    as_of_timestamp = _timestamp_utc(as_of)
+    if end_timestamp is not None and as_of_timestamp is not None:
+        raise ValueError("as_of is only valid when end is omitted")
     if (
         start_timestamp is not None
         and end_timestamp is not None
@@ -438,6 +472,14 @@ def fetch_okx_history_candles(
         requested_end=end_timestamp,
         expected_step_seconds=declared_step_seconds,
     )
+    if end_timestamp is None and as_of_timestamp is None and get_json is None:
+        as_of_timestamp = _current_utc_timestamp()
+    freshness_age_seconds, freshness_max_age_seconds = _validate_open_ended_freshness(
+        candles,
+        requested_end=end_timestamp,
+        checked_at=as_of_timestamp,
+        expected_step_seconds=declared_step_seconds,
+    )
 
     expected_step_seconds = declared_step_seconds
     missing_intervals = None
@@ -470,6 +512,11 @@ def fetch_okx_history_candles(
         "fetched_at_utc": datetime.now(UTC).isoformat(),
         "requested_start": start_timestamp.isoformat() if start_timestamp is not None else None,
         "requested_end": end_timestamp.isoformat() if end_timestamp is not None else None,
+        "freshness_checked_at_utc": (
+            as_of_timestamp.isoformat() if as_of_timestamp is not None else None
+        ),
+        "freshness_age_seconds": freshness_age_seconds,
+        "freshness_max_age_seconds": freshness_max_age_seconds,
         "limit": limit,
         "max_pages": max_pages,
         "pages": len(raw_pages),

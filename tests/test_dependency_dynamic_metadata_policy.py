@@ -92,3 +92,22 @@ def test_prepare_rejects_setuptools_dynamic_table_before_output(tmp_path: Path) 
     assert completed.stdout == ""
     assert "[tool.setuptools.dynamic] is not allowed" in completed.stderr
     assert not output_dir.exists()
+
+
+def test_prepare_rejects_setuptools_cmdclass_before_output(tmp_path: Path) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    output_dir = tmp_path / "audit"
+    pyproject_path.write_text(
+        _pyproject(
+            "dynamic = []",
+            '\n[tool.setuptools.cmdclass]\nbuild_py = "package.commands.CustomBuildPy"',
+        ),
+        encoding="utf-8",
+    )
+
+    completed = _run_prepare(pyproject_path, output_dir)
+
+    assert completed.returncode == 2
+    assert completed.stdout == ""
+    assert "[tool.setuptools.cmdclass] is not allowed" in completed.stderr
+    assert not output_dir.exists()
