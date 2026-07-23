@@ -219,9 +219,7 @@ def verify_walk_forward_selection(output_dir: str | Path) -> dict[str, int | str
             if _utc_timestamp(actual.get(boundary), f"fold {fold_id} {boundary}") != _utc_timestamp(
                 expected[boundary], f"recomputed fold {fold_id} {boundary}"
             ):
-                raise ValueError(
-                    f"fold {fold_id} {boundary} does not match full 5 bps reselection"
-                )
+                raise ValueError(f"fold {fold_id} {boundary} does not match full 5 bps reselection")
         tested = _positive_integer(
             actual.get("candidates_tested"),
             f"fold {fold_id} candidates_tested",
