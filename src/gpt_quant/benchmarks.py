@@ -67,13 +67,15 @@ def _build_frame(
     asset_return = clean.pct_change().fillna(0.0).rename("asset_return")
     turnover = aligned_position.diff().abs().fillna(aligned_position.abs()).rename("turnover")
     trading_cost = (turnover * transaction_cost_bps / 10_000.0).rename("trading_cost")
-    strategy_return = (aligned_position * asset_return - trading_cost).rename("strategy_return")
+    gross_strategy_return = (aligned_position * asset_return).rename("gross_strategy_return")
+    strategy_return = (gross_strategy_return - trading_cost).rename("strategy_return")
     frame = pd.concat(
         [
             clean.rename("close"),
             asset_return,
             aligned_position.rename("position"),
             turnover,
+            gross_strategy_return,
             trading_cost,
             strategy_return,
         ],
@@ -91,9 +93,12 @@ def _build_frame(
     entry_turnover = abs(float(frame.at[first, "position"]) - initial_position)
     frame.at[first, "turnover"] = entry_turnover
     frame.at[first, "trading_cost"] = entry_turnover * transaction_cost_bps / 10_000.0
-    frame.at[first, "strategy_return"] = float(frame.at[first, "position"]) * float(
+    frame.at[first, "gross_strategy_return"] = float(frame.at[first, "position"]) * float(
         frame.at[first, "asset_return"]
-    ) - float(frame.at[first, "trading_cost"])
+    )
+    frame.at[first, "strategy_return"] = float(frame.at[first, "gross_strategy_return"]) - float(
+        frame.at[first, "trading_cost"]
+    )
     frame["nav"] = (1.0 + frame["strategy_return"]).cumprod()
     return frame
 
