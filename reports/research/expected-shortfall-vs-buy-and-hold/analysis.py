@@ -49,8 +49,7 @@ def verify_return_file_sha256(path: str | Path, market: str) -> str:
     observed = file_sha256(path)
     if observed != expected:
         raise ValueError(
-            f"{market} return file SHA-256 mismatch: "
-            f"expected {expected}, observed {observed}"
+            f"{market} return file SHA-256 mismatch: expected {expected}, observed {observed}"
         )
     return observed
 
