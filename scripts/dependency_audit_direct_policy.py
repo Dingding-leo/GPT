@@ -7,15 +7,10 @@ from pathlib import Path
 
 from dependency_audit_inputs import _canonical_requirement_name, prepare_audit_inputs
 
-_APPROVED_DIRECT_DEPENDENCIES = frozenset(
-    {
-        "numpy",
-        "pandas",
-        "pytest",
-        "ruff",
-        "setuptools",
-    }
-)
+_APPROVED_DIRECT_DEPENDENCIES = {
+    "build": frozenset({"setuptools"}),
+    "project": frozenset({"numpy", "pandas", "pytest", "ruff"}),
+}
 
 
 def _canonical_names(requirements: object, *, label: str) -> list[str]:
@@ -48,19 +43,22 @@ def enforce_direct_dependency_policy(
             label="project and optional dependencies",
         ),
     }
-    unapproved = sorted(
-        (set(declared["build"]) | set(declared["project"]))
-        - _APPROVED_DIRECT_DEPENDENCIES
-    )
+    unapproved = {
+        scope: sorted(set(names) - _APPROVED_DIRECT_DEPENDENCIES[scope])
+        for scope, names in declared.items()
+        if set(names) - _APPROVED_DIRECT_DEPENDENCIES[scope]
+    }
     if unapproved:
         raise ValueError(
-            "unapproved direct dependency names are not allowed: "
+            "unapproved direct dependency names are not allowed in their declared scopes: "
             f"{unapproved!r}; approve names in trusted base policy before declaring them"
         )
 
     evidence: dict[str, object] = {
         "schema_version": 1,
-        "approved_direct_dependencies": sorted(_APPROVED_DIRECT_DEPENDENCIES),
+        "approved_direct_dependencies": {
+            scope: sorted(names) for scope, names in _APPROVED_DIRECT_DEPENDENCIES.items()
+        },
         "declared_direct_dependencies": declared,
     }
     evidence_path.parent.mkdir(parents=True, exist_ok=True)
