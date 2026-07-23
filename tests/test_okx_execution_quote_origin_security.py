@@ -4,9 +4,7 @@ import pytest
 
 from gpt_quant.okx_execution_quote import fetch_okx_top_of_book
 
-_INSTRUMENT_SNAPSHOT_SHA256 = (
-    "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"
-)
+_INSTRUMENT_SNAPSHOT_SHA256 = "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"
 
 
 @pytest.mark.parametrize(
@@ -24,9 +22,7 @@ _INSTRUMENT_SNAPSHOT_SHA256 = (
         "https://www.okx.com#fragment",
     ],
 )
-def test_fetch_okx_top_of_book_rejects_untrusted_origin_before_io(
-    base_url: str,
-) -> None:
+def test_fetch_okx_top_of_book_rejects_untrusted_origin_before_io(base_url: str) -> None:
     def forbidden(*args: object, **kwargs: object) -> object:
         raise AssertionError("untrusted origin reached network or clock boundary")
 
