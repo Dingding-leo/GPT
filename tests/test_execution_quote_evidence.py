@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -56,6 +57,33 @@ def test_execution_quote_store_replays_one_deterministic_root(tmp_path: Path) ->
     assert store_path.stat().st_mode & 0o777 == 0o700
     assert all(path.stat().st_mode & 0o777 == 0o600 for path in store_path.glob("*.json"))
     assert not any(path.name.startswith(".execution-quote-") for path in store_path.iterdir())
+
+
+def test_execution_quote_store_fsyncs_new_directory_and_parent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fsynced: list[tuple[int, int, int]] = []
+    real_fsync = os.fsync
+
+    def traced_fsync(descriptor: int) -> None:
+        descriptor_stat = os.fstat(descriptor)
+        fsynced.append(
+            (descriptor_stat.st_dev, descriptor_stat.st_ino, stat.S_IFMT(descriptor_stat.st_mode))
+        )
+        real_fsync(descriptor)
+
+    monkeypatch.setattr(os, "fsync", traced_fsync)
+    store_path = tmp_path / "quotes"
+    snapshot = _quote(offset_ms=0)
+    record_execution_quote_evidence(store_path, snapshot)
+
+    parent_stat = tmp_path.stat()
+    store_stat = store_path.stat()
+    snapshot_stat = (store_path / f"{snapshot.snapshot_id}.json").stat()
+    identities = {(device, inode) for device, inode, _ in fsynced}
+    assert (parent_stat.st_dev, parent_stat.st_ino) in identities
+    assert (store_stat.st_dev, store_stat.st_ino) in identities
+    assert (snapshot_stat.st_dev, snapshot_stat.st_ino) in identities
 
 
 def test_execution_quote_store_rejects_tampered_or_unowned_names(tmp_path: Path) -> None:
