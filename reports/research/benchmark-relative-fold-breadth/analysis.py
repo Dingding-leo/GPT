@@ -46,6 +46,7 @@ def load_complete_fold_deltas(
     path: str | Path,
     *,
     expected_complete_folds: int = EXPECTED_COMPLETE_FOLDS,
+    expected_fold_observations: int = EXPECTED_FOLD_OBSERVATIONS,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     source = Path(path)
     frame = pd.read_csv(source)
@@ -82,10 +83,19 @@ def load_complete_fold_deltas(
         raise ValueError("fold identifiers must be consecutive and start at one")
 
     fold_sizes = grouped.size()
-    complete_ids = fold_sizes.index[fold_sizes == EXPECTED_FOLD_OBSERVATIONS].to_numpy(dtype=int)
-    incomplete_ids = fold_sizes.index[fold_sizes != EXPECTED_FOLD_OBSERVATIONS].to_numpy(dtype=int)
+    complete_ids = fold_sizes.index[
+        fold_sizes == expected_fold_observations
+    ].to_numpy(dtype=int)
+    incomplete_ids = fold_sizes.index[
+        fold_sizes != expected_fold_observations
+    ].to_numpy(dtype=int)
     if len(incomplete_ids) > 1 or (len(incomplete_ids) == 1 and incomplete_ids[0] != fold_ids[-1]):
         raise ValueError("only one trailing incomplete fold may be excluded")
+    if (
+        len(incomplete_ids) == 1
+        and int(fold_sizes.loc[incomplete_ids[0]]) >= expected_fold_observations
+    ):
+        raise ValueError("the trailing incomplete fold must be shorter than a complete fold")
     if len(complete_ids) != expected_complete_folds:
         raise ValueError(
             f"expected exactly {expected_complete_folds} complete folds, found {len(complete_ids)}"
