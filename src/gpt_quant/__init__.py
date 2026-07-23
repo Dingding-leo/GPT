@@ -27,7 +27,7 @@ from .research import ResearchResult, run_holdout_research
 from .research_report import write_research_report
 from .walk_forward import WalkForwardResult, run_walk_forward_research
 from .walk_forward_report import write_walk_forward_report
-from .walk_forward_verify import verify_walk_forward_report
+from .walk_forward_verify_gate import verify_walk_forward_report
 
 __all__ = [
     "BacktestResult",
