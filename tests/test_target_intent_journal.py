@@ -99,6 +99,10 @@ def test_target_intent_journal_rejects_ambiguous_persisted_state(tmp_path: Path)
     with pytest.raises(ValueError, match="newline-terminated"):
         load_target_position_intent_journal(path)
 
+    path.write_bytes(earlier.to_json_bytes().replace(b"\n", b"\r\n"))
+    with pytest.raises(ValueError, match="canonical encoding"):
+        load_target_position_intent_journal(path)
+
 
 def test_target_intent_journal_preserves_old_state_when_publication_fails(
     tmp_path: Path,
