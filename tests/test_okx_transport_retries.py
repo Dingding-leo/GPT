@@ -222,6 +222,52 @@ def test_public_downloader_bounds_malformed_json_retries(
     assert sleeps == [0.5, 1.0]
 
 
+def test_public_downloader_recovers_from_transient_invalid_utf8(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = _real_okx_payload()
+    responses = [_Response(b"\xff"), _Response.from_payload(payload)]
+    sleeps: list[float] = []
+    attempts = 0
+
+    def fake_urlopen(request: Any, timeout: float) -> _Response:
+        nonlocal attempts
+        attempts += 1
+        _assert_request_contract(request, timeout)
+        return responses.pop(0)
+
+    monkeypatch.setattr(okx, "urlopen", fake_urlopen)
+    monkeypatch.setattr(okx.time, "sleep", sleeps.append)
+
+    snapshot = _download_with_default_transport()
+
+    assert attempts == 2
+    assert sleeps == [0.5]
+    assert snapshot.metadata["raw_rows"] == 5
+
+
+def test_public_downloader_bounds_invalid_utf8_retries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    attempts = 0
+    sleeps: list[float] = []
+
+    def fake_urlopen(request: Any, timeout: float) -> _Response:
+        nonlocal attempts
+        attempts += 1
+        _assert_request_contract(request, timeout)
+        return _Response(b"\xff")
+
+    monkeypatch.setattr(okx, "urlopen", fake_urlopen)
+    monkeypatch.setattr(okx.time, "sleep", sleeps.append)
+
+    with pytest.raises(RuntimeError, match="OKX request failed after retries"):
+        _download_with_default_transport()
+
+    assert attempts == 3
+    assert sleeps == [0.5, 1.0]
+
+
 def test_public_downloader_honors_and_caps_retry_after_delta_seconds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
