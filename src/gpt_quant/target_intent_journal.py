@@ -36,7 +36,6 @@ def _decision_key(intent: TargetPositionIntent) -> tuple[object, ...]:
         intent.strategy_id,
         intent.signal_bar_open_utc,
         intent.signal_bar_close_utc,
-        intent.decision_not_before_utc,
     )
 
 
@@ -64,7 +63,7 @@ def _journal_from_intents(
         decision = _decision_key(intent)
         previous_id = decisions.get(decision)
         if previous_id is not None and previous_id != intent.intent_id:
-            raise ValueError(f"{_ERROR_LABEL} contains conflicting targets for one signal decision")
+            raise ValueError(f"{_ERROR_LABEL} contains conflicting intents for one signal decision")
         decisions[decision] = intent.intent_id
 
     payload = b"".join(intent.to_json_bytes() for intent in ordered)
