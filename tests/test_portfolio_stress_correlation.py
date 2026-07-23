@@ -105,7 +105,7 @@ def test_stress_correlation_is_report_only_and_backed_by_real_returns(tmp_path: 
     original_gate = result.concentration["passes"]
 
     diagnostic = build_portfolio_stress_correlation_diagnostic(result)
-    report_path = write_portfolio_stress_correlation_report(diagnostic, tmp_path)
+    report_path = write_portfolio_stress_correlation_report(result, tmp_path)
     saved = json.loads(report_path.read_text(encoding="utf-8"))
 
     assert diagnostic.report_only is True
@@ -132,6 +132,36 @@ def test_stress_correlation_is_report_only_and_backed_by_real_returns(tmp_path: 
     assert saved["source_provenance"]["source_artifact_id"] == 8499721759
     assert result.risk_status == original_status
     assert result.concentration["passes"] is original_gate
+
+
+def test_standalone_stress_writer_revalidates_verified_sources(tmp_path: Path) -> None:
+    metadata = json.loads((_FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8"))
+    instruments = metadata["instruments"]
+    btc_path = tmp_path / "btc_usdt_returns.csv"
+    eth_path = tmp_path / "eth_usdt_returns.csv"
+    btc_path.write_bytes((_FIXTURE_DIR / "btc_usdt_returns.csv").read_bytes())
+    eth_path.write_bytes((_FIXTURE_DIR / "eth_usdt_returns.csv").read_bytes())
+    btc = load_verified_return_csv(
+        btc_path,
+        expected_sha256=instruments["BTC-USDT"]["fixture_sha256"],
+    )
+    eth = load_verified_return_csv(
+        eth_path,
+        expected_sha256=instruments["ETH-USDT"]["fixture_sha256"],
+    )
+    result = build_buy_and_hold_sleeve_portfolio(
+        {"BTC-USDT": btc, "ETH-USDT": eth},
+        initial_weights={"BTC-USDT": 0.5, "ETH-USDT": 0.5},
+        provenance=_provenance(metadata),
+    )
+
+    btc_path.write_bytes(btc_path.read_bytes() + b"\n")
+    output_dir = tmp_path / "stress-report"
+
+    with pytest.raises(ValueError):
+        write_portfolio_stress_correlation_report(result, output_dir)
+
+    assert not output_dir.exists()
 
 
 def test_cli_publishes_stress_diagnostic_without_changing_risk_gate(
