@@ -21,8 +21,17 @@ jobs:
           cache: pip
       - name: Install formatter
         run: python -m pip install "ruff>=0.9,<1"
-      - name: Show formatter diff
+      - name: Format focused files
         run: |
-          ruff format --diff \
+          ruff format \
             reports/research/conditional-drawdown-vs-volatility-benchmark/analysis.py \
-            tests/test_conditional_drawdown_vs_volatility_benchmark_report.py || true
+            tests/test_conditional_drawdown_vs_volatility_benchmark_report.py
+      - name: Upload formatted files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: conditional-drawdown-formatted
+          path: |
+            reports/research/conditional-drawdown-vs-volatility-benchmark/analysis.py
+            tests/test_conditional_drawdown_vs_volatility_benchmark_report.py
+          if-no-files-found: error
+          retention-days: 1
