@@ -2,10 +2,16 @@ from __future__ import annotations
 
 import hashlib
 import os
+import stat
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
+
+try:
+    import fcntl as _fcntl
+except ImportError:  # pragma: no cover - exercised only on non-POSIX platforms
+    _fcntl = None
 
 from ._atomic_publish import publish_payloads_atomically
 from .execution_intent import TargetPositionIntent
@@ -89,6 +95,16 @@ def _parse_journal_bytes(value: bytes) -> TargetPositionIntentJournal:
     return journal
 
 
+def _validate_lock_descriptor(descriptor: int) -> os.stat_result:
+    lock_stat = os.fstat(descriptor)
+    if not stat.S_ISREG(lock_stat.st_mode) or lock_stat.st_nlink != 1:
+        raise ValueError(f"{_ERROR_LABEL} writer lock must be a regular single-link file")
+    if hasattr(os, "geteuid") and lock_stat.st_uid != os.geteuid():
+        raise ValueError(f"{_ERROR_LABEL} writer lock must be owned by the current user")
+    os.fchmod(descriptor, 0o600)
+    return lock_stat
+
+
 @contextmanager
 def _exclusive_writer_lock(journal_path: Path) -> Iterator[None]:
     output = journal_path.parent
@@ -98,17 +114,51 @@ def _exclusive_writer_lock(journal_path: Path) -> Iterator[None]:
     output.mkdir(parents=True, exist_ok=True)
 
     lock_path = output / f".{journal_path.name}.lock"
-    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0)
-    try:
-        descriptor = os.open(lock_path, flags, 0o600)
-    except FileExistsError as exc:
-        raise RuntimeError(f"{_ERROR_LABEL} writer lock already exists") from exc
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    if _fcntl is None:
+        flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | no_follow
+        try:
+            descriptor = os.open(lock_path, flags, 0o600)
+        except FileExistsError as exc:
+            raise RuntimeError(f"{_ERROR_LABEL} writer lock already exists") from exc
+        os.close(descriptor)
+        try:
+            yield
+        finally:
+            lock_path.unlink(missing_ok=True)
+            if not output_preexisted:
+                with suppress(OSError):
+                    output.rmdir()
+        return
 
-    os.close(descriptor)
+    flags = os.O_CREAT | os.O_RDWR | no_follow
+    descriptor = os.open(lock_path, flags, 0o600)
+    acquired = False
+    lock_stat: os.stat_result | None = None
     try:
+        lock_stat = _validate_lock_descriptor(descriptor)
+        try:
+            _fcntl.flock(descriptor, _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise RuntimeError(f"{_ERROR_LABEL} writer lock already exists") from exc
+        acquired = True
+        os.ftruncate(descriptor, 0)
+        os.write(descriptor, f"pid={os.getpid()}\n".encode("ascii"))
+        os.fsync(descriptor)
         yield
     finally:
-        lock_path.unlink(missing_ok=True)
+        if acquired:
+            try:
+                current_stat = os.stat(lock_path, follow_symlinks=False)
+                if lock_stat is None or (
+                    current_stat.st_dev != lock_stat.st_dev
+                    or current_stat.st_ino != lock_stat.st_ino
+                ):
+                    raise RuntimeError(f"{_ERROR_LABEL} writer lock path changed during commit")
+                lock_path.unlink()
+            finally:
+                _fcntl.flock(descriptor, _fcntl.LOCK_UN)
+        os.close(descriptor)
         if not output_preexisted:
             with suppress(OSError):
                 output.rmdir()
