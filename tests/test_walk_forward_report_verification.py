@@ -6,13 +6,13 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
-from gpt_quant.walk_forward_report import write_walk_forward_report
 
 from gpt_quant import (
     StrategyConfig,
     run_walk_forward_research,
     verify_walk_forward_report,
 )
+from gpt_quant.walk_forward_report import write_walk_forward_report
 
 
 def _write_real_report(btc_usdt_prices: pd.Series, output: Path) -> dict[str, Path]:
