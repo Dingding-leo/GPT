@@ -87,9 +87,7 @@ def build_target_position_intent(
             raise ValueError("1Dutc signal cutoff must align to UTC midnight")
 
     if decision_not_before <= signal_bar_close:
-        raise ValueError(
-            "signal cutoff signal_not_before_utc must be after the signal bar close"
-        )
+        raise ValueError("signal cutoff signal_not_before_utc must be after the signal bar close")
 
     expires_at = signal_bar_close + bar_duration
     if decision_not_before >= expires_at:
