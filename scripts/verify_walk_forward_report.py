@@ -5,6 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
+from gpt_quant.walk_forward_manifest_verify import verify_walk_forward_manifest
 from gpt_quant.walk_forward_verify_gate import verify_walk_forward_report
 
 
@@ -13,6 +14,7 @@ def parse_args() -> argparse.Namespace:
         description="Recompute and hash a persisted canonical 5 bps walk-forward report."
     )
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--manifest-path", required=True)
     parser.add_argument(
         "--verification-path",
         help="Defaults to <output-dir>/walk_forward_verification.json.",
@@ -24,6 +26,11 @@ def main() -> int:
     args = parse_args()
     output = Path(args.output_dir)
     verification = verify_walk_forward_report(output)
+    manifest_binding = verify_walk_forward_manifest(output, args.manifest_path)
+    overlap = sorted(set(verification) & set(manifest_binding))
+    if overlap:
+        raise RuntimeError(f"verification payload key collision: {overlap}")
+    verification.update(manifest_binding)
     verification_path = (
         Path(args.verification_path)
         if args.verification_path
@@ -38,6 +45,7 @@ def main() -> int:
     print(f"verification_path={verification_path}")
     print(f"report_json_sha256={verification['report_json_sha256']}")
     print(f"returns_csv_sha256={verification['returns_csv_sha256']}")
+    print(f"manifest_run_id={verification['manifest_run_id']}")
     return 0
 
 
