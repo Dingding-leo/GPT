@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -42,7 +41,9 @@ def _fetch(payload: dict[str, Any]) -> None:
     fetch_okx_spot_instrument_snapshot(
         inst_id="BTC-USDT",
         server_time_sample=sample,
-        get_json=lambda _url, _timeout: deepcopy(payload),
+        get_bytes=lambda _url, _timeout: json.dumps(
+            payload, ensure_ascii=False, separators=(",", ":")
+        ).encode("utf-8"),
         now=_clock(started, received),
     )
 
