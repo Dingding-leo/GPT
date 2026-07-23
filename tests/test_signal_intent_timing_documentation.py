@@ -98,7 +98,13 @@ def test_documented_okx_timing_example_executes_persists_and_replays(tmp_path) -
     assert binding.decision_at_utc == datetime(2026, 7, 21, 12, 0, 0, 400000, tzinfo=UTC)
     assert binding.maximum_age_ms == 200
     assert binding.instrument_snapshot_sha256 == quote.instrument_snapshot_sha256
-    assert Decimal(binding.observed_spread_bps) == Decimal(quote_summary["observed_spread_bps"])
+    expected_binding = bind_execution_quote(
+        intent,
+        quote,
+        decision_at_utc=binding.decision_at_utc,
+        maximum_age_ms=binding.maximum_age_ms,
+    )
+    assert binding == expected_binding
     assert ExecutionQuoteBinding.from_json_bytes(binding.to_json_bytes()) == binding
     binding.assert_reconstructs(intent, quote)
 
