@@ -208,8 +208,11 @@ def build_portfolio_stress_correlation_diagnostic(
 def write_portfolio_stress_correlation_report(
     result: PortfolioRiskResult,
     output_dir: str | Path,
+    *,
+    stress_fraction: float = 0.20,
+    minimum_stress_observations: int = 5,
 ) -> Path:
-    """Revalidate verified sources and atomically persist the report-only diagnostic."""
+    """Revalidate verified sources and persist the requested report-only diagnostic."""
 
     if not isinstance(result, PortfolioRiskResult):
         raise TypeError("result must be a PortfolioRiskResult")
@@ -221,7 +224,11 @@ def write_portfolio_stress_correlation_report(
         expected_sleeves=sleeves,
     )
     _validate_result_against_verified_sources(result)
-    diagnostic = build_portfolio_stress_correlation_diagnostic(result)
+    diagnostic = build_portfolio_stress_correlation_diagnostic(
+        result,
+        stress_fraction=stress_fraction,
+        minimum_stress_observations=minimum_stress_observations,
+    )
 
     output = Path(output_dir)
     output_preexisted = output.exists()
@@ -265,8 +272,11 @@ def write_portfolio_stress_correlation_report(
 def write_portfolio_risk_bundle(
     result: PortfolioRiskResult,
     output_dir: str | Path,
+    *,
+    stress_fraction: float = 0.20,
+    minimum_stress_observations: int = 5,
 ) -> dict[str, Path]:
-    """Publish the core report and stress diagnostic as one rollback-capable generation."""
+    """Publish the core report and requested stress diagnostic as one generation."""
 
     if not isinstance(result, PortfolioRiskResult):
         raise TypeError("result must be a PortfolioRiskResult")
@@ -288,6 +298,8 @@ def write_portfolio_risk_bundle(
             staged_paths["stress_correlation"] = write_portfolio_stress_correlation_report(
                 result,
                 staging,
+                stress_fraction=stress_fraction,
+                minimum_stress_observations=minimum_stress_observations,
             )
             if set(staged_paths) != set(destinations):
                 raise ValueError("portfolio bundle must exactly match the report file set")
