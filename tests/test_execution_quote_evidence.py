@@ -59,6 +59,28 @@ def test_execution_quote_store_replays_one_deterministic_root(tmp_path: Path) ->
     assert not any(path.name.startswith(".execution-quote-") for path in store_path.iterdir())
 
 
+def test_execution_quote_store_recovers_stages_left_by_crashed_writer(tmp_path: Path) -> None:
+    store_path = tmp_path / "quotes"
+    snapshot = _quote(offset_ms=0)
+    expected = record_execution_quote_evidence(store_path, snapshot)
+    destination = store_path / f"{snapshot.snapshot_id}.json"
+
+    incomplete_stage = store_path / ".execution-quote-101-deadbeefdeadbeef.tmp"
+    incomplete_stage.write_bytes(b"partial execution quote")
+    os.chmod(incomplete_stage, 0o600)
+
+    published_stage = store_path / ".execution-quote-202-feedfacefeedface.tmp"
+    os.link(destination, published_stage)
+    assert destination.stat().st_nlink == 2
+
+    replayed = load_execution_quote_evidence_store(store_path)
+
+    assert replayed == expected
+    assert not incomplete_stage.exists()
+    assert not published_stage.exists()
+    assert destination.stat().st_nlink == 1
+
+
 def test_execution_quote_store_fsyncs_new_directory_and_parent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
