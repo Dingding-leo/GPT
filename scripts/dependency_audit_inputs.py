@@ -192,9 +192,16 @@ def prepare_audit_inputs(pyproject_path: Path, output_dir: Path) -> dict[str, ob
     dynamic = project.get("dynamic", [])
     if not isinstance(dynamic, list) or not all(isinstance(value, str) for value in dynamic):
         raise ValueError("[project].dynamic must be a list of strings")
-    forbidden_dynamic = {"dependencies", "optional-dependencies"}.intersection(dynamic)
-    if forbidden_dynamic:
-        raise ValueError(f"dependency declarations cannot be dynamic: {sorted(forbidden_dynamic)}")
+    if dynamic:
+        raise ValueError("dynamic project metadata is not allowed")
+    tool = pyproject.get("tool", {})
+    if not isinstance(tool, dict):
+        raise ValueError("[tool] must be a table")
+    setuptools_config = tool.get("setuptools", {})
+    if not isinstance(setuptools_config, dict):
+        raise ValueError("[tool.setuptools] must be a table")
+    if "dynamic" in setuptools_config:
+        raise ValueError("[tool.setuptools.dynamic] is not allowed")
 
     project_requirements = _validated_requirements(
         project.get("dependencies", []),
