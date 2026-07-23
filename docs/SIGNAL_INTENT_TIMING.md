@@ -127,6 +127,27 @@ An identical retry returns the same store. A conflicting record, unsafe file typ
 
 The store root proves the ordered set of canonical quote records. It does not prove that the external response bytes addressed by `source_response_sha256` or the instrument bytes addressed by `instrument_snapshot_sha256` are available.
 
+### Fail-closed operator replay gate
+
+After running the deterministic example, verify the already-existing store against its expected record count and deterministic root:
+
+```bash
+python examples/verify_execution_quote_store.py \
+  --store reports/examples/signal-intent-timing/execution-quotes \
+  --expected-count 1 \
+  --expected-sha256 4313206599c3d31c7cbd32015df3bd97275f532e20e2f3eb20c276fa22f0907d
+```
+
+The exact example output is:
+
+```json
+{"count":1,"path":"reports/examples/signal-intent-timing/execution-quotes","sha256":"4313206599c3d31c7cbd32015df3bd97275f532e20e2f3eb20c276fa22f0907d","snapshot_ids":["5c3a79878c546d3687ae6a8f95dd1604cebf1a8bd1e54b59abbb976bd5e9b24b"],"status":"verified"}
+```
+
+The verifier refuses a store that does not exist instead of creating an empty store, then fails closed when the replayed count or root differs from the operator-supplied expectation. It invokes the production replay path, so safe crash-left stages are recovered under the store lock; unsafe or ambiguous stages remain fatal. Do not delete or rename staged files manually. Preserve the store for incident analysis and treat any mismatch as a deployment blocker.
+
+This command verifies only the canonical quote records and their deterministic store root. It does not turn the structural quote into real top-of-book provenance, prove availability of the separately hashed source bytes, authorize a paper decision, or establish an order or fill.
+
 ## Binding identity and replay
 
 The canonical binding contains:
