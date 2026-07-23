@@ -1,0 +1,23 @@
+{
+  "columns": [
+    "timestamp",
+    "strategy_return",
+    "benchmark_volatility_targeted_long_return"
+  ],
+  "extraction": "first 40 aligned persisted OOS rows, values unchanged",
+  "fixture_sha256": "20a7125cafcf4c4b88275193b6afcce9d7ea570ba7d60402b3cab301bebb6503",
+  "instrument": "BTC-USDT",
+  "market_type": "spot",
+  "period_end": "2020-02-19T00:00:00+00:00",
+  "period_start": "2020-01-11T00:00:00+00:00",
+  "provider": "OKX",
+  "rows": 40,
+  "source_artifact_id": 8559031387,
+  "source_artifact_name": "quant-research-source-1839-attempt-1",
+  "source_artifact_sha256": "9d7f5c91ac46c8a3d5a3b0d34f569936bd70bc4197161ae5d977c2c6730e0c04",
+  "source_head_sha": "d2d569ee2e20d4fc4172e5339a2aa06862d66ea8",
+  "source_main_base": "d1433f4e423861b953736f812f76cf24ac00de89",
+  "source_return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+  "source_workflow_run_id": 29996094865,
+  "timeframe": "1Dutc"
+}
