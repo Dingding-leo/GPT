@@ -51,7 +51,8 @@ jobs:
           set +e
           ruff check . > ruff-check.txt 2>&1
           check_status=$?
-          ruff format --check . > ruff-format.txt 2>&1
+          ruff format --diff tests/test_okx_live_signal_cutoff.py > ruff-format.txt 2>&1
+          ruff format --check . > /dev/null 2>&1
           format_status=$?
           printf 'check_status=%s\nformat_status=%s\n' "$check_status" "$format_status" > ruff-status.txt
 
