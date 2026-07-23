@@ -196,6 +196,17 @@ def run_holdout_research(
     validation_end = clean.index[holdout_start_idx - 1]
     holdout_start = clean.index[holdout_start_idx]
 
+    longest_lookback = max(
+        base_config.volatility_lookback,
+        max(validated_momentum),
+        max(validated_reversal),
+    )
+    if longest_lookback > validation_start_idx - 1:
+        raise ValueError(
+            "development history must provide a fully formed one-bar-delayed "
+            "position at validation start for every candidate lookback"
+        )
+
     candidates: list[tuple[float, StrategyConfig, dict[str, float | int]]] = []
     for momentum, reversal, trend_weight in itertools.product(
         validated_momentum,
