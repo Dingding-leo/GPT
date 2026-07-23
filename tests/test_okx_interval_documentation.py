@@ -95,14 +95,22 @@ def test_okx_interval_guide_matches_open_ended_freshness_gate() -> None:
         "+ _OPEN_ENDED_FRESHNESS_GRACE_SECONDS" in source
     )
 
-    live_reference = source.index("as_of_timestamp = _current_utc_timestamp()")
     getter_assignment = source.index("getter = get_json or _default_json_getter")
     parsed_rows = source.index("parsed = parse_okx_candle_rows(raw_rows)")
+    explicit_end_coverage = source.index("    _validate_requested_end_coverage(\n        candles,")
+    live_reference = source.index("as_of_timestamp = _current_utc_timestamp()")
     freshness_call = source.index(
         "    freshness_age_seconds, freshness_max_age_seconds = _validate_open_ended_freshness("
     )
     snapshot_return = source.index("return OKXCandleSnapshot(")
-    assert live_reference < getter_assignment < parsed_rows < freshness_call < snapshot_return
+    assert (
+        getter_assignment
+        < parsed_rows
+        < explicit_end_coverage
+        < live_reference
+        < freshness_call
+        < snapshot_return
+    )
 
     for metadata_field in (
         "freshness_checked_at_utc",
@@ -115,6 +123,9 @@ def test_okx_interval_guide_matches_open_ended_freshness_gate() -> None:
     assert "省略 `end`" in guide
     assert "`2 × expected_step_seconds + 5 分钟`" in guide
     assert "`48 小时 5 分钟`" in guide
-    assert "网络下载开始前采样 UTC 参考时刻" in guide
-    assert "PR #226" in guide
+    assert "完成网络分页" in guide
+    assert "网络下载耗时因此已经计入" in guide
+    assert "下载完成后采样参考时刻" in guide
+    assert "PR #226" not in guide
+    assert "网络下载开始前采样 UTC 参考时刻" not in guide
     assert "tests/test_okx_open_ended_freshness.py" in guide
