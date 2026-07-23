@@ -1,0 +1,46 @@
+name: PR213 Formatter
+
+on:
+  push:
+    branches:
+      - auto/performance/20260723-11-cache-memory-evidence
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install formatter
+        run: |
+          python -m pip install "pip==26.1.2"
+          python -m pip install -e ".[dev]"
+
+      - name: Format focused files
+        run: |
+          ruff check --fix benchmarks/run_walk_forward_cache_rss.py tests/test_walk_forward_cache_rss_benchmark.py
+          ruff format benchmarks/run_walk_forward_cache_rss.py tests/test_walk_forward_cache_rss_benchmark.py
+          mkdir -p formatted/benchmarks formatted/tests
+          cp benchmarks/run_walk_forward_cache_rss.py formatted/benchmarks/
+          cp tests/test_walk_forward_cache_rss_benchmark.py formatted/tests/
+
+      - name: Upload formatted files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr213-formatted
+          path: formatted/
+          if-no-files-found: error
+          retention-days: 1
