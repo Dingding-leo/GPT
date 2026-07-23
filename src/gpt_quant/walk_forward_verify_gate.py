@@ -11,6 +11,11 @@ from . import walk_forward_verify as _walk_forward_verify
 from .walk_forward_verify import _assert_series_close, _numeric_column
 
 _verify_core = _walk_forward_verify.verify_walk_forward_report
+_SELECTED_PARAMETER_COLUMNS = (
+    "selected_momentum_lookback",
+    "selected_reversal_lookback",
+    "selected_trend_weight",
+)
 
 
 def _verify_global_position_delay(persisted: pd.DataFrame, *, tolerance: float) -> None:
@@ -20,10 +25,22 @@ def _verify_global_position_delay(persisted: pd.DataFrame, *, tolerance: float) 
 
     positions = _numeric_column(persisted, "position")
     targets = _numeric_column(persisted, "target_position")
-    folds = _numeric_column(persisted, "fold")
+    folds = _numeric_column(persisted, "fold").to_numpy()
     actual = positions.iloc[1:].reset_index(drop=True)
     expected = targets.shift(1).iloc[1:].reset_index(drop=True)
-    mismatches = np.flatnonzero(np.abs(actual.to_numpy() - expected.to_numpy()) > tolerance)
+
+    same_fold = folds[1:] == folds[:-1]
+    comparable = same_fold.copy()
+    if set(_SELECTED_PARAMETER_COLUMNS) <= set(persisted.columns):
+        same_strategy = np.ones(len(persisted) - 1, dtype=bool)
+        for name in _SELECTED_PARAMETER_COLUMNS:
+            values = _numeric_column(persisted, name).to_numpy()
+            same_strategy &= values[1:] == values[:-1]
+        comparable |= same_strategy
+
+    mismatches = np.flatnonzero(
+        (np.abs(actual.to_numpy() - expected.to_numpy()) > tolerance) & comparable
+    )
     if not mismatches.size:
         return
 
@@ -31,8 +48,8 @@ def _verify_global_position_delay(persisted: pd.DataFrame, *, tolerance: float) 
     row = offset + 1
     label = (
         "cross-fold delayed position"
-        if folds.iloc[row] != folds.iloc[row - 1]
-        else f"fold {int(folds.iloc[row])} position"
+        if folds[row] != folds[row - 1]
+        else f"fold {int(folds[row])} position"
     )
     _assert_series_close(
         label,
@@ -47,7 +64,7 @@ def verify_walk_forward_report(
     *,
     tolerance: float = 1e-12,
 ) -> dict[str, float | int | str]:
-    """Verify persisted metrics and the global one-bar target-to-position delay."""
+    """Verify persisted metrics and every reconstructable delayed position."""
 
     returns_path = Path(output_dir) / "walk_forward_returns.csv"
     returns_bytes = returns_path.read_bytes()
