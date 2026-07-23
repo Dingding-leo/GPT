@@ -60,9 +60,7 @@ def read_verified_return_payloads(
         market: (artifact_root / market / "walk_forward_returns.csv").read_bytes()
         for market in MARKETS
     }
-    digests = {
-        market: verify_return_payload_sha256(payloads[market], market) for market in MARKETS
-    }
+    digests = {market: verify_return_payload_sha256(payloads[market], market) for market in MARKETS}
     return payloads, digests
 
 
