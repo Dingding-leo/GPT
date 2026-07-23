@@ -127,9 +127,7 @@ def test_live_readiness_gate_rejects_failed_or_skipped_ci_checks(tmp_path: Path)
     assert not result.ready
     assert blockers == {
         "ci_tests_failure": "required CI check tests concluded failure",
-        "ci_portfolio_artifact_skipped": (
-            "required CI check portfolio_artifact concluded skipped"
-        ),
+        "ci_portfolio_artifact_skipped": ("required CI check portfolio_artifact concluded skipped"),
     }
     assert dict(result.ci_checks) == ci_checks
     assert "ci_tests" not in result.passed_checks
@@ -267,8 +265,7 @@ def test_cli_writes_ci_outcomes_before_returning_failure(tmp_path: Path) -> None
     assert payload["ready"] is False
     assert payload["ci_checks"] == ci_checks
     assert any(
-        blocker["code"] == "ci_walk_forward_verification_failure"
-        for blocker in payload["blockers"]
+        blocker["code"] == "ci_walk_forward_verification_failure" for blocker in payload["blockers"]
     )
     markdown = (output_dir / "live_readiness.md").read_text(encoding="utf-8")
     assert "`walk_forward_verification`: `failure`" in markdown
