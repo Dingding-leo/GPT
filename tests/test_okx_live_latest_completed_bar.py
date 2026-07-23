@@ -74,3 +74,45 @@ def test_completed_bar_cutoff_rejects_snapshot_missing_newly_completed_bar() -> 
     assert snapshot.candles.index[-1] == pd.Timestamp("2026-07-20T00:00:00+00:00")
     with pytest.raises(ValueError, match="stale relative to server time"):
         build_okx_completed_bar_cutoff(snapshot, server_time_sample=sample)
+
+
+def test_completed_bar_cutoff_rejects_post_download_candle_mutation() -> None:
+    rows = _real_okx_rows()
+
+    def candle_getter(url: str, timeout: float) -> dict[str, object]:
+        assert "instId=BTC-USDT" in url
+        assert "bar=1Dutc" in url
+        assert timeout == 20.0
+        return {"code": "0", "msg": "", "data": [list(row) for row in rows]}
+
+    snapshot = fetch_okx_history_candles(
+        inst_id="BTC-USDT",
+        bar="1Dutc",
+        base_url="https://example.test",
+        limit=100,
+        max_pages=1,
+        pause_seconds=0.0,
+        as_of="2026-07-21T12:00:00.000+00:00",
+        get_json=candle_getter,
+    )
+    latest_open = snapshot.candles.index[-1]
+    original_close = float(snapshot.candles.loc[latest_open, "close"])
+    assert original_close == pytest.approx(65259.4)
+    snapshot.candles.loc[latest_open, "close"] = original_close / 2
+
+    def time_getter(url: str, timeout: float) -> dict[str, object]:
+        assert url == "https://example.test/api/v5/public/time"
+        assert timeout == 20.0
+        return {"code": "0", "msg": "", "data": [{"ts": "1784635200100"}]}
+
+    sample = sample_okx_server_time(
+        base_url="https://example.test",
+        get_json=time_getter,
+        now=_clock(
+            "2026-07-21T12:00:00.000+00:00",
+            "2026-07-21T12:00:00.200+00:00",
+        ),
+    )
+
+    with pytest.raises(ValueError, match="snapshot candles changed after download"):
+        build_okx_completed_bar_cutoff(snapshot, server_time_sample=sample)
