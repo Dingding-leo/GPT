@@ -36,45 +36,40 @@ jobs:
           from pathlib import Path
 
           path = Path("reports/research/cross_market_maximin_shared_candidate/analysis.py")
-          text = path.read_text(encoding="utf-8")
-          old = '''        "limitations": [
-              "BTC-USDT and ETH-USDT are development markets and may be used only for architecture design.",
-              "SOL-USDT was not read or used and remains a consumed sealed holdout unavailable for tuning.",
-              "Mean-score and rank-sum rules are predeclared neighbourhood stresses, not separately selected architectures.",
-              "Moving-block resampling creates artificial joins and preserves dependence only within 20-session blocks.",
-              "Delay scenarios shift daily positions and do not model executable next-open fills.",
-              "The 7.5, 10 and 15 bps cases are aggregate repricings, not measured spread, slippage, impact or latency.",
-              "Capacity and prospective forward evidence remain unavailable.",
-          ],
-          '''
-          new = '''        "limitations": [
-              (
-                  "BTC-USDT and ETH-USDT are development markets and may be used only for "
-                  "architecture design."
-              ),
-              (
-                  "SOL-USDT was not read or used and remains a consumed sealed holdout "
-                  "unavailable for tuning."
-              ),
-              (
-                  "Mean-score and rank-sum rules are predeclared neighbourhood stresses, "
-                  "not separately selected architectures."
-              ),
-              (
-                  "Moving-block resampling creates artificial joins and preserves dependence "
-                  "only within 20-session blocks."
-              ),
-              "Delay scenarios shift daily positions and do not model executable next-open fills.",
-              (
-                  "The 7.5, 10 and 15 bps cases are aggregate repricings, not measured spread, "
-                  "slippage, impact or latency."
-              ),
-              "Capacity and prospective forward evidence remain unavailable.",
-          ],
-          '''
-          if old not in text:
-              raise SystemExit("expected limitation block not found")
-          path.write_text(text.replace(old, new), encoding="utf-8")
+          lines = path.read_text(encoding="utf-8").splitlines()
+          start = next(index for index, line in enumerate(lines) if line.strip() == '"limitations": [')
+          end = next(
+              index
+              for index in range(start + 1, len(lines))
+              if lines[index].strip() == "],"
+          )
+          replacement = [
+              '        "limitations": [',
+              "            (",
+              '                "BTC-USDT and ETH-USDT are development markets and may be used only for "',
+              '                "architecture design."',
+              "            ),",
+              "            (",
+              '                "SOL-USDT was not read or used and remains a consumed sealed holdout "',
+              '                "unavailable for tuning."',
+              "            ),",
+              "            (",
+              '                "Mean-score and rank-sum rules are predeclared neighbourhood stresses, "',
+              '                "not separately selected architectures."',
+              "            ),",
+              "            (",
+              '                "Moving-block resampling creates artificial joins and preserves dependence "',
+              '                "only within 20-session blocks."',
+              "            ),",
+              '            "Delay scenarios shift daily positions and do not model executable next-open fills.",',
+              "            (",
+              '                "The 7.5, 10 and 15 bps cases are aggregate repricings, not measured spread, "',
+              '                "slippage, impact or latency."',
+              "            ),",
+              '            "Capacity and prospective forward evidence remain unavailable.",',
+              "        ],",
+          ]
+          path.write_text("\n".join(lines[:start] + replacement + lines[end + 1 :]) + "\n", encoding="utf-8")
           PY
           ruff check --fix reports/research/cross_market_maximin_shared_candidate/analysis.py
           ruff format reports/research/cross_market_maximin_shared_candidate/analysis.py
