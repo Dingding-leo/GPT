@@ -94,9 +94,7 @@ def test_completed_bar_cutoff_uses_bounded_exchange_time() -> None:
     assert cutoff.bar_close_utc == pd.Timestamp("2026-07-21T00:00:00+00:00")
     assert cutoff.observed_at_utc == pd.Timestamp("2026-07-21T11:59:59+00:00")
     assert cutoff.exchange_observed_at_utc == pd.Timestamp("2026-07-21T12:00:00.100+00:00")
-    assert cutoff.server_time_response_received_utc == pd.Timestamp(
-        "2026-07-21T12:00:00.200+00:00"
-    )
+    assert cutoff.server_time_response_received_utc == pd.Timestamp("2026-07-21T12:00:00.200+00:00")
     assert cutoff.signal_not_before_utc == cutoff.server_time_response_received_utc
     assert cutoff.availability_delay_seconds == pytest.approx(12 * 60 * 60 + 0.1)
     assert cutoff.server_round_trip_seconds == pytest.approx(0.2)
