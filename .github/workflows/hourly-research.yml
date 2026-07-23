@@ -45,28 +45,8 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Apply Ruff diagnostic and verify repository
-        run: |
-          files=(
-            src/gpt_quant/walk_forward_diagnostics.py
-            src/gpt_quant/walk_forward_report.py
-            tests/test_walk_forward_path_diagnostics.py
-          )
-          ruff check --fix --exit-zero "${files[@]}"
-          ruff format "${files[@]}"
-          ruff check .
-          ruff format --check .
-
-      - name: Upload Ruff-formatted files
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ruff-formatted-${{ github.run_id }}
-          path: |
-            src/gpt_quant/walk_forward_diagnostics.py
-            src/gpt_quant/walk_forward_report.py
-            tests/test_walk_forward_path_diagnostics.py
-          if-no-files-found: error
-          retention-days: 1
+      - name: Lint and formatting
+        run: ruff check . && ruff format --check .
 
       - name: Test against public OKX data
         env:
