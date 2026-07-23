@@ -13,6 +13,11 @@ import pandas as pd
 
 from .metrics import performance_metrics
 
+_POSITION_ADJUSTMENT_THRESHOLD = 1e-12
+_MATERIAL_POSITION_ADJUSTMENT_THRESHOLD = 0.01
+_ACTIVE_POSITION_THRESHOLD = 0.01
+_DRAWDOWN_THRESHOLD = 1e-12
+
 _REQUIRED_RETURN_COLUMNS = {
     "timestamp",
     "asset_return",
@@ -125,6 +130,132 @@ def _assert_metric_mapping(
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _path_diagnostics(
+    persisted: pd.DataFrame,
+    *,
+    annualization: int,
+) -> dict[str, float | int | str]:
+    """Reconstruct live-readiness path diagnostics from the persisted CSV only."""
+
+    observations = len(persisted)
+    absolute_position = persisted["position"].abs()
+    turnover = persisted["turnover"]
+    adjustments = turnover > _POSITION_ADJUSTMENT_THRESHOLD
+    material_adjustments = turnover > _MATERIAL_POSITION_ADJUSTMENT_THRESHOLD
+    active = absolute_position > _ACTIVE_POSITION_THRESHOLD
+
+    episode_durations: list[int] = []
+    completed_episode_returns: list[float] = []
+    completed_episodes = 0
+    open_episodes = 0
+    row = 0
+    while row < observations:
+        if not bool(active.iloc[row]):
+            row += 1
+            continue
+        start = row
+        while row + 1 < observations and bool(active.iloc[row + 1]):
+            row += 1
+        last_active = row
+        episode_durations.append(last_active - start + 1)
+        if last_active + 1 < observations:
+            completed_episodes += 1
+            exit_row = last_active + 1
+            episode_returns = persisted["strategy_return"].iloc[start : exit_row + 1]
+            completed_episode_returns.append(float((1.0 + episode_returns).prod() - 1.0))
+        else:
+            open_episodes += 1
+        row += 1
+
+    positive_episode_profit = sum(
+        value for value in completed_episode_returns if value > 0.0
+    )
+    negative_episode_loss = -sum(
+        value for value in completed_episode_returns if value < 0.0
+    )
+    if negative_episode_loss > 0.0:
+        episode_profit_factor: float | str = positive_episode_profit / negative_episode_loss
+    elif positive_episode_profit > 0.0:
+        episode_profit_factor = "unbounded"
+    else:
+        episode_profit_factor = "undefined"
+
+    if completed_episodes:
+        episode_win_rate = sum(
+            value > 0.0 for value in completed_episode_returns
+        ) / completed_episodes
+    else:
+        episode_win_rate = 0.0
+
+    if episode_durations:
+        average_holding_bars = float(np.mean(episode_durations))
+        median_holding_bars = float(np.median(episode_durations))
+        maximum_holding_bars = max(episode_durations)
+    else:
+        average_holding_bars = 0.0
+        median_holding_bars = 0.0
+        maximum_holding_bars = 0
+
+    net_returns = persisted["strategy_return"].to_numpy(dtype=float, copy=False)
+    equity = np.cumprod(1.0 + net_returns)
+    running_peak = np.maximum.accumulate(np.concatenate(([1.0], equity)))[1:]
+    drawdown = equity / running_peak - 1.0
+    underwater = drawdown < -_DRAWDOWN_THRESHOLD
+    longest_underwater_bars = 0
+    current_underwater_bars = 0
+    running_underwater_bars = 0
+    for is_underwater in underwater:
+        if bool(is_underwater):
+            running_underwater_bars += 1
+            longest_underwater_bars = max(
+                longest_underwater_bars,
+                running_underwater_bars,
+            )
+        else:
+            running_underwater_bars = 0
+    if bool(underwater[-1]):
+        current_underwater_bars = running_underwater_bars
+
+    return {
+        "diagnostic_schema": "persisted_path_v1",
+        "position_adjustment_threshold": _POSITION_ADJUSTMENT_THRESHOLD,
+        "material_position_adjustment_threshold": (
+            _MATERIAL_POSITION_ADJUSTMENT_THRESHOLD
+        ),
+        "active_position_threshold": _ACTIVE_POSITION_THRESHOLD,
+        "drawdown_threshold": _DRAWDOWN_THRESHOLD,
+        "total_absolute_turnover": float(turnover.sum()),
+        "annualized_instrument_turnover": float(turnover.mean() * annualization),
+        "position_adjustment_count": int(adjustments.sum()),
+        "annualized_position_adjustment_count": float(
+            adjustments.sum() * annualization / observations
+        ),
+        "material_position_adjustment_count": int(material_adjustments.sum()),
+        "annualized_material_position_adjustment_count": float(
+            material_adjustments.sum() * annualization / observations
+        ),
+        "holding_episode_count": len(episode_durations),
+        "completed_holding_episode_count": completed_episodes,
+        "open_holding_episode_count": open_episodes,
+        "holding_duration_basis": (
+            "active_bars; open episode truncated at evaluation_end; "
+            "completed episode PnL includes the first cash bar exit fee"
+        ),
+        "average_holding_duration_bars": average_holding_bars,
+        "median_holding_duration_bars": median_holding_bars,
+        "maximum_holding_duration_bars": maximum_holding_bars,
+        "completed_holding_episode_win_rate": float(episode_win_rate),
+        "completed_holding_episode_profit_factor": episode_profit_factor,
+        "average_absolute_exposure": float(absolute_position.mean()),
+        "current_absolute_exposure": float(absolute_position.iloc[-1]),
+        "maximum_absolute_exposure": float(absolute_position.max()),
+        "current_drawdown": float(drawdown[-1]),
+        "recomputed_maximum_drawdown": float(drawdown.min()),
+        "current_underwater_duration_bars": current_underwater_bars,
+        "longest_underwater_duration_bars": longest_underwater_bars,
+    }
 
 
 def verify_walk_forward_report(
@@ -287,7 +418,7 @@ def verify_walk_forward_report(
     if index[-1] != evaluation_end:
         raise ValueError("evaluation_end does not match persisted returns")
 
-    return {
+    verification: dict[str, float | int | str] = {
         "status": "passed",
         "report_json_sha256": _sha256(report_path),
         "returns_csv_sha256": _sha256(returns_path),
@@ -296,4 +427,8 @@ def verify_walk_forward_report(
         "annualization": annualization,
         "transaction_cost_bps": fee_bps,
         "metric_tolerance": tolerance,
+        "evaluation_start": evaluation_start.isoformat(),
+        "evaluation_end": evaluation_end.isoformat(),
     }
+    verification.update(_path_diagnostics(persisted, annualization=annualization))
+    return verification
