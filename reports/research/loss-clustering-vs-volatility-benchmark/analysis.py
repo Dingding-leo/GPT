@@ -175,8 +175,7 @@ def bootstrap_loss_clustering_delta(
         if strategy_previous == 0 or benchmark_previous == 0:
             raise ValueError("sampled blocks must contain prior losses for both return series")
         sampled_deltas[index] = (
-            benchmark_consecutive / benchmark_previous
-            - strategy_consecutive / strategy_previous
+            benchmark_consecutive / benchmark_previous - strategy_consecutive / strategy_previous
         )
 
     alpha = 1.0 - float(confidence)
