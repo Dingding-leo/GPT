@@ -101,6 +101,15 @@ pytest -q \
 
 这些命令验证受信任解析和工作流声明，不会在本地复现 GitHub Actions 的全部 20 个 Python/平台解析任务，也不会替代远端 vulnerability audit。
 
+## PR 作者提交前检查
+
+在修改 `pyproject.toml` 的 pull request 中：
+
+1. 先运行上面的本地 `prepare` 命令，并审阅规范化后的两组 requirements；
+2. 确认没有新增 legacy build file、dynamic metadata、`cmdclass`、本地路径或 direct URL；
+3. 在 Actions 中检查全部 Python/平台 dependency-audit jobs，而不是只看普通 package build；
+4. 若门禁失败，下载对应 `python-dependency-audit-*` artifact，先查看校验 stderr、resolution JSON 和两份 `pip-audit` 输出，再修改声明。
+
 ## 证据边界
 
 通过门禁表示：受信任解析器能够静态读取声明；解析结果来自 public PyPI binary artifacts；记录的 artifact SHA-256 格式有效；两组锁定依赖在当次 `pip-audit` 数据下未触发门禁失败。
