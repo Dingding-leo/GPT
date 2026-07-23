@@ -161,9 +161,7 @@ def _validate_source_returns(
     if (source_positions == 0).any():
         raise ValueError("normalized OKX snapshot lacks the preceding close for an asset return")
     if len(source_positions) > 1 and not np.equal(np.diff(source_positions), 1).all():
-        raise ValueError(
-            "walk-forward returns must cover contiguous normalized OKX snapshot rows"
-        )
+        raise ValueError("walk-forward returns must cover contiguous normalized OKX snapshot rows")
 
     aligned_close = source_close.iloc[source_positions]
     expected_asset_return = source_close.pct_change().iloc[source_positions]
