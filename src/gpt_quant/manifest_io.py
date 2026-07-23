@@ -6,7 +6,11 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from .experiment_registry import _registry_lock, load_manifest_entries, validate_manifest_entry
+from .experiment_registry import (
+    _registry_lock,
+    load_manifest_entries,
+    validate_manifest_entry,
+)
 
 
 def _canonical_jsonl(entries: list[Mapping[str, Any]]) -> bytes:
