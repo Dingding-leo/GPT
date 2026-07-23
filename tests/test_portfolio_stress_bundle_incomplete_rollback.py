@@ -58,7 +58,9 @@ def test_incomplete_bundle_rollback_is_reported_and_caller_files_survive(
         _build_result(btc_weight=0.5, eth_weight=0.5),
         output_dir,
     )
-    original_payloads = {name: path.read_bytes() for name, path in original_paths.items()}
+    original_payloads = {
+        name: path.read_bytes() for name, path in original_paths.items()
+    }
     sentinel = output_dir / "operator-notes.txt"
     sentinel_payload = b"preserve caller-owned evidence\n"
     sentinel.write_bytes(sentinel_payload)
