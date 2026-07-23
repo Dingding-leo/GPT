@@ -71,9 +71,7 @@ def analyze_market(artifact_dir: Path, market: str) -> dict[str, Any]:
     )
     folds = fold_stability(candidate)
     calendar = calendar_stability(candidate)
-    costs = {
-        f"{cost:g}": frame_metrics(reprice(candidate, cost)) for cost in ALL_IN_COSTS_BPS
-    }
+    costs = {f"{cost:g}": frame_metrics(reprice(candidate, cost)) for cost in ALL_IN_COSTS_BPS}
     neighbourhood = {}
     for top_k in NEIGHBOUR_TOP_K:
         frame, _ = build_top_k_path(prices, top_k=top_k)
@@ -139,8 +137,7 @@ def analyze_market(artifact_dir: Path, market: str) -> dict[str, Any]:
         "annualized_turnover",
     )
     compact_costs = {
-        name: {key: metrics[key] for key in compact_metric_names}
-        for name, metrics in costs.items()
+        name: {key: metrics[key] for key in compact_metric_names} for name, metrics in costs.items()
     }
     compact_neighbourhood = {
         name: {key: metrics[key] for key in compact_metric_names}
@@ -159,19 +156,15 @@ def analyze_market(artifact_dir: Path, market: str) -> dict[str, Any]:
         "minimum_total_return": min(
             details["metrics"]["total_return"] for details in delay_scenarios.values()
         ),
-        "minimum_sharpe": min(
-            details["metrics"]["sharpe"] for details in delay_scenarios.values()
-        ),
+        "minimum_sharpe": min(details["metrics"]["sharpe"] for details in delay_scenarios.values()),
         "worst_max_drawdown": min(
             details["metrics"]["max_drawdown"] for details in delay_scenarios.values()
         ),
         "minimum_annualized_mean_95pct_lower": min(
-            details["bootstrap"]["annualized_mean_lower"]
-            for details in delay_scenarios.values()
+            details["bootstrap"]["annualized_mean_lower"] for details in delay_scenarios.values()
         ),
         "minimum_sharpe_95pct_lower": min(
-            details["bootstrap"]["sharpe_lower"]
-            for details in delay_scenarios.values()
+            details["bootstrap"]["sharpe_lower"] for details in delay_scenarios.values()
         ),
         "passes": delay_passes,
     }
@@ -228,10 +221,8 @@ def analyze_market(artifact_dir: Path, market: str) -> dict[str, Any]:
                             f"r={record['reversal_lookback']}|"
                             f"trend={record['trend_weight']:.2f}"
                         ): sum(
-                            selected["momentum_lookback"]
-                            == record["momentum_lookback"]
-                            and selected["reversal_lookback"]
-                            == record["reversal_lookback"]
+                            selected["momentum_lookback"] == record["momentum_lookback"]
+                            and selected["reversal_lookback"] == record["reversal_lookback"]
                             and selected["trend_weight"] == record["trend_weight"]
                             for fold in fold_records
                             for selected in fold["selected"]
