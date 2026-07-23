@@ -128,6 +128,8 @@ API 域名优先级为：
 
 因此，selection 指标与连续 OOS 指标具有不同但明确的初始仓位边界。省略 selection 的首笔建仓成本，或在 OOS fold 之间重置为现金，都会改变候选排名或聚合结果。
 
+当前 rolling 基线在单边 `5 bps` 交易所手续费假设下完成全部候选的逐 fold 选择。`7.5 / 10 / 15 bps` 仅对该已选路径进行固定路径总成本重新计价；它们不是在每个成本水平重新选参，也不是对 spread、slippage、market impact 或 latency 的独立测量。完整执行边界见 [`LIVE_EXECUTION_BOUNDARY.md`](LIVE_EXECUTION_BOUNDARY.md)。
+
 ## 4. 预期输出
 
 以 `BTC-USDT` 为例：
@@ -139,6 +141,7 @@ reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.metadata.json
 reports/okx/BTC-USDT/walk_forward.json
 reports/okx/BTC-USDT/walk_forward.md
 reports/okx/BTC-USDT/walk_forward_returns.csv
+reports/okx/BTC-USDT/effective_config.json
 reports/okx/experiment-manifest.jsonl
 ```
 
@@ -149,6 +152,8 @@ reports/okx/experiment-manifest.jsonl
 - fold 数、聚合 Sharpe、最大回撤和稳健性分类；
 - experiment ID、run ID、manifest 路径及 manifest SHA-256；
 - 各报告与快照路径。
+
+`effective_config.json` 保存解析配置、命令行覆盖和环境选择后的精确执行配置。该文件使用确定性 canonical JSON，并由 experiment manifest 的 artifact SHA-256 绑定；复现者不应根据命令行或原始配置文件猜测最终执行设置。
 
 ## 5. 验证快照来源与哈希
 
@@ -161,7 +166,7 @@ python -c "import json,pathlib; p=pathlib.Path('reports/okx/BTC-USDT/snapshot/ok
 跨平台重新计算文件哈希：
 
 ```bash
-python -c "import hashlib,pathlib; files=['reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv','reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.raw.json','reports/okx/experiment-manifest.jsonl']; [print(hashlib.sha256(pathlib.Path(f).read_bytes()).hexdigest(), f) for f in files]"
+python -c "import hashlib,pathlib; files=['reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.csv','reports/okx/BTC-USDT/snapshot/okx-BTC-USDT-1Dutc.raw.json','reports/okx/BTC-USDT/effective_config.json','reports/okx/experiment-manifest.jsonl']; [print(hashlib.sha256(pathlib.Path(f).read_bytes()).hexdigest(), f) for f in files]"
 ```
 
 核对以下证据：
@@ -202,13 +207,13 @@ python scripts/create_verified_snapshot_manifest.py `
 
 成功时，helper 会打印 manifest 路径、CSV SHA-256、观测数和首尾时间戳。完整校验规则见 [`VERIFIED_SNAPSHOT_MANIFEST.md`](VERIFIED_SNAPSHOT_MANIFEST.md)。
 
-BTC-USDT `1Dutc` 的验证/留出示例使用 `config/okx_holdout.json`。该配置与 rolling 基线共享完整 strategy、365 日年化、每单位换手 10 bps 成本和候选参数族。运行前可执行以下跨平台断言，防止文档命令与 rolling OKX 市场假设发生静默漂移：
+BTC-USDT `1Dutc` 的验证/留出示例使用 `config/okx_holdout.json`。该配置与 rolling 基线共享完整 strategy、365 日年化、单边 5 bps 交易所手续费基线和候选参数族。运行前可执行以下跨平台断言，防止文档命令与 rolling OKX 市场假设发生静默漂移：
 
 ```bash
-python -c "import json,pathlib; o=json.loads(pathlib.Path('config/okx_research.json').read_text()); h=json.loads(pathlib.Path('config/okx_holdout.json').read_text()); keys=('momentum_lookbacks','reversal_lookbacks','trend_weights'); assert h['strategy']==o['strategy']; assert all(h['search'][k]==o['search'][k] for k in keys); assert h['strategy']['annualization']==365; assert h['strategy']['transaction_cost_bps']==10.0; print('okx_holdout_config=verified')"
+python -c "import json,pathlib; o=json.loads(pathlib.Path('config/okx_research.json').read_text()); h=json.loads(pathlib.Path('config/okx_holdout.json').read_text()); keys=('momentum_lookbacks','reversal_lookbacks','trend_weights'); assert h['strategy']==o['strategy']; assert all(h['search'][k]==o['search'][k] for k in keys); assert h['strategy']['annualization']==365; assert h['strategy']['transaction_cost_bps']==5.0; print('okx_holdout_config=verified')"
 ```
 
-`run_research.py` 使用固定 `validation_fraction=0.20` 和 `holdout_fraction=0.20`，而 rolling OOS 使用 730 根 selection bars 与 90 根 test bars。两者共享市场、成本和候选族假设，但切分协议不同；不得把 holdout 指标当作 rolling 报告的直接复算结果。运行验证/留出研究：
+`run_research.py` 使用固定 `validation_fraction=0.20` 和 `holdout_fraction=0.20`，而 rolling OOS 使用 730 根 selection bars 与 90 根 test bars。两者共享市场、手续费基线和候选族假设，但切分协议不同；不得把 holdout 指标当作 rolling 报告的直接复算结果。运行验证/留出研究：
 
 ```bash
 python scripts/run_research.py \
@@ -326,7 +331,7 @@ attempt 后缀是 artifact 身份的一部分；workflow rerun 会生成新的 s
 - portfolio artifact 的 ID、名称、下载包 SHA-256 digest；
 - 两份 `walk_forward_returns.csv` 的 SHA-256；
 - experiment manifest；
-- 两个品种的 snapshot metadata、raw response、normalized CSV 和 rolling reports；
+- 两个品种的 snapshot metadata、raw response、normalized CSV、effective config 和 rolling reports；
 - `portfolio_risk.json`、`portfolio_returns.csv`、`portfolio_risk.md` 与 `portfolio_stress_correlation.json`。
 
 历史绿色 workflow 只对其确切 commit、配置和两个对应 artifact 有效，不能自动替代当前 head 的验证。portfolio artifact 必须能追溯到同一运行先上传的 source artifact；不能把不同 run 或 attempt 的证据拼接在一起。
