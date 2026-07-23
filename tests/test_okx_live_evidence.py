@@ -117,6 +117,34 @@ def test_real_okx_timing_evidence_is_canonical_immutable_and_hash_bound(
     assert restored["signal_not_before_utc"] == "2026-07-21T12:00:00.200000+00:00"
 
 
+def test_timing_evidence_preserves_preexisting_legacy_temp_path(tmp_path) -> None:
+    sample = _sample()
+    cutoff = _cutoff()
+    payload = (
+        json.dumps(
+            build_okx_live_timing_evidence(sample=sample, cutoff=cutoff),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        + "\n"
+    ).encode("utf-8")
+    digest = hashlib.sha256(payload).hexdigest()
+    output = tmp_path / "okx-live-timing.json"
+    legacy_temp = output.with_name(f".{output.name}.{digest}.tmp")
+    legacy_temp.write_bytes(b"other-writer-owned-temp")
+
+    path, written_digest = write_okx_live_timing_evidence(
+        output,
+        sample=sample,
+        cutoff=cutoff,
+    )
+
+    assert path.read_bytes() == payload
+    assert written_digest == digest
+    assert legacy_temp.read_bytes() == b"other-writer-owned-temp"
+
+
 def test_real_okx_timing_evidence_rejects_tampering_and_cutoff_drift(
     tmp_path,
 ) -> None:

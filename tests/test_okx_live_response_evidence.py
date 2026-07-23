@@ -130,6 +130,31 @@ def test_real_okx_cutoff_persists_reconstructable_public_time_response(tmp_path)
     assert restored["signal_not_before_utc"] == "2026-07-21T12:00:00.200000+00:00"
 
 
+def test_response_evidence_preserves_preexisting_legacy_temp_path(tmp_path) -> None:
+    observation = _observation()
+    cutoff = _cutoff(observation)
+    payload = _canonical_json_bytes(
+        build_okx_live_timing_response_evidence(
+            observation=observation,
+            cutoff=cutoff,
+        )
+    )
+    digest = hashlib.sha256(payload).hexdigest()
+    output = tmp_path / "okx-live-timing-response.json"
+    legacy_temp = output.with_name(f".{output.name}.{digest}.tmp")
+    legacy_temp.write_bytes(b"other-writer-owned-temp")
+
+    path, written_digest = write_okx_live_timing_response_evidence(
+        output,
+        observation=observation,
+        cutoff=cutoff,
+    )
+
+    assert path.read_bytes() == payload
+    assert written_digest == digest
+    assert legacy_temp.read_bytes() == b"other-writer-owned-temp"
+
+
 def test_public_time_response_must_match_validated_sample() -> None:
     observation = _observation()
     different_response = {
