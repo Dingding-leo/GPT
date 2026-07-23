@@ -4,7 +4,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-# Temporary capture only; removed from the final production diff.
+# Temporary capture only; removed from the final production diff after PR #262.
 
 
 def test_capture_exact_ruff_output_for_atomic_portfolio_repair() -> None:
