@@ -279,7 +279,7 @@ class TargetPositionIntent:
 
         try:
             payload = json.loads(serialized, object_pairs_hook=_reject_duplicate_fields)
-        except (ValueError, json.JSONDecodeError) as exc:
+        except ValueError as exc:
             raise ValueError("target-position intent JSON is unreadable") from exc
 
         intent = cls.from_mapping(payload)
