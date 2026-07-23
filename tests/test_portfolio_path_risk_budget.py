@@ -46,7 +46,7 @@ def _underlying_result():
     )
 
 
-def test_real_okx_path_budget_recomputes_tail_drawdown_and_cost_boundary(
+def test_real_okx_path_budget_recomputes_tail_drawdown_turnover_and_cost_boundary(
     tmp_path: Path,
 ) -> None:
     underlying = _underlying_result()
@@ -54,10 +54,14 @@ def test_real_okx_path_budget_recomputes_tail_drawdown_and_cost_boundary(
         underlying,
         max_annualized_net_volatility=0.50,
         maximum_drawdown_floor=-0.40,
+        max_annualized_weighted_underlying_turnover=25.0,
     )
 
     net_return = underlying.frame["portfolio_net_return"]
     annualized_volatility = float(net_return.std(ddof=1) * math.sqrt(365))
+    annualized_turnover = float(
+        underlying.frame["portfolio_weighted_underlying_turnover"].mean() * 365
+    )
     nav = (1.0 + net_return).cumprod()
     running_peak = pd.Series(
         np.maximum.accumulate(np.concatenate(([1.0], nav.to_numpy())))[1:],
@@ -68,6 +72,9 @@ def test_real_okx_path_budget_recomputes_tail_drawdown_and_cost_boundary(
     sorted_returns = np.sort(net_return.to_numpy(), kind="stable")
 
     assert result.metrics["annualized_net_volatility"] == pytest.approx(annualized_volatility)
+    assert result.metrics["annualized_weighted_underlying_turnover"] == pytest.approx(
+        annualized_turnover
+    )
     assert result.metrics["maximum_drawdown"] == pytest.approx(float(drawdown.min()))
     assert result.metrics["current_drawdown"] == pytest.approx(float(drawdown.iloc[-1]))
     assert result.metrics["historical_expected_shortfall_95"] == pytest.approx(
@@ -76,6 +83,7 @@ def test_real_okx_path_budget_recomputes_tail_drawdown_and_cost_boundary(
     assert result.metrics["expected_shortfall_tail_observations"] == tail_observations
     assert result.metrics["worst_day_net_return"] == pytest.approx(float(net_return.min()))
     assert result.metrics["longest_underwater_duration_observations"] > 0
+    assert result.payload["risk_budget"]["turnover_budget_passes"] is True
     assert result.passes is True
     assert result.payload["deployment_eligible"] is False
     assert result.payload["cost_attribution"]["exchange_fee"]["one_way_bps"] == 5.0
@@ -102,17 +110,22 @@ def test_path_budget_rejects_tight_limits_and_refuses_mutated_evidence(
         underlying,
         max_annualized_net_volatility=5.0,
         maximum_drawdown_floor=-0.99,
+        max_annualized_weighted_underlying_turnover=100.0,
     )
     rejected = evaluate_portfolio_path_risk_budget(
         underlying,
         max_annualized_net_volatility=measured.metrics["annualized_net_volatility"] / 2.0,
         maximum_drawdown_floor=measured.metrics["maximum_drawdown"] / 2.0,
+        max_annualized_weighted_underlying_turnover=(
+            measured.metrics["annualized_weighted_underlying_turnover"] / 2.0
+        ),
     )
 
     assert rejected.passes is False
     assert rejected.payload["risk_budget"]["volatility_budget_passes"] is False
     assert rejected.payload["risk_budget"]["drawdown_budget_passes"] is False
-    assert len(rejected.payload["risk_budget"]["failure_reasons"]) == 2
+    assert rejected.payload["risk_budget"]["turnover_budget_passes"] is False
+    assert len(rejected.payload["risk_budget"]["failure_reasons"]) == 3
 
     rejected.payload["metrics"]["maximum_drawdown"] = 0.0
     with pytest.raises(
@@ -133,8 +146,13 @@ def test_hourly_workflow_enforces_explicit_underlying_path_budgets() -> None:
 
     assert 'MAX_ANNUALIZED_NET_VOLATILITY: "0.50"' in workflow
     assert 'MAXIMUM_DRAWDOWN_FLOOR: "-0.40"' in workflow
+    assert 'MAX_ANNUALIZED_WEIGHTED_UNDERLYING_TURNOVER: "25.0"' in workflow
     assert '--max-annualized-net-volatility "$MAX_ANNUALIZED_NET_VOLATILITY"' in block
     assert '--maximum-drawdown-floor "$MAXIMUM_DRAWDOWN_FLOOR"' in block
+    assert (
+        '--max-annualized-weighted-underlying-turnover '
+        '"$MAX_ANNUALIZED_WEIGHTED_UNDERLYING_TURNOVER"'
+    ) in block
     assert "--fail-on-reject" in block
     assert "portfolio_path_risk_budget.json" not in workflow
     assert (
