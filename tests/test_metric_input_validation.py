@@ -29,7 +29,7 @@ def test_performance_metrics_rejects_invalid_primary_returns(
     invalid_value: object,
 ) -> None:
     frame = _real_return_frame(btc_usdt_prices)
-    if isinstance(invalid_value, (str, bool, complex)):
+    if isinstance(invalid_value, str | bool | complex):
         frame["strategy_return"] = frame["strategy_return"].astype(object)
     frame.iat[-1, frame.columns.get_loc("strategy_return")] = invalid_value
 
