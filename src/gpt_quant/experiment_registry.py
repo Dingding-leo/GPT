@@ -1,16 +1,25 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable, Mapping
+import os
+import stat
+from collections.abc import Iterable, Iterator, Mapping
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+try:
+    import fcntl as _fcntl
+except ImportError:  # pragma: no cover - exercised only on non-POSIX platforms
+    _fcntl = None
+
 from ._atomic_publish import publish_payloads_atomically
 from .reproducibility import canonical_json_sha256, file_sha256
 
 _HEX_DIGITS = frozenset("0123456789abcdef")
+_ERROR_LABEL = "experiment registry"
 _MANIFEST_KEYS = frozenset(
     {
         "schema_version",
@@ -187,6 +196,75 @@ def _experiment_evidence(entry: Mapping[str, Any]) -> dict[str, Any]:
     return {name: entry[name] for name in _EXPERIMENT_KEYS}
 
 
+def _validate_lock_descriptor(descriptor: int) -> os.stat_result:
+    lock_stat = os.fstat(descriptor)
+    if not stat.S_ISREG(lock_stat.st_mode) or lock_stat.st_nlink != 1:
+        raise ValueError(f"{_ERROR_LABEL} writer lock must be a regular single-link file")
+    if hasattr(os, "geteuid") and lock_stat.st_uid != os.geteuid():
+        raise ValueError(f"{_ERROR_LABEL} writer lock must be owned by the current user")
+    os.fchmod(descriptor, 0o600)
+    return lock_stat
+
+
+@contextmanager
+def _exclusive_registry_lock(registry_path: Path) -> Iterator[None]:
+    output = registry_path.parent
+    output_preexisted = output.exists()
+    if output.is_symlink():
+        raise ValueError(f"{_ERROR_LABEL} output directory must not be a symbolic link")
+    output.mkdir(parents=True, exist_ok=True)
+
+    lock_path = output / f".{registry_path.name}.lock"
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    if _fcntl is None:
+        flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | no_follow
+        try:
+            descriptor = os.open(lock_path, flags, 0o600)
+        except FileExistsError as exc:
+            raise RuntimeError(f"{_ERROR_LABEL} writer lock already exists") from exc
+        os.close(descriptor)
+        try:
+            yield
+        finally:
+            lock_path.unlink(missing_ok=True)
+            if not output_preexisted:
+                with suppress(OSError):
+                    output.rmdir()
+        return
+
+    flags = os.O_CREAT | os.O_RDWR | no_follow
+    descriptor = os.open(lock_path, flags, 0o600)
+    acquired = False
+    lock_stat: os.stat_result | None = None
+    try:
+        lock_stat = _validate_lock_descriptor(descriptor)
+        try:
+            _fcntl.flock(descriptor, _fcntl.LOCK_EX | _fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise RuntimeError(f"{_ERROR_LABEL} writer lock already exists") from exc
+        acquired = True
+        os.ftruncate(descriptor, 0)
+        os.write(descriptor, f"pid={os.getpid()}\n".encode("ascii"))
+        os.fsync(descriptor)
+        yield
+    finally:
+        if acquired:
+            try:
+                current_stat = os.stat(lock_path, follow_symlinks=False)
+                if lock_stat is None or (
+                    current_stat.st_dev != lock_stat.st_dev
+                    or current_stat.st_ino != lock_stat.st_ino
+                ):
+                    raise RuntimeError(f"{_ERROR_LABEL} writer lock path changed during commit")
+                lock_path.unlink()
+            finally:
+                _fcntl.flock(descriptor, _fcntl.LOCK_UN)
+        os.close(descriptor)
+        if not output_preexisted:
+            with suppress(OSError):
+                output.rmdir()
+
+
 def merge_experiment_manifests(
     registry_path: str | Path,
     manifest_paths: Iterable[str | Path],
@@ -198,47 +276,50 @@ def merge_experiment_manifests(
     if not inputs:
         raise ValueError("at least one manifest path is required")
 
-    existing = _read_manifest(registry, registry=True) if registry.exists() else []
-    merged = list(existing)
-    by_run_id = {entry["run_id"]: entry for entry in existing}
-    by_experiment_id = {entry["experiment_id"]: _experiment_evidence(entry) for entry in existing}
-    added_runs = 0
-    skipped_runs = 0
+    with _exclusive_registry_lock(registry):
+        existing = _read_manifest(registry, registry=True) if registry.exists() else []
+        merged = list(existing)
+        by_run_id = {entry["run_id"]: entry for entry in existing}
+        by_experiment_id = {
+            entry["experiment_id"]: _experiment_evidence(entry) for entry in existing
+        }
+        added_runs = 0
+        skipped_runs = 0
 
-    for manifest in inputs:
-        for entry in _read_manifest(manifest, registry=False):
-            run_id = entry["run_id"]
-            experiment_id = entry["experiment_id"]
-            prior_run = by_run_id.get(run_id)
-            if prior_run is not None:
-                if prior_run != entry:
-                    raise ValueError(f"run_id collision for {run_id}")
-                skipped_runs += 1
-                continue
+        for manifest in inputs:
+            for entry in _read_manifest(manifest, registry=False):
+                run_id = entry["run_id"]
+                experiment_id = entry["experiment_id"]
+                prior_run = by_run_id.get(run_id)
+                if prior_run is not None:
+                    if prior_run != entry:
+                        raise ValueError(f"run_id collision for {run_id}")
+                    skipped_runs += 1
+                    continue
 
-            experiment_evidence = _experiment_evidence(entry)
-            prior_experiment = by_experiment_id.get(experiment_id)
-            if prior_experiment is not None and prior_experiment != experiment_evidence:
-                raise ValueError(f"experiment_id collision for {experiment_id}")
+                experiment_evidence = _experiment_evidence(entry)
+                prior_experiment = by_experiment_id.get(experiment_id)
+                if prior_experiment is not None and prior_experiment != experiment_evidence:
+                    raise ValueError(f"experiment_id collision for {experiment_id}")
 
-            merged.append(entry)
-            by_run_id[run_id] = entry
-            by_experiment_id[experiment_id] = experiment_evidence
-            added_runs += 1
+                merged.append(entry)
+                by_run_id[run_id] = entry
+                by_experiment_id[experiment_id] = experiment_evidence
+                added_runs += 1
 
-    payload = b"".join(_canonical_json_bytes(entry) for entry in merged)
-    if added_runs:
-        publish_payloads_atomically(
-            registry.parent,
-            {"registry": registry},
-            {"registry": payload},
-            commit_order=("registry",),
-            staging_prefix=".experiment-registry-",
-            error_label="experiment registry",
+        payload = b"".join(_canonical_json_bytes(entry) for entry in merged)
+        if added_runs:
+            publish_payloads_atomically(
+                registry.parent,
+                {"registry": registry},
+                {"registry": payload},
+                commit_order=("registry",),
+                staging_prefix=".experiment-registry-",
+                error_label=_ERROR_LABEL,
+            )
+        return ExperimentRegistryMergeResult(
+            path=registry,
+            added_runs=added_runs,
+            skipped_runs=skipped_runs,
+            registry_sha256=file_sha256(registry),
         )
-    return ExperimentRegistryMergeResult(
-        path=registry,
-        added_runs=added_runs,
-        skipped_runs=skipped_runs,
-        registry_sha256=file_sha256(registry),
-    )
