@@ -51,6 +51,8 @@ selected after viewing the results.
 - Benchmark: persisted volatility-targeted-long return on identical timestamps.
 - Inference: paired non-circular 20-session moving-block bootstrap, 2,000 resamples,
   95% confidence.
+- Bootstrap seeds: first 64 bits of SHA-256 over the canonical signature, inference scope,
+  candidate label, market, and scenario. This rule is result-independent and persisted.
 
 The 7.5/10/15 bps scenarios are aggregate repricings. Spread, slippage, market impact,
 latency, partial fills, and capacity are not separately measured.
@@ -93,15 +95,19 @@ also materially weakened ETH benchmark-relative performance.
 
 | Budget | Market | Sharpe delta, 95% interval | Calmar delta, 95% interval |
 |---:|---|---:|---:|
-| 15% | BTC-USDT | +0.030864, [-0.650246, +0.669376] | +0.223729, [-0.874771, +0.935459] |
-| 15% | ETH-USDT | -0.480147, [-1.118589, +0.206529] | -0.355330, [-1.820550, +0.277880] |
-| 20% | BTC-USDT | +0.015832, [-0.603000, +0.651800] | +0.179345, [-0.795113, +0.859290] |
-| 20% | ETH-USDT | -0.402719, [-1.044834, +0.225168] | -0.283235, [-1.891855, +0.331299] |
-| 25% | BTC-USDT | -0.017639, [-0.635497, +0.639655] | +0.132456, [-0.920675, +0.859810] |
-| 25% | ETH-USDT | -0.361946, [-1.013880, +0.280863] | -0.261477, [-1.698603, +0.388402] |
+| 15% | BTC-USDT | +0.030864, [-0.609312, +0.690916] | +0.223729, [-0.883531, +0.937938] |
+| 15% | ETH-USDT | -0.480147, [-1.114884, +0.209622] | -0.355330, [-1.748147, +0.301920] |
+| 20% | BTC-USDT | +0.015832, [-0.648531, +0.692533] | +0.179345, [-0.812722, +0.979918] |
+| 20% | ETH-USDT | -0.402719, [-1.012507, +0.243205] | -0.283235, [-1.637873, +0.360994] |
+| 25% | BTC-USDT | -0.017639, [-0.660139, +0.671910] | +0.132456, [-0.918242, +0.888759] |
+| 25% | ETH-USDT | -0.361946, [-1.018459, +0.284453] | -0.261477, [-1.860465, +0.416912] |
 
 Every required confidence lower bound is negative. No candidate establishes superior
 risk-adjusted performance over volatility-targeted long in both development markets.
+
+The point metrics and gate verdicts are unchanged from the first persisted result. The
+confidence intervals above replace the prior non-reproducible seed state with the explicit,
+canonical-signature-derived seed rule.
 
 ## Fold, year, cost, neighbourhood, tail, and delay gates
 
@@ -131,6 +137,15 @@ test, prospective paper validation, or live deployment.
 This result also rejects a narrower interpretation: simple fold-local exposure reduction
 can lower BTC drawdown and concentration, but it does not create reliable cross-market
 benchmark-relative performance or execution-delay robustness.
+
+## Reproducibility correction
+
+The executable now rebuilds the complete persisted result from the hash-bound snapshots,
+canonical folds, deterministic bootstrap seeds, cost stresses, neighbourhoods, tail metrics,
+and delay gates. It no longer loads and re-emits `result.json`.
+
+Risk-budgeted NAV is recomputed from the reconstructed OOS net-return path after every fold
+is concatenated, preventing stale unscaled NAV values from surviving in the returned frame.
 
 ## Provenance
 
