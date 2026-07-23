@@ -210,8 +210,7 @@ def _exclusive_store_lock(path: Path) -> Iterator[tuple[int, os.stat_result]]:
                 follow_symlinks=False,
             )
             if lock_stat is None or (
-                current_stat.st_dev != lock_stat.st_dev
-                or current_stat.st_ino != lock_stat.st_ino
+                current_stat.st_dev != lock_stat.st_dev or current_stat.st_ino != lock_stat.st_ino
             ):
                 raise RuntimeError(f"{_ERROR_LABEL} writer lock path changed during use")
             os.unlink(_LOCK_NAME, dir_fd=directory_descriptor)
