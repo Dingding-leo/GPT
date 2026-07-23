@@ -107,7 +107,11 @@ def _assert_metric_mapping(
             raise ValueError(f"{label} is missing recomputable metric {key}")
         actual = persisted_mapping[key]
         if isinstance(expected, int):
-            if isinstance(actual, bool) or not isinstance(actual, Integral) or int(actual) != expected:
+            if (
+                isinstance(actual, bool)
+                or not isinstance(actual, Integral)
+                or int(actual) != expected
+            ):
                 raise ValueError(f"{label}.{key} does not match persisted returns")
             continue
         if isinstance(actual, bool) or not isinstance(actual, Real):
