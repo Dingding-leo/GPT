@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+import multiprocessing
+import os
 import stat
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -17,6 +19,7 @@ from gpt_quant.target_intent_journal import (
 _SOURCE_SHA256 = "ab0846180ff5b9397de26de8ca8d728ad237be00bdb92ba1612ef6ba243fc149"
 _CONFIG_SHA256 = "a0340ca26a0c5e7d0d609ddf69bcb3e4e643a93ab009f27ee03e8ea322aed822"
 _REVISION = "bd3bf844d0c37e2e65d6591cb2a3c4a03e6e45c3"
+_CRASH_EXIT_CODE = 23
 
 
 def _intent(
@@ -47,6 +50,14 @@ def _intent(
 
 def _lock_path(path: Path) -> Path:
     return path.with_name(f".{path.name}.lock")
+
+
+def _crash_during_intent_publication(path: str) -> None:
+    def crash_publish(*args: object, **kwargs: object) -> None:
+        os._exit(_CRASH_EXIT_CODE)
+
+    journal_module.publish_payloads_atomically = crash_publish
+    record_target_position_intent(Path(path), _intent(day=23, target_position=0.75))
 
 
 def test_target_intent_journal_is_deterministic_and_idempotent(
@@ -115,6 +126,9 @@ def test_target_intent_journal_rejects_retry_with_new_observation_time(
 
 
 def test_target_intent_journal_rejects_concurrent_writer(tmp_path: Path) -> None:
+    if journal_module._fcntl is None:
+        pytest.skip("POSIX advisory locks are unavailable")
+
     path = tmp_path / "target-intents.jsonl"
     first = _intent(day=22, target_position=0.25)
     second = _intent(day=23, target_position=0.75)
@@ -123,11 +137,54 @@ def test_target_intent_journal_rejects_concurrent_writer(tmp_path: Path) -> None
 
     lock_path = _lock_path(path)
     lock_path.write_bytes(b"held")
-    with pytest.raises(RuntimeError, match="writer lock already exists"):
-        record_target_position_intent(path, second)
+    descriptor = os.open(lock_path, os.O_RDWR)
+    journal_module._fcntl.flock(
+        descriptor,
+        journal_module._fcntl.LOCK_EX | journal_module._fcntl.LOCK_NB,
+    )
+    try:
+        with pytest.raises(RuntimeError, match="writer lock already exists"):
+            record_target_position_intent(path, second)
 
+        assert path.read_bytes() == before
+        assert lock_path.read_bytes() == b"held"
+    finally:
+        journal_module._fcntl.flock(descriptor, journal_module._fcntl.LOCK_UN)
+        os.close(descriptor)
+        lock_path.unlink()
+
+
+def test_target_intent_journal_recovers_after_crash_during_publication(
+    tmp_path: Path,
+) -> None:
+    if journal_module._fcntl is None:
+        pytest.skip("POSIX advisory locks are unavailable")
+
+    path = tmp_path / "target-intents.jsonl"
+    first = _intent(day=22, target_position=0.25)
+    second = _intent(day=23, target_position=0.75)
+    record_target_position_intent(path, first)
+    before = path.read_bytes()
+
+    process = multiprocessing.get_context("fork").Process(
+        target=_crash_during_intent_publication,
+        args=(str(path),),
+    )
+    process.start()
+    process.join(timeout=10)
+    if process.is_alive():
+        process.kill()
+        process.join()
+        pytest.fail("crash simulation did not terminate")
+
+    assert process.exitcode == _CRASH_EXIT_CODE
     assert path.read_bytes() == before
-    assert lock_path.read_bytes() == b"held"
+    assert _lock_path(path).is_file()
+
+    recovered = record_target_position_intent(path, second)
+    assert recovered.intents == (first, second)
+    assert load_target_position_intent_journal(path) == recovered
+    assert not _lock_path(path).exists()
 
 
 def test_target_intent_journal_rejects_ambiguous_persisted_state(tmp_path: Path) -> None:
