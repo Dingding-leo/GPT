@@ -10,9 +10,14 @@ from urllib.error import HTTPError
 
 import pytest
 
-from gpt_quant.okx_execution_quote import _default_json_getter, _default_raw_bytes_getter
+from gpt_quant.okx_execution_quote import (
+    _default_json_getter,
+    _default_raw_bytes_getter,
+)
 
-_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "order-book-btc-usdt-docs-20210826"
+_FIXTURE_DIR = (
+    Path(__file__).parent / "fixtures" / "okx" / "order-book-btc-usdt-docs-20210826"
+)
 _RESPONSE_PATH = _FIXTURE_DIR / "response.json"
 _EXPECTED_RESPONSE_SHA256 = "7d12a351f8f51320d1c8beee0063557e1c90388d66ac63412bf66ca544aeb3e3"
 _SERVER_TIME_RESPONSE = b'{"code":"0","msg":"","data":[{"ts":"1629966436500"}]}'
@@ -24,7 +29,10 @@ def _fixture_response() -> bytes:
     return response
 
 
-def _payload_handler(payload: bytes, contacts: list[str]) -> type[BaseHTTPRequestHandler]:
+def _payload_handler(
+    payload: bytes,
+    contacts: list[str],
+) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             contacts.append(self.path)
@@ -40,7 +48,10 @@ def _payload_handler(payload: bytes, contacts: list[str]) -> type[BaseHTTPReques
     return Handler
 
 
-def _redirect_handler(location: str, contacts: list[str]) -> type[BaseHTTPRequestHandler]:
+def _redirect_handler(
+    location: str,
+    contacts: list[str],
+) -> type[BaseHTTPRequestHandler]:
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self) -> None:
             contacts.append(self.path)
