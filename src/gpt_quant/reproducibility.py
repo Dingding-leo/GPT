@@ -7,7 +7,7 @@ import os
 import subprocess
 from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 _HEX_DIGITS = frozenset("0123456789abcdef")
@@ -16,6 +16,44 @@ _CODE_PROVENANCE_KEYS = frozenset(
         "checkout_commit",
         "pull_request_head_commit",
         "pull_request_base_commit",
+    }
+)
+_UNTRACKED_SENSITIVE_ROOTS = frozenset({".github", "config", "scripts", "src", "tests"})
+_UNTRACKED_EXECUTABLE_SUFFIXES = frozenset(
+    {
+        ".bash",
+        ".bat",
+        ".cmd",
+        ".dll",
+        ".dylib",
+        ".fish",
+        ".ipynb",
+        ".ps1",
+        ".pth",
+        ".py",
+        ".pyi",
+        ".pyw",
+        ".pyx",
+        ".sh",
+        ".so",
+        ".zsh",
+    }
+)
+_UNTRACKED_CONFIG_SUFFIXES = frozenset({".cfg", ".ini", ".toml", ".yaml", ".yml"})
+_UNTRACKED_ROOT_CONFIG_NAMES = frozenset(
+    {
+        "Dockerfile",
+        "Makefile",
+        "Procfile",
+        "conftest.py",
+        "noxfile.py",
+        "pyproject.toml",
+        "pytest.ini",
+        "setup.cfg",
+        "setup.py",
+        "sitecustomize.py",
+        "tox.ini",
+        "usercustomize.py",
     }
 )
 
@@ -146,6 +184,62 @@ def _require_clean_tracked_worktree(repository_root: Path) -> None:
     raise RuntimeError("unable to verify tracked worktree cleanliness")
 
 
+def _untracked_path_can_affect_run(repository_root: Path, relative_path: str) -> bool:
+    path = PurePosixPath(relative_path)
+    if not path.parts:
+        return False
+    if path.parts[0] in _UNTRACKED_SENSITIVE_ROOTS:
+        return True
+
+    name = path.name
+    lowered_name = name.lower()
+    if lowered_name == ".env" or lowered_name.startswith(".env."):
+        return True
+    if path.suffix.lower() in _UNTRACKED_EXECUTABLE_SUFFIXES | _UNTRACKED_CONFIG_SUFFIXES:
+        return True
+    if len(path.parts) == 1:
+        if name in _UNTRACKED_ROOT_CONFIG_NAMES:
+            return True
+        if lowered_name.startswith(("constraints", "requirements")) and path.suffix.lower() in {
+            ".in",
+            ".txt",
+        }:
+            return True
+
+    candidate = repository_root / Path(*path.parts)
+    return candidate.is_symlink() or (candidate.is_file() and os.access(candidate, os.X_OK))
+
+
+def _require_no_untracked_research_inputs(repository_root: Path) -> None:
+    """Reject untracked executable or configuration paths while allowing generated reports."""
+
+    try:
+        completed = subprocess.run(
+            ["git", "ls-files", "--others", "--exclude-standard", "-z", "--"],
+            cwd=repository_root,
+            check=False,
+            capture_output=True,
+            timeout=10,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        raise RuntimeError("unable to inspect untracked worktree paths") from exc
+    if completed.returncode != 0:
+        raise RuntimeError("unable to inspect untracked worktree paths")
+
+    untracked = sorted(os.fsdecode(value) for value in completed.stdout.split(b"\0") if value)
+    sensitive = [
+        path for path in untracked if _untracked_path_can_affect_run(repository_root, path)
+    ]
+    if sensitive:
+        rendered = ", ".join(repr(path) for path in sensitive[:10])
+        if len(sensitive) > 10:
+            rendered += f", ... ({len(sensitive) - 10} more)"
+        raise RuntimeError(
+            "untracked executable or configuration files can affect the run; "
+            f"refusing incomplete code provenance: {rendered}"
+        )
+
+
 def resolve_git_commit(repository_root: str | Path = ".") -> str:
     """Resolve the exact checked-out commit, with GITHUB_SHA as a source-archive fallback."""
 
@@ -166,6 +260,7 @@ def resolve_git_commit(repository_root: str | Path = ".") -> str:
         commit = completed.stdout.strip().lower()
         if _valid_git_commit(commit):
             _require_clean_tracked_worktree(root)
+            _require_no_untracked_research_inputs(root)
             return commit
 
     github_sha = os.environ.get("GITHUB_SHA", "").strip().lower()
