@@ -51,3 +51,18 @@ def test_timestamp_index_identifies_non_utc_row_after_valid_utc_evidence() -> No
 
     with pytest.raises(ValueError, match="row 1 must include an explicit UTC offset"):
         verify_gate._timestamp_index(values, "walk-forward returns timestamp")
+
+
+@pytest.mark.parametrize(
+    "timestamps",
+    [
+        ["2026-07-20T00:00:00+00:00", "2026-07-20T00:00:00Z"],
+        ["2026-07-21T00:00:00Z", "2026-07-20T00:00:00+00:00"],
+    ],
+)
+def test_timestamp_index_preserves_unique_increasing_contract(timestamps: list[str]) -> None:
+    with pytest.raises(ValueError, match="unique and increasing"):
+        verify_gate._timestamp_index(
+            pd.Series(timestamps),
+            "walk-forward returns timestamp",
+        )
