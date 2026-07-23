@@ -11,11 +11,7 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .execution_quote import ExecutionQuoteSnapshot
 from .okx import JSONGetter
-from .okx_live import (
-    OKXServerTimeSample,
-    sample_okx_server_time,
-    validate_okx_server_time_sample,
-)
+from .okx_live import OKXServerTimeSample, validate_okx_server_time_sample
 
 RawBytesGetter = Callable[[str, float], bytes]
 Clock = Callable[[], datetime]
@@ -24,6 +20,7 @@ _SERVER_TIME_ENDPOINT = "/api/v5/public/time"
 _MAX_RESPONSE_BYTES = 1_000_000
 _EXPECTED_TOP_LEVEL_KEYS = {"code", "msg", "data"}
 _EXPECTED_BOOK_KEYS = {"asks", "bids", "ts", "seqId"}
+_EXPECTED_SERVER_TIME_KEYS = {"ts"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,6 +47,7 @@ class OKXTopOfBookObservation:
     max_server_round_trip_seconds: float
     max_abs_midpoint_clock_skew_seconds: float
     maximum_quote_age_ms: int
+    raw_server_time_response_json: bytes
     raw_response_json: bytes
     quote: ExecutionQuoteSnapshot
 
@@ -140,12 +138,29 @@ class OKXTopOfBookObservation:
             raise ValueError("OKX books request round trip exceeds the configured bound")
         object.__setattr__(self, "request_round_trip_seconds", request_round_trip)
 
+        raw_server_time_response = _required_raw_response(
+            self.raw_server_time_response_json,
+            response_name="public-time",
+        )
+        object.__setattr__(
+            self,
+            "raw_server_time_response_json",
+            raw_server_time_response,
+        )
+        response_exchange_observed = _server_time_from_raw_response(
+            raw_server_time_response
+        )
+        if response_exchange_observed != exchange_observed:
+            raise ValueError(
+                "OKX exchange-time observation does not match the public-time response"
+            )
+
         server_time_sample = OKXServerTimeSample(
             base_url=normalized_base_url,
             endpoint=self.server_time_endpoint,
             local_request_started_utc=server_started,
             local_response_received_utc=server_received,
-            server_time_utc=exchange_observed,
+            server_time_utc=response_exchange_observed,
             round_trip_seconds=self.server_round_trip_seconds,
             midpoint_clock_skew_seconds=self.midpoint_clock_skew_seconds,
         )
@@ -188,7 +203,10 @@ class OKXTopOfBookObservation:
         )
         object.__setattr__(self, "maximum_quote_age_ms", maximum_quote_age_ms)
 
-        raw_response = _required_raw_response(self.raw_response_json)
+        raw_response = _required_raw_response(
+            self.raw_response_json,
+            response_name="books",
+        )
         object.__setattr__(self, "raw_response_json", raw_response)
         response_hash = hashlib.sha256(raw_response).hexdigest()
         if response_hash != self.quote.source_response_sha256:
@@ -218,6 +236,10 @@ class OKXTopOfBookObservation:
     @property
     def source_response_sha256(self) -> str:
         return hashlib.sha256(self.raw_response_json).hexdigest()
+
+    @property
+    def server_time_response_sha256(self) -> str:
+        return hashlib.sha256(self.raw_server_time_response_json).hexdigest()
 
 
 def _current_utc_datetime() -> datetime:
@@ -257,15 +279,17 @@ def _default_raw_bytes_getter(url: str, timeout: float) -> bytes:
     return _read_public_response(url, timeout)
 
 
-def _default_json_getter(url: str, timeout: float) -> Mapping[str, object]:
-    raw_response = _read_public_response(url, timeout)
+def _canonical_json_bytes(value: Mapping[str, object]) -> bytes:
     try:
-        payload = json.loads(raw_response.decode("utf-8"))
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ValueError("OKX public response must be UTF-8 JSON") from exc
-    if not isinstance(payload, Mapping):
-        raise ValueError("OKX public response must be a JSON object")
-    return payload
+        return json.dumps(
+            dict(value),
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+    except (TypeError, ValueError) as exc:
+        raise ValueError("OKX injected JSON response must be serializable") from exc
 
 
 def _required_base_url(value: object) -> str:
@@ -340,17 +364,21 @@ def _required_nonnegative_integer(value: object, *, field: str) -> int:
     return value
 
 
-def _required_raw_response(value: object) -> bytes:
+def _required_raw_response(value: object, *, response_name: str) -> bytes:
     if not isinstance(value, bytes) or not value or len(value) > _MAX_RESPONSE_BYTES:
-        raise ValueError("OKX books response must be non-empty bounded bytes")
+        raise ValueError(
+            f"OKX {response_name} response must be non-empty bounded bytes"
+        )
     try:
         value.decode("utf-8")
     except UnicodeDecodeError as exc:
-        raise ValueError("OKX books response must be UTF-8 JSON") from exc
+        raise ValueError(f"OKX {response_name} response must be UTF-8 JSON") from exc
     return value
 
 
-def _reject_duplicate_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+def _reject_duplicate_books_fields(
+    pairs: list[tuple[str, object]],
+) -> dict[str, object]:
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:
@@ -359,16 +387,76 @@ def _reject_duplicate_fields(pairs: list[tuple[str, object]]) -> dict[str, objec
     return result
 
 
-def _parse_response(value: bytes) -> Mapping[str, object]:
+def _reject_duplicate_server_time_fields(
+    pairs: list[tuple[str, object]],
+) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(
+                f"OKX public-time JSON contains duplicate field {key!r}"
+            )
+        result[key] = value
+    return result
+
+
+def _parse_json_object(
+    value: bytes,
+    *,
+    response_name: str,
+    duplicate_hook: Callable[[list[tuple[str, object]]], dict[str, object]],
+) -> Mapping[str, object]:
     try:
-        payload = json.loads(value.decode("utf-8"), object_pairs_hook=_reject_duplicate_fields)
+        payload = json.loads(
+            value.decode("utf-8"),
+            object_pairs_hook=duplicate_hook,
+        )
     except json.JSONDecodeError as exc:
-        raise ValueError("OKX books response is not valid JSON") from exc
+        raise ValueError(f"OKX {response_name} response is not valid JSON") from exc
     if not isinstance(payload, Mapping):
-        raise ValueError("OKX books response must be a JSON object")
+        raise ValueError(f"OKX {response_name} response must be a JSON object")
+    return payload
+
+
+def _parse_response(value: bytes) -> Mapping[str, object]:
+    payload = _parse_json_object(
+        value,
+        response_name="books",
+        duplicate_hook=_reject_duplicate_books_fields,
+    )
     if set(payload) != _EXPECTED_TOP_LEVEL_KEYS:
         raise ValueError("OKX books response fields do not match the public endpoint schema")
     return payload
+
+
+def _server_time_from_raw_response(value: bytes) -> datetime:
+    payload = _parse_json_object(
+        value,
+        response_name="public-time",
+        duplicate_hook=_reject_duplicate_server_time_fields,
+    )
+    if set(payload) != _EXPECTED_TOP_LEVEL_KEYS:
+        raise ValueError(
+            "OKX public-time response fields do not match the public endpoint schema"
+        )
+    if payload["code"] != "0":
+        raise RuntimeError(
+            f"OKX API error code={payload['code']!r} message={payload['msg']!r}"
+        )
+    if not isinstance(payload["msg"], str):
+        raise ValueError("OKX public-time response message must be a string")
+    data = payload["data"]
+    if not isinstance(data, list) or len(data) != 1 or not isinstance(data[0], Mapping):
+        raise ValueError("OKX public-time response must contain exactly one object")
+    server_time = data[0]
+    if set(server_time) != _EXPECTED_SERVER_TIME_KEYS:
+        raise ValueError(
+            "OKX public-time object fields do not match the public endpoint schema"
+        )
+    return _unix_milliseconds_to_datetime(
+        server_time["ts"],
+        field="OKX server time",
+    )
 
 
 def _required_ascii_digits(value: object, *, field: str) -> str:
@@ -464,6 +552,7 @@ def fetch_okx_top_of_book(
     max_server_round_trip_seconds: float = 2.0,
     max_abs_midpoint_clock_skew_seconds: float = 5.0,
     get_bytes: RawBytesGetter | None = None,
+    get_server_time_bytes: RawBytesGetter | None = None,
     get_json: JSONGetter | None = None,
     now: Clock | None = None,
 ) -> OKXTopOfBookObservation:
@@ -517,7 +606,10 @@ def fetch_okx_top_of_book(
     endpoint_url = f"{normalized_base_url}{_ENDPOINT}?{query}"
 
     request_started = _required_utc_datetime(clock(), field="OKX books request start")
-    raw_response = _required_raw_response(getter(endpoint_url, timeout_seconds))
+    raw_response = _required_raw_response(
+        getter(endpoint_url, timeout_seconds),
+        response_name="books",
+    )
     response_received = _required_utc_datetime(clock(), field="OKX books response receipt")
     if response_received < request_started:
         raise ValueError("local clock moved backward during OKX books request")
@@ -525,19 +617,65 @@ def fetch_okx_top_of_book(
     if request_round_trip > request_round_trip_bound:
         raise ValueError("OKX books request round trip exceeds the configured bound")
 
-    server_time_sample = sample_okx_server_time(
+    if get_server_time_bytes is not None and get_json is not None:
+        raise ValueError(
+            "provide only one of get_server_time_bytes or compatibility get_json"
+        )
+    if get_server_time_bytes is not None:
+        server_time_getter = get_server_time_bytes
+    elif get_json is not None:
+
+        def server_time_getter(url: str, request_timeout: float) -> bytes:
+            payload = get_json(url, request_timeout)
+            if not isinstance(payload, Mapping):
+                raise ValueError("OKX injected JSON response must be an object")
+            return _canonical_json_bytes(payload)
+
+    else:
+        server_time_getter = _default_raw_bytes_getter
+
+    server_time_url = f"{normalized_base_url}{_SERVER_TIME_ENDPOINT}"
+    server_started = _required_utc_datetime(
+        clock(),
+        field="OKX server-time request start",
+    )
+    if server_started < response_received:
+        raise ValueError("OKX server time must be sampled after the books response")
+    raw_server_time_response = _required_raw_response(
+        server_time_getter(server_time_url, timeout_seconds),
+        response_name="public-time",
+    )
+    server_received = _required_utc_datetime(
+        clock(),
+        field="OKX server-time response receipt",
+    )
+    exchange_observed = _server_time_from_raw_response(raw_server_time_response)
+    server_round_trip = (server_received - server_started).total_seconds()
+    midpoint = server_started + (server_received - server_started) / 2
+    midpoint_clock_skew = (exchange_observed - midpoint).total_seconds()
+    server_time_sample = OKXServerTimeSample(
         base_url=normalized_base_url,
-        timeout=timeout_seconds,
+        endpoint=_SERVER_TIME_ENDPOINT,
+        local_request_started_utc=server_started,
+        local_response_received_utc=server_received,
+        server_time_utc=exchange_observed,
+        round_trip_seconds=server_round_trip,
+        midpoint_clock_skew_seconds=midpoint_clock_skew,
+    )
+    (
+        validated_server_started,
+        validated_server_received,
+        validated_exchange_observed,
+        server_round_trip,
+        midpoint_clock_skew,
+    ) = validate_okx_server_time_sample(
+        server_time_sample,
         max_round_trip_seconds=server_round_trip_bound,
         max_abs_clock_skew_seconds=clock_skew_bound,
-        get_json=get_json or _default_json_getter,
-        now=clock,
     )
-    if server_time_sample.local_request_started_utc.to_pydatetime() < response_received:
-        raise ValueError("OKX server time must be sampled after the books response")
 
     exchange_clock_response_received = response_received + timedelta(
-        seconds=server_time_sample.midpoint_clock_skew_seconds
+        seconds=midpoint_clock_skew
     )
     quote = _quote_from_raw_response(
         raw_response,
@@ -551,21 +689,18 @@ def fetch_okx_top_of_book(
         endpoint=_ENDPOINT,
         request_started_utc=request_started,
         response_received_utc=response_received,
-        server_time_endpoint=server_time_sample.endpoint,
-        server_time_request_started_utc=(
-            server_time_sample.local_request_started_utc.to_pydatetime()
-        ),
-        exchange_time_observed_utc=server_time_sample.server_time_utc.to_pydatetime(),
-        server_time_response_received_utc=(
-            server_time_sample.local_response_received_utc.to_pydatetime()
-        ),
+        server_time_endpoint=_SERVER_TIME_ENDPOINT,
+        server_time_request_started_utc=validated_server_started.to_pydatetime(),
+        exchange_time_observed_utc=validated_exchange_observed.to_pydatetime(),
+        server_time_response_received_utc=validated_server_received.to_pydatetime(),
         request_round_trip_seconds=request_round_trip,
-        server_round_trip_seconds=server_time_sample.round_trip_seconds,
-        midpoint_clock_skew_seconds=server_time_sample.midpoint_clock_skew_seconds,
+        server_round_trip_seconds=server_round_trip,
+        midpoint_clock_skew_seconds=midpoint_clock_skew,
         max_request_round_trip_seconds=request_round_trip_bound,
         max_server_round_trip_seconds=server_round_trip_bound,
         max_abs_midpoint_clock_skew_seconds=clock_skew_bound,
         maximum_quote_age_ms=maximum_quote_age_ms,
+        raw_server_time_response_json=raw_server_time_response,
         raw_response_json=raw_response,
         quote=quote,
     )
