@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from numbers import Integral
+from numbers import Integral, Real
 
 import numpy as np
 import pandas as pd
@@ -9,6 +9,7 @@ import pandas as pd
 _POSITION_ADJUSTMENT_THRESHOLD = 1e-12
 _MATERIAL_POSITION_ADJUSTMENT_THRESHOLD = 0.01
 _ACTIVE_POSITION_THRESHOLD = 0.01
+_POSITION_LIMIT_TOLERANCE = 1e-12
 _DRAWDOWN_THRESHOLD = 1e-12
 _EXPECTED_SHORTFALL_TAIL_FRACTION = 0.05
 
@@ -17,6 +18,15 @@ def _positive_integer(value: object, label: str) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral) or int(value) <= 0:
         raise ValueError(f"{label} must be a positive integer")
     return int(value)
+
+
+def _finite_real(value: object, label: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{label} must be a finite real number")
+    parsed = float(value)
+    if not math.isfinite(parsed):
+        raise ValueError(f"{label} must be a finite real number")
+    return parsed
 
 
 def _finite_series(frame: pd.DataFrame, name: str) -> pd.Series:
@@ -48,10 +58,18 @@ def walk_forward_path_diagnostics(
     frame: pd.DataFrame,
     *,
     annualization: int,
-) -> dict[str, float | int | str]:
+    minimum_position: float,
+    maximum_absolute_position: float,
+) -> dict[str, float | int | str | bool]:
     """Reconstruct position-path diagnostics without treating transitions as exchange orders."""
 
     ann = _positive_integer(annualization, "annualization")
+    minimum = _finite_real(minimum_position, "minimum_position")
+    maximum = _finite_real(maximum_absolute_position, "maximum_absolute_position")
+    if maximum <= 0.0:
+        raise ValueError("maximum_absolute_position must be positive")
+    if minimum < -maximum or minimum > maximum:
+        raise ValueError("minimum_position must lie within the absolute position limit")
     if frame.empty:
         raise ValueError("walk-forward diagnostics require a non-empty frame")
     if not isinstance(frame.index, pd.DatetimeIndex):
@@ -64,6 +82,15 @@ def walk_forward_path_diagnostics(
     position = _finite_series(frame, "position")
     turnover = _finite_series(frame, "turnover")
     net_returns = _finite_series(frame, "strategy_return")
+    position_limit_breach = (position < minimum - _POSITION_LIMIT_TOLERANCE) | (
+        position > maximum + _POSITION_LIMIT_TOLERANCE
+    )
+    if position_limit_breach.any():
+        breach_row = int(np.flatnonzero(position_limit_breach.to_numpy(copy=False))[0])
+        raise ValueError(
+            "walk-forward position breaches configured position limits at row "
+            f"{breach_row}: {position.iloc[breach_row]:.12g} not in [{minimum:.12g}, {maximum:.12g}]"
+        )
     if (turnover < 0.0).any():
         raise ValueError("walk-forward turnover must be non-negative")
     if (net_returns <= -1.0).any():
@@ -141,6 +168,10 @@ def walk_forward_path_diagnostics(
         "observations": observations,
         "evaluation_start": frame.index[0].isoformat(),
         "evaluation_end": frame.index[-1].isoformat(),
+        "declared_minimum_position": minimum,
+        "declared_maximum_absolute_position": maximum,
+        "position_limit_tolerance": _POSITION_LIMIT_TOLERANCE,
+        "position_limit_passes": True,
         "position_adjustment_threshold": _POSITION_ADJUSTMENT_THRESHOLD,
         "material_position_adjustment_threshold": _MATERIAL_POSITION_ADJUSTMENT_THRESHOLD,
         "active_position_threshold": _ACTIVE_POSITION_THRESHOLD,
