@@ -396,9 +396,7 @@ def evaluate_target_position_intents(
         raise ValueError("portfolio target risk gate received duplicate instruments")
 
     limit_by_instrument = {limit.instrument_id: limit for limit in policy.instrument_limits}
-    current_by_instrument = {
-        position.instrument_id: position for position in snapshot.positions
-    }
+    current_by_instrument = {position.instrument_id: position for position in snapshot.positions}
     unsupported_current = sorted(set(current_by_instrument) - set(limit_by_instrument))
     if unsupported_current:
         raise ValueError(
@@ -469,9 +467,7 @@ def evaluate_target_position_intents(
             InstrumentTargetRiskMeasure(
                 instrument_id=instrument_id,
                 current_quantity=(
-                    current_position_record.quantity
-                    if current_position_record is not None
-                    else 0.0
+                    current_position_record.quantity if current_position_record is not None else 0.0
                 ),
                 current_mark_price=(
                     current_position_record.mark_price
@@ -530,9 +526,7 @@ def evaluate_target_position_intents(
         _ALL_IN_STRESS_BPS[2] * buy_bps_scale,
     )
     tolerance = max(1.0, snapshot.equity) * 1e-12
-    sell_only_reduction = (
-        required_sell_notional > tolerance and required_buy_notional <= tolerance
-    )
+    sell_only_reduction = required_sell_notional > tolerance and required_buy_notional <= tolerance
     required_cash = (
         0.0
         if sell_only_reduction
