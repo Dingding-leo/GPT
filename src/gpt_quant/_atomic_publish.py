@@ -71,9 +71,7 @@ def publish_staged_paths_atomically(
                 raise ValueError(
                     f"{error_label} staged paths must be direct children of the staging directory"
                 )
-            if any(
-                path.is_symlink() or not path.is_file() for path in staged_paths.values()
-            ):
+            if any(path.is_symlink() or not path.is_file() for path in staged_paths.values()):
                 raise ValueError(f"{error_label} staged paths must be regular files")
 
             replaced: list[str] = []
