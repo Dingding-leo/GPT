@@ -29,8 +29,7 @@ def _fixture_response() -> bytes:
 
 def _clock(*values: str):
     timestamps: Iterator[datetime] = iter(
-        datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC)
-        for value in values
+        datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC) for value in values
     )
     return lambda: next(timestamps)
 
