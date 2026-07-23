@@ -257,8 +257,7 @@ def build_result(artifact_dir: str | Path) -> dict[str, object]:
         rejection_reason = (
             "The 95% paired moving-block-bootstrap lower bound for the strategy-minus-"
             "volatility-matched-volatility-targeted-long expected-shortfall delta was "
-            "non-positive in: "
-            + ", ".join(failed_markets)
+            "non-positive in: " + ", ".join(failed_markets)
         )
 
     return {
