@@ -48,12 +48,12 @@ def write_walk_forward_report(
     buy_hold_flags = assessment["beats_buy_and_hold"]
     buy_hold_differences = assessment["strategy_minus_buy_and_hold"]
     instrument = str(provenance.get("instrument_id", "Instrument"))
-    partial_month_labels = ", ".join(
-        str(value) for value in path_diagnostics["partial_month_labels"]
-    ) or "none"
-    partial_year_labels = ", ".join(
-        str(value) for value in path_diagnostics["partial_year_labels"]
-    ) or "none"
+    partial_month_labels = (
+        ", ".join(str(value) for value in path_diagnostics["partial_month_labels"]) or "none"
+    )
+    partial_year_labels = (
+        ", ".join(str(value) for value in path_diagnostics["partial_year_labels"]) or "none"
+    )
     lines = [
         "# OKX Walk-Forward Research Report",
         "",
