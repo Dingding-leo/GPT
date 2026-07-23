@@ -9,12 +9,7 @@ from math import isfinite
 
 from .execution_quote import ExecutionQuoteSnapshot
 from .okx import JSONGetter
-from .okx_execution_quote import (
-    Clock,
-    OKXTopOfBookObservation,
-    RawBytesGetter,
-    fetch_okx_top_of_book,
-)
+from .okx_execution_quote import Clock, OKXTopOfBookObservation, RawBytesGetter, fetch_okx_top_of_book
 
 _SCHEMA_VERSION = 1
 _PAYLOAD_KEYS = {
@@ -32,11 +27,16 @@ _OBSERVATION_KEYS = {
     "endpoint",
     "request_started_utc",
     "response_received_utc",
+    "server_time_endpoint",
+    "server_time_request_started_utc",
     "exchange_time_observed_utc",
     "server_time_response_received_utc",
     "request_round_trip_seconds",
     "server_round_trip_seconds",
     "midpoint_clock_skew_seconds",
+    "max_request_round_trip_seconds",
+    "max_server_round_trip_seconds",
+    "max_abs_midpoint_clock_skew_seconds",
     "maximum_quote_age_ms",
     "raw_response_json_utf8",
     "quote",
@@ -61,10 +61,7 @@ def _required_utc(value: object, *, field_name: str) -> datetime:
 def _required_finite(value: object, *, field_name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{field_name} must be a finite number")
-    try:
-        parsed = float(value)
-    except (OverflowError, ValueError) as exc:
-        raise ValueError(f"{field_name} must be a finite number") from exc
+    parsed = float(value)
     if not isfinite(parsed):
         raise ValueError(f"{field_name} must be a finite number")
     return 0.0 if parsed == 0 else parsed
@@ -117,24 +114,21 @@ def _observation_payload(observation: OKXTopOfBookObservation) -> dict[str, obje
         "endpoint": observation.endpoint,
         "request_started_utc": _format_utc(observation.request_started_utc),
         "response_received_utc": _format_utc(observation.response_received_utc),
+        "server_time_endpoint": observation.server_time_endpoint,
+        "server_time_request_started_utc": _format_utc(
+            observation.server_time_request_started_utc
+        ),
         "exchange_time_observed_utc": _format_utc(observation.exchange_time_observed_utc),
         "server_time_response_received_utc": _format_utc(
             observation.server_time_response_received_utc
         ),
-        "request_round_trip_seconds": (
-            0.0
-            if observation.request_round_trip_seconds == 0
-            else observation.request_round_trip_seconds
-        ),
-        "server_round_trip_seconds": (
-            0.0
-            if observation.server_round_trip_seconds == 0
-            else observation.server_round_trip_seconds
-        ),
-        "midpoint_clock_skew_seconds": (
-            0.0
-            if observation.midpoint_clock_skew_seconds == 0
-            else observation.midpoint_clock_skew_seconds
+        "request_round_trip_seconds": observation.request_round_trip_seconds,
+        "server_round_trip_seconds": observation.server_round_trip_seconds,
+        "midpoint_clock_skew_seconds": observation.midpoint_clock_skew_seconds,
+        "max_request_round_trip_seconds": observation.max_request_round_trip_seconds,
+        "max_server_round_trip_seconds": observation.max_server_round_trip_seconds,
+        "max_abs_midpoint_clock_skew_seconds": (
+            observation.max_abs_midpoint_clock_skew_seconds
         ),
         "maximum_quote_age_ms": observation.maximum_quote_age_ms,
         "raw_response_json_utf8": observation.raw_response_json.decode("utf-8"),
@@ -160,12 +154,7 @@ class ReconstructableOKXTopOfBookEvidence:
             self.server_time_request_started_utc,
             field_name="server_time_request_started_utc",
         )
-        object.__setattr__(self, "server_time_request_started_utc", server_started)
-        object.__setattr__(
-            self,
-            "timeout_seconds",
-            _required_positive(self.timeout_seconds, field_name="timeout_seconds"),
-        )
+        timeout = _required_positive(self.timeout_seconds, field_name="timeout_seconds")
         request_bound = _required_positive(
             self.max_request_round_trip_seconds,
             field_name="max_request_round_trip_seconds",
@@ -178,31 +167,22 @@ class ReconstructableOKXTopOfBookEvidence:
             self.max_abs_midpoint_clock_skew_seconds,
             field_name="max_abs_midpoint_clock_skew_seconds",
         )
+        object.__setattr__(self, "server_time_request_started_utc", server_started)
+        object.__setattr__(self, "timeout_seconds", timeout)
         object.__setattr__(self, "max_request_round_trip_seconds", request_bound)
         object.__setattr__(self, "max_server_round_trip_seconds", server_bound)
         object.__setattr__(self, "max_abs_midpoint_clock_skew_seconds", skew_bound)
 
         if not isinstance(self.observation, OKXTopOfBookObservation):
             raise TypeError("observation must be an OKXTopOfBookObservation")
-        if server_started < self.observation.response_received_utc:
-            raise ValueError("OKX server-time request predates books response receipt")
-        server_received = self.observation.server_time_response_received_utc
-        if server_received < server_started:
-            raise ValueError("local clock moved backward during OKX server-time request")
-
-        expected_server_round_trip = (server_received - server_started).total_seconds()
-        if abs(self.observation.server_round_trip_seconds - expected_server_round_trip) > 1e-9:
-            raise ValueError("OKX server-time round trip does not match replay timestamps")
-        midpoint = server_started + (server_received - server_started) / 2
-        expected_skew = (self.observation.exchange_time_observed_utc - midpoint).total_seconds()
-        if abs(self.observation.midpoint_clock_skew_seconds - expected_skew) > 1e-9:
-            raise ValueError("OKX midpoint clock skew does not match replay timestamps")
-        if self.observation.request_round_trip_seconds > request_bound:
-            raise ValueError("OKX books request round trip exceeds replay policy")
-        if self.observation.server_round_trip_seconds > server_bound:
-            raise ValueError("OKX server-time round trip exceeds replay policy")
-        if abs(self.observation.midpoint_clock_skew_seconds) > skew_bound:
-            raise ValueError("OKX midpoint clock skew exceeds replay policy")
+        if server_started != self.observation.server_time_request_started_utc:
+            raise ValueError("replay server-time request start does not match observation")
+        if request_bound != self.observation.max_request_round_trip_seconds:
+            raise ValueError("replay books round-trip policy does not match observation")
+        if server_bound != self.observation.max_server_round_trip_seconds:
+            raise ValueError("replay server round-trip policy does not match observation")
+        if skew_bound != self.observation.max_abs_midpoint_clock_skew_seconds:
+            raise ValueError("replay clock-skew policy does not match observation")
 
         object.__setattr__(
             self,
@@ -229,9 +209,8 @@ class ReconstructableOKXTopOfBookEvidence:
     @classmethod
     def from_json_bytes(cls, value: bytes) -> ReconstructableOKXTopOfBookEvidence:
         try:
-            text = value.decode("utf-8")
             payload = json.loads(
-                text,
+                value.decode("utf-8"),
                 object_pairs_hook=_reject_duplicates,
                 parse_constant=_reject_nonfinite,
             )
@@ -247,17 +226,19 @@ class ReconstructableOKXTopOfBookEvidence:
         raw_response = raw_observation["raw_response_json_utf8"]
         if not isinstance(raw_response, str):
             raise ValueError("OKX quote replay raw response must be UTF-8 text")
-        quote = ExecutionQuoteSnapshot.from_mapping(raw_observation["quote"])
         observation = OKXTopOfBookObservation(
             base_url=raw_observation["base_url"],
             endpoint=raw_observation["endpoint"],
             request_started_utc=_required_utc(
-                raw_observation["request_started_utc"],
-                field_name="request_started_utc",
+                raw_observation["request_started_utc"], field_name="request_started_utc"
             ),
             response_received_utc=_required_utc(
-                raw_observation["response_received_utc"],
-                field_name="response_received_utc",
+                raw_observation["response_received_utc"], field_name="response_received_utc"
+            ),
+            server_time_endpoint=raw_observation["server_time_endpoint"],
+            server_time_request_started_utc=_required_utc(
+                raw_observation["server_time_request_started_utc"],
+                field_name="server_time_request_started_utc",
             ),
             exchange_time_observed_utc=_required_utc(
                 raw_observation["exchange_time_observed_utc"],
@@ -270,9 +251,16 @@ class ReconstructableOKXTopOfBookEvidence:
             request_round_trip_seconds=raw_observation["request_round_trip_seconds"],
             server_round_trip_seconds=raw_observation["server_round_trip_seconds"],
             midpoint_clock_skew_seconds=raw_observation["midpoint_clock_skew_seconds"],
+            max_request_round_trip_seconds=raw_observation[
+                "max_request_round_trip_seconds"
+            ],
+            max_server_round_trip_seconds=raw_observation["max_server_round_trip_seconds"],
+            max_abs_midpoint_clock_skew_seconds=raw_observation[
+                "max_abs_midpoint_clock_skew_seconds"
+            ],
             maximum_quote_age_ms=raw_observation["maximum_quote_age_ms"],
             raw_response_json=raw_response.encode("utf-8"),
-            quote=quote,
+            quote=ExecutionQuoteSnapshot.from_mapping(raw_observation["quote"]),
         )
         evidence = cls(
             server_time_request_started_utc=_required_utc(
@@ -314,14 +302,6 @@ def fetch_reconstructable_okx_top_of_book(
 ) -> ReconstructableOKXTopOfBookEvidence:
     """Fetch public market evidence and retain the complete replay timing envelope."""
 
-    clock = now or _current_utc
-    clock_samples: list[datetime] = []
-
-    def recording_clock() -> datetime:
-        value = clock()
-        clock_samples.append(value)
-        return value
-
     observation = fetch_okx_top_of_book(
         instrument_id=instrument_id,
         instrument_snapshot_sha256=instrument_snapshot_sha256,
@@ -333,26 +313,13 @@ def fetch_reconstructable_okx_top_of_book(
         max_abs_midpoint_clock_skew_seconds=max_abs_midpoint_clock_skew_seconds,
         get_bytes=get_bytes,
         get_json=get_json,
-        now=recording_clock,
+        now=now or _current_utc,
     )
-    if len(clock_samples) != 4:
-        raise RuntimeError("OKX top-of-book replay requires exactly four local clock samples")
-    normalized_samples = tuple(
-        _required_utc(value, field_name=f"clock_samples[{index}]")
-        for index, value in enumerate(clock_samples)
-    )
-    if normalized_samples[0] != observation.request_started_utc:
-        raise RuntimeError("OKX books request start was not preserved")
-    if normalized_samples[1] != observation.response_received_utc:
-        raise RuntimeError("OKX books response receipt was not preserved")
-    if normalized_samples[3] != observation.server_time_response_received_utc:
-        raise RuntimeError("OKX server-time response receipt was not preserved")
-
     return ReconstructableOKXTopOfBookEvidence(
-        server_time_request_started_utc=normalized_samples[2],
+        server_time_request_started_utc=observation.server_time_request_started_utc,
         timeout_seconds=timeout,
-        max_request_round_trip_seconds=max_request_round_trip_seconds,
-        max_server_round_trip_seconds=max_server_round_trip_seconds,
-        max_abs_midpoint_clock_skew_seconds=max_abs_midpoint_clock_skew_seconds,
+        max_request_round_trip_seconds=observation.max_request_round_trip_seconds,
+        max_server_round_trip_seconds=observation.max_server_round_trip_seconds,
+        max_abs_midpoint_clock_skew_seconds=observation.max_abs_midpoint_clock_skew_seconds,
         observation=observation,
     )
