@@ -194,3 +194,60 @@ def test_server_time_sample_rejects_excessive_round_trip() -> None:
             local_received="2026-07-21T12:00:03.000+00:00",
             max_round_trip_seconds=2.0,
         )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("max_round_trip_seconds", float("nan")),
+        ("max_round_trip_seconds", float("inf")),
+        ("max_abs_clock_skew_seconds", float("nan")),
+        ("max_abs_clock_skew_seconds", float("inf")),
+        ("timeout", float("nan")),
+        ("timeout", float("inf")),
+    ],
+)
+def test_server_time_sample_rejects_nonfinite_timing_configuration_before_request(
+    field: str,
+    value: float,
+) -> None:
+    requested = False
+
+    def forbidden_getter(url: str, timeout: float) -> dict[str, object]:
+        nonlocal requested
+        requested = True
+        raise AssertionError("public server-time endpoint must not be called")
+
+    kwargs: dict[str, object] = {field: value}
+    with pytest.raises(ValueError, match="finite number"):
+        sample_okx_server_time(
+            base_url="https://example.test",
+            get_json=forbidden_getter,
+            **kwargs,
+        )
+
+    assert requested is False
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("max_round_trip_seconds", float("nan")),
+        ("max_round_trip_seconds", float("inf")),
+        ("max_abs_clock_skew_seconds", float("nan")),
+        ("max_abs_clock_skew_seconds", float("inf")),
+    ],
+)
+def test_completed_bar_cutoff_rejects_nonfinite_timing_bounds(
+    field: str,
+    value: float,
+) -> None:
+    snapshot = _download(_real_okx_rows(), as_of="2026-07-21T11:59:59+00:00")
+    kwargs: dict[str, object] = {field: value}
+
+    with pytest.raises(ValueError, match="finite number"):
+        build_okx_completed_bar_cutoff(
+            snapshot,
+            server_time_sample=_server_time_sample(),
+            **kwargs,
+        )
