@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 import gpt_quant.okx as okx
@@ -98,3 +99,44 @@ def test_as_of_with_default_transport_fails_before_network(
         )
 
     assert network_calls == 0
+
+
+def test_default_transport_checks_freshness_after_download(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rows = _real_okx_rows()
+    download_completed = False
+    clock_calls = 0
+
+    def fake_clock() -> pd.Timestamp:
+        nonlocal clock_calls
+        clock_calls += 1
+        reference = (
+            "2026-07-22T00:05:00+00:00" if download_completed else "2026-07-22T00:04:59+00:00"
+        )
+        return pd.Timestamp(reference)
+
+    def fake_getter(url: str, timeout: float) -> dict[str, object]:
+        nonlocal download_completed
+        assert clock_calls == 0
+        assert "instId=BTC-USDT" in url
+        assert "bar=1Dutc" in url
+        assert timeout == 20.0
+        download_completed = True
+        return {"code": "0", "msg": "", "data": [list(row) for row in rows]}
+
+    monkeypatch.setattr(okx, "_current_utc_timestamp", fake_clock)
+    monkeypatch.setattr(okx, "_default_json_getter", fake_getter)
+
+    with pytest.raises(ValueError, match="open-ended download is stale"):
+        fetch_okx_history_candles(
+            inst_id="BTC-USDT",
+            bar="1Dutc",
+            base_url="https://example.test",
+            limit=100,
+            max_pages=1,
+            pause_seconds=0.0,
+        )
+
+    assert download_completed
+    assert clock_calls == 1
