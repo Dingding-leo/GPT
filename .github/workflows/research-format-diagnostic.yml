@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - auto/research/20260724-00-execution-delay-cost-stress
+  pull_request:
 
 permissions:
   contents: read
