@@ -1,0 +1,265 @@
+name: Python Dependency Audit
+
+on:
+  pull_request_target:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-audit-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-audit:
+    name: Python ${{ matrix.python-version }} / ${{ matrix.target.name }} dependency audit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+      PIP_AUDIT_VERSION: "2.10.1"
+      PIP_CONFIG_FILE: /dev/null
+      PYPI_INDEX_URL: https://pypi.org/simple
+      AUDIT_PYTHON_VERSION: ${{ matrix.python-version }}
+      TARGET_NAME: ${{ matrix.target.name }}
+      TARGET_PLATFORM: ${{ matrix.target.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        target:
+          - name: linux-x86_64
+            platform: manylinux_2_28_x86_64
+          - name: linux-aarch64
+            platform: manylinux_2_28_aarch64
+          - name: windows-x86_64
+            platform: win_amd64
+          - name: macos-x86_64
+            platform: macosx_11_0_x86_64
+          - name: macos-arm64
+            platform: macosx_11_0_arm64
+
+    steps:
+      - name: Check out trusted base policy
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download proposed dependency manifest as data
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          mkdir -p reports/security
+          export PROPOSED_PYPROJECT=reports/security/proposed-pyproject.toml
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          context = {
+              "audit_python_version": os.environ["AUDIT_PYTHON_VERSION"],
+              "base_sha": os.environ["BASE_SHA"],
+              "head_repository": os.environ["HEAD_REPOSITORY"],
+              "head_sha": os.environ["HEAD_SHA"],
+              "pull_request_number": int(os.environ["PR_NUMBER"]),
+              "target_name": os.environ["TARGET_NAME"],
+              "target_platform": os.environ["TARGET_PLATFORM"],
+          }
+          Path("reports/security/audit-context.json").write_text(
+              json.dumps(context, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+          api_url="https://api.github.com/repos/${HEAD_REPOSITORY}/contents/pyproject.toml?ref=${HEAD_SHA}"
+          curl --fail-with-body --location --silent --show-error \
+            -H "Accept: application/vnd.github.raw+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${api_url}" \
+            --output "${PROPOSED_PYPROJECT}"
+          sha256sum "${PROPOSED_PYPROJECT}" > reports/security/proposed-pyproject.sha256
+
+          root_api_url="https://api.github.com/repos/${HEAD_REPOSITORY}/contents?ref=${HEAD_SHA}"
+          curl --fail-with-body --location --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "${root_api_url}" \
+            --output reports/security/proposed-root-contents.json
+
+          : > reports/security/legacy-build-files.tsv
+          for path in setup.py setup.cfg; do
+            status="$(curl --location --silent --show-error \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "https://api.github.com/repos/${HEAD_REPOSITORY}/contents/${path}?ref=${HEAD_SHA}")"
+            printf '%s\t%s\n' "$path" "$status" >> reports/security/legacy-build-files.tsv
+          done
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          statuses = {}
+          for line in Path("reports/security/legacy-build-files.tsv").read_text(
+              encoding="utf-8"
+          ).splitlines():
+              path, raw_status = line.split("\t", maxsplit=1)
+              statuses[path] = int(raw_status)
+          Path("reports/security/legacy-build-files.json").write_text(
+              json.dumps(statuses, indent=2, sort_keys=True) + "\n",
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Validate proposed dependency declarations
+        run: |
+          python scripts/dependency_audit_root_tree.py \
+            reports/security/proposed-root-contents.json
+          python scripts/dependency_audit_inputs.py validate-legacy-build-files \
+            reports/security/legacy-build-files.json
+          python scripts/dependency_audit_inputs.py prepare \
+            reports/security/proposed-pyproject.toml \
+            reports/security
+          python scripts/dependency_audit_transitive.py validate-manifest \
+            reports/security/dependency-inputs.json
+
+      - name: Resolve proposed dependencies without installation
+        run: |
+          python -m venv .resolver-venv
+          .resolver-venv/bin/python -m pip install --quiet --isolated \
+            --index-url "${PYPI_INDEX_URL}" \
+            --no-cache-dir \
+            --only-binary=:all: \
+            "pip==${PIP_BOOTSTRAP_VERSION}"
+          python_tag="${AUDIT_PYTHON_VERSION//./}"
+          target_args=(
+            --python-version "${AUDIT_PYTHON_VERSION}"
+            --implementation cp
+            --abi "cp${python_tag}"
+            --abi abi3
+            --abi none
+          )
+          if [[ "${TARGET_PLATFORM}" == manylinux_2_28_* ]]; then
+            architecture="${TARGET_PLATFORM#manylinux_2_28_}"
+            for minor in $(seq 28 -1 5); do
+              target_args+=(--platform "manylinux_2_${minor}_${architecture}")
+            done
+            target_args+=(--platform "manylinux2014_${architecture}")
+            if [[ "${architecture}" == x86_64 ]]; then
+              target_args+=(--platform manylinux2010_x86_64 --platform manylinux1_x86_64)
+            fi
+          else
+            target_args+=(--platform "${TARGET_PLATFORM}")
+          fi
+          for dependency_set in build project; do
+            .resolver-venv/bin/python -m pip install --isolated \
+              --dry-run \
+              --ignore-installed \
+              --index-url "${PYPI_INDEX_URL}" \
+              --no-cache-dir \
+              --only-binary=:all: \
+              "${target_args[@]}" \
+              --report "reports/security/${dependency_set}-initial-resolution.json" \
+              --requirement "reports/security/${dependency_set}-requirements.in"
+            python scripts/dependency_audit_transitive.py collect \
+              "reports/security/${dependency_set}-initial-resolution.json" \
+              "reports/security/${dependency_set}-platform-requirements.in"
+            .resolver-venv/bin/python -m pip install --isolated \
+              --dry-run \
+              --ignore-installed \
+              --index-url "${PYPI_INDEX_URL}" \
+              --no-cache-dir \
+              --only-binary=:all: \
+              "${target_args[@]}" \
+              --report "reports/security/${dependency_set}-resolution.json" \
+              --requirement "reports/security/${dependency_set}-requirements.in" \
+              --requirement "reports/security/${dependency_set}-platform-requirements.in"
+            python scripts/dependency_audit_transitive.py verify \
+              "reports/security/${dependency_set}-resolution.json" \
+              "reports/security/${dependency_set}-platform-requirements.in"
+            python scripts/dependency_audit_inputs.py lock-report \
+              "reports/security/${dependency_set}-resolution.json" \
+              "reports/security/${dependency_set}-resolved-requirements.txt" \
+              "reports/security/${dependency_set}-resolved-artifacts.json"
+          done
+
+      - name: Install isolated auditor
+        run: |
+          python -m venv .audit-venv
+          .audit-venv/bin/python -m pip install --quiet --isolated \
+            --index-url "${PYPI_INDEX_URL}" \
+            --no-cache-dir \
+            --only-binary=:all: \
+            "pip==${PIP_BOOTSTRAP_VERSION}"
+          .audit-venv/bin/python -m pip install --quiet --isolated \
+            --index-url "${PYPI_INDEX_URL}" \
+            --no-cache-dir \
+            --only-binary=:all: \
+            "pip-audit==${PIP_AUDIT_VERSION}"
+
+      - name: Audit build dependencies
+        id: build-audit
+        continue-on-error: true
+        run: |
+          set +e
+          .audit-venv/bin/python -m pip_audit \
+            --strict \
+            --requirement reports/security/build-resolved-requirements.txt \
+            --no-deps \
+            --disable-pip \
+            --progress-spinner off \
+            --format json \
+            --output reports/security/build-pip-audit.json \
+            2>reports/security/build-pip-audit.stderr
+          status=$?
+          printf '%s\n' "$status" > reports/security/build-pip-audit.exit-code
+          exit "$status"
+
+      - name: Audit project dependencies
+        id: project-audit
+        continue-on-error: true
+        run: |
+          set +e
+          .audit-venv/bin/python -m pip_audit \
+            --strict \
+            --requirement reports/security/project-resolved-requirements.txt \
+            --no-deps \
+            --disable-pip \
+            --progress-spinner off \
+            --format json \
+            --output reports/security/project-pip-audit.json \
+            2>reports/security/project-pip-audit.stderr
+          status=$?
+          printf '%s\n' "$status" > reports/security/project-pip-audit.exit-code
+          exit "$status"
+
+      - name: Upload dependency audit evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: python-dependency-audit-pr${{ github.event.pull_request.number }}-py${{ matrix.python-version }}-${{ matrix.target.name }}-${{ github.run_attempt }}
+          path: reports/security/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce dependency audits
+        if: steps.build-audit.outcome == 'failure' || steps.project-audit.outcome == 'failure'
+        run: |
+          cat reports/security/build-pip-audit.stderr
+          cat reports/security/project-pip-audit.stderr
+          exit 1
