@@ -12,8 +12,8 @@ def test_hourly_portfolio_declares_variance_contribution_budget() -> None:
     correlation_declaration = 'MAX_PAIRWISE_CORRELATION: "0.90"'
     correlation_argument = '--max-pairwise-correlation "$MAX_PAIRWISE_CORRELATION"'
     fail_closed_argument = "--fail-on-reject"
-    rejected_report_upload_guard = (
-        "if: ${{ always() && hashFiles('reports/portfolio/portfolio_risk.json') != '' }}"
+    verified_report_upload_guard = (
+        "if: ${{ success() && hashFiles('reports/portfolio/portfolio_risk.json') != '' }}"
     )
     portfolio_start = workflow.index("- name: Generate verified portfolio risk report")
     portfolio_upload = workflow.index("- name: Upload verified portfolio risk artifact")
@@ -28,7 +28,6 @@ def test_hourly_portfolio_declares_variance_contribution_budget() -> None:
     assert workflow.count(correlation_argument) == 1
     assert workflow.index(correlation_declaration) < portfolio_start
     assert correlation_argument in portfolio_block
-    assert workflow.count(fail_closed_argument) == 1
-    assert fail_closed_argument in portfolio_block
-    assert workflow.count(rejected_report_upload_guard) == 1
-    assert rejected_report_upload_guard in upload_block
+    assert portfolio_block.count(fail_closed_argument) == 1
+    assert verified_report_upload_guard in upload_block
+    assert "always()" not in upload_block
