@@ -100,9 +100,7 @@ def load_returns(path: str | Path) -> pd.DataFrame:
             raise ValueError(f"{column} must contain finite returns greater than -100%")
         validated[column] = values
 
-    positions = pd.to_numeric(frame[STRATEGY_POSITION_COLUMN], errors="raise").to_numpy(
-        dtype=float
-    )
+    positions = pd.to_numeric(frame[STRATEGY_POSITION_COLUMN], errors="raise").to_numpy(dtype=float)
     if not np.isfinite(positions).all() or np.any((positions < 0.0) | (positions > 1.0)):
         raise ValueError(f"{STRATEGY_POSITION_COLUMN} must be finite and within [0, 1]")
     validated[STRATEGY_POSITION_COLUMN] = positions
@@ -239,9 +237,7 @@ def bootstrap_exposure_efficiency_delta(
         sample_indices = moving_block_indices(arrays[0].size, block_length, rng)
         deltas[index] = annualized_return_per_exposure_day(
             arrays[0][sample_indices], arrays[1][sample_indices]
-        ) - annualized_return_per_exposure_day(
-            arrays[2][sample_indices], arrays[3][sample_indices]
-        )
+        ) - annualized_return_per_exposure_day(arrays[2][sample_indices], arrays[3][sample_indices])
 
     alpha = 1.0 - float(confidence)
     lower, upper = np.quantile(deltas, [alpha / 2.0, 1.0 - alpha / 2.0])
