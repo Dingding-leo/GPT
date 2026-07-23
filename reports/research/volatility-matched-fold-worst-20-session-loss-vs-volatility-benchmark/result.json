@@ -1,0 +1,78 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "volatility-matched-fold-worst-20-session-loss-vs-volatility-benchmark-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=volatility-targeted-long-scaled-within-each-complete-fold-to-strategy-sample-volatility|volatility=sample-standard-deviation-ddof1|complete-folds=26x90|trailing-short-fold=excluded|window=20-sessions|fold-metric=min-within-fold-compounded-20-session-return|delta=strategy-minus-volatility-matched-benchmark|aggregate=mean-fold-delta|claim=mean-fold-delta>0-in-both-markets|resampling=noncircular-moving-block-bootstrap-over-consecutive-complete-fold-deltas|block-length=3-folds|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072321,ETH-USDT:2026072322|candidate_count=1",
+  "hypothesis": "The adaptive strategy has a less severe mean within-fold worst compounded 20-session return than a within-fold volatility-matched volatility-targeted-long benchmark in both BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "ci_lower": -0.0191668188246339,
+      "ci_upper": 0.00198397437632083,
+      "complete_folds": 26,
+      "excluded_trailing_rows": 45,
+      "mean_benchmark_volatility_scale": 0.4169751878662988,
+      "median_benchmark_volatility_scale": 0.3445146381365679,
+      "median_fold_delta": -0.005149255062292857,
+      "observed_mean_delta": -0.01064436588127051,
+      "passed": false,
+      "period_end": "2026-07-22T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "positive_fold_count": 8,
+      "probability_mean_delta_positive": 0.0525,
+      "return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "rolling_windows_per_fold": 71,
+      "strategy_mean_fold_worst_window_return": -0.07108140327228193,
+      "volatility_matched_benchmark_mean_fold_worst_window_return": -0.06043703739101141
+    },
+    "ETH-USDT": {
+      "ci_lower": -0.026371786731525924,
+      "ci_upper": -0.006924253349972834,
+      "complete_folds": 26,
+      "excluded_trailing_rows": 45,
+      "mean_benchmark_volatility_scale": 0.4192779692940194,
+      "median_benchmark_volatility_scale": 0.44089661741563213,
+      "median_fold_delta": -0.017541946188374014,
+      "observed_mean_delta": -0.016774498228293185,
+      "passed": false,
+      "period_end": "2026-07-22T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "positive_fold_count": 6,
+      "probability_mean_delta_positive": 0.001,
+      "return_file_sha256": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047",
+      "rolling_windows_per_fold": 71,
+      "strategy_mean_fold_worst_window_return": -0.08166968101627907,
+      "volatility_matched_benchmark_mean_fold_worst_window_return": -0.06489518278798587
+    }
+  },
+  "provenance": {
+    "market_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8553558024,
+    "source_artifact_name": "quant-research-source-1679-attempt-1",
+    "source_artifact_sha256": "382f20d2350ebd5cb79aafdf3c901eda4ec0f1663c33d0bae9b70a920d3c82b7",
+    "source_code_commit": "c3bd405ac7ddd6a7fd6d8eff8d9372a05a8855b4",
+    "source_main_commit": "2cb492b66873bccbf5535c8f3721feb3ee52c880",
+    "source_workflow_run_id": 29982033676,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reason": "The 95% complete-fold moving-block-bootstrap lower bound for the mean strategy-minus-volatility-matched-benchmark worst 20-session return delta was non-positive in: BTC-USDT, ETH-USDT",
+  "settings": {
+    "aggregate_metric": "mean strategy-minus-volatility-matched-benchmark fold delta",
+    "benchmark": "volatility-targeted long",
+    "benchmark_volatility_matching": "scale each complete fold by strategy sample std / benchmark sample std, ddof=1",
+    "complete_fold_length_sessions": 90,
+    "confidence": 0.95,
+    "fold_block_length": 3,
+    "fold_metric": "minimum within-fold compounded window return",
+    "loss_window_sessions": 20,
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072321,
+      "ETH-USDT": 2026072322
+    },
+    "trailing_short_fold_policy": "exclude exactly one trailing shorter fold"
+  },
+  "verdict": "rejected"
+}
