@@ -40,6 +40,43 @@ def test_real_okx_fixture_hash_and_metric_primitives() -> None:
     assert module.holding_episode_metrics(validated)["count"] >= 0
 
 
+def test_calendar_metrics_are_version_independent_at_year_boundary() -> None:
+    module = _analysis_module()
+    frame = pd.DataFrame(
+        {
+            "timestamp": pd.to_datetime(
+                [
+                    "2021-12-30T00:00:00Z",
+                    "2021-12-31T00:00:00Z",
+                    "2022-01-01T00:00:00Z",
+                    "2022-01-02T00:00:00Z",
+                ],
+                utc=True,
+            ),
+            "strategy_return": [0.10, -0.05, 0.02, 0.03],
+        }
+    )
+
+    metrics = module.calendar_metrics(frame)
+
+    assert metrics["month_count"] == 2
+    assert metrics["profitable_months"] == 2
+    assert metrics["losing_or_flat_months"] == 0
+    assert metrics["completed_year_count"] == 0
+    assert metrics["years"] == [
+        {
+            "year": 2021,
+            "return": pytest.approx((1.10 * 0.95) - 1.0),
+            "partial": True,
+        },
+        {
+            "year": 2022,
+            "return": pytest.approx((1.02 * 1.03) - 1.0),
+            "partial": True,
+        },
+    ]
+
+
 def test_committed_inventory_is_hash_bound_and_rejected() -> None:
     result = json.loads((_REPORT_DIR / "result.json").read_text(encoding="utf-8"))
     assert result["source"]["artifact_sha256"] == (
