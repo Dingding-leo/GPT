@@ -51,7 +51,9 @@ def verify_execution_quote_store(
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Replay an existing execution-quote evidence store and verify its expected root."
+        description=(
+            "Replay an existing execution-quote evidence store and verify its expected root."
+        )
     )
     parser.add_argument("--store", required=True, type=Path)
     parser.add_argument("--expected-sha256", required=True)
