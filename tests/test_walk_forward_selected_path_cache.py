@@ -50,7 +50,7 @@ def _write_repeated_selection_report(prices: pd.Series, output: Path) -> dict[st
     return paths
 
 
-def test_verifier_reuses_one_source_path_per_selected_config(
+def test_verifier_builds_one_target_path_per_selected_config(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -60,20 +60,17 @@ def test_verifier_reuses_one_source_path_per_selected_config(
     assert len(report["folds"]) == 2
     assert report["folds"][0]["selected_parameters"] == report["folds"][1]["selected_parameters"]
 
-    original = verify_gate.run_backtest
+    original = verify_gate.build_target_position
     calls: list[tuple[pd.Timestamp, pd.Timestamp, StrategyConfig]] = []
 
-    def counted_run_backtest(
+    def counted_build_target_position(
         prices: pd.Series,
         config: StrategyConfig,
-        *,
-        start: pd.Timestamp | str | None = None,
-        end: pd.Timestamp | str | None = None,
-    ):
+    ) -> pd.Series:
         calls.append((prices.index[0], prices.index[-1], config))
-        return original(prices, config, start=start, end=end)
+        return original(prices, config)
 
-    monkeypatch.setattr(verify_gate, "run_backtest", counted_run_backtest)
+    monkeypatch.setattr(verify_gate, "build_target_position", counted_build_target_position)
 
     verification = verify_gate.verify_walk_forward_report(tmp_path)
 
