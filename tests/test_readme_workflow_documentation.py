@@ -82,7 +82,7 @@ def test_readme_matches_hourly_portfolio_artifact_pipeline() -> None:
         in portfolio_script
     )
     assert '"--fail-on-reject"' in portfolio_script
-    report_write = portfolio_script.index("paths = write_portfolio_risk_report(")
+    report_write = portfolio_script.index("paths = write_portfolio_risk_bundle(")
     gate_return = portfolio_script.index(
         "return 1 if args.fail_on_reject and not risk_gate_passes else 0"
     )
