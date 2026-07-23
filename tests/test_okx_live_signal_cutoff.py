@@ -161,11 +161,11 @@ def test_completed_bar_cutoff_applies_its_own_network_bound() -> None:
         )
 
 
-def test_completed_bar_cutoff_rejects_unbound_freshness_metadata() -> None:
+def test_completed_bar_cutoff_rejects_post_download_metadata_mutation() -> None:
     snapshot = _download(_real_okx_rows(), as_of="2026-07-21T11:59:59+00:00")
     snapshot.metadata["freshness_age_seconds"] = 0.0
 
-    with pytest.raises(ValueError, match="freshness age does not match"):
+    with pytest.raises(ValueError, match="snapshot metadata changed after download"):
         build_okx_completed_bar_cutoff(
             snapshot,
             server_time_sample=_server_time_sample(),
