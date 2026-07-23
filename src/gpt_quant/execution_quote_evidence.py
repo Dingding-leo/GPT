@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import base64
+import binascii
 import hashlib
+import json
 import os
 import re
 import stat
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,24 +24,144 @@ _ERROR_LABEL = "execution quote evidence store"
 _LOCK_NAME = ".execution-quote-evidence.lock"
 _JSON_NAME = re.compile(r"([0-9a-f]{64})\.json")
 _STAGE_NAME = re.compile(r"\.execution-quote-[0-9]+-[0-9a-f]{16}\.tmp")
+_EVIDENCE_SCHEMA_VERSION = 1
+_EVIDENCE_KEYS = {
+    "schema_version",
+    "snapshot",
+    "source_response_base64",
+    "instrument_snapshot_base64",
+}
+
+
+def _canonical_json_bytes(payload: Mapping[str, object]) -> bytes:
+    return json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode("utf-8")
+
+
+def _reject_duplicate_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"execution quote evidence JSON contains duplicate field {key!r}")
+        result[key] = value
+    return result
+
+
+def _required_artifact_bytes(value: object, *, field_name: str) -> bytes:
+    if not isinstance(value, bytes) or not value:
+        raise ValueError(f"{field_name} must be non-empty immutable bytes")
+    return value
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionQuoteEvidence:
+    """One quote plus the exact public bytes needed to reconstruct its provenance."""
+
+    snapshot: ExecutionQuoteSnapshot
+    source_response_bytes: bytes
+    instrument_snapshot_bytes: bytes
+    schema_version: int = _EVIDENCE_SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.snapshot, ExecutionQuoteSnapshot):
+            raise TypeError("snapshot must be an ExecutionQuoteSnapshot")
+        if self.schema_version != _EVIDENCE_SCHEMA_VERSION:
+            raise ValueError(f"unsupported execution quote evidence schema {self.schema_version!r}")
+        for field_name in ("source_response_bytes", "instrument_snapshot_bytes"):
+            object.__setattr__(
+                self,
+                field_name,
+                _required_artifact_bytes(getattr(self, field_name), field_name=field_name),
+            )
+        if (
+            hashlib.sha256(self.source_response_bytes).hexdigest()
+            != self.snapshot.source_response_sha256
+        ):
+            raise ValueError("source response bytes do not match execution quote hash")
+        if (
+            hashlib.sha256(self.instrument_snapshot_bytes).hexdigest()
+            != self.snapshot.instrument_snapshot_sha256
+        ):
+            raise ValueError("instrument snapshot bytes do not match execution quote hash")
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "snapshot": self.snapshot.to_dict(),
+            "source_response_base64": base64.b64encode(self.source_response_bytes).decode("ascii"),
+            "instrument_snapshot_base64": base64.b64encode(
+                self.instrument_snapshot_bytes
+            ).decode("ascii"),
+        }
+
+    def to_json_bytes(self) -> bytes:
+        return _canonical_json_bytes(self.to_dict()) + b"\n"
+
+    @classmethod
+    def from_json_bytes(cls, value: bytes | str) -> ExecutionQuoteEvidence:
+        if isinstance(value, bytes):
+            try:
+                serialized = value.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise ValueError("execution quote evidence JSON is unreadable") from exc
+        elif isinstance(value, str):
+            serialized = value
+        else:
+            raise ValueError("execution quote evidence JSON is unreadable")
+        try:
+            payload = json.loads(serialized, object_pairs_hook=_reject_duplicate_fields)
+        except json.JSONDecodeError as exc:
+            raise ValueError("execution quote evidence JSON is unreadable") from exc
+        if not isinstance(payload, Mapping) or set(payload) != _EVIDENCE_KEYS:
+            raise ValueError("execution quote evidence fields do not match schema")
+        if payload["schema_version"] != _EVIDENCE_SCHEMA_VERSION:
+            raise ValueError(
+                f"unsupported execution quote evidence schema {payload['schema_version']!r}"
+            )
+        try:
+            source_response_bytes = base64.b64decode(
+                payload["source_response_base64"], validate=True
+            )
+            instrument_snapshot_bytes = base64.b64decode(
+                payload["instrument_snapshot_base64"], validate=True
+            )
+        except (binascii.Error, TypeError, ValueError) as exc:
+            raise ValueError("execution quote evidence contains invalid base64") from exc
+        record = cls(
+            snapshot=ExecutionQuoteSnapshot.from_mapping(payload["snapshot"]),
+            source_response_bytes=source_response_bytes,
+            instrument_snapshot_bytes=instrument_snapshot_bytes,
+        )
+        if serialized.encode("utf-8") != record.to_json_bytes():
+            raise ValueError("execution quote evidence JSON must use canonical encoding")
+        return record
 
 
 @dataclass(frozen=True, slots=True)
 class ExecutionQuoteEvidenceStore:
     """Replay-verified immutable execution quotes and their deterministic root."""
 
-    snapshots: tuple[ExecutionQuoteSnapshot, ...]
+    records: tuple[ExecutionQuoteEvidence, ...]
     sha256: str
 
     @property
+    def snapshots(self) -> tuple[ExecutionQuoteSnapshot, ...]:
+        return tuple(record.snapshot for record in self.records)
+
+    @property
     def count(self) -> int:
-        return len(self.snapshots)
+        return len(self.records)
 
     def to_bytes(self) -> bytes:
-        return b"".join(snapshot.to_json_bytes() for snapshot in self.snapshots)
+        return b"".join(record.to_json_bytes() for record in self.records)
 
 
-def _sort_key(snapshot: ExecutionQuoteSnapshot) -> tuple[object, ...]:
+def _sort_key(record: ExecutionQuoteEvidence) -> tuple[object, ...]:
+    snapshot = record.snapshot
     return (
         snapshot.received_at_utc,
         snapshot.observed_at_utc,
@@ -48,20 +171,19 @@ def _sort_key(snapshot: ExecutionQuoteSnapshot) -> tuple[object, ...]:
     )
 
 
-def _store_from_snapshots(
-    snapshots: tuple[ExecutionQuoteSnapshot, ...],
+def _store_from_records(
+    records: tuple[ExecutionQuoteEvidence, ...],
 ) -> ExecutionQuoteEvidenceStore:
-    ordered = tuple(sorted(snapshots, key=_sort_key))
+    ordered = tuple(sorted(records, key=_sort_key))
     seen_ids: set[str] = set()
-    for snapshot in ordered:
-        if snapshot.snapshot_id in seen_ids:
-            raise ValueError(
-                f"{_ERROR_LABEL} contains duplicate snapshot ID {snapshot.snapshot_id}"
-            )
-        seen_ids.add(snapshot.snapshot_id)
-    payload = b"".join(snapshot.to_json_bytes() for snapshot in ordered)
+    for record in ordered:
+        snapshot_id = record.snapshot.snapshot_id
+        if snapshot_id in seen_ids:
+            raise ValueError(f"{_ERROR_LABEL} contains duplicate snapshot ID {snapshot_id}")
+        seen_ids.add(snapshot_id)
+    payload = b"".join(record.to_json_bytes() for record in ordered)
     return ExecutionQuoteEvidenceStore(
-        snapshots=ordered,
+        records=ordered,
         sha256=hashlib.sha256(payload).hexdigest(),
     )
 
@@ -131,7 +253,7 @@ def _validate_regular_private_file(descriptor: int, *, label: str) -> os.stat_re
     return file_stat
 
 
-def _read_snapshot_file(directory_descriptor: int, name: str) -> ExecutionQuoteSnapshot:
+def _read_snapshot_file(directory_descriptor: int, name: str) -> ExecutionQuoteEvidence:
     match = _JSON_NAME.fullmatch(name)
     if match is None:
         raise ValueError(f"{_ERROR_LABEL} contains unexpected entry {name!r}")
@@ -165,10 +287,10 @@ def _read_snapshot_file(directory_descriptor: int, name: str) -> ExecutionQuoteS
             raise RuntimeError(f"{_ERROR_LABEL} snapshot changed during replay")
     finally:
         os.close(descriptor)
-    snapshot = ExecutionQuoteSnapshot.from_json_bytes(b"".join(chunks))
-    if snapshot.snapshot_id != match.group(1):
+    record = ExecutionQuoteEvidence.from_json_bytes(b"".join(chunks))
+    if record.snapshot.snapshot_id != match.group(1):
         raise ValueError(f"{_ERROR_LABEL} filename does not match canonical snapshot ID")
-    return snapshot
+    return record
 
 
 def _recover_stale_stages(directory_descriptor: int) -> None:
@@ -212,8 +334,8 @@ def _recover_stale_stages(directory_descriptor: int) -> None:
                     or after_stat.st_size != staged_stat.st_size
                 ):
                     raise RuntimeError(f"{_ERROR_LABEL} staged snapshot changed during recovery")
-                snapshot = ExecutionQuoteSnapshot.from_json_bytes(b"".join(chunks))
-                destination_name = f"{snapshot.snapshot_id}.json"
+                record = ExecutionQuoteEvidence.from_json_bytes(b"".join(chunks))
+                destination_name = f"{record.snapshot.snapshot_id}.json"
                 try:
                     destination_stat = os.stat(
                         destination_name,
@@ -241,8 +363,8 @@ def _recover_stale_stages(directory_descriptor: int) -> None:
 
 def _load_from_descriptor(directory_descriptor: int) -> ExecutionQuoteEvidenceStore:
     names = sorted(name for name in os.listdir(directory_descriptor) if name != _LOCK_NAME)
-    snapshots = tuple(_read_snapshot_file(directory_descriptor, name) for name in names)
-    return _store_from_snapshots(snapshots)
+    records = tuple(_read_snapshot_file(directory_descriptor, name) for name in names)
+    return _store_from_records(records)
 
 
 @contextmanager
@@ -310,14 +432,20 @@ def load_execution_quote_evidence_store(
 def record_execution_quote_evidence(
     path: str | Path,
     snapshot: ExecutionQuoteSnapshot,
+    *,
+    source_response_bytes: bytes,
+    instrument_snapshot_bytes: bytes,
 ) -> ExecutionQuoteEvidenceStore:
-    """Persist one immutable quote idempotently and replay the complete store."""
+    """Persist one quote and its exact source artifacts, then replay the store."""
 
-    if not isinstance(snapshot, ExecutionQuoteSnapshot):
-        raise TypeError("snapshot must be an ExecutionQuoteSnapshot")
+    record = ExecutionQuoteEvidence(
+        snapshot=snapshot,
+        source_response_bytes=source_response_bytes,
+        instrument_snapshot_bytes=instrument_snapshot_bytes,
+    )
     store_path = Path(path)
     destination_name = f"{snapshot.snapshot_id}.json"
-    payload = snapshot.to_json_bytes()
+    payload = record.to_json_bytes()
     with _exclusive_store_lock(store_path) as (directory_descriptor, _):
         try:
             existing = _read_snapshot_file(directory_descriptor, destination_name)
@@ -325,7 +453,7 @@ def record_execution_quote_evidence(
             existing = None
         if existing is not None:
             if existing.to_json_bytes() != payload:
-                raise ValueError(f"{_ERROR_LABEL} snapshot ID maps to conflicting bytes")
+                raise ValueError(f"{_ERROR_LABEL} snapshot ID maps to conflicting evidence")
             return _load_from_descriptor(directory_descriptor)
 
         temporary_name = f".execution-quote-{os.getpid()}-{token_hex(8)}.tmp"
