@@ -21,7 +21,10 @@ def _fixture_inputs() -> tuple[dict[str, Path], dict[str, str], dict[str, object
         name: _FIXTURE_DIR / details["fixture_file"]
         for name, details in metadata["instruments"].items()
     }
-    hashes = {name: details["fixture_sha256"] for name, details in metadata["instruments"].items()}
+    hashes = {
+        name: details["fixture_sha256"]
+        for name, details in metadata["instruments"].items()
+    }
     provenance = {
         key: metadata[key]
         for key in (
@@ -57,12 +60,58 @@ def test_underlying_risk_exposes_real_sleeve_exposure_turnover_and_fee(tmp_path:
         assert metrics["current_absolute_exposure"] == pytest.approx(
             abs(frame["position"].iloc[-1])
         )
-        assert metrics["maximum_absolute_exposure"] == pytest.approx(frame["position"].abs().max())
+        assert metrics["maximum_absolute_exposure"] == pytest.approx(
+            frame["position"].abs().max()
+        )
         assert metrics["total_absolute_turnover"] == pytest.approx(frame["turnover"].sum())
         assert metrics["exchange_fee_sum"] == pytest.approx(frame["trading_cost"].sum())
         assert metrics["exchange_fee_sum"] == pytest.approx(
             metrics["total_absolute_turnover"] * 0.0005
         )
+
+    net_returns = pd.DataFrame(
+        {name: frame["strategy_return"] for name, frame in source_frames.items()}
+    )
+    initial_weights = pd.Series({"BTC-USDT": 0.5, "ETH-USDT": 0.5})
+    sleeve_values = (1.0 + net_returns).cumprod().mul(initial_weights, axis=1)
+    end_weights = sleeve_values.div(sleeve_values.sum(axis=1), axis=0)
+    start_weights = end_weights.shift(1)
+    start_weights.iloc[0] = initial_weights
+    weighted_net_returns = start_weights * net_returns
+    portfolio_net_return = weighted_net_returns.sum(axis=1)
+    annualized_variance = float(portfolio_net_return.var(ddof=1) * 365)
+    annualized_covariance = weighted_net_returns.apply(
+        lambda contribution: contribution.cov(portfolio_net_return) * 365
+    )
+
+    for name, variance_contribution in annualized_covariance.items():
+        metrics = result.sleeve_metrics[name]
+        assert metrics["annualized_net_variance_contribution"] == pytest.approx(
+            variance_contribution
+        )
+        assert metrics["net_variance_contribution_fraction"] == pytest.approx(
+            variance_contribution / annualized_variance
+        )
+        assert metrics["annualized_net_volatility_contribution"] == pytest.approx(
+            variance_contribution / annualized_variance**0.5
+        )
+
+    assert result.portfolio_metrics["annualized_net_variance"] == pytest.approx(
+        annualized_variance
+    )
+    assert result.portfolio_metrics["annualized_net_volatility"] == pytest.approx(
+        annualized_variance**0.5
+    )
+    assert result.portfolio_metrics[
+        "annualized_net_variance_contribution_sum"
+    ] == pytest.approx(annualized_variance)
+    assert result.portfolio_metrics[
+        "annualized_net_volatility_contribution_sum"
+    ] == pytest.approx(annualized_variance**0.5)
+    assert result.portfolio_metrics[
+        "net_variance_contribution_fraction_sum"
+    ] == pytest.approx(1.0)
+    assert result.portfolio_metrics["risk_contribution_status"] == "measured"
 
     assert result.portfolio_metrics["average_start_of_bar_absolute_market_exposure"] < 1.0
     assert result.portfolio_metrics["maximum_start_of_bar_absolute_market_exposure"] < 1.0
