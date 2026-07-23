@@ -22,9 +22,9 @@ jobs:
       - name: Produce canonical diagnostics
         shell: bash
         run: |
-          set -euo pipefail
-          python -m pip install -e ".[dev]"
           mkdir -p /tmp/pr390-security-format
+          python -m pip install -e ".[dev]" \
+            > /tmp/pr390-security-format/install.txt 2>&1 || true
           python -m ruff check \
             src/gpt_quant/execution_quote_binding_journal.py \
             tests/test_execution_quote_binding_journal.py \
@@ -34,11 +34,16 @@ jobs:
           python -m ruff format \
             src/gpt_quant/execution_quote_binding_journal.py \
             tests/test_execution_quote_binding_journal.py \
-            tests/test_execution_quote_binding_journal_security.py
-          cp src/gpt_quant/execution_quote_binding_journal.py /tmp/pr390-security-format/
-          cp tests/test_execution_quote_binding_journal.py /tmp/pr390-security-format/
-          cp tests/test_execution_quote_binding_journal_security.py /tmp/pr390-security-format/
+            tests/test_execution_quote_binding_journal_security.py \
+            > /tmp/pr390-security-format/format.txt 2>&1 || true
+          cp src/gpt_quant/execution_quote_binding_journal.py \
+            /tmp/pr390-security-format/module.py || true
+          cp tests/test_execution_quote_binding_journal.py \
+            /tmp/pr390-security-format/test_journal.py || true
+          cp tests/test_execution_quote_binding_journal_security.py \
+            /tmp/pr390-security-format/test_security.py || true
       - name: Upload diagnostics
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: pr390-security-format-diagnostic
