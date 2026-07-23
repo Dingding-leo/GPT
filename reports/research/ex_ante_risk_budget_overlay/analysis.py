@@ -471,13 +471,9 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
                 adjacent_labels.append(labels[budget_index + 1])
             neighbourhood_passes = all(
                 (
-                    float(frame_metrics(market_data[market]["paths"][other])["total_return"])
-                    > 0.0
-                    and float(frame_metrics(market_data[market]["paths"][other])["sharpe"])
-                    > 0.0
-                    and float(
-                        frame_metrics(market_data[market]["paths"][other])["max_drawdown"]
-                    )
+                    float(frame_metrics(market_data[market]["paths"][other])["total_return"]) > 0.0
+                    and float(frame_metrics(market_data[market]["paths"][other])["sharpe"]) > 0.0
+                    and float(frame_metrics(market_data[market]["paths"][other])["max_drawdown"])
                     > -0.40
                 )
                 for other in adjacent_labels
@@ -504,8 +500,7 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
                     delay_passes &= (
                         float(delayed_metrics["total_return"]) > 0.0
                         and float(delayed_metrics["max_drawdown"]) > -0.40
-                        and float(delayed_bootstrap["annualized_arithmetic_mean"]["lower"])
-                        > 0.0
+                        and float(delayed_bootstrap["annualized_arithmetic_mean"]["lower"]) > 0.0
                         and float(delayed_bootstrap["sharpe"]["lower"]) > 0.0
                     )
             benchmark_passes = (
