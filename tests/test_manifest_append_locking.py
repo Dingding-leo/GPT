@@ -9,7 +9,7 @@ import pytest
 
 from gpt_quant import append_experiment_manifest
 from gpt_quant.experiment_registry import _registry_lock, load_manifest_entries
-from gpt_quant.reproducibility import build_experiment_manifest_entry, file_sha256
+from gpt_quant.reproducibility import build_experiment_manifest_entry
 
 _FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc"
 _CANDLES = _FIXTURE_ROOT / "candles.csv"
@@ -89,4 +89,3 @@ def test_manifest_append_waits_for_cross_process_lock(tmp_path: Path) -> None:
 
     stored = load_manifest_entries(manifest, require_canonical=True)
     assert [stored_entry["run_id"] for stored_entry in stored] == [entry["run_id"]]
-    assert file_sha256(manifest) == file_sha256(manifest)
