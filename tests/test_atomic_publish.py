@@ -5,7 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from gpt_quant._atomic_publish import publish_payloads_atomically
+from gpt_quant._atomic_publish import (
+    publish_payloads_atomically,
+    publish_staged_paths_atomically,
+)
 
 
 def test_atomic_publisher_rejects_invalid_contract_before_touching_filesystem(
@@ -34,6 +37,50 @@ def test_atomic_publisher_rejects_invalid_contract_before_touching_filesystem(
             staging_prefix=".atomic-test-",
             error_label="test artifact",
         )
+    assert not output.exists()
+
+
+@pytest.mark.parametrize(
+    ("case", "expected_error"),
+    (
+        ("outside", "staged paths must be direct children of the staging directory"),
+        ("duplicate", "staged paths must be unique"),
+    ),
+)
+def test_atomic_publisher_rejects_unowned_staged_paths_before_commit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+    expected_error: str,
+) -> None:
+    output = tmp_path / "artifacts"
+    outside_source = tmp_path / "operator-notes.txt"
+    outside_source.write_bytes(b"caller-owned\n")
+    paths = {"json": output / "result.json", "markdown": output / "result.md"}
+
+    def stage_invalid_paths(staging: Path) -> dict[str, Path]:
+        shared_staged_path = staging / "shared.tmp"
+        shared_staged_path.write_bytes(b"staged\n")
+        if case == "outside":
+            return {"json": outside_source, "markdown": shared_staged_path}
+        return {"json": shared_staged_path, "markdown": shared_staged_path}
+
+    def unexpected_replace(_source: str | Path, _destination: str | Path) -> None:
+        raise AssertionError("invalid staged paths must fail before destination replacement")
+
+    monkeypatch.setattr(os, "replace", unexpected_replace)
+
+    with pytest.raises(ValueError, match=expected_error):
+        publish_staged_paths_atomically(
+            output,
+            paths,
+            stage_paths=stage_invalid_paths,
+            commit_order=("json", "markdown"),
+            staging_prefix=".atomic-test-",
+            error_label="test artifact",
+        )
+
+    assert outside_source.read_bytes() == b"caller-owned\n"
     assert not output.exists()
 
 
