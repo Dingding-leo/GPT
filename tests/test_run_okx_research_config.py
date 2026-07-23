@@ -91,6 +91,4 @@ def test_effective_config_snapshot_is_canonical_and_manifest_bound(tmp_path: Pat
     assert config_path.read_bytes() == expected_bytes
     assert json.loads(config_path.read_text(encoding="utf-8")) == effective_config
     assert manifest_entry["config_sha256"] == canonical_json_sha256(effective_config)
-    assert manifest_entry["artifact_sha256"]["effective_config"] == file_sha256(
-        config_path
-    )
+    assert manifest_entry["artifact_sha256"]["effective_config"] == file_sha256(config_path)
