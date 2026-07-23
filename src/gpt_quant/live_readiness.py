@@ -368,8 +368,7 @@ def _ci_status_json(value: str) -> dict[str, str]:
     except json.JSONDecodeError as exc:
         raise argparse.ArgumentTypeError("--ci-status-json must contain valid JSON") from exc
     if not isinstance(payload, dict) or not all(
-        isinstance(key, str) and isinstance(outcome, str)
-        for key, outcome in payload.items()
+        isinstance(key, str) and isinstance(outcome, str) for key, outcome in payload.items()
     ):
         raise argparse.ArgumentTypeError("--ci-status-json must contain a string-to-string object")
     return payload
