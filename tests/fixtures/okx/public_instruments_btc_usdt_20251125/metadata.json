@@ -1,0 +1,12 @@
+{
+  "provider": "OKX",
+  "endpoint": "/api/v5/public/instruments",
+  "instrument_id": "BTC-USDT",
+  "instrument_type": "SPOT",
+  "source": "official OKX public-instruments response example",
+  "source_url": "https://tr.okx.com/docs-v5/zh/#public-data-rest-api-get-instruments",
+  "source_publication_date": "2025-11-25",
+  "fixture_path": "tests/fixtures/okx/public_instruments_btc_usdt_20251125/response.json",
+  "fixture_sha256": "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb",
+  "normalization": "JSON whitespace was canonicalized; exchange-published field values were preserved."
+}
