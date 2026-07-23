@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - auto/docs/20260722-01-reproduction-guide
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
