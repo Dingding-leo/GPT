@@ -24,6 +24,22 @@ def _real_rows() -> list[list[str]]:
     return [list(row) for row in json.loads(rows_bytes)]
 
 
+def _fetch_real_snapshot():
+    rows = _real_rows()
+
+    def getter(url: str, timeout: float) -> dict[str, object]:
+        return {"code": "0", "msg": "", "data": rows}
+
+    return fetch_okx_history_candles(
+        inst_id="BTC-USDT",
+        bar="1Dutc",
+        limit=len(rows),
+        max_pages=1,
+        pause_seconds=0.0,
+        get_json=getter,
+    )
+
+
 def test_fetch_reuses_canonical_snapshot_bytes_without_changing_evidence(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -73,3 +89,12 @@ def test_fetch_reuses_canonical_snapshot_bytes_without_changing_evidence(
         hashlib.sha256(paths["raw"].read_bytes()).hexdigest()
         == snapshot.metadata["raw_pages_sha256"]
     )
+
+
+def test_reused_canonical_bytes_preserve_post_fetch_mutation_detection(tmp_path: Path) -> None:
+    snapshot = _fetch_real_snapshot()
+    original_close = float(snapshot.candles.iloc[-1]["close"])
+    snapshot.candles.iloc[-1, snapshot.candles.columns.get_loc("close")] = original_close / 2.0
+
+    with pytest.raises(ValueError, match="candles changed after download"):
+        write_okx_snapshot(snapshot, tmp_path / "mutated")
