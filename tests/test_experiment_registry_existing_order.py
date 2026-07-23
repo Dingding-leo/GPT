@@ -32,7 +32,7 @@ def _entry(recorded_at_utc: str) -> dict[str, object]:
         data_paths={"normalized_csv": _CANDLES, "raw_pages": _RAW},
         artifact_paths={"fixture_metadata": _METADATA},
         candidate_count=27,
-        result_classification="fixture-only registry migration test; no performance claim",
+        result_classification="fixture-only registry prefix test; no performance claim",
         instrument_id=metadata["instrument_id"],
         bar=metadata["bar"],
         code_provenance={
@@ -44,33 +44,32 @@ def _entry(recorded_at_utc: str) -> dict[str, object]:
     )
 
 
-def _canonical_lines(entries: list[dict[str, object]]) -> str:
-    return "".join(
-        json.dumps(entry, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
-        for entry in entries
+def _write_manifest(path: Path, entry: dict[str, object]) -> None:
+    path.write_text(
+        json.dumps(entry, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n",
+        encoding="utf-8",
     )
 
 
-def test_registry_recanonicalizes_existing_global_order_without_new_runs(
-    tmp_path: Path,
-) -> None:
+def test_registry_appends_older_run_without_reordering_history(tmp_path: Path) -> None:
     earlier = _entry("2026-07-21T15:01:16.374294+00:00")
     later = _entry("2026-07-21T16:01:16.374294+00:00")
-    manifest = tmp_path / "manifest.jsonl"
+    earlier_manifest = tmp_path / "earlier.jsonl"
+    later_manifest = tmp_path / "later.jsonl"
     registry = tmp_path / "registry.jsonl"
-    manifest.write_text(_canonical_lines([later, earlier]), encoding="utf-8")
+    _write_manifest(earlier_manifest, earlier)
+    _write_manifest(later_manifest, later)
 
-    merge_experiment_manifests(registry, [manifest])
-    canonical_bytes = registry.read_bytes()
+    merge_experiment_manifests(registry, [later_manifest])
+    historical_prefix = registry.read_bytes()
+    result = merge_experiment_manifests(registry, [earlier_manifest])
+    final_bytes = registry.read_bytes()
     stored = load_manifest_entries(registry)
-    registry.write_text(_canonical_lines(list(reversed(stored))), encoding="utf-8")
-    assert registry.read_bytes() != canonical_bytes
 
-    result = merge_experiment_manifests(registry, [])
-
-    assert result.existing_runs == 2
-    assert result.appended_runs == 0
+    assert result.existing_runs == 1
+    assert result.appended_runs == 1
     assert result.skipped_runs == 0
     assert result.total_runs == 2
-    assert registry.read_bytes() == canonical_bytes
+    assert final_bytes.startswith(historical_prefix)
+    assert [entry["run_id"] for entry in stored] == [later["run_id"], earlier["run_id"]]
     assert result.registry_sha256 == file_sha256(registry)
