@@ -39,9 +39,7 @@ def test_example_replays_one_canonical_non_order_attempt() -> None:
     assert attempt.requested_base_quantity == "0.1"
     assert attempt.filled_base_quantity == "0.1"
     assert attempt.average_fill_price == attempt.reference_ask_price
-    assert attempt.submitted_at_utc == datetime(
-        2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC
-    )
+    assert attempt.submitted_at_utc == datetime(2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC)
     assert attempt.outcome_at_utc == datetime(2026, 7, 21, 0, 0, 0, 500_000, tzinfo=UTC)
     assert attempt.decision_to_submission_latency_us == 50_000
     assert attempt.quote_observed_to_submission_latency_us == 150_000
