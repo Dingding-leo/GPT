@@ -101,10 +101,7 @@ def _sources(tmp_path: Path, *, quote: ExecutionQuoteSnapshot | None = None):
 
 def test_binding_journal_replays_from_exact_persisted_sources(tmp_path: Path) -> None:
     assert hashlib.sha256(_REAL_OKX_BOOK_BYTES).hexdigest() == _REAL_OKX_BOOK_SHA256
-    assert (
-        hashlib.sha256(_REAL_OKX_INSTRUMENT_BYTES).hexdigest()
-        == _REAL_OKX_INSTRUMENT_SHA256
-    )
+    assert hashlib.sha256(_REAL_OKX_INSTRUMENT_BYTES).hexdigest() == _REAL_OKX_INSTRUMENT_SHA256
     intent, quote, intent_journal, quote_store = _sources(tmp_path)
     binding = bind_execution_quote(
         intent,
