@@ -349,6 +349,18 @@ def fetch_okx_top_of_book(
     )
     if request_round_trip_bound <= 0:
         raise ValueError("max_request_round_trip_seconds must be positive")
+    server_round_trip_bound = _required_finite_number(
+        max_server_round_trip_seconds,
+        field="max_server_round_trip_seconds",
+    )
+    if server_round_trip_bound <= 0:
+        raise ValueError("max_server_round_trip_seconds must be positive")
+    clock_skew_bound = _required_finite_number(
+        max_abs_midpoint_clock_skew_seconds,
+        field="max_abs_midpoint_clock_skew_seconds",
+    )
+    if clock_skew_bound < 0:
+        raise ValueError("max_abs_midpoint_clock_skew_seconds cannot be negative")
     _required_nonnegative_integer(maximum_quote_age_ms, field="maximum_quote_age_ms")
 
     clock = now or _current_utc_datetime
@@ -375,8 +387,8 @@ def fetch_okx_top_of_book(
     server_time_sample = sample_okx_server_time(
         base_url=normalized_base_url,
         timeout=timeout_seconds,
-        max_round_trip_seconds=max_server_round_trip_seconds,
-        max_abs_clock_skew_seconds=max_abs_midpoint_clock_skew_seconds,
+        max_round_trip_seconds=server_round_trip_bound,
+        max_abs_clock_skew_seconds=clock_skew_bound,
         get_json=get_json,
         now=clock,
     )

@@ -145,3 +145,33 @@ def test_fetch_okx_top_of_book_rejects_slow_public_response() -> None:
                 "2021-08-26T08:27:16.450000Z",
             ),
         )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("max_server_round_trip_seconds", float("inf"), "must be a finite number"),
+        ("max_server_round_trip_seconds", float("nan"), "must be a finite number"),
+        ("max_server_round_trip_seconds", 0.0, "must be positive"),
+        ("max_abs_midpoint_clock_skew_seconds", float("inf"), "must be a finite number"),
+        ("max_abs_midpoint_clock_skew_seconds", float("nan"), "must be a finite number"),
+        ("max_abs_midpoint_clock_skew_seconds", -0.001, "cannot be negative"),
+    ],
+)
+def test_fetch_okx_top_of_book_rejects_unbounded_server_timing_before_io(
+    field: str,
+    value: float,
+    message: str,
+) -> None:
+    def forbidden(*args: object, **kwargs: object) -> object:
+        raise AssertionError("invalid timing policy must fail before public network or clock access")
+
+    with pytest.raises(ValueError, match=message):
+        fetch_okx_top_of_book(
+            instrument_id="BTC-USDT",
+            instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
+            get_bytes=forbidden,
+            get_json=forbidden,
+            now=forbidden,
+            **{field: value},
+        )
