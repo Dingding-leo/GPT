@@ -8,7 +8,7 @@
     "min_position": 0.0,
     "trend_weight": 0.7,
     "reversal_weight": 0.3,
-    "transaction_cost_bps": 10.0,
+    "transaction_cost_bps": 5.0,
     "annualization": 365
   },
   "search": {
