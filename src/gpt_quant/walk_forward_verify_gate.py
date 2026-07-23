@@ -313,62 +313,51 @@ def _validate_accounting(payload: Mapping[str, object], persisted: pd.DataFrame)
 
 
 def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int | str]:
-    """Verify persisted 5 bps walk-forward evidence from immutable source artifacts."""
+    """Fail closed on persisted 5 bps source, accounting, timestamp, metric, and hash drift."""
 
     output = Path(output_dir)
     report_path = output / "walk_forward.json"
     returns_path = output / "walk_forward_returns.csv"
-    if not report_path.is_file() or not returns_path.is_file():
-        raise ValueError("walk-forward verification requires report JSON and returns CSV")
-
     report_bytes = report_path.read_bytes()
     returns_bytes = returns_path.read_bytes()
     try:
         payload = json.loads(report_bytes.decode("utf-8"))
-    except (UnicodeError, json.JSONDecodeError) as exc:
-        raise ValueError("walk-forward report JSON is unreadable") from exc
-    if not isinstance(payload, Mapping):
-        raise ValueError("walk-forward report JSON must contain a mapping")
-    try:
         persisted = pd.read_csv(returns_path, float_precision="round_trip")
-    except (OSError, UnicodeError, pd.errors.ParserError) as exc:
-        raise ValueError("walk-forward returns CSV is unreadable") from exc
-    if persisted.empty:
-        raise ValueError("walk-forward returns CSV cannot be empty")
+    except (UnicodeError, json.JSONDecodeError, pd.errors.ParserError) as exc:
+        raise ValueError("persisted walk-forward evidence is unreadable") from exc
+    payload_mapping = _mapping(payload, "walk-forward report")
 
-    _validate_explicit_timestamps(payload, persisted)
-    source_sha256, predecessor, source_close = _validate_source_returns(
-        output,
-        payload,
-        persisted,
-    )
-    selected_folds, selected_rows = _validate_selected_position_paths(
-        payload,
+    _validate_explicit_timestamps(payload_mapping, persisted)
+    (
+        source_snapshot_sha256,
+        source_preceding_close_timestamp,
+        source_close,
+    ) = _validate_source_returns(output, payload_mapping, persisted)
+    selected_folds_verified, selected_rows_verified = _validate_selected_position_paths(
+        payload_mapping,
         persisted,
         source_close,
     )
-    _validate_accounting(payload, persisted)
-    metric_verification = _verify_report_metrics(output)
+    _validate_accounting(payload_mapping, persisted)
+    verification = _verify_report_metrics(output, tolerance=_METRIC_TOLERANCE)
 
-    if report_bytes != report_path.read_bytes():
-        raise ValueError("walk-forward report changed during verification")
-    if returns_bytes != returns_path.read_bytes():
-        raise ValueError("walk-forward returns changed during verification")
+    if report_bytes != report_path.read_bytes() or returns_bytes != returns_path.read_bytes():
+        raise ValueError("persisted walk-forward evidence changed during verification")
+    if verification["report_json_sha256"] != _sha256_bytes(report_bytes):
+        raise ValueError("walk-forward report hash does not match verified bytes")
+    if verification["returns_csv_sha256"] != _sha256_bytes(returns_bytes):
+        raise ValueError("walk-forward returns hash does not match verified bytes")
 
-    verified = dict(metric_verification)
-    verified.update(
-        {
-            "accounting_tolerance": _ACCOUNTING_TOLERANCE,
-            "source_snapshot_sha256": source_sha256,
-            "source_price_rows_verified": len(persisted),
-            "source_preceding_close_timestamp": predecessor,
-            "asset_return_source": "immutable_normalized_okx_close_pct_change",
-            "selected_folds_verified": selected_folds,
-            "selected_target_rows_verified": selected_rows,
-            "selected_position_rows_verified": selected_rows,
-            "target_position_source": (
-                "immutable_normalized_okx_close_and_persisted_selected_config"
-            ),
-        }
+    verification["accounting_tolerance"] = _ACCOUNTING_TOLERANCE
+    verification["metric_tolerance"] = _METRIC_TOLERANCE
+    verification["source_snapshot_sha256"] = source_snapshot_sha256
+    verification["source_price_rows_verified"] = len(persisted)
+    verification["source_preceding_close_timestamp"] = source_preceding_close_timestamp
+    verification["asset_return_source"] = "immutable_normalized_okx_close_pct_change"
+    verification["selected_folds_verified"] = selected_folds_verified
+    verification["selected_target_rows_verified"] = selected_rows_verified
+    verification["selected_position_rows_verified"] = selected_rows_verified
+    verification["target_position_source"] = (
+        "immutable_normalized_okx_close_and_persisted_selected_config"
     )
-    return verified
+    return verification
