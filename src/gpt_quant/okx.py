@@ -7,7 +7,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from contextlib import suppress
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import InitVar, dataclass, field
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from itertools import pairwise
@@ -50,22 +50,41 @@ class OKXCandleSnapshot:
     _source_normalized_csv_sha256: str = field(init=False, repr=False, compare=False)
     _source_raw_pages_sha256: str = field(init=False, repr=False, compare=False)
     _source_metadata_sha256: str = field(init=False, repr=False, compare=False)
+    _canonical_csv: InitVar[bytes | None] = None
+    _canonical_raw: InitVar[bytes | None] = None
+    _canonical_metadata: InitVar[bytes | None] = None
 
-    def __post_init__(self) -> None:
+    def __post_init__(
+        self,
+        _canonical_csv: bytes | None,
+        _canonical_raw: bytes | None,
+        _canonical_metadata: bytes | None,
+    ) -> None:
+        canonical_csv = (
+            _canonical_csv if _canonical_csv is not None else _canonical_csv_bytes(self.candles)
+        )
+        canonical_raw = (
+            _canonical_raw if _canonical_raw is not None else _canonical_json_bytes(self.raw_pages)
+        )
+        canonical_metadata = (
+            _canonical_metadata
+            if _canonical_metadata is not None
+            else _canonical_json_bytes(self.metadata)
+        )
         object.__setattr__(
             self,
             "_source_normalized_csv_sha256",
-            _sha256(_canonical_csv_bytes(self.candles)),
+            _sha256(canonical_csv),
         )
         object.__setattr__(
             self,
             "_source_raw_pages_sha256",
-            _sha256(_canonical_json_bytes(self.raw_pages)),
+            _sha256(canonical_raw),
         )
         object.__setattr__(
             self,
             "_source_metadata_sha256",
-            _sha256(_canonical_json_bytes(self.metadata)),
+            _sha256(canonical_metadata),
         )
 
     @property
@@ -545,7 +564,15 @@ def fetch_okx_history_candles(
             "A close-price backtest does not model order-book depth or guaranteed fills.",
         ],
     }
-    return OKXCandleSnapshot(candles=candles, raw_pages=tuple(raw_pages), metadata=metadata)
+    canonical_metadata = _canonical_json_bytes(metadata)
+    return OKXCandleSnapshot(
+        candles=candles,
+        raw_pages=tuple(raw_pages),
+        metadata=metadata,
+        _canonical_csv=canonical_csv,
+        _canonical_raw=canonical_raw,
+        _canonical_metadata=canonical_metadata,
+    )
 
 
 def _verified_snapshot_bytes(
