@@ -251,9 +251,7 @@ def test_verifier_rejects_self_consistent_path_from_wrong_selected_model(
     returns["gross_strategy_return"] = returns["position"] * returns["asset_return"]
     fee_bps = float(report["settings"]["base_config"]["transaction_cost_bps"])
     returns["trading_cost"] = returns["turnover"] * fee_bps / 10_000.0
-    returns["strategy_return"] = (
-        returns["gross_strategy_return"] - returns["trading_cost"]
-    )
+    returns["strategy_return"] = returns["gross_strategy_return"] - returns["trading_cost"]
     returns["nav"] = (1.0 + returns["strategy_return"]).cumprod()
     returns.to_csv(paths["returns"], index=False)
 
