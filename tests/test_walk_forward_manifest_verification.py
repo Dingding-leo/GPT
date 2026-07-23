@@ -156,3 +156,59 @@ def test_manifest_verifier_rejects_valid_but_wrong_checkout_commit(
             paths["manifest"],
             repository_root=tmp_path,
         )
+
+
+@pytest.mark.parametrize(
+    ("field", "forged_value", "message"),
+    [
+        ("experiment_id", "exp-forged-audit-alias", "manifest experiment_id does not match"),
+        ("run_id", "run-forged-audit-alias", "manifest run_id does not match"),
+    ],
+)
+def test_manifest_verifier_rejects_forged_content_addressed_identity(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    field: str,
+    forged_value: str,
+    message: str,
+) -> None:
+    paths = _write_manifest_bound_report(btc_usdt_prices, tmp_path)
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    entry = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    entry[field] = forged_value
+    paths["manifest"].write_text(_canonical_json(entry), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        verify_walk_forward_manifest(
+            tmp_path,
+            paths["manifest"],
+            repository_root=tmp_path,
+        )
+
+
+@pytest.mark.parametrize(
+    "recorded_at_utc",
+    [
+        "2026-07-24T00:00:00",
+        "2026-07-24T09:30:00+09:30",
+    ],
+)
+def test_manifest_verifier_rejects_ambiguous_or_non_utc_run_timestamp(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    recorded_at_utc: str,
+) -> None:
+    paths = _write_manifest_bound_report(btc_usdt_prices, tmp_path)
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
+    entry = json.loads(paths["manifest"].read_text(encoding="utf-8"))
+    entry["recorded_at_utc"] = recorded_at_utc
+    paths["manifest"].write_text(_canonical_json(entry), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="recorded_at_utc"):
+        verify_walk_forward_manifest(
+            tmp_path,
+            paths["manifest"],
+            repository_root=tmp_path,
+        )
