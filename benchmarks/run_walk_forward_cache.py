@@ -100,9 +100,7 @@ def _cache_unique_index_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> i
 def _cache_retained_array_bytes(cache: Mapping[StrategyConfig, pd.DataFrame]) -> int:
     """Count each retained column or index root buffer exactly once."""
 
-    return _unique_root_array_bytes(
-        chain(_cache_column_arrays(cache), _cache_index_arrays(cache))
-    )
+    return _unique_root_array_bytes(chain(_cache_column_arrays(cache), _cache_index_arrays(cache)))
 
 
 def _legacy_candidate_window(
