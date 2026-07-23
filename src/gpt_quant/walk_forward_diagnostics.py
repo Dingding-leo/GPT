@@ -87,9 +87,11 @@ def walk_forward_path_diagnostics(
     )
     if position_limit_breach.any():
         breach_row = int(np.flatnonzero(position_limit_breach.to_numpy(copy=False))[0])
+        breach_value = float(position.iloc[breach_row])
         raise ValueError(
             "walk-forward position breaches configured position limits at row "
-            f"{breach_row}: {position.iloc[breach_row]:.12g} not in [{minimum:.12g}, {maximum:.12g}]"
+            f"{breach_row}: {breach_value:.12g} not in "
+            f"[{minimum:.12g}, {maximum:.12g}]"
         )
     if (turnover < 0.0).any():
         raise ValueError("walk-forward turnover must be non-negative")
