@@ -25,7 +25,7 @@ _PORTFOLIO_SHA256 = "821ce470b97bfbc53529bc2f7a95bded56d5e808a4d628728285a4ffd01
 _RISK_SHA256 = "6ab0010d4ce8090657d35599267fd73910f2d9a6d9566661a3f7ed9e566f5539"
 
 
-def test_publication_fsyncs_file_then_directory_entry(
+def test_publication_fsyncs_store_parent_file_then_directory_entry(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -70,13 +70,23 @@ def test_publication_fsyncs_file_then_directory_entry(
         market_impact_bps="0.25",
         latency_ms=80,
     )
+    parent_stat = tmp_path.stat()
     events: list[str] = []
     real_fsync = store_module.os.fsync
     real_replace = store_module.os.replace
 
     def trace_fsync(descriptor: int) -> None:
-        mode = os.fstat(descriptor).st_mode
-        events.append("directory_fsync" if stat.S_ISDIR(mode) else "file_fsync")
+        opened = os.fstat(descriptor)
+        if stat.S_ISDIR(opened.st_mode):
+            parent_identity = (parent_stat.st_dev, parent_stat.st_ino)
+            opened_identity = (opened.st_dev, opened.st_ino)
+            events.append(
+                "parent_directory_fsync"
+                if opened_identity == parent_identity
+                else "decision_directory_fsync"
+            )
+        else:
+            events.append("file_fsync")
         real_fsync(descriptor)
 
     def trace_replace(source: object, destination: object) -> None:
@@ -87,5 +97,10 @@ def test_publication_fsyncs_file_then_directory_entry(
     monkeypatch.setattr(store_module.os, "replace", trace_replace)
 
     assert record_paper_order_decision(target_path, decision_directory, decision) == decision
-    assert events == ["file_fsync", "replace", "directory_fsync"]
+    assert events == [
+        "parent_directory_fsync",
+        "file_fsync",
+        "replace",
+        "decision_directory_fsync",
+    ]
     assert pending_target_position_intents(target_path, decision_directory) == ()
