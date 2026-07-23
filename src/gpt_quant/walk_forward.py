@@ -309,17 +309,25 @@ def _run_cached_candidate_window(
     return _rebase_test_window(template.loc[start:end], config, previous_position)
 
 
+def _longer_lookbacks(config: StrategyConfig) -> tuple[int, int]:
+    return (
+        max(2, round(config.momentum_lookback * 1.2)),
+        max(1, round(config.reversal_lookback * 1.2)),
+    )
+
+
 def _perturb(config: StrategyConfig) -> dict[str, StrategyConfig]:
     lower_weight = max(0.0, config.trend_weight - 0.05)
     higher_weight = min(1.0, config.trend_weight + 0.05)
+    longer_momentum, longer_reversal = _longer_lookbacks(config)
     return {
         "shorter_lookbacks": config.with_overrides(
             momentum_lookback=max(2, round(config.momentum_lookback * 0.8)),
             reversal_lookback=max(1, round(config.reversal_lookback * 0.8)),
         ),
         "longer_lookbacks": config.with_overrides(
-            momentum_lookback=max(2, round(config.momentum_lookback * 1.2)),
-            reversal_lookback=max(1, round(config.reversal_lookback * 1.2)),
+            momentum_lookback=longer_momentum,
+            reversal_lookback=longer_reversal,
         ),
         "less_trend_weight": config.with_overrides(
             trend_weight=lower_weight,
@@ -494,17 +502,14 @@ def run_walk_forward_research(
     )
     candidate_frame_cache: dict[StrategyConfig, pd.DataFrame] = {}
     longest_lookback = max(
-        max(
-            candidate.momentum_lookback,
-            candidate.reversal_lookback,
-            candidate.volatility_lookback,
-        )
+        max(candidate.volatility_lookback, *_longer_lookbacks(candidate))
         for candidate in candidates
     )
     if longest_lookback > selection_bars - 2:
         raise ValueError(
             "selection_bars must provide at least one one-bar-delayed "
-            "selection-window observation after every candidate lookback"
+            "selection-window observation after every candidate lookback "
+            "and longer-lookback perturbation"
         )
 
     folds: list[dict[str, Any]] = []
