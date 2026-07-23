@@ -70,7 +70,7 @@ canonical research CLI 还会在 `write_okx_snapshot()` 之前对返回快照做
 
 使用注入的 `get_json` 时，调用者必须显式传入 `as_of` 才会执行同一确定性检查；省略 `as_of` 会为 fixture 兼容而跳过新鲜度门禁，并把三个 metadata 字段记录为 `null`。反过来，默认网络 transport 不允许调用者传入 `as_of`，并会在网络请求前报 `as_of is only valid with an injected get_json`。
 
-截至当前 `main`，默认 live transport 在网络下载开始前采样 UTC 参考时刻，所以这是请求开始时的新鲜度门禁，而不是下载完成时的新鲜度证明。PR #226 单独负责把该采样移动到下载后；在它合并前，极慢下载仍可能跨过阈值。即使采样移动完成，这仍是容忍度门禁而非固定截止日期：需要字节级可复现时间边界的实验应保存并显式传入 `end`。
+默认 live transport 会先完成网络分页、原始行解析、完整 candle 筛选和显式结束覆盖检查，然后在调用 `_validate_open_ended_freshness()` 之前立即采样当前 UTC。网络下载耗时因此已经计入 `freshness_age_seconds`，慢请求不能再依赖请求开始时的旧时钟通过门禁。注入 getter 的确定性路径不会读取墙上时钟，仍只使用调用者显式提供的 `as_of`。即便按下载完成时刻采样，这仍是容忍度门禁而非固定截止日期：需要字节级可复现时间边界的实验应保存并显式传入 `end`。
 
 ## 可执行自检
 
@@ -94,7 +94,7 @@ pytest \
 - 原始页必须严格从新到旧，且后续页不能越过活动游标返回更新行；
 - 精确边界重叠被保留为可审计的去重事件，而冲突重叠会 fail closed；
 - 可复用下载器对任何直接调用者强制显式结束覆盖；
-- 默认 live transport 对省略 `end` 的下载强制两周期加五分钟的新鲜度门禁；
+- 默认 live transport 对省略 `end` 的下载强制两周期加五分钟的新鲜度门禁，并在下载完成后采样参考时刻；
 - 注入 getter 只有在显式提供 `as_of` 时才执行确定性新鲜度检查；
 - canonical CLI 在 snapshot、回测和报告写入前再次复核结束覆盖。
 
