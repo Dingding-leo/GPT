@@ -17,9 +17,11 @@ _SOURCE_FILENAMES = {
     "BTC-USDT": "btc_usdt_returns.csv",
     "ETH-USDT": "eth_usdt_returns.csv",
 }
-_REPORT_FILENAMES = frozenset(
-    {"portfolio_risk.json", "portfolio_risk.md", "portfolio_returns.csv"}
-)
+_REPORT_FILENAMES = {
+    "portfolio_risk.json",
+    "portfolio_risk.md",
+    "portfolio_returns.csv",
+}
 
 
 def _build_verified_portfolio_result():
