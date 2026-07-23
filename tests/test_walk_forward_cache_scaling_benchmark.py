@@ -57,6 +57,42 @@ def test_scaling_axes_reject_unsupported_sizes(
         benchmark._axis_values(_settings(), axis_size)
 
 
+def test_linear_fit_reports_persisted_scaling_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    benchmark = _load_scaling_benchmark_module(monkeypatch)
+    candidates = [1, 8, 27, 64]
+
+    runtime_fit = benchmark._linear_fit(
+        candidates,
+        [0.273157908, 0.769003060, 2.016769424, 4.450399261],
+    )
+    assert runtime_fit.intercept == pytest.approx(0.224923750, abs=1e-9)
+    assert runtime_fit.slope == pytest.approx(0.066096347, abs=1e-9)
+    assert runtime_fit.r_squared == pytest.approx(0.999939868, abs=1e-9)
+
+    peak_rss_fit = benchmark._linear_fit(
+        candidates,
+        [87_728_128, 90_005_504, 96_894_976, 110_211_072],
+    )
+    assert peak_rss_fit.intercept == pytest.approx(87_251_205.356, abs=1e-3)
+    assert peak_rss_fit.slope == pytest.approx(358_348.586, abs=1e-3)
+    assert peak_rss_fit.r_squared == pytest.approx(0.999907577, abs=1e-9)
+
+
+def test_linear_fit_rejects_insufficient_or_degenerate_inputs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    benchmark = _load_scaling_benchmark_module(monkeypatch)
+
+    with pytest.raises(ValueError, match="equally sized inputs"):
+        benchmark._linear_fit([1.0], [2.0])
+    with pytest.raises(ValueError, match="equally sized inputs"):
+        benchmark._linear_fit([1.0, 2.0], [3.0])
+    with pytest.raises(ValueError, match="distinct x values"):
+        benchmark._linear_fit([1.0, 1.0], [2.0, 3.0])
+
+
 def test_scaling_measurement_alternates_order_and_checks_repetitions(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
