@@ -1,0 +1,196 @@
+{
+  "benchmark": {
+    "annualized_turnover": 6.051436989411818,
+    "average_abs_exposure": 0.6550560706505701,
+    "cagr": 0.24588959823972778,
+    "calmar": 0.38088535344619834,
+    "max_drawdown": -0.6455737822810788,
+    "net_total_return": 1.2549845881506272,
+    "sharpe": 0.6716790300817155,
+    "sortino": 1.020291709655902
+  },
+  "benchmark_bootstrap": {
+    "calmar": {
+      "ci_lower": -1.0465936089056846,
+      "ci_median": 0.5824570805555266,
+      "ci_upper": 2.6765537946272056,
+      "lower_bound_positive": false,
+      "observed_delta": 0.9344428971950347,
+      "probability_positive": 0.8335
+    },
+    "sharpe": {
+      "ci_lower": -0.46869487584786335,
+      "ci_median": 0.39420990324133526,
+      "ci_upper": 1.2659010179381793,
+      "lower_bound_positive": false,
+      "observed_delta": 0.4872801276225541,
+      "probability_positive": 0.8105
+    }
+  },
+  "blockers": [
+    "benchmark_relative_risk_adjusted",
+    "fold_stability",
+    "year_stability",
+    "untouched_market_validation",
+    "separate_spread_slippage_impact_latency",
+    "capacity",
+    "prospective_forward_validation",
+    "overall_live_eligibility"
+  ],
+  "calendar_years": [
+    {
+      "partial": true,
+      "return": -0.01778349421736536,
+      "year": 2022
+    },
+    {
+      "partial": false,
+      "return": 1.3568884760111501,
+      "year": 2023
+    },
+    {
+      "partial": false,
+      "return": 0.31829391636396553,
+      "year": 2024
+    },
+    {
+      "partial": false,
+      "return": -0.1250715383354989,
+      "year": 2025
+    },
+    {
+      "partial": true,
+      "return": -0.016963459154192173,
+      "year": 2026
+    }
+  ],
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "canonical-5bps-sol-sealed-holdout-v1|market=SOL-USDT|architecture-base=9ab1bafddcc67ac78d4c42cd1bfb9e6e96b97449|source=public-OKX-spot-1Dutc|data-cutoff=2026-07-22T00:00:00Z|baseline=full-reselection-5bps|grid=27-declared-candidates|selection=730|test=90-nonoverlapping|execution=one-bar-delay|costs=5,7.5,10,15bps-fixed-selected-path|benchmark=volatility-targeted-long|benchmark-evidence=paired-noncircular-moving-block-bootstrap-sharpe-and-calmar-lower-bounds-positive|block=20|resamples=2000|confidence=0.95|seed=2026072405|fold-stability=repository-gate|year-stability=at-least-4-complete-years-and-60pct-profitable-and-worst-year-above-minus20pct|turnover=max20-and-15bps-total-return-and-sharpe-positive|neighbourhood=all-perturbations-positive-return-and-sharpe-and-dd-above-minus40pct|tail=maxdd-better-than-benchmark-and-above-minus35pct-and-es-better|candidate-count=1|no-same-market-retuning=true",
+  "cost_stress": {
+    "10 bps": {
+      "max_drawdown": -0.2306113635089172,
+      "sharpe": 1.1374176626563337,
+      "total_return": 1.5724970320976763
+    },
+    "15 bps": {
+      "max_drawdown": -0.2365590850382111,
+      "sharpe": 1.1158688243247084,
+      "total_return": 1.521207220187534
+    },
+    "5 bps": {
+      "max_drawdown": -0.22664513563600308,
+      "sharpe": 1.1589591577042695,
+      "total_return": 1.6248271817610123
+    },
+    "7.5 bps": {
+      "max_drawdown": -0.22826207577981794,
+      "sharpe": 1.148189342903156,
+      "total_return": 1.5985307595786904
+    }
+  },
+  "fold_stability": {
+    "best_fold_total_return": 1.1457410586348873,
+    "failure_reasons": [
+      "one fold contributes more than half of positive fold return"
+    ],
+    "fold_count": 15,
+    "losing_or_flat_folds": 7,
+    "max_positive_fold_share": 0.669996162967344,
+    "maximum_allowed_positive_fold_share": 0.5,
+    "minimum_profitable_folds": 8,
+    "minimum_required_folds": 3,
+    "passes": false,
+    "positive_fold_ratio": 0.5333333333333333,
+    "profitable_folds": 8,
+    "worst_fold_total_return": -0.13329641128260605
+  },
+  "freeze": {
+    "architecture_base_sha": "9ab1bafddcc67ac78d4c42cd1bfb9e6e96b97449",
+    "data_cutoff_utc": "2026-07-22T00:00:00Z",
+    "no_same_market_retuning": true,
+    "pre_result_branch_head_sha": "5b622a5051f288abe3f294bcbc1206a4c568ceb4"
+  },
+  "gates": {
+    "benchmark_relative_risk_adjusted": "fail",
+    "capacity": "blocked",
+    "fold_stability": "fail",
+    "frozen_architecture_and_5bps_baseline": "pass",
+    "overall_live_eligibility": "fail",
+    "parameter_neighborhood_stability": "pass",
+    "prospective_forward_validation": "blocked",
+    "separate_spread_slippage_impact_latency": "blocked",
+    "tail_risk": "pass",
+    "turnover_and_cost_viability": "pass",
+    "untouched_market_validation": "fail",
+    "year_stability": "fail"
+  },
+  "hypothesis": "The frozen canonical 5 bps full-reselection architecture passes every predeclared retrospective untouched-market gate on SOL-USDT without same-market retuning.",
+  "interpretation": "The frozen architecture failed one or more predeclared retrospective SOL-USDT holdout gates. The result is rejected and SOL-USDT must not be used for same-market retuning.",
+  "metrics_5bps": {
+    "annualized_arithmetic_mean": 0.2921966706516464,
+    "annualized_turnover": 10.90476828445051,
+    "average_abs_exposure": 0.16723482768967682,
+    "cagr": 0.29811274977245006,
+    "calmar": 1.315328250641238,
+    "exchange_fee_sum": 0.020166352306860532,
+    "gross_total_return": 1.6782187087944465,
+    "max_drawdown": -0.22664513563600308,
+    "net_total_return": 1.6248271817610123,
+    "sharpe": 1.1589591577042695,
+    "sortino": 2.061615824994766
+  },
+  "overall_live_eligible": false,
+  "parameter_neighborhood": {
+    "passes": true,
+    "scenarios": {
+      "less_trend_weight": {
+        "max_drawdown": -0.23468329367972418,
+        "sharpe": 1.1248469344019671,
+        "total_return": 1.4556147897080756
+      },
+      "longer_lookbacks": {
+        "max_drawdown": -0.3308752960570882,
+        "sharpe": 0.7518171768132689,
+        "total_return": 0.7728805749886942
+      },
+      "more_trend_weight": {
+        "max_drawdown": -0.22598557221784887,
+        "sharpe": 1.1869009585190566,
+        "total_return": 1.7868231786157942
+      },
+      "shorter_lookbacks": {
+        "max_drawdown": -0.24059576999670462,
+        "sharpe": 1.1617980930931275,
+        "total_return": 1.661925869325053
+      }
+    }
+  },
+  "provenance": {
+    "bootstrap_sha256": "91ef37a8952b5e0f5d81dbbd715a80452d9c323614d9fe7a15ef5a0df03265a8",
+    "effective_config_sha256": "e0f07fdc39e4a57a44d7943da1ff5e9d19e6cb9a407cbb913e95e413467a1f13",
+    "evaluation_end": "2026-06-11T00:00:00+00:00",
+    "evaluation_start": "2022-10-01T00:00:00+00:00",
+    "market": "SOL-USDT",
+    "observations": 1350,
+    "provider": "OKX",
+    "report_sha256": "c7ae86e9b740e41b5dd954cd17fbf63f789c2c340fbad5f1b763282c4cce24b9",
+    "returns_sha256": "01121d2c583c4280ef585ceee42b80da873f9437fd609271e346f7ce8973b5bf",
+    "snapshot_sha256": "d1d27fc2147897d58701aa36afcff1f1509124b8f6546822b4a455e053841d8e",
+    "timeframe": "1Dutc"
+  },
+  "tail_risk": {
+    "benchmark_expected_shortfall_5pct": -0.06117854438404867,
+    "strategy_expected_shortfall_5pct": -0.026982118058432765
+  },
+  "validation": {
+    "artifact_id": 8576864761,
+    "artifact_sha256": "3485ddf8c3a2c608fcfeaecf340580c2c61883944459ddd46117b760885dba09",
+    "initial_formatting_failure_run_id": 30039919449,
+    "workflow_run_id": 30040059930
+  },
+  "verdict": "rejected"
+}
