@@ -117,9 +117,7 @@ def _build_structural_execution_evidence(
         ask_price="66113.9",
         ask_quantity="0.4",
         source_response_sha256=hashlib.sha256(_STRUCTURAL_QUOTE_SOURCE_BYTES).hexdigest(),
-        instrument_snapshot_sha256=hashlib.sha256(
-            _STRUCTURAL_INSTRUMENT_SOURCE_BYTES
-        ).hexdigest(),
+        instrument_snapshot_sha256=hashlib.sha256(_STRUCTURAL_INSTRUMENT_SOURCE_BYTES).hexdigest(),
     )
     replayed_quote = ExecutionQuoteSnapshot.from_json_bytes(quote.to_json_bytes())
     binding = bind_execution_quote(
@@ -173,9 +171,7 @@ def build_example(output_dir: Path) -> dict[str, object]:
         "signal_bar_close_utc": restored_evidence["bar_close_utc"],
         "candle_observed_at_utc": restored_evidence["candle_observed_at_utc"],
         "exchange_server_time_utc": restored_evidence["exchange_server_time_utc"],
-        "server_time_response_received_utc": restored_evidence[
-            "server_time_response_received_utc"
-        ],
+        "server_time_response_received_utc": restored_evidence["server_time_response_received_utc"],
         "signal_not_before_utc": restored_evidence["signal_not_before_utc"],
         "intent": intent.to_dict(),
         "execution_quote": {
