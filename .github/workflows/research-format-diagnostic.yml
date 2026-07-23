@@ -1,9 +1,7 @@
 name: Research Format Diagnostic
 
 on:
-  push:
-    branches:
-      - auto/research/20260723-20-prior-fold-volmatched-es
+  pull_request:
 
 permissions:
   contents: read
@@ -26,7 +24,7 @@ jobs:
             tests/test_prior_fold_volatility_matched_es_vs_volatility_benchmark_report.py
           git diff -- \
             reports/research/prior-fold-volatility-matched-es-vs-volatility-benchmark/analysis.py \
-            tests/test_prior_fold_volatility_matched_es_vs_volatility-benchmark_report.py
+            tests/test_prior_fold_volatility_matched_es_vs_volatility_benchmark_report.py
           git diff --exit-code -- \
             reports/research/prior-fold-volatility-matched-es-vs-volatility-benchmark/analysis.py \
-            tests/test_prior_fold_volatility_matched_es_vs_volatility-benchmark_report.py
+            tests/test_prior_fold_volatility_matched_es_vs_volatility_benchmark_report.py
