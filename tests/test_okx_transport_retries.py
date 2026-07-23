@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
 
+import pandas as pd
 import pytest
 
 import gpt_quant.okx as okx
@@ -16,6 +17,15 @@ _ROWS_PATH = _FIXTURE_DIR / "rows.json"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
 _EXPECTED_FIXTURE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
 _RETRYABLE_HTTP_STATUS_CODES = (408, 429, 500, 502, 503, 504)
+
+
+@pytest.fixture(autouse=True)
+def _freeze_live_freshness_reference(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        okx,
+        "_current_utc_timestamp",
+        lambda: pd.Timestamp("2026-07-21T12:00:00+00:00"),
+    )
 
 
 class _Response:
