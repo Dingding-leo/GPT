@@ -163,6 +163,7 @@ def test_writer_reports_incomplete_rollback(
 ) -> None:
     output = tmp_path / "snapshot"
     write_okx_snapshot(_snapshot(end="2026-07-19"), output)
+    (output / "caller-owned.txt").write_text("preserve me", encoding="utf-8")
 
     real_replace = okx_module.os.replace
     replace_calls = 0
@@ -189,4 +190,5 @@ def test_writer_reports_incomplete_rollback(
 
     assert isinstance(exc_info.value.__cause__, OSError)
     assert str(exc_info.value.__cause__) == "injected metadata commit failure"
+    assert (output / "caller-owned.txt").read_text(encoding="utf-8") == "preserve me"
     assert not any(path.name.startswith(".okx-snapshot-") for path in output.iterdir())
