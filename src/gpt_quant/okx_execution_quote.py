@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from math import isfinite
 from urllib.parse import urlencode, urlsplit
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .execution_quote import ExecutionQuoteSnapshot
 from .okx import JSONGetter
@@ -224,7 +224,20 @@ def _current_utc_datetime() -> datetime:
     return datetime.now(UTC)
 
 
-def _default_raw_bytes_getter(url: str, timeout: float) -> bytes:
+class _RejectRedirects(HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        req: Request,
+        fp: object,
+        code: int,
+        msg: str,
+        headers: object,
+        newurl: str,
+    ) -> None:
+        return None
+
+
+def _read_public_response(url: str, timeout: float) -> bytes:
     request = Request(
         url,
         headers={
@@ -232,10 +245,26 @@ def _default_raw_bytes_getter(url: str, timeout: float) -> bytes:
             "User-Agent": "gpt-quant-lab/0.2 (+https://github.com/Dingding-leo/GPT)",
         },
     )
-    with urlopen(request, timeout=timeout) as response:  # noqa: S310
+    opener = build_opener(_RejectRedirects())
+    with opener.open(request, timeout=timeout) as response:  # noqa: S310
         payload = response.read(_MAX_RESPONSE_BYTES + 1)
     if len(payload) > _MAX_RESPONSE_BYTES:
-        raise RuntimeError("OKX books response exceeds the configured safety limit")
+        raise RuntimeError("OKX public response exceeds the configured safety limit")
+    return payload
+
+
+def _default_raw_bytes_getter(url: str, timeout: float) -> bytes:
+    return _read_public_response(url, timeout)
+
+
+def _default_json_getter(url: str, timeout: float) -> Mapping[str, object]:
+    raw_response = _read_public_response(url, timeout)
+    try:
+        payload = json.loads(raw_response.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ValueError("OKX public response must be UTF-8 JSON") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError("OKX public response must be a JSON object")
     return payload
 
 
@@ -501,7 +530,7 @@ def fetch_okx_top_of_book(
         timeout=timeout_seconds,
         max_round_trip_seconds=server_round_trip_bound,
         max_abs_clock_skew_seconds=clock_skew_bound,
-        get_json=get_json,
+        get_json=get_json or _default_json_getter,
         now=clock,
     )
     if server_time_sample.local_request_started_utc.to_pydatetime() < response_received:
