@@ -6,7 +6,7 @@ import math
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from numbers import Real
 
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
@@ -65,7 +65,7 @@ def _required_utc_datetime(value: object, *, field_name: str) -> datetime:
         raise ValueError(f"{field_name} must be a timezone-aware timestamp")
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError(f"{field_name} must be a timezone-aware timestamp")
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def _required_real(value: object, *, field_name: str) -> float:
@@ -78,9 +78,7 @@ def _required_real(value: object, *, field_name: str) -> float:
 
 
 def _format_utc(value: datetime) -> str:
-    return value.astimezone(timezone.utc).isoformat(timespec="microseconds").replace(
-        "+00:00", "Z"
-    )
+    return value.astimezone(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def _canonical_json_bytes(payload: Mapping[str, object]) -> bytes:
