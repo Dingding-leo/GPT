@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS_PATH = (
@@ -58,6 +59,27 @@ def test_real_okx_fixture_provenance_and_fold_compounding() -> None:
         assert int(fold_id) in (1, 2, 3)
 
     np.testing.assert_allclose(folds["relative_return_delta"], expected_deltas, rtol=0, atol=0)
+
+
+def test_oversized_trailing_fold_is_rejected_before_exclusion(tmp_path: Path) -> None:
+    source = pd.read_csv(FIXTURE_PATH)
+    structural_copy = pd.concat(
+        [
+            source.loc[source["fold"] == 1].head(10),
+            source.loc[source["fold"] == 2].head(10),
+            source.loc[source["fold"] == 3].head(11),
+        ],
+        ignore_index=True,
+    )
+    path = tmp_path / "oversized-trailing-fold.csv"
+    structural_copy.to_csv(path, index=False)
+
+    with pytest.raises(ValueError, match="trailing incomplete fold must be shorter"):
+        analysis.load_complete_fold_deltas(
+            path,
+            expected_complete_folds=2,
+            expected_fold_observations=10,
+        )
 
 
 def test_moving_fold_blocks_are_deterministic_on_observed_relative_returns() -> None:
