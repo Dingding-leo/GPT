@@ -40,6 +40,33 @@ def test_atomic_publisher_rejects_invalid_contract_before_touching_filesystem(
     assert not output.exists()
 
 
+def test_atomic_publisher_rejects_symlink_destination_before_staging(tmp_path: Path) -> None:
+    output = tmp_path / "artifacts"
+    output.mkdir()
+    external_json = tmp_path / "operator-result.json"
+    external_json.write_bytes(b"operator-owned\n")
+    json_destination = output / "result.json"
+    json_destination.symlink_to(external_json)
+    markdown_destination = output / "result.md"
+    markdown_destination.write_bytes(b"old-markdown\n")
+
+    with pytest.raises(ValueError, match="destinations must not be symbolic links"):
+        publish_payloads_atomically(
+            output,
+            {"json": json_destination, "markdown": markdown_destination},
+            {"json": b"new-json\n", "markdown": b"new-markdown\n"},
+            commit_order=("json", "markdown"),
+            staging_prefix=".atomic-test-",
+            error_label="test artifact",
+        )
+
+    assert json_destination.is_symlink()
+    assert json_destination.read_bytes() == b"operator-owned\n"
+    assert external_json.read_bytes() == b"operator-owned\n"
+    assert markdown_destination.read_bytes() == b"old-markdown\n"
+    assert {path.name for path in output.iterdir()} == {"result.json", "result.md"}
+
+
 @pytest.mark.parametrize(
     ("case", "expected_error"),
     (
