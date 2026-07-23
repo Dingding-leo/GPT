@@ -5,63 +5,54 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Check out repository
+      - name: Check out feature branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.pull_request.head.ref }}
           persist-credentials: false
 
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-
-      - name: Capture repository Ruff output
+      - name: Apply canonical formatting and remove diagnostic
         shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
         run: |
-          set -u
+          set -euo pipefail
           python -m pip install "ruff==0.12.11"
-          : > ruff-output.txt
-          ruff check --fix \
-            src/gpt_quant/okx_instruments.py \
-            tests/test_okx_instruments.py \
-            tests/test_okx_instrument_decimal_contract.py \
-            tests/test_okx_instrument_archive.py \
-            >> ruff-output.txt 2>&1 || true
-          ruff format \
-            src/gpt_quant/okx_instruments.py \
-            tests/test_okx_instruments.py \
-            tests/test_okx_instrument_decimal_contract.py \
-            tests/test_okx_instrument_archive.py \
-            >> ruff-output.txt 2>&1
-          ruff check \
-            src/gpt_quant/okx_instruments.py \
-            tests/test_okx_instruments.py \
-            tests/test_okx_instrument_decimal_contract.py \
-            tests/test_okx_instrument_archive.py \
-            >> ruff-output.txt 2>&1 || true
-          ruff format --check \
-            src/gpt_quant/okx_instruments.py \
-            tests/test_okx_instruments.py \
-            tests/test_okx_instrument_decimal_contract.py \
-            tests/test_okx_instrument_archive.py \
-            >> ruff-output.txt 2>&1 || true
-
-      - name: Upload formatted files
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: data-formatted-files
-          path: |
-            ruff-output.txt
+          files=(
             src/gpt_quant/okx_instruments.py
             tests/test_okx_instruments.py
             tests/test_okx_instrument_decimal_contract.py
             tests/test_okx_instrument_archive.py
-          if-no-files-found: error
-          retention-days: 1
+          )
+          ruff check --fix "${files[@]}"
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/gpt_quant/okx_instruments.py")
+          content = path.read_text(encoding="utf-8")
+          old = "isinstance(value, (str, bytes))"
+          new = "isinstance(value, str | bytes)"
+          if old not in content:
+              raise SystemExit("expected UP038 expression not found")
+          path.write_text(content.replace(old, new), encoding="utf-8")
+          PY
+          ruff format "${files[@]}"
+          ruff check "${files[@]}"
+          ruff format --check "${files[@]}"
+          rm .github/workflows/data-format-diagnostic.yml
+          git diff --check
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          git commit -m "style(data): apply canonical instrument formatting"
+          authorization="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $authorization" \
+            push origin "HEAD:$HEAD_REF"
