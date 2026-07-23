@@ -166,10 +166,7 @@ def test_verifier_rejects_duplicate_metric_column_names(tmp_path: Path) -> None:
     completed = _run_verifier(report_path, returns_path)
 
     assert completed.returncode == 1
-    assert (
-        "returns CSV contains duplicate column names: ['strategy_return']"
-        in completed.stderr
-    )
+    assert "returns CSV contains duplicate column names: ['strategy_return']" in completed.stderr
 
 
 def test_verifier_rejects_timezone_naive_return_timestamps(tmp_path: Path) -> None:
