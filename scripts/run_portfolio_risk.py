@@ -5,12 +5,9 @@ import argparse
 from collections.abc import Sequence
 from pathlib import Path
 
-from gpt_quant import (
-    build_buy_and_hold_sleeve_portfolio,
-    load_verified_return_csv,
-    write_portfolio_risk_report,
-)
+from gpt_quant import build_buy_and_hold_sleeve_portfolio, load_verified_return_csv
 from gpt_quant.portfolio import validate_portfolio_provenance
+from gpt_quant.portfolio_stress import write_portfolio_risk_bundle
 
 _HEX_DIGITS = frozenset("0123456789abcdef")
 
@@ -109,7 +106,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         max_pairwise_correlation=args.max_pairwise_correlation,
         provenance=provenance,
     )
-    paths = write_portfolio_risk_report(result, args.output_dir)
+    paths = write_portfolio_risk_bundle(result, args.output_dir)
     risk_gate_passes = bool(result.concentration["passes"])
     print(f"risk_status={result.risk_status}")
     print(f"risk_gate_passes={str(risk_gate_passes).lower()}")
