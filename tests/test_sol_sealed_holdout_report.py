@@ -59,12 +59,8 @@ def test_sol_exact_5bps_metrics_and_cost_stress_are_persisted() -> None:
     assert metrics["calmar"] == pytest.approx(1.315328250641238)
     assert metrics["max_drawdown"] == pytest.approx(-0.22664513563600308)
     assert metrics["annualized_turnover"] == pytest.approx(10.90476828445051)
-    assert result["cost_stress"]["15 bps"]["total_return"] == pytest.approx(
-        1.521207220187534
-    )
-    assert result["cost_stress"]["15 bps"]["sharpe"] == pytest.approx(
-        1.1158688243247084
-    )
+    assert result["cost_stress"]["15 bps"]["total_return"] == pytest.approx(1.521207220187534)
+    assert result["cost_stress"]["15 bps"]["sharpe"] == pytest.approx(1.1158688243247084)
 
 
 def test_sol_fails_predeclared_statistical_and_stability_gates() -> None:
