@@ -152,18 +152,12 @@ def test_report_persists_recomputable_position_path_diagnostics(
     expected_years = _independent_calendar_records(result.combined_frame, period="year")
     _assert_diagnostics_equal(expected["calendar_months"], expected_months)
     _assert_diagnostics_equal(expected["calendar_years"], expected_years)
-    assert (
-        expected["profitable_month_count"]
-        + expected["losing_month_count"]
-        + expected["flat_month_count"]
-        == len(expected_months)
-    )
-    assert (
-        expected["profitable_year_count"]
-        + expected["losing_year_count"]
-        + expected["flat_year_count"]
-        == len(expected_years)
-    )
+    assert expected["profitable_month_count"] + expected["losing_month_count"] + expected[
+        "flat_month_count"
+    ] == len(expected_months)
+    assert expected["profitable_year_count"] + expected["losing_year_count"] + expected[
+        "flat_year_count"
+    ] == len(expected_years)
     assert expected["partial_month_labels"] == [
         record["period"] for record in expected_months if record["coverage"] == "partial"
     ]
