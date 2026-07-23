@@ -51,24 +51,31 @@ def _write_manifest(path: Path, entry: dict[str, object]) -> None:
     )
 
 
-def test_registry_digest_is_independent_of_incremental_import_order(tmp_path: Path) -> None:
+def test_registry_orders_only_new_runs_deterministically(tmp_path: Path) -> None:
+    historical = _entry("2026-07-21T17:01:16.374294+00:00")
     earlier = _entry("2026-07-21T15:01:16.374294+00:00")
     later = _entry("2026-07-21T16:01:16.374294+00:00")
+    historical_manifest = tmp_path / "historical.jsonl"
     earlier_manifest = tmp_path / "earlier.jsonl"
     later_manifest = tmp_path / "later.jsonl"
-    forward_registry = tmp_path / "forward.jsonl"
-    reverse_registry = tmp_path / "reverse.jsonl"
+    left = tmp_path / "left.jsonl"
+    right = tmp_path / "right.jsonl"
+    _write_manifest(historical_manifest, historical)
     _write_manifest(earlier_manifest, earlier)
     _write_manifest(later_manifest, later)
 
-    merge_experiment_manifests(forward_registry, [earlier_manifest])
-    forward = merge_experiment_manifests(forward_registry, [later_manifest])
-    merge_experiment_manifests(reverse_registry, [later_manifest])
-    reverse = merge_experiment_manifests(reverse_registry, [earlier_manifest])
+    merge_experiment_manifests(left, [historical_manifest])
+    merge_experiment_manifests(right, [historical_manifest])
+    historical_prefix = left.read_bytes()
 
-    assert forward_registry.read_bytes() == reverse_registry.read_bytes()
-    assert forward.registry_sha256 == reverse.registry_sha256
-    assert [entry["run_id"] for entry in load_manifest_entries(forward_registry)] == [
+    left_result = merge_experiment_manifests(left, [later_manifest, earlier_manifest])
+    right_result = merge_experiment_manifests(right, [earlier_manifest, later_manifest])
+
+    assert left.read_bytes() == right.read_bytes()
+    assert left.read_bytes().startswith(historical_prefix)
+    assert left_result.registry_sha256 == right_result.registry_sha256
+    assert [entry["run_id"] for entry in load_manifest_entries(left)] == [
+        historical["run_id"],
         earlier["run_id"],
         later["run_id"],
     ]
