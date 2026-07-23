@@ -52,6 +52,7 @@ def test_hourly_workflow_publishes_portfolio_from_source_artifact_evidence() -> 
     assert research < verification < hashes < source_upload < portfolio < portfolio_upload
     assert workflow.count("python scripts/verify_walk_forward_report.py") == 1
     assert '--output-dir "reports/okx/$instrument"' in workflow
+    assert workflow.count("--manifest-path reports/okx/experiment-manifest.jsonl") == 2
     assert workflow.count("id: source-artifact") == 1
     assert workflow.count("id: return-hashes") == 1
     assert "steps.source-artifact.outputs.artifact-id" in workflow
