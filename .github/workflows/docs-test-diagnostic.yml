@@ -18,11 +18,11 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install "pip==26.1.2" && python -m pip install -e ".[dev]"
-      - name: Run focused documentation tests
+      - name: Run full pytest diagnostic
         shell: bash
         run: |
           set +e
-          python -m pytest -q tests/test_dependency_audit_documentation.py tests/test_walk_forward_warmup_documentation.py > docs-test-output.txt 2>&1
+          python -m pytest -q > docs-test-output.txt 2>&1
           status=$?
           cat docs-test-output.txt
           echo "$status" > docs-test-status.txt
