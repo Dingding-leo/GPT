@@ -25,8 +25,12 @@ def _real_rows() -> list[list[str]]:
     return [list(row) for row in rows]
 
 
-def _snapshot(*, end: str | None = None):
-    rows = _real_rows()
+def _snapshot(
+    *,
+    end: str | None = None,
+    rows: list[list[str]] | None = None,
+):
+    rows = _real_rows() if rows is None else rows
 
     def getter(url: str, timeout: float) -> dict[str, object]:
         return {"code": "0", "msg": "", "data": rows}
@@ -162,7 +166,8 @@ def test_writer_reports_incomplete_rollback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     output = tmp_path / "snapshot"
-    write_okx_snapshot(_snapshot(end="2026-07-19"), output)
+    previous_paths = write_okx_snapshot(_snapshot(rows=_real_rows()[2:]), output)
+    previous_payloads = {name: path.read_bytes() for name, path in previous_paths.items()}
     (output / "caller-owned.txt").write_text("preserve me", encoding="utf-8")
 
     real_replace = okx_module.os.replace
@@ -191,4 +196,7 @@ def test_writer_reports_incomplete_rollback(
     assert isinstance(exc_info.value.__cause__, OSError)
     assert str(exc_info.value.__cause__) == "injected metadata commit failure"
     assert (output / "caller-owned.txt").read_text(encoding="utf-8") == "preserve me"
+    assert previous_paths["candles"].read_bytes() == previous_payloads["candles"]
+    assert previous_paths["metadata"].read_bytes() == previous_payloads["metadata"]
+    assert previous_paths["raw"].read_bytes() != previous_payloads["raw"]
     assert not any(path.name.startswith(".okx-snapshot-") for path in output.iterdir())
