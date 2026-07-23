@@ -24,7 +24,9 @@ jobs:
         run: |
           ruff format \
             reports/research/return-skewness-vs-volatility-benchmark/analysis.py \
-            tests/test_return_skewness_vs-volatility-benchmark_report.py
+            tests/test_return_skewness_vs_volatility_benchmark_report.py \
+            > ruff-format.log 2>&1 || true
+          cat ruff-format.log
       - name: Upload formatted files
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
@@ -32,4 +34,5 @@ jobs:
           path: |
             reports/research/return-skewness-vs-volatility-benchmark/analysis.py
             tests/test_return_skewness_vs-volatility-benchmark_report.py
+            ruff-format.log
           if-no-files-found: error
