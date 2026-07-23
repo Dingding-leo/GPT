@@ -5,7 +5,7 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from .execution_intent import TargetPositionIntent
@@ -160,6 +160,10 @@ class ExecutionQuoteBinding:
             "maximum_age_ms",
             _required_non_negative_integer(self.maximum_age_ms, field_name="maximum_age_ms"),
         )
+        if self.decision_at_utc - self.quote_observed_at_utc > timedelta(
+            milliseconds=self.maximum_age_ms
+        ):
+            raise ValueError("execution quote binding is stale for the configured maximum age")
         object.__setattr__(
             self,
             "instrument_snapshot_sha256",
