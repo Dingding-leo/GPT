@@ -25,8 +25,14 @@ def max_drawdown_from_returns(returns: pd.Series) -> float:
 
 def _invalid_return_error(series: pd.Series, position: int) -> ValueError:
     index_value = series.index[position]
-    location = index_value.isoformat() if isinstance(index_value, pd.Timestamp) else str(index_value)
-    return ValueError(f"strategy_return must contain finite real numbers; invalid value at {location}")
+    location = (
+        index_value.isoformat()
+        if isinstance(index_value, pd.Timestamp)
+        else str(index_value)
+    )
+    return ValueError(
+        f"strategy_return must contain finite real numbers; invalid value at {location}"
+    )
 
 
 def _validated_returns(series: pd.Series) -> pd.Series:
