@@ -63,10 +63,7 @@ def test_walk_forward_warmup_guide_matches_enforced_delayed_boundary() -> None:
     assert '("momentum", 248, 11, "longer_lookbacks")' in boundary_test
     assert '("reversal", 248, 0, "longer_lookbacks")' in boundary_test
     assert '("volatility", _SELECTION_BARS - 2, 50, "base")' in boundary_test
-    assert (
-        "test_walk_forward_accepts_active_last_executable_lookback_boundary"
-        in boundary_test
-    )
+    assert "test_walk_forward_accepts_active_last_executable_lookback_boundary" in boundary_test
     assert "0.0 < abs(boundary_position) <= 1.0" in boundary_test
     assert "test_walk_forward_rejects_underwarmed_longer_lookback_perturbation" in boundary_test
     assert '@pytest.mark.parametrize("lookback", (250, 251))' in boundary_test
