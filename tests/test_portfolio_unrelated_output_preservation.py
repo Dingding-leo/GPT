@@ -44,8 +44,7 @@ def _build_verified_portfolio_result():
         "source_artifact_sha256": metadata["source_artifact_sha256"],
         "source_head_sha": metadata["source_head_sha"],
         "return_file_sha256": {
-            instrument: details["fixture_sha256"]
-            for instrument, details in instruments.items()
+            instrument: details["fixture_sha256"] for instrument, details in instruments.items()
         },
     }
     return build_buy_and_hold_sleeve_portfolio(
