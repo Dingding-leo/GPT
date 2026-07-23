@@ -12,12 +12,7 @@ from gpt_quant.portfolio_underlying_risk import (
     write_underlying_sleeve_risk_report,
 )
 
-_FIXTURE_DIR = (
-    Path(__file__).parent
-    / "fixtures"
-    / "okx"
-    / "btc_eth_full_path_20200111_20200219"
-)
+_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc_eth_full_path_20200111_20200219"
 
 
 def _fixture_inputs() -> tuple[dict[str, Path], dict[str, str], dict[str, object]]:
@@ -100,9 +95,8 @@ def test_underlying_risk_rejects_self_consistent_hash_for_corrupted_turnover(
     frame = pd.read_csv(paths["BTC-USDT"])
     frame.loc[10, "turnover"] = float(frame.loc[10, "turnover"]) + 0.25
     frame.loc[10, "trading_cost"] = float(frame.loc[10, "turnover"]) * 0.0005
-    frame.loc[10, "strategy_return"] = (
-        float(frame.loc[10, "gross_strategy_return"])
-        - float(frame.loc[10, "trading_cost"])
+    frame.loc[10, "strategy_return"] = float(frame.loc[10, "gross_strategy_return"]) - float(
+        frame.loc[10, "trading_cost"]
     )
     frame.to_csv(corrupted, index=False)
     corrupted_hash = hashlib.sha256(corrupted.read_bytes()).hexdigest()
@@ -112,7 +106,10 @@ def test_underlying_risk_rejects_self_consistent_hash_for_corrupted_turnover(
     altered_hashes["BTC-USDT"] = corrupted_hash
     provenance["return_file_sha256"] = altered_hashes
 
-    with pytest.raises(ValueError, match="turnover must equal absolute underlying position changes"):
+    with pytest.raises(
+        ValueError,
+        match="turnover must equal absolute underlying position changes",
+    ):
         build_underlying_sleeve_risk(
             altered_paths,
             expected_sha256=altered_hashes,
@@ -147,8 +144,8 @@ def test_hourly_workflow_generates_underlying_risk_before_portfolio_gate() -> No
     assert source_upload < underlying < portfolio < upload
     assert workflow.count("python scripts/run_portfolio_underlying_risk.py") == 1
     underlying_block = workflow[underlying:portfolio]
-    assert '--btc-returns reports/okx/BTC-USDT/walk_forward_returns.csv' in underlying_block
-    assert '--eth-returns reports/okx/ETH-USDT/walk_forward_returns.csv' in underlying_block
+    assert "--btc-returns reports/okx/BTC-USDT/walk_forward_returns.csv" in underlying_block
+    assert "--eth-returns reports/okx/ETH-USDT/walk_forward_returns.csv" in underlying_block
     assert '--source-artifact-sha256 "$source_artifact_digest"' in underlying_block
     assert '--source-head-sha "$GITHUB_SHA"' in underlying_block
     assert "--output-dir reports/portfolio" in underlying_block
