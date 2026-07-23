@@ -6,7 +6,8 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
+from fractions import Fraction
 
 from .execution_intent import TargetPositionIntent
 from .execution_quote import ExecutionQuoteSnapshot
@@ -80,6 +81,22 @@ def _canonical_non_negative_decimal(value: object, *, field_name: str) -> str:
     if isinstance(value, str) and canonical != value:
         raise ValueError(f"{field_name} must use canonical decimal encoding")
     return canonical
+
+
+def _deterministic_spread_bps(quote: ExecutionQuoteSnapshot) -> str:
+    """Return a context-independent 50-significant-digit spread encoding."""
+
+    bid = Fraction(Decimal(quote.bid_price))
+    ask = Fraction(Decimal(quote.ask_price))
+    exact_spread_bps = (ask - bid) * 20_000 / (ask + bid)
+    with localcontext(Context(prec=50, rounding=ROUND_HALF_EVEN)):
+        spread_bps = Decimal(exact_spread_bps.numerator) / Decimal(
+            exact_spread_bps.denominator
+        )
+    return _canonical_non_negative_decimal(
+        spread_bps,
+        field_name="observed_spread_bps",
+    )
 
 
 def _format_utc(value: datetime) -> str:
@@ -309,8 +326,5 @@ def bind_execution_quote(
         quote_observed_at_utc=quote.observed_at_utc,
         quote_received_at_utc=quote.received_at_utc,
         instrument_snapshot_sha256=quote.instrument_snapshot_sha256,
-        observed_spread_bps=_canonical_non_negative_decimal(
-            quote.spread_bps,
-            field_name="observed_spread_bps",
-        ),
+        observed_spread_bps=_deterministic_spread_bps(quote),
     )
