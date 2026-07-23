@@ -7,7 +7,7 @@ import pytest
 
 from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.execution_quote import ExecutionQuoteSnapshot
-from gpt_quant.execution_quote_binding import bind_execution_quote
+from gpt_quant.execution_quote_binding import ExecutionQuoteBinding, bind_execution_quote
 from gpt_quant.paper_execution_attempt import (
     PaperExecutionAttempt,
     record_paper_execution_attempt,
@@ -71,6 +71,7 @@ def test_attempt_binds_submission_fill_price_and_measured_latency() -> None:
         maximum_age_ms=250,
     )
     attempt = record_paper_execution_attempt(
+        intent,
         binding,
         quote,
         submitted_at_utc=datetime(2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC),
@@ -86,6 +87,7 @@ def test_attempt_binds_submission_fill_price_and_measured_latency() -> None:
     replayed = PaperExecutionAttempt.from_json_bytes(attempt.to_json_bytes())
     assert replayed == attempt
     assert replayed.binding_id == binding.binding_id
+    assert replayed.target_intent_id == intent.intent_id
     assert replayed.quote_snapshot_id == quote.snapshot_id
     assert replayed.reference_bid_price == quote.bid_price
     assert replayed.reference_ask_price == quote.ask_price
@@ -154,7 +156,39 @@ def test_attempt_rejects_ambiguous_timing_price_and_quantity_states(
     values.update(overrides)
 
     with pytest.raises(ValueError, match=error):
-        record_paper_execution_attempt(_binding(), _quote(), **values)
+        record_paper_execution_attempt(_intent(), _binding(), _quote(), **values)
+
+
+def test_attempt_rejects_forged_binding_before_creating_execution_evidence() -> None:
+    intent = _intent()
+    quote = _quote()
+    binding = _binding()
+    forged = ExecutionQuoteBinding(
+        target_intent_id="0" * 64,
+        quote_snapshot_id=binding.quote_snapshot_id,
+        instrument_id=binding.instrument_id,
+        decision_at_utc=binding.decision_at_utc,
+        maximum_age_ms=binding.maximum_age_ms,
+        quote_observed_at_utc=binding.quote_observed_at_utc,
+        quote_received_at_utc=binding.quote_received_at_utc,
+        instrument_snapshot_sha256=binding.instrument_snapshot_sha256,
+        observed_spread_bps=binding.observed_spread_bps,
+    )
+
+    with pytest.raises(ValueError, match="target intent does not match"):
+        record_paper_execution_attempt(
+            intent,
+            forged,
+            quote,
+            submitted_at_utc=datetime(2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC),
+            outcome_at_utc=datetime(2026, 7, 21, 0, 0, 0, 500_000, tzinfo=UTC),
+            side="buy",
+            requested_base_quantity="0.1",
+            outcome="filled",
+            filled_base_quantity="0.1",
+            average_fill_price=quote.ask_price,
+            reason_code="paper-touch-fill",
+        )
 
 
 def test_attempt_rejects_sell_fill_above_bid_and_tampered_latency() -> None:
@@ -169,6 +203,7 @@ def test_attempt_rejects_sell_fill_above_bid_and_tampered_latency() -> None:
 
     with pytest.raises(ValueError, match="cannot improve through the reference bid"):
         record_paper_execution_attempt(
+            intent,
             binding,
             quote,
             submitted_at_utc=datetime(2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC),
@@ -182,6 +217,7 @@ def test_attempt_rejects_sell_fill_above_bid_and_tampered_latency() -> None:
         )
 
     attempt = record_paper_execution_attempt(
+        intent,
         binding,
         quote,
         submitted_at_utc=datetime(2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC),
