@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import math
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -69,6 +70,22 @@ def file_sha256(path: str | Path) -> str:
     return digest.hexdigest()
 
 
+def _read_verified_payload(
+    path: str | Path,
+    *,
+    expected_sha256: str,
+    label: str,
+    verify_hash: bool = True,
+) -> tuple[bytes, str]:
+    payload = Path(path).read_bytes()
+    observed_hash = hashlib.sha256(payload).hexdigest()
+    if verify_hash and observed_hash != expected_sha256:
+        raise ValueError(
+            f"{label} SHA-256 mismatch: expected {expected_sha256}, observed {observed_hash}"
+        )
+    return payload, observed_hash
+
+
 def _validated_timestamps(values: pd.Series) -> pd.DatetimeIndex:
     raw = values.astype("string")
     explicit_zone = raw.str.contains(r"(?:Z|[+-]\d{2}:?\d{2})$", regex=True, na=False)
@@ -84,18 +101,10 @@ def _validated_timestamps(values: pd.Series) -> pd.DatetimeIndex:
     return timestamps
 
 
-def load_returns(path: str | Path, market: str, *, verify_hash: bool = True) -> pd.DataFrame:
+def _parse_returns(payload: bytes, market: str) -> pd.DataFrame:
     if market not in MARKETS:
         raise ValueError(f"unsupported market: {market}")
-    if verify_hash:
-        observed_hash = file_sha256(path)
-        expected_hash = EXPECTED_RETURN_FILE_SHA256[market]
-        if observed_hash != expected_hash:
-            raise ValueError(
-                f"{market} return file SHA-256 mismatch: "
-                f"expected {expected_hash}, observed {observed_hash}"
-            )
-    frame = pd.read_csv(path)
+    frame = pd.read_csv(BytesIO(payload))
     required = {"timestamp", FOLD_COLUMN, STRATEGY_COLUMN, BENCHMARK_COLUMN}
     missing = required - set(frame.columns)
     if missing:
@@ -115,18 +124,22 @@ def load_returns(path: str | Path, market: str, *, verify_hash: bool = True) -> 
     return validated
 
 
-def load_snapshot(path: str | Path, market: str, *, verify_hash: bool = True) -> pd.DataFrame:
+def load_returns(path: str | Path, market: str, *, verify_hash: bool = True) -> pd.DataFrame:
     if market not in MARKETS:
         raise ValueError(f"unsupported market: {market}")
-    if verify_hash:
-        observed_hash = file_sha256(path)
-        expected_hash = EXPECTED_SNAPSHOT_FILE_SHA256[market]
-        if observed_hash != expected_hash:
-            raise ValueError(
-                f"{market} snapshot SHA-256 mismatch: "
-                f"expected {expected_hash}, observed {observed_hash}"
-            )
-    frame = pd.read_csv(path)
+    payload, _ = _read_verified_payload(
+        path,
+        expected_sha256=EXPECTED_RETURN_FILE_SHA256[market],
+        label=f"{market} return file",
+        verify_hash=verify_hash,
+    )
+    return _parse_returns(payload, market)
+
+
+def _parse_snapshot(payload: bytes, market: str) -> pd.DataFrame:
+    if market not in MARKETS:
+        raise ValueError(f"unsupported market: {market}")
+    frame = pd.read_csv(BytesIO(payload))
     required = {"timestamp", "close", "confirm"}
     missing = required - set(frame.columns)
     if missing:
@@ -141,6 +154,18 @@ def load_snapshot(path: str | Path, market: str, *, verify_hash: bool = True) ->
     if confirm.isna().any() or not bool((confirm == 1).all()):
         raise ValueError("snapshot must contain only confirmed candles")
     return pd.DataFrame({"timestamp": timestamps, "close": close.astype(float)})
+
+
+def load_snapshot(path: str | Path, market: str, *, verify_hash: bool = True) -> pd.DataFrame:
+    if market not in MARKETS:
+        raise ValueError(f"unsupported market: {market}")
+    payload, _ = _read_verified_payload(
+        path,
+        expected_sha256=EXPECTED_SNAPSHOT_FILE_SHA256[market],
+        label=f"{market} snapshot",
+        verify_hash=verify_hash,
+    )
+    return _parse_snapshot(payload, market)
 
 
 def reconstruct_volatility_benchmark(
@@ -310,16 +335,33 @@ def analyze_market(
 
 def build_result(artifact_dir: str | Path) -> dict[str, Any]:
     root = Path(artifact_dir)
-    markets: dict[str, Any] = {}
+    return_payloads: dict[str, bytes] = {}
+    snapshot_payloads: dict[str, bytes] = {}
+    return_hashes: dict[str, str] = {}
+    snapshot_hashes: dict[str, str] = {}
+
     for market in MARKETS:
         returns_path = root / market / "walk_forward_returns.csv"
         snapshot_path = root / market / "snapshot" / f"okx-{market}-1Dutc.csv"
-        frame = load_returns(returns_path, market)
-        snapshot = load_snapshot(snapshot_path, market)
+        return_payloads[market], return_hashes[market] = _read_verified_payload(
+            returns_path,
+            expected_sha256=EXPECTED_RETURN_FILE_SHA256[market],
+            label=f"{market} return file",
+        )
+        snapshot_payloads[market], snapshot_hashes[market] = _read_verified_payload(
+            snapshot_path,
+            expected_sha256=EXPECTED_SNAPSHOT_FILE_SHA256[market],
+            label=f"{market} snapshot",
+        )
+
+    markets: dict[str, Any] = {}
+    for market in MARKETS:
+        frame = _parse_returns(return_payloads[market], market)
+        snapshot = _parse_snapshot(snapshot_payloads[market], market)
         benchmark, reconstruction_error = reconstruct_volatility_benchmark(snapshot, frame)
         result = analyze_market(frame, benchmark, market, reconstruction_error)
-        result["return_file_sha256"] = file_sha256(returns_path)
-        result["snapshot_file_sha256"] = file_sha256(snapshot_path)
+        result["return_file_sha256"] = return_hashes[market]
+        result["snapshot_file_sha256"] = snapshot_hashes[market]
         markets[market] = result
     passes = all(result["passes"] for result in markets.values())
     return {
