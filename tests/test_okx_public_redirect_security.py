@@ -75,11 +75,14 @@ def _assert_cross_origin_redirect_rejected(
 ) -> None:
     origin_contacts: list[str] = []
     destination_contacts: list[str] = []
-    with _serve(_payload_handler(destination_payload, destination_contacts)) as destination:
-        location = f"{destination}/link-local-target"
-        with _serve(_redirect_handler(location, origin_contacts)) as origin:
-            with pytest.raises((HTTPError, RuntimeError)):
-                getter(f"{origin}/public-okx-endpoint", 2.0)
+    with (
+        _serve(_payload_handler(destination_payload, destination_contacts)) as destination,
+        _serve(
+            _redirect_handler(f"{destination}/link-local-target", origin_contacts)
+        ) as origin,
+        pytest.raises((HTTPError, RuntimeError)),
+    ):
+        getter(f"{origin}/public-okx-endpoint", 2.0)
 
     assert origin_contacts == ["/public-okx-endpoint"]
     assert destination_contacts == []
