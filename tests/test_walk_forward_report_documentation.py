@@ -138,12 +138,10 @@ def test_solvency_guide_matches_metric_and_holdout_report_boundaries() -> None:
         assert claim in guide
 
     assert "insolvent = returns <= -1.0" in metrics
-    assert metrics.index("_validate_solvent_returns(returns)") < metrics.index(
-        "total_growth ="
+    assert metrics.index("_validate_solvent_returns(returns)") < metrics.index("total_growth =")
+    assert research.index("metrics = performance_metrics(validation_frame") < research.index(
+        "score = _selection_score(metrics)"
     )
-    assert research.index(
-        "metrics = performance_metrics(validation_frame"
-    ) < research.index("score = _selection_score(metrics)")
     assert holdout_cli.index("result = run_holdout_research(") < holdout_cli.index(
         "write_research_report(result"
     )
