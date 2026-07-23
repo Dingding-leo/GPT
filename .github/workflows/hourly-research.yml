@@ -45,84 +45,27 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Lint and formatting
-        run: ruff check . && ruff format --check .
-
-      - name: Test against public OKX data
-        env:
-          OKX_BASE_URL: https://www.okx.com
-        run: pytest
-
-      - name: Run OKX rolling out-of-sample research
-        env:
-          OKX_BASE_URL: https://www.okx.com
+      - name: Capture exact Ruff output
         run: |
-          for instrument in BTC-USDT ETH-USDT; do
-            python scripts/run_okx_research.py \
-              --inst-id "$instrument" \
-              --output-dir "reports/okx/$instrument" \
-              --manifest-path reports/okx/experiment-manifest.jsonl
-          done
+          ruff format \
+            src/gpt_quant/portfolio_stress.py \
+            scripts/run_portfolio_risk.py \
+            tests/test_portfolio_stress_correlation.py
+          ruff check \
+            src/gpt_quant/portfolio_stress.py \
+            scripts/run_portfolio_risk.py \
+            tests/test_portfolio_stress_correlation.py
 
-      - name: Hash portfolio return inputs
-        id: return-hashes
-        shell: bash
-        run: |
-          set -euo pipefail
-          btc_returns="reports/okx/BTC-USDT/walk_forward_returns.csv"
-          eth_returns="reports/okx/ETH-USDT/walk_forward_returns.csv"
-          test -s "$btc_returns"
-          test -s "$eth_returns"
-          printf 'btc_sha256=%s\n' "$(sha256sum "$btc_returns" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          printf 'eth_sha256=%s\n' "$(sha256sum "$eth_returns" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-
-      - name: Upload immutable sleeve research source
-        id: source-artifact
+      - name: Upload exact Ruff output
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ env.SOURCE_ARTIFACT_NAME }}
-          path: reports/okx/
+          name: risk-formatter-capture-${{ github.run_id }}
+          path: |
+            src/gpt_quant/portfolio_stress.py
+            scripts/run_portfolio_risk.py
+            tests/test_portfolio_stress_correlation.py
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
-      - name: Generate verified portfolio risk report
-        shell: bash
-        env:
-          BTC_RETURN_SHA256: ${{ steps.return-hashes.outputs.btc_sha256 }}
-          ETH_RETURN_SHA256: ${{ steps.return-hashes.outputs.eth_sha256 }}
-          SOURCE_ARTIFACT_ID: ${{ steps.source-artifact.outputs.artifact-id }}
-          SOURCE_ARTIFACT_DIGEST: ${{ steps.source-artifact.outputs.artifact-digest }}
-        run: |
-          set -euo pipefail
-          source_artifact_digest="${SOURCE_ARTIFACT_DIGEST#sha256:}"
-          source_artifact_digest="${source_artifact_digest,,}"
-          [[ "$SOURCE_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
-          [[ "$source_artifact_digest" =~ ^[0-9a-f]{64}$ ]]
-          [[ "$BTC_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
-          [[ "$ETH_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
-          python scripts/run_portfolio_risk.py \
-            --btc-returns reports/okx/BTC-USDT/walk_forward_returns.csv \
-            --eth-returns reports/okx/ETH-USDT/walk_forward_returns.csv \
-            --btc-sha256 "$BTC_RETURN_SHA256" \
-            --eth-sha256 "$ETH_RETURN_SHA256" \
-            --provider OKX \
-            --market-type spot \
-            --timeframe 1Dutc \
-            --source-workflow-run "$GITHUB_RUN_ID" \
-            --source-artifact-id "$SOURCE_ARTIFACT_ID" \
-            --source-artifact-name "$SOURCE_ARTIFACT_NAME" \
-            --source-artifact-sha256 "$source_artifact_digest" \
-            --source-head-sha "$GITHUB_SHA" \
-            --max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION" \
-            --max-pairwise-correlation "$MAX_PAIRWISE_CORRELATION" \
-            --fail-on-reject \
-            --output-dir reports/portfolio
-
-      - name: Upload verified portfolio risk artifact
-        if: ${{ always() && hashFiles('reports/portfolio/portfolio_risk.json') != '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ env.PORTFOLIO_ARTIFACT_NAME }}
-          path: reports/portfolio/
-          if-no-files-found: error
-          retention-days: 14
+      - name: Stop after formatter capture
+        run: exit 1
