@@ -24,7 +24,9 @@ _INSTRUMENT_SNAPSHOT_SHA256 = (
         "https://www.okx.com#fragment",
     ],
 )
-def test_fetch_okx_top_of_book_rejects_untrusted_origin_before_io(base_url: str) -> None:
+def test_fetch_okx_top_of_book_rejects_untrusted_origin_before_io(
+    base_url: str,
+) -> None:
     def forbidden(*args: object, **kwargs: object) -> object:
         raise AssertionError("untrusted origin reached network or clock boundary")
 
