@@ -45,9 +45,12 @@ def test_atomic_publisher_rejects_invalid_contract_before_touching_filesystem(
     (
         ("outside", "staged paths must be direct children of the staging directory"),
         ("duplicate", "staged paths must be unique"),
+        ("missing", "staged paths must be regular files"),
+        ("directory", "staged paths must be regular files"),
+        ("symlink", "staged paths must be regular files"),
     ),
 )
-def test_atomic_publisher_rejects_unowned_staged_paths_before_commit(
+def test_atomic_publisher_rejects_invalid_staged_paths_before_commit(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     case: str,
@@ -59,11 +62,23 @@ def test_atomic_publisher_rejects_unowned_staged_paths_before_commit(
     paths = {"json": output / "result.json", "markdown": output / "result.md"}
 
     def stage_invalid_paths(staging: Path) -> dict[str, Path]:
-        shared_staged_path = staging / "shared.tmp"
-        shared_staged_path.write_bytes(b"staged\n")
+        first_staged_path = staging / "first.tmp"
+        second_staged_path = staging / "second.tmp"
+        first_staged_path.write_bytes(b"first\n")
+        second_staged_path.write_bytes(b"second\n")
         if case == "outside":
-            return {"json": outside_source, "markdown": shared_staged_path}
-        return {"json": shared_staged_path, "markdown": shared_staged_path}
+            return {"json": outside_source, "markdown": second_staged_path}
+        if case == "duplicate":
+            return {"json": first_staged_path, "markdown": first_staged_path}
+        if case == "missing":
+            return {"json": staging / "missing.tmp", "markdown": second_staged_path}
+        if case == "directory":
+            directory_source = staging / "directory.tmp"
+            directory_source.mkdir()
+            return {"json": directory_source, "markdown": second_staged_path}
+        symlink_source = staging / "symlink.tmp"
+        symlink_source.symlink_to(outside_source)
+        return {"json": symlink_source, "markdown": second_staged_path}
 
     def unexpected_replace(_source: str | Path, _destination: str | Path) -> None:
         raise AssertionError("invalid staged paths must fail before destination replacement")
