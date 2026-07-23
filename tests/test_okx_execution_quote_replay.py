@@ -15,7 +15,11 @@ _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "order-book-btc-usdt
 _RESPONSE_PATH = _FIXTURE_DIR / "response.json"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
 _EXPECTED_RESPONSE_SHA256 = "7d12a351f8f51320d1c8beee0063557e1c90388d66ac63412bf66ca544aeb3e3"
+_EXPECTED_SERVER_TIME_RESPONSE_SHA256 = (
+    "2ab44b9abd247acb72cf79b22b30e14c4e80cc00a96384a4535b31a37f6dfeb0"
+)
 _INSTRUMENT_SNAPSHOT_SHA256 = "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"
+_SERVER_TIME_RESPONSE = b'{"code":"0","msg":"","data":[{"ts":"1629966436500"}]}'
 
 
 def _fixture_response() -> bytes:
@@ -41,11 +45,7 @@ def _observation():
         base_url="https://test.okx.com",
         maximum_quote_age_ms=200,
         get_bytes=lambda url, timeout: _fixture_response(),
-        get_json=lambda url, timeout: {
-            "code": "0",
-            "msg": "",
-            "data": [{"ts": "1629966436500"}],
-        },
+        get_server_time_bytes=lambda url, timeout: _SERVER_TIME_RESPONSE,
         now=_clock(
             "2021-08-26T08:27:16.420000Z",
             "2021-08-26T08:27:16.450000Z",
@@ -79,6 +79,8 @@ def test_top_of_book_replay_round_trips_complete_real_okx_evidence() -> None:
     assert replayed == evidence
     assert replayed.observation.raw_response_json == _fixture_response()
     assert replayed.observation.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
+    assert replayed.observation.raw_server_time_response_json == _SERVER_TIME_RESPONSE
+    assert replayed.observation.server_time_response_sha256 == _EXPECTED_SERVER_TIME_RESPONSE_SHA256
     assert replayed.observation.quote.instrument_snapshot_sha256 == _INSTRUMENT_SNAPSHOT_SHA256
     assert replayed.observation.server_time_request_started_utc == datetime(
         2021, 8, 26, 8, 27, 16, 460_000, tzinfo=UTC
@@ -95,6 +97,17 @@ def test_top_of_book_replay_rejects_forged_timing_envelope() -> None:
     payload["server_time_response_received_utc"] = "2026-07-23T21:00:00.000000Z"
 
     with pytest.raises(ValueError, match="round trip does not match its timestamps"):
+        ReconstructableOKXTopOfBookEvidence.from_json_bytes(_serialized(payload))
+
+
+def test_top_of_book_replay_rejects_altered_server_time_source_bytes() -> None:
+    evidence = ReconstructableOKXTopOfBookEvidence(observation=_observation())
+    payload = _canonical_payload(evidence)
+    payload["raw_server_time_response_json_utf8"] = (
+        '{"code":"0","msg":"","data":[{"ts":"1629966436499"}]}'
+    )
+
+    with pytest.raises(ValueError, match="does not reproduce the exchange timestamp"):
         ReconstructableOKXTopOfBookEvidence.from_json_bytes(_serialized(payload))
 
 
