@@ -9,6 +9,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from .walk_forward_target_verify import verify_source_bound_position_paths
 from .walk_forward_verify import verify_walk_forward_report as _verify_report_metrics
 
 _ACCOUNTING_TOLERANCE = 1e-12
@@ -112,7 +113,7 @@ def _validate_source_returns(
     output: Path,
     payload: Mapping[str, object],
     persisted: pd.DataFrame,
-) -> tuple[str, str]:
+) -> tuple[str, str, pd.Series, np.ndarray]:
     data_summary = _mapping(payload.get("data_summary"), "data_summary")
     provenance = _mapping(data_summary.get("provenance"), "data_summary.provenance")
     if provenance.get("provider") != "OKX":
@@ -178,7 +179,7 @@ def _validate_source_returns(
         expected_asset_return.reset_index(drop=True),
     )
     predecessor = snapshot_index[int(source_positions[0]) - 1].isoformat()
-    return snapshot_sha256, predecessor
+    return snapshot_sha256, predecessor, source_close, source_positions
 
 
 def _validate_accounting(payload: Mapping[str, object], persisted: pd.DataFrame) -> None:
@@ -216,7 +217,7 @@ def _validate_accounting(payload: Mapping[str, object], persisted: pd.DataFrame)
 
 
 def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int | str]:
-    """Fail closed on persisted 5 bps source, accounting, timestamp, metric, and hash drift."""
+    """Fail closed on persisted 5 bps source, target, accounting, metric, and hash drift."""
 
     output = Path(output_dir)
     report_path = output / "walk_forward.json"
@@ -231,11 +232,25 @@ def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int 
     payload_mapping = _mapping(payload, "walk-forward report")
 
     _validate_explicit_timestamps(payload_mapping, persisted)
-    source_snapshot_sha256, source_preceding_close_timestamp = _validate_source_returns(
-        output, payload_mapping, persisted
+    (
+        source_snapshot_sha256,
+        source_preceding_close_timestamp,
+        source_close,
+        source_positions,
+    ) = _validate_source_returns(output, payload_mapping, persisted)
+    source_path_verification = verify_source_bound_position_paths(
+        payload_mapping,
+        persisted,
+        source_close=source_close,
+        source_positions=source_positions,
+        tolerance=_ACCOUNTING_TOLERANCE,
     )
     _validate_accounting(payload_mapping, persisted)
     verification = _verify_report_metrics(output, tolerance=_METRIC_TOLERANCE)
+    overlap = sorted(set(verification) & set(source_path_verification))
+    if overlap:
+        raise RuntimeError(f"source path verification key collision: {overlap}")
+    verification.update(source_path_verification)
 
     if report_bytes != report_path.read_bytes() or returns_bytes != returns_path.read_bytes():
         raise ValueError("persisted walk-forward evidence changed during verification")
