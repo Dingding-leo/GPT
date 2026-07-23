@@ -107,9 +107,7 @@ class OKXSpotInstrumentSnapshot:
             "upcoming_changes",
         ):
             if getattr(self, field_name) != getattr(replayed, field_name):
-                raise ValueError(
-                    f"{field_name} does not match the exact OKX instrument response"
-                )
+                raise ValueError(f"{field_name} does not match the exact OKX instrument response")
 
     @property
     def tick_size_decimal(self) -> Decimal:
@@ -286,7 +284,7 @@ def _parse_upcoming_changes(
 ) -> tuple[tuple[OKXUpcomingInstrumentChange, ...], datetime | None]:
     if value is None:
         return (), None
-    if not isinstance(value, Sequence) or isinstance(value, (str, bytes)):
+    if not isinstance(value, Sequence) or isinstance(value, str | bytes):
         raise ValueError("OKX upcChg must be a list")
 
     normalized: list[OKXUpcomingInstrumentChange] = []
@@ -335,8 +333,7 @@ def _parse_spot_instrument_response(
     payload = _parse_json_response(_required_raw_response(raw_response))
     if payload.get("code") != "0":
         raise RuntimeError(
-            f"OKX API error code={payload.get('code')!r} "
-            f"message={payload.get('msg')!r}"
+            f"OKX API error code={payload.get('code')!r} message={payload.get('msg')!r}"
         )
     if not isinstance(payload.get("msg"), str):
         raise ValueError("OKX instrument response message must be a string")

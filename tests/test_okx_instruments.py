@@ -142,9 +142,10 @@ def test_duplicate_constraint_field_is_rejected_before_snapshot_creation() -> No
         1,
     )
     assert conflicting_response != response_bytes
-    assert hashlib.sha256(conflicting_response).hexdigest() != hashlib.sha256(
-        response_bytes
-    ).hexdigest()
+    assert (
+        hashlib.sha256(conflicting_response).hexdigest()
+        != hashlib.sha256(response_bytes).hexdigest()
+    )
 
     with pytest.raises(ValueError, match="duplicate field 'tickSz'"):
         _snapshot(response_bytes=conflicting_response)
