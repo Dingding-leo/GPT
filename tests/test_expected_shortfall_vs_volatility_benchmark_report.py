@@ -101,8 +101,7 @@ def test_bootstrap_resamples_strategy_and_benchmark_rows_together(
     )
 
     expected_deltas = [
-        _expected_shortfall(strategy[indices], 0.05)
-        - _expected_shortfall(benchmark[indices], 0.05)
+        _expected_shortfall(strategy[indices], 0.05) - _expected_shortfall(benchmark[indices], 0.05)
         for indices in sample_indices
     ]
     assert result["ci_lower"] == pytest.approx(np.quantile(expected_deltas, 0.025))
@@ -142,12 +141,8 @@ def test_result_records_single_supported_candidate_and_bound_provenance() -> Non
     )
     assert result["markets"]["BTC-USDT"]["observations"] == 2385
     assert result["markets"]["ETH-USDT"]["observations"] == 2385
-    assert result["markets"]["BTC-USDT"]["observed_delta"] == pytest.approx(
-        0.03019532258994361
-    )
-    assert result["markets"]["ETH-USDT"]["observed_delta"] == pytest.approx(
-        0.028569380467662116
-    )
+    assert result["markets"]["BTC-USDT"]["observed_delta"] == pytest.approx(0.03019532258994361)
+    assert result["markets"]["ETH-USDT"]["observed_delta"] == pytest.approx(0.028569380467662116)
     assert result["markets"]["BTC-USDT"]["ci_lower"] > 0.0
     assert result["markets"]["ETH-USDT"]["ci_lower"] > 0.0
 
