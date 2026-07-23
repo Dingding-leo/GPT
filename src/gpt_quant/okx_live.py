@@ -74,7 +74,7 @@ def _required_unix_milliseconds(value: Any, *, field: str) -> int:
 
 
 def _required_finite_number(value: Any, *, field: str) -> float:
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if isinstance(value, bool) or not isinstance(value, int | float):
         raise ValueError(f"{field} must be a finite number")
     number = float(value)
     if not isfinite(number):
@@ -289,7 +289,7 @@ def build_okx_completed_bar_cutoff(
         raise ValueError("live signal cutoff requires a confirmed latest candle")
 
     reported_age = metadata.get("freshness_age_seconds")
-    if isinstance(reported_age, bool) or not isinstance(reported_age, (int, float)):
+    if isinstance(reported_age, bool) or not isinstance(reported_age, int | float):
         raise ValueError("OKX snapshot freshness_age_seconds must be numeric")
     observed_age_seconds = (observed_at - latest_open).total_seconds()
     if abs(float(reported_age) - observed_age_seconds) > 1e-6:
