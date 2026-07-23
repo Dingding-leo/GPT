@@ -426,7 +426,9 @@ def record_paper_execution_attempt(
     if binding.instrument_id != quote.instrument_id:
         raise ValueError("execution quote binding instrument does not match the supplied quote")
     if binding.quote_observed_at_utc != quote.observed_at_utc:
-        raise ValueError("execution quote binding observation time does not match the supplied quote")
+        raise ValueError(
+            "execution quote binding observation time does not match the supplied quote"
+        )
     if binding.quote_received_at_utc != quote.received_at_utc:
         raise ValueError("execution quote binding receipt time does not match the supplied quote")
     if binding.instrument_snapshot_sha256 != quote.instrument_snapshot_sha256:
