@@ -21,3 +21,31 @@ Executable research commands, CI research jobs, and persisted research artifacts
 `run_research.py` therefore requires `--snapshot-manifest` and rejects the legacy `--csv`, `--timestamp-col`, and `--close-col` arguments. The loader validates path containment, exact SHA-256, declared columns and row widths, observation count, explicit timezone-aware and strictly increasing timestamps, boundary timestamps, and finite positive closes before research begins.
 
 The manifest records a declared timeframe and provenance object but does not query an exchange or GitHub to attest those declarations, and it does not infer cadence from the timeframe string. Audit claims must retain the provider response or workflow artifact, metadata, hashes, retrieval/request details, and any independent continuity evidence needed for the declared bar interval.
+
+## Verified OKX snapshot publication and recovery
+
+`write_okx_snapshot()` verifies the source-bound normalized CSV, raw-page JSON, and metadata bytes before creating or modifying the destination. It then stages all three payloads in a temporary directory on the destination filesystem and publishes them with `os.replace` in this exact order:
+
+1. normalized candle CSV;
+2. raw-page JSON;
+3. metadata JSON.
+
+If a later replacement raises a recoverable filesystem exception, the publisher rolls already-replaced destinations back in reverse order. A file that existed before the call is restored to its exact prior bytes; a newly created file is removed. A pre-existing output directory and unrelated caller-owned files are preserved. When the call created the output directory and rollback leaves it empty, the publisher removes that directory.
+
+The immutable-real-OKX regression `test_writer_rolls_back_partial_snapshot_commit` covers both first publication and replacement of an existing three-file snapshot. It injects only a metadata replacement failure; it does not alter market observations or produce performance evidence.
+
+This is a recoverable partial-write guarantee, not an atomic three-file generation protocol. Concurrent readers can observe the interval between individual replacements, concurrent writers are not synchronized, and no `fsync` crash-durability guarantee is made. If restoration itself fails, the publisher raises:
+
+```text
+OKX snapshot commit failed and rollback was incomplete
+```
+
+After that error, the affected destination must be treated as an indeterminate snapshot generation and regenerated before it is used as research evidence.
+
+Executable verification from a checkout with development dependencies installed:
+
+```bash
+pytest \
+  tests/test_okx_snapshot_integrity.py \
+  tests/test_real_data_policy_documentation.py
+```
