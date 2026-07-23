@@ -150,7 +150,7 @@ def test_hourly_workflow_enforces_explicit_underlying_path_budgets() -> None:
     assert '--max-annualized-net-volatility "$MAX_ANNUALIZED_NET_VOLATILITY"' in block
     assert '--maximum-drawdown-floor "$MAXIMUM_DRAWDOWN_FLOOR"' in block
     assert (
-        '--max-annualized-weighted-underlying-turnover '
+        "--max-annualized-weighted-underlying-turnover "
         '"$MAX_ANNUALIZED_WEIGHTED_UNDERLYING_TURNOVER"'
     ) in block
     assert "--fail-on-reject" in block
