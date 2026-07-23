@@ -68,7 +68,8 @@ jobs:
         run: |
           for instrument in BTC-USDT ETH-USDT; do
             python scripts/verify_walk_forward_report.py \
-              --output-dir "reports/okx/$instrument"
+              --output-dir "reports/okx/$instrument" \
+              --manifest-path reports/okx/experiment-manifest.jsonl
           done
 
       - name: Hash portfolio return inputs
