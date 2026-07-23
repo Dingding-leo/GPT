@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-"""Benchmark canonical-byte reuse on an immutable public OKX snapshot."""
-
 import argparse
 import gc
 import hashlib
