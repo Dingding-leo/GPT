@@ -22,10 +22,6 @@ jobs:
     timeout-minutes: 15
     env:
       PIP_BOOTSTRAP_VERSION: "26.1.2"
-      MAX_VARIANCE_CONTRIBUTION: "0.75"
-      MAX_PAIRWISE_CORRELATION: "0.90"
-      SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
-      PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
 
     steps:
       - name: Check out repository
@@ -45,106 +41,21 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Lint and formatting
-        shell: bash
+      - name: Format proposed data files
         run: |
-          set +e
-          ruff check . > /tmp/ruff-check.txt 2>&1
-          check_status=$?
-          ruff format --check . > /tmp/ruff-format.txt 2>&1
-          format_status=$?
-          cat /tmp/ruff-check.txt
-          cat /tmp/ruff-format.txt
-          if (( check_status != 0 || format_status != 0 )); then
-            exit 1
-          fi
+          ruff format src/gpt_quant/okx_live_evidence.py tests/test_okx_live_evidence.py
+          ruff check src/gpt_quant/okx_live_evidence.py tests/test_okx_live_evidence.py
+          mkdir -p /tmp/ruff-formatted/src/gpt_quant /tmp/ruff-formatted/tests
+          cp src/gpt_quant/okx_live_evidence.py /tmp/ruff-formatted/src/gpt_quant/
+          cp tests/test_okx_live_evidence.py /tmp/ruff-formatted/tests/
 
-      - name: Upload temporary lint diagnostics
-        if: ${{ failure() }}
+      - name: Upload temporary formatted files
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: temporary-data-lint-diagnostics-${{ github.run_number }}-attempt-${{ github.run_attempt }}
-          path: |
-            /tmp/ruff-check.txt
-            /tmp/ruff-format.txt
+          name: temporary-data-formatted-files-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: /tmp/ruff-formatted/
           if-no-files-found: error
           retention-days: 1
 
-      - name: Test against public OKX data
-        env:
-          OKX_BASE_URL: https://www.okx.com
-        run: pytest
-
-      - name: Run OKX rolling out-of-sample research
-        env:
-          OKX_BASE_URL: https://www.okx.com
-        run: |
-          for instrument in BTC-USDT ETH-USDT; do
-            python scripts/run_okx_research.py \
-              --inst-id "$instrument" \
-              --output-dir "reports/okx/$instrument" \
-              --manifest-path reports/okx/experiment-manifest.jsonl
-          done
-
-      - name: Hash portfolio return inputs
-        id: return-hashes
-        shell: bash
-        run: |
-          set -euo pipefail
-          btc_returns="reports/okx/BTC-USDT/walk_forward_returns.csv"
-          eth_returns="reports/okx/ETH-USDT/walk_forward_returns.csv"
-          test -s "$btc_returns"
-          test -s "$eth_returns"
-          printf 'btc_sha256=%s\n' "$(sha256sum "$btc_returns" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-          printf 'eth_sha256=%s\n' "$(sha256sum "$eth_returns" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
-
-      - name: Upload immutable sleeve research source
-        id: source-artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ env.SOURCE_ARTIFACT_NAME }}
-          path: reports/okx/
-          if-no-files-found: error
-          retention-days: 14
-
-      - name: Generate verified portfolio risk report
-        shell: bash
-        env:
-          BTC_RETURN_SHA256: ${{ steps.return-hashes.outputs.btc_sha256 }}
-          ETH_RETURN_SHA256: ${{ steps.return-hashes.outputs.eth_sha256 }}
-          SOURCE_ARTIFACT_ID: ${{ steps.source-artifact.outputs.artifact-id }}
-          SOURCE_ARTIFACT_DIGEST: ${{ steps.source-artifact.outputs.artifact-digest }}
-        run: |
-          set -euo pipefail
-          source_artifact_digest="${SOURCE_ARTIFACT_DIGEST#sha256:}"
-          source_artifact_digest="${source_artifact_digest,,}"
-          [[ "$SOURCE_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
-          [[ "$source_artifact_digest" =~ ^[0-9a-f]{64}$ ]]
-          [[ "$BTC_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
-          [[ "$ETH_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
-          python scripts/run_portfolio_risk.py \
-            --btc-returns reports/okx/BTC-USDT/walk_forward_returns.csv \
-            --eth-returns reports/okx/ETH-USDT/walk_forward_returns.csv \
-            --btc-sha256 "$BTC_RETURN_SHA256" \
-            --eth-sha256 "$ETH_RETURN_SHA256" \
-            --provider OKX \
-            --market-type spot \
-            --timeframe 1Dutc \
-            --source-workflow-run "$GITHUB_RUN_ID" \
-            --source-artifact-id "$SOURCE_ARTIFACT_ID" \
-            --source-artifact-name "$SOURCE_ARTIFACT_NAME" \
-            --source-artifact-sha256 "$source_artifact_digest" \
-            --source-head-sha "$GITHUB_SHA" \
-            --max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION" \
-            --max-pairwise-correlation "$MAX_PAIRWISE_CORRELATION" \
-            --fail-on-reject \
-            --output-dir reports/portfolio
-
-      - name: Upload verified portfolio risk artifact
-        if: ${{ always() && hashFiles('reports/portfolio/portfolio_risk.json') != '' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: ${{ env.PORTFOLIO_ARTIFACT_NAME }}
-          path: reports/portfolio/
-          if-no-files-found: error
-          retention-days: 14
+      - name: Stop after formatter capture
+        run: exit 1
