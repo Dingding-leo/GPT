@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - auto/performance/20260724-08-cache-paper-attempt-bytes
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
