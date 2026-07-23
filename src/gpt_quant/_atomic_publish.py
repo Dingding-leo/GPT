@@ -60,10 +60,16 @@ def publish_staged_paths_atomically(
     try:
         with TemporaryDirectory(prefix=staging_prefix, dir=output) as staging_name:
             staging = Path(staging_name)
-            staged_paths = dict(stage_paths(staging))
+            staged_paths = {name: Path(path) for name, path in stage_paths(staging).items()}
             if set(staged_paths) != names:
                 raise ValueError(
                     f"{error_label} staged paths must exactly match the destination file set"
+                )
+            if len(set(staged_paths.values())) != len(staged_paths):
+                raise ValueError(f"{error_label} staged paths must be unique")
+            if any(path.parent != staging for path in staged_paths.values()):
+                raise ValueError(
+                    f"{error_label} staged paths must be direct children of the staging directory"
                 )
 
             replaced: list[str] = []
