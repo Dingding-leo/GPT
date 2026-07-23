@@ -121,11 +121,14 @@ def test_programmatic_and_persisted_payloads_share_structured_identity(
 ) -> None:
     result = _real_walk_forward_result(btc_usdt_prices)
     legacy_frequency = dict(result.parameter_stability["selection_frequency"])
+    base_config = result.settings["base_config"]
 
     programmatic = result.to_dict()
     programmatic["path_diagnostics"] = walk_forward_path_diagnostics(
         result.combined_frame,
         annualization=365,
+        minimum_position=float(base_config["min_position"]),
+        maximum_absolute_position=float(base_config["max_abs_position"]),
     )
     paths = write_walk_forward_report(result, tmp_path)
     persisted = json.loads(paths["json"].read_text(encoding="utf-8"))
