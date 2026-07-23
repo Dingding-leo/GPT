@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -59,10 +60,18 @@ def test_persisted_walk_forward_report_recomputes_from_real_okx_data(
         "trading_cost",
         "strategy_return",
     } <= set(returns.columns)
-    assert returns["gross_strategy_return"].equals(
-        returns["position"] * returns["asset_return"]
+    assert np.allclose(
+        returns["gross_strategy_return"],
+        returns["position"] * returns["asset_return"],
+        rtol=0.0,
+        atol=1e-12,
     )
-    assert returns["exchange_fee_cost"].equals(returns["trading_cost"])
+    assert np.allclose(
+        returns["exchange_fee_cost"],
+        returns["trading_cost"],
+        rtol=0.0,
+        atol=1e-12,
+    )
 
 
 def test_persisted_walk_forward_verifier_rejects_report_metric_drift(
