@@ -44,6 +44,21 @@ jobs:
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
 
+      - name: Prepare formatted performance diagnostic
+        run: |
+          ruff check --fix benchmarks/run_walk_forward_cache.py tests/test_walk_forward_cache_benchmark.py
+          ruff format benchmarks/run_walk_forward_cache.py tests/test_walk_forward_cache_benchmark.py
+
+      - name: Upload formatted performance diagnostic
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: pr213-ruff-formatted-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: |
+            benchmarks/run_walk_forward_cache.py
+            tests/test_walk_forward_cache_benchmark.py
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
