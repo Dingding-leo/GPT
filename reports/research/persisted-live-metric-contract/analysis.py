@@ -379,7 +379,9 @@ def build_result(artifact_dir: Path) -> dict[str, Any]:
                 "sum positive completed-episode returns divided by absolute sum negative "
                 "completed-episode returns; null when there are no losing completed episodes"
             ),
-            "calendar_return": "compounded net daily return with incomplete periods labelled partial",
+            "calendar_return": (
+                "compounded net daily return with incomplete periods labelled partial"
+            ),
             "underwater_duration": "consecutive daily OOS observations below the running peak",
         },
         "markets": markets,
@@ -390,14 +392,10 @@ def build_result(artifact_dir: Path) -> dict[str, Any]:
             "corrected_5bps_full_reselection": "pass",
             "path_derived_metric_reconstructability": "pass" if passes else "fail",
             "formal_persisted_metric_contract": "fail",
-            "benchmark_relative_risk_adjusted": joint(
-                "benchmark_relative_risk_adjusted_passes"
-            ),
+            "benchmark_relative_risk_adjusted": joint("benchmark_relative_risk_adjusted_passes"),
             "fold_stability": joint("fold_stability_passes"),
             "year_stability": joint("complete_year_stability_passes"),
-            "turnover_and_5_7_5_10_15bps_viability": joint(
-                "fifteen_bps_selected_path_viable"
-            ),
+            "turnover_and_5_7_5_10_15bps_viability": joint("fifteen_bps_selected_path_viable"),
             "parameter_neighbourhood_stability": "pass",
             "tail_risk": "pass",
             "execution_delay_robustness": "fail",

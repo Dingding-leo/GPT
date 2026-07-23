@@ -70,8 +70,9 @@ def test_path_diagnostics_reconstruct_from_real_okx_returns(
     assert years[0]["partial"] is True
     assert years[-1]["partial"] is True
     assert drawdown["maximum_drawdown"] <= drawdown["current_drawdown"] <= 0.0
-    assert drawdown["longest_underwater_duration_bars"] >= (
-        drawdown["current_underwater_duration_bars"]
+    assert (
+        drawdown["longest_underwater_duration_bars"]
+        >= (drawdown["current_underwater_duration_bars"])
     )
 
 
