@@ -133,22 +133,38 @@ def test_cache_memory_benchmark_measures_nav_omission(
     )
 
 
-def test_cache_memory_accounting_counts_shared_index_buffer_once(
+def test_cache_memory_accounting_counts_shared_root_buffers_once(
     btc_usdt_prices: pd.Series,
 ) -> None:
     benchmark = _load_benchmark_module()
-    first = pd.DataFrame({"value": [1.0, 2.0]}, index=btc_usdt_prices.index[:2])
-    second = pd.DataFrame({"value": [3.0, 4.0]}, index=btc_usdt_prices.index[:2].copy())
+    shared_close = btc_usdt_prices.iloc[:2].to_numpy(copy=False)
+    first = pd.DataFrame(
+        {"close": shared_close},
+        index=btc_usdt_prices.index[:2],
+        copy=False,
+    )
+    second = pd.DataFrame(
+        {"close": shared_close},
+        index=btc_usdt_prices.index[:2].copy(),
+        copy=False,
+    )
+    first_column_root = benchmark._root_array(first["close"].to_numpy(copy=False))
+    second_column_root = benchmark._root_array(second["close"].to_numpy(copy=False))
+    first_index_root = benchmark._root_array(first.index.asi8)
+    second_index_root = benchmark._root_array(second.index.asi8)
+
     assert first.index is not second.index
-    assert benchmark._root_array(first.index.asi8) is benchmark._root_array(second.index.asi8)
+    assert first_column_root is second_column_root
+    assert first_index_root is second_index_root
+    assert first_column_root is not first_index_root
 
     cache = {
         StrategyConfig(momentum_lookback=10): first,
         StrategyConfig(momentum_lookback=11): second,
     }
 
-    shared_index_bytes = benchmark._root_array(first.index.asi8).nbytes
-    assert benchmark._cache_unique_index_bytes(cache) == shared_index_bytes
+    assert benchmark._cache_column_bytes(cache) == first_column_root.nbytes
+    assert benchmark._cache_unique_index_bytes(cache) == first_index_root.nbytes
     assert benchmark._cache_retained_array_bytes(cache) == (
-        benchmark._cache_column_bytes(cache) + shared_index_bytes
+        first_column_root.nbytes + first_index_root.nbytes
     )
