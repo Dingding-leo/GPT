@@ -1,0 +1,435 @@
+{
+  "candidate_accounting": {
+    "live_critical_scenarios_per_market": 8,
+    "passed": 0,
+    "rejected": 1,
+    "strategy_candidates_searched": 1,
+    "stress_scenarios_per_market": 8
+  },
+  "canonical_signature": "canonical-5bps-execution-delay-cost-stress-v1|markets=BTC-USDT,ETH-USDT|source=PR308-artifact-8566608828|baseline=full-reselection-5bps-one-bar-delay|stress=total-delay-2,3-bars|all-in-costs-bps=5,7.5,10,15|position-path=frozen-persisted-selected-path-shifted-by-extra-delay|resampling=paired-noncircular-moving-block-bootstrap|block-length=20|resamples=2000|confidence=0.95|pass=all-stress-scenarios-positive-point-return-and-sharpe,max-drawdown-at-least-minus-40pct,and-positive-bootstrap-lower-bounds-for-annualized-mean-and-sharpe-in-both-markets|candidate_count=1",
+  "execution_delay_gate_passes": false,
+  "hypothesis": "The frozen canonical 5 bps selected path remains reliably profitable and risk-controlled in BTC-USDT and ETH-USDT under total execution delays of two and three daily bars and fixed all-in costs of 5, 7.5, 10, and 15 bps.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "The delayed paths shift observed daily positions; they are not executable next-open fills.",
+    "The 7.5/10/15 bps scenarios are all-in totals and do not identify separate friction components.",
+    "Moving-block concatenation creates artificial joins and preserves dependence only within blocks.",
+    "Capacity, partial fills, rejected orders, and prospective paper evidence remain untested."
+  ],
+  "live_gate_status": {
+    "gates": {
+      "benchmark_relative_risk_adjusted_evidence": "fail",
+      "capacity": "blocked",
+      "execution_delay_and_all_in_cost_stress": "fail",
+      "fold_stability": "fail",
+      "prospective_forward_validation": "blocked",
+      "separate_spread_slippage_impact_latency": "blocked",
+      "untouched_market_validation": "blocked",
+      "year_stability": "fail"
+    },
+    "live_eligible": false
+  },
+  "markets": {
+    "BTC-USDT": {
+      "baseline_5bps": {
+        "all_in_cost_bps": 5.0,
+        "annualized_arithmetic_mean": 0.161305222665,
+        "annualized_mean_95pct_lower": -0.037906427264,
+        "annualized_turnover": 16.425319286678,
+        "cagr": 0.144891182501,
+        "extra_delay_bars": 0,
+        "failed_checks": [
+          "positive_mean_lower_bound",
+          "positive_sharpe_lower_bound"
+        ],
+        "max_drawdown": -0.284066679269,
+        "passes_delay_gate": null,
+        "sharpe": 0.706719913562,
+        "sharpe_95pct_lower": -0.17717237311,
+        "total_delay_bars": 1,
+        "total_return": 1.420916675994
+      },
+      "delay_gate_passes": false,
+      "failed_scenarios": [
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_2_bars_cost_5_bps"
+        },
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_2_bars_cost_7.5_bps"
+        },
+        {
+          "failed_checks": [
+            "max_drawdown_floor",
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_2_bars_cost_10_bps"
+        },
+        {
+          "failed_checks": [
+            "max_drawdown_floor",
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_2_bars_cost_15_bps"
+        },
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_3_bars_cost_5_bps"
+        },
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_3_bars_cost_7.5_bps"
+        },
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_3_bars_cost_10_bps"
+        },
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_3_bars_cost_15_bps"
+        }
+      ],
+      "stress_scenarios": {
+        "delay_2_bars_cost_10_bps": {
+          "all_in_cost_bps": 10.0,
+          "annualized_mean_95pct_lower": -0.064000306118,
+          "extra_delay_bars": 1,
+          "failed_checks": [
+            "max_drawdown_floor",
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.401104028788,
+          "passes_delay_gate": false,
+          "sharpe": 0.57776256111,
+          "sharpe_95pct_lower": -0.303067736509,
+          "total_delay_bars": 2,
+          "total_return": 1.02371832013
+        },
+        "delay_2_bars_cost_15_bps": {
+          "all_in_cost_bps": 15.0,
+          "annualized_mean_95pct_lower": -0.072810937639,
+          "extra_delay_bars": 1,
+          "failed_checks": [
+            "max_drawdown_floor",
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.407983605934,
+          "passes_delay_gate": false,
+          "sharpe": 0.542667932306,
+          "sharpe_95pct_lower": -0.340691055599,
+          "total_delay_bars": 2,
+          "total_return": 0.917985887842
+        },
+        "delay_2_bars_cost_5_bps": {
+          "all_in_cost_bps": 5.0,
+          "annualized_mean_95pct_lower": -0.056126001191,
+          "extra_delay_bars": 1,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.394145263098,
+          "passes_delay_gate": false,
+          "sharpe": 0.612852049847,
+          "sharpe_95pct_lower": -0.25992659583,
+          "total_delay_bars": 2,
+          "total_return": 1.135269151481
+        },
+        "delay_2_bars_cost_7.5_bps": {
+          "all_in_cost_bps": 7.5,
+          "annualized_mean_95pct_lower": -0.059837387993,
+          "extra_delay_bars": 1,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.397634600703,
+          "passes_delay_gate": false,
+          "sharpe": 0.595308014275,
+          "sharpe_95pct_lower": -0.281999075008,
+          "total_delay_bars": 2,
+          "total_return": 1.078746859663
+        },
+        "delay_3_bars_cost_10_bps": {
+          "all_in_cost_bps": 10.0,
+          "annualized_mean_95pct_lower": -0.057962020537,
+          "extra_delay_bars": 2,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.326489929228,
+          "passes_delay_gate": false,
+          "sharpe": 0.587447322445,
+          "sharpe_95pct_lower": -0.261655318698,
+          "total_delay_bars": 3,
+          "total_return": 1.050238847137
+        },
+        "delay_3_bars_cost_15_bps": {
+          "all_in_cost_bps": 15.0,
+          "annualized_mean_95pct_lower": -0.066344599646,
+          "extra_delay_bars": 2,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.335207718519,
+          "passes_delay_gate": false,
+          "sharpe": 0.552199909557,
+          "sharpe_95pct_lower": -0.298280083693,
+          "total_delay_bars": 3,
+          "total_return": 0.943083697082
+        },
+        "delay_3_bars_cost_5_bps": {
+          "all_in_cost_bps": 5.0,
+          "annualized_mean_95pct_lower": -0.048610550857,
+          "extra_delay_bars": 2,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.317658734076,
+          "passes_delay_gate": false,
+          "sharpe": 0.622693587325,
+          "sharpe_95pct_lower": -0.223940333063,
+          "total_delay_bars": 3,
+          "total_return": 1.16329284764
+        },
+        "delay_3_bars_cost_7.5_bps": {
+          "all_in_cost_bps": 7.5,
+          "annualized_mean_95pct_lower": -0.053289104386,
+          "extra_delay_bars": 2,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.322088598412,
+          "passes_delay_gate": false,
+          "sharpe": 0.605070665471,
+          "sharpe_95pct_lower": -0.242798712904,
+          "total_delay_bars": 3,
+          "total_return": 1.106008637001
+        }
+      }
+    },
+    "ETH-USDT": {
+      "baseline_5bps": {
+        "all_in_cost_bps": 5.0,
+        "annualized_arithmetic_mean": 0.145459205756,
+        "annualized_mean_95pct_lower": -0.06068276033,
+        "annualized_turnover": 17.301474510838,
+        "cagr": 0.120708832918,
+        "extra_delay_bars": 0,
+        "failed_checks": [
+          "positive_mean_lower_bound",
+          "positive_sharpe_lower_bound"
+        ],
+        "max_drawdown": -0.291805680958,
+        "passes_delay_gate": null,
+        "sharpe": 0.579466964697,
+        "sharpe_95pct_lower": -0.249904590681,
+        "total_delay_bars": 1,
+        "total_return": 1.105707894326
+      },
+      "delay_gate_passes": false,
+      "failed_scenarios": [
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_2_bars_cost_5_bps"
+        },
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_2_bars_cost_7.5_bps"
+        },
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_2_bars_cost_10_bps"
+        },
+        {
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "scenario": "delay_2_bars_cost_15_bps"
+        }
+      ],
+      "stress_scenarios": {
+        "delay_2_bars_cost_10_bps": {
+          "all_in_cost_bps": 10.0,
+          "annualized_mean_95pct_lower": -0.022839982549,
+          "extra_delay_bars": 1,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.363438038288,
+          "passes_delay_gate": false,
+          "sharpe": 0.638948121046,
+          "sharpe_95pct_lower": -0.088467238961,
+          "total_delay_bars": 2,
+          "total_return": 1.320911609212
+        },
+        "delay_2_bars_cost_15_bps": {
+          "all_in_cost_bps": 15.0,
+          "annualized_mean_95pct_lower": -0.03187041087,
+          "extra_delay_bars": 1,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.368652906061,
+          "passes_delay_gate": false,
+          "sharpe": 0.604523340327,
+          "sharpe_95pct_lower": -0.119785675397,
+          "total_delay_bars": 2,
+          "total_return": 1.193472619518
+        },
+        "delay_2_bars_cost_5_bps": {
+          "all_in_cost_bps": 5.0,
+          "annualized_mean_95pct_lower": -0.014063402171,
+          "extra_delay_bars": 1,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.358180615545,
+          "passes_delay_gate": false,
+          "sharpe": 0.673366362602,
+          "sharpe_95pct_lower": -0.056855789201,
+          "total_delay_bars": 2,
+          "total_return": 1.455742867446
+        },
+        "delay_2_bars_cost_7.5_bps": {
+          "all_in_cost_bps": 7.5,
+          "annualized_mean_95pct_lower": -0.018839512713,
+          "extra_delay_bars": 1,
+          "failed_checks": [
+            "positive_mean_lower_bound",
+            "positive_sharpe_lower_bound"
+          ],
+          "max_drawdown": -0.360814667668,
+          "passes_delay_gate": false,
+          "sharpe": 0.656158113811,
+          "sharpe_95pct_lower": -0.072565780445,
+          "total_delay_bars": 2,
+          "total_return": 1.387377011659
+        },
+        "delay_3_bars_cost_10_bps": {
+          "all_in_cost_bps": 10.0,
+          "annualized_mean_95pct_lower": 0.008643297079,
+          "extra_delay_bars": 2,
+          "failed_checks": [],
+          "max_drawdown": -0.281955035844,
+          "passes_delay_gate": true,
+          "sharpe": 0.719118902874,
+          "sharpe_95pct_lower": 0.034663171221,
+          "total_delay_bars": 3,
+          "total_return": 1.678772220795
+        },
+        "delay_3_bars_cost_15_bps": {
+          "all_in_cost_bps": 15.0,
+          "annualized_mean_95pct_lower": 0.000370475038,
+          "extra_delay_bars": 2,
+          "failed_checks": [],
+          "max_drawdown": -0.287832847152,
+          "passes_delay_gate": true,
+          "sharpe": 0.685185764069,
+          "sharpe_95pct_lower": 0.001513820614,
+          "total_delay_bars": 3,
+          "total_return": 1.531675228957
+        },
+        "delay_3_bars_cost_5_bps": {
+          "all_in_cost_bps": 5.0,
+          "annualized_mean_95pct_lower": 0.017001850512,
+          "extra_delay_bars": 2,
+          "failed_checks": [],
+          "max_drawdown": -0.276029299491,
+          "passes_delay_gate": true,
+          "sharpe": 0.753046694111,
+          "sharpe_95pct_lower": 0.068408767112,
+          "total_delay_bars": 3,
+          "total_return": 1.834402252627
+        },
+        "delay_3_bars_cost_7.5_bps": {
+          "all_in_cost_bps": 7.5,
+          "annualized_mean_95pct_lower": 0.012890532454,
+          "extra_delay_bars": 2,
+          "failed_checks": [],
+          "max_drawdown": -0.278998182354,
+          "passes_delay_gate": true,
+          "sharpe": 0.736083519242,
+          "sharpe_95pct_lower": 0.051695988349,
+          "total_delay_bars": 3,
+          "total_return": 1.755490369901
+        }
+      }
+    }
+  },
+  "method": {
+    "all_in_costs_bps": [
+      5.0,
+      7.5,
+      10.0,
+      15.0
+    ],
+    "baseline_fee_bps_one_way": 5.0,
+    "block_length": 20,
+    "candidate_architecture_frozen": true,
+    "component_cost_attribution": "blocked: all-in cost totals do not separately identify spread, slippage, market impact, or latency",
+    "confidence": 0.95,
+    "delay_method": "shift the persisted one-bar-delayed selected-path position by total_delay-1 additional daily rows; recompute turnover and costs from cash",
+    "live_critical_total_delay_bars": [
+      2,
+      3
+    ],
+    "max_drawdown_floor": -0.4,
+    "pass_rule": "every live-critical market/delay/cost scenario must have positive point total return and Sharpe, max drawdown >= -40%, and positive 95% moving-block-bootstrap lower bounds for annualized arithmetic mean and Sharpe",
+    "resamples": 2000,
+    "selection_recomputed": false,
+    "total_delay_bars": [
+      1,
+      2,
+      3
+    ]
+  },
+  "source": {
+    "artifact_id": 8566608828,
+    "artifact_name": "quant-research-source-2037-attempt-1",
+    "artifact_sha256": "ab0846180ff5b9397de26de8ca8d728ad237be00bdb92ba1612ef6ba243fc149",
+    "source_head_sha": "0d9c098f6408f4510bbefb95633e3d695f30dde3",
+    "workflow_run_id": 30014704624
+  },
+  "verdict": "rejected"
+}
