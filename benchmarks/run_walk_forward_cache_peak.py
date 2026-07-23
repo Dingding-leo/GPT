@@ -47,8 +47,9 @@ def _paired_peak_bytes(
         cache_benchmark._assert_equal(baseline_result, optimized_result)
         baseline_samples.append(baseline_peak)
         optimized_samples.append(optimized_peak)
-    return int(statistics.median(baseline_samples)), int(
-        statistics.median(optimized_samples)
+    return (
+        int(statistics.median(baseline_samples)),
+        int(statistics.median(optimized_samples)),
     )
 
 
