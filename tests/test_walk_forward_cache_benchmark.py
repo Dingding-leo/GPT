@@ -140,9 +140,7 @@ def test_cache_memory_accounting_counts_shared_index_buffer_once(
     first = pd.DataFrame({"value": [1.0, 2.0]}, index=btc_usdt_prices.index[:2])
     second = pd.DataFrame({"value": [3.0, 4.0]}, index=btc_usdt_prices.index[:2].copy())
     assert first.index is not second.index
-    assert benchmark._root_array(first.index.asi8) is benchmark._root_array(
-        second.index.asi8
-    )
+    assert benchmark._root_array(first.index.asi8) is benchmark._root_array(second.index.asi8)
 
     cache = {
         StrategyConfig(momentum_lookback=10): first,
