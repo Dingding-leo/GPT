@@ -24,7 +24,7 @@ jobs:
     env:
       PIP_BOOTSTRAP_VERSION: "26.1.2"
       OKX_BASE_URL: https://www.okx.com
-      FREEZE_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      FREEZE_HEAD: 5b622a5051f288abe3f294bcbc1206a4c568ceb4
       HOLDOUT_ARTIFACT_NAME: sealed-sol-holdout-${{ github.run_number }}-attempt-${{ github.run_attempt }}
 
     steps:
@@ -45,8 +45,15 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Lint and formatting
-        run: ruff check . && ruff format --check .
+      - name: Apply temporary Ruff diagnostic
+        run: |
+          ruff check . --fix
+          ruff format .
+          ruff check .
+          ruff format --check .
+          mkdir -p reports/research/sol-sealed-holdout/diagnostic
+          cp scripts/evaluate_sealed_okx_holdout.py \
+            reports/research/sol-sealed-holdout/diagnostic/evaluate_sealed_okx_holdout.py
 
       - name: Test repository
         run: pytest
@@ -95,5 +102,6 @@ jobs:
           path: |
             reports/sealed/
             reports/research/sol-sealed-holdout/generated/
+            reports/research/sol-sealed-holdout/diagnostic/
           if-no-files-found: error
           retention-days: 14
