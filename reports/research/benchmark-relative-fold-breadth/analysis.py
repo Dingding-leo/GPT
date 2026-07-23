@@ -186,7 +186,6 @@ def analyze(artifact_dir: str | Path) -> dict[str, object]:
         statistics["trailing_incomplete_observations"] = int(
             len(frame) - EXPECTED_COMPLETE_FOLDS * EXPECTED_FOLD_OBSERVATIONS
         )
-        statistics["fold_records"] = fold_records.to_dict(orient="records")
         market_results[market] = statistics
         return_hashes[market] = file_sha256(returns_path)
 
