@@ -243,14 +243,12 @@ class PaperExecutionAttempt:
                 raise ValueError("sell fill price cannot improve through the reference bid")
 
         latency_values = {
-            "decision_to_submission_latency_us": self.submitted_at_utc
-            - self.decision_at_utc,
+            "decision_to_submission_latency_us": self.submitted_at_utc - self.decision_at_utc,
             "quote_observed_to_submission_latency_us": self.submitted_at_utc
             - self.quote_observed_at_utc,
             "quote_received_to_submission_latency_us": self.submitted_at_utc
             - self.quote_received_at_utc,
-            "submission_to_outcome_latency_us": self.outcome_at_utc
-            - self.submitted_at_utc,
+            "submission_to_outcome_latency_us": self.outcome_at_utc - self.submitted_at_utc,
         }
         for name, value in latency_values.items():
             object.__setattr__(self, name, _microseconds(value))
@@ -414,7 +412,9 @@ def record_paper_execution_attempt(
     if binding.instrument_id != quote.instrument_id:
         raise ValueError("execution quote binding instrument does not match the supplied quote")
     if binding.quote_observed_at_utc != quote.observed_at_utc:
-        raise ValueError("execution quote binding observation time does not match the supplied quote")
+        raise ValueError(
+            "execution quote binding observation time does not match the supplied quote"
+        )
     if binding.quote_received_at_utc != quote.received_at_utc:
         raise ValueError("execution quote binding receipt time does not match the supplied quote")
     if binding.instrument_snapshot_sha256 != quote.instrument_snapshot_sha256:
