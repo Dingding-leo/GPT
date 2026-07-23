@@ -14,11 +14,30 @@ from .walk_forward_verify import verify_walk_forward_report as _verify_report_me
 _ACCOUNTING_TOLERANCE = 1e-12
 _METRIC_TOLERANCE = 1e-9
 _BASELINE_FEE_BPS = 5.0
+_HEX_DIGITS = frozenset("0123456789abcdef")
 
 
 def _mapping(value: object, label: str) -> Mapping[str, object]:
     if not isinstance(value, Mapping):
         raise ValueError(f"{label} must be a mapping")
+    return value
+
+
+def _required_text(value: object, label: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{label} must be a non-empty string")
+    if "/" in value or "\\" in value or value in {".", ".."}:
+        raise ValueError(f"{label} contains an unsafe path component")
+    return value
+
+
+def _sha256_bytes(payload: bytes) -> str:
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _sha256_digest(value: object, label: str) -> str:
+    if not isinstance(value, str) or len(value) != 64 or set(value) - _HEX_DIGITS:
+        raise ValueError(f"{label} must be a lowercase SHA-256 digest")
     return value
 
 
@@ -33,6 +52,16 @@ def _explicit_utc_timestamp(value: object, label: str) -> pd.Timestamp:
     if offset is None or offset.total_seconds() != 0.0:
         raise ValueError(f"{label} must include an explicit UTC offset")
     return parsed.tz_convert("UTC")
+
+
+def _timestamp_index(values: pd.Series, label: str) -> pd.DatetimeIndex:
+    index = pd.DatetimeIndex(
+        [_explicit_utc_timestamp(value, f"{label} row {row}") for row, value in enumerate(values)],
+        name="timestamp",
+    )
+    if index.has_duplicates or not index.is_monotonic_increasing:
+        raise ValueError(f"{label}s must be unique and increasing")
+    return index
 
 
 def _numeric(frame: pd.DataFrame, name: str) -> pd.Series:
@@ -76,8 +105,70 @@ def _validate_explicit_timestamps(payload: Mapping[str, object], persisted: pd.D
         _explicit_utc_timestamp(fold_mapping.get("test_start"), f"fold {ordinal} test_start")
         _explicit_utc_timestamp(fold_mapping.get("test_end"), f"fold {ordinal} test_end")
 
-    for row, value in enumerate(persisted["timestamp"]):
-        _explicit_utc_timestamp(value, f"walk-forward returns timestamp row {row}")
+    _timestamp_index(persisted["timestamp"], "walk-forward returns timestamp")
+
+
+def _validate_source_returns(
+    output: Path,
+    payload: Mapping[str, object],
+    persisted: pd.DataFrame,
+) -> str:
+    data_summary = _mapping(payload.get("data_summary"), "data_summary")
+    provenance = _mapping(data_summary.get("provenance"), "data_summary.provenance")
+    if provenance.get("provider") != "OKX":
+        raise ValueError("walk-forward source verification requires OKX provenance")
+    instrument_id = _required_text(provenance.get("instrument_id"), "instrument_id")
+    bar = _required_text(provenance.get("bar"), "bar")
+    expected_sha256 = _sha256_digest(
+        provenance.get("normalized_csv_sha256"),
+        "normalized_csv_sha256",
+    )
+    snapshot_path = output / "snapshot" / f"okx-{instrument_id}-{bar}.csv"
+    if not snapshot_path.is_file():
+        raise ValueError("walk-forward source verification requires the normalized OKX snapshot")
+    snapshot_bytes = snapshot_path.read_bytes()
+    snapshot_sha256 = _sha256_bytes(snapshot_bytes)
+    if snapshot_sha256 != expected_sha256:
+        raise ValueError("normalized OKX snapshot hash does not match report provenance")
+
+    try:
+        snapshot = pd.read_csv(snapshot_path, float_precision="round_trip")
+    except (OSError, UnicodeError, pd.errors.ParserError) as exc:
+        raise ValueError("normalized OKX snapshot is unreadable") from exc
+    missing = sorted({"timestamp", "close", "confirm"} - set(snapshot.columns))
+    if missing:
+        raise ValueError(f"normalized OKX snapshot is missing required columns: {missing}")
+    if snapshot.empty:
+        raise ValueError("normalized OKX snapshot cannot be empty")
+
+    snapshot_index = _timestamp_index(snapshot["timestamp"], "normalized OKX snapshot timestamp")
+    persisted_index = _timestamp_index(persisted["timestamp"], "walk-forward returns timestamp")
+    snapshot_close = pd.to_numeric(snapshot["close"], errors="raise").astype(float)
+    if not np.isfinite(snapshot_close.to_numpy(copy=False)).all() or (snapshot_close <= 0.0).any():
+        raise ValueError("normalized OKX snapshot close must contain finite positive values")
+    confirm = pd.to_numeric(snapshot["confirm"], errors="raise")
+    if not confirm.eq(1).all():
+        raise ValueError("normalized OKX snapshot must contain completed candles only")
+
+    source_close = pd.Series(snapshot_close.to_numpy(copy=False), index=snapshot_index, name="close")
+    aligned_close = source_close.reindex(persisted_index)
+    expected_asset_return = source_close.pct_change().fillna(0.0).reindex(persisted_index)
+    if aligned_close.isna().any() or expected_asset_return.isna().any():
+        raise ValueError("walk-forward timestamps are not fully covered by the normalized OKX snapshot")
+
+    persisted_close = _numeric(persisted, "close")
+    persisted_asset_return = _numeric(persisted, "asset_return")
+    _assert_accounting(
+        "close from immutable normalized OKX snapshot",
+        persisted_close,
+        aligned_close.reset_index(drop=True),
+    )
+    _assert_accounting(
+        "asset_return from immutable normalized OKX snapshot",
+        persisted_asset_return,
+        expected_asset_return.reset_index(drop=True),
+    )
+    return snapshot_sha256
 
 
 def _validate_accounting(payload: Mapping[str, object], persisted: pd.DataFrame) -> None:
@@ -114,12 +205,8 @@ def _validate_accounting(payload: Mapping[str, object], persisted: pd.DataFrame)
     _assert_accounting("strategy_return", strategy_return, expected_net)
 
 
-def _sha256_bytes(payload: bytes) -> str:
-    return hashlib.sha256(payload).hexdigest()
-
-
 def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int | str]:
-    """Fail closed on persisted 5 bps accounting, timestamp, metric, and hash drift."""
+    """Fail closed on persisted 5 bps source, accounting, timestamp, metric, and hash drift."""
 
     output = Path(output_dir)
     report_path = output / "walk_forward.json"
@@ -128,12 +215,13 @@ def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int 
     returns_bytes = returns_path.read_bytes()
     try:
         payload = json.loads(report_bytes.decode("utf-8"))
-        persisted = pd.read_csv(returns_path)
+        persisted = pd.read_csv(returns_path, float_precision="round_trip")
     except (UnicodeError, json.JSONDecodeError, pd.errors.ParserError) as exc:
         raise ValueError("persisted walk-forward evidence is unreadable") from exc
     payload_mapping = _mapping(payload, "walk-forward report")
 
     _validate_explicit_timestamps(payload_mapping, persisted)
+    source_snapshot_sha256 = _validate_source_returns(output, payload_mapping, persisted)
     _validate_accounting(payload_mapping, persisted)
     verification = _verify_report_metrics(output, tolerance=_METRIC_TOLERANCE)
 
@@ -146,4 +234,7 @@ def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int 
 
     verification["accounting_tolerance"] = _ACCOUNTING_TOLERANCE
     verification["metric_tolerance"] = _METRIC_TOLERANCE
+    verification["source_snapshot_sha256"] = source_snapshot_sha256
+    verification["source_price_rows_verified"] = len(persisted)
+    verification["asset_return_source"] = "immutable_normalized_okx_close_pct_change"
     return verification
