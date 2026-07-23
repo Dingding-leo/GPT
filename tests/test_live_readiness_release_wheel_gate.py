@@ -17,7 +17,7 @@ def test_live_readiness_install_gate_builds_and_imports_release_wheel() -> None:
     assert '"build==${BUILD_FRONTEND_VERSION}"' in install_block
     assert '"setuptools==${BUILD_BACKEND_VERSION}"' in install_block
     assert "python -m build --wheel --no-isolation" in install_block
-    assert 'wheels=(dist/gpt_quant_lab-*.whl)' in install_block
+    assert "wheels=(dist/gpt_quant_lab-*.whl)" in install_block
     assert 'test "${#wheels[@]}" -eq 1' in install_block
     assert "python -m venv /tmp/gpt-live-readiness-wheel-venv" in install_block
     assert '/tmp/gpt-live-readiness-wheel-venv/bin/pip install "${wheels[0]}"' in install_block
