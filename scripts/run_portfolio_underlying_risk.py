@@ -63,7 +63,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
             "Expose source-bound underlying sleeve risk and enforce explicit portfolio "
-            "volatility and drawdown budgets."
+            "volatility, drawdown, and turnover budgets."
         )
     )
     parser.add_argument("--btc-returns", required=True)
@@ -82,6 +82,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--maximum-drawdown-floor",
         required=True,
         type=_drawdown_floor,
+    )
+    parser.add_argument(
+        "--max-annualized-weighted-underlying-turnover",
+        required=True,
+        type=_positive_float,
     )
     parser.add_argument("--fail-on-reject", action="store_true")
     parser.add_argument("--provider", required=True, choices=("OKX",))
@@ -143,6 +148,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         result,
         max_annualized_net_volatility=args.max_annualized_net_volatility,
         maximum_drawdown_floor=args.maximum_drawdown_floor,
+        max_annualized_weighted_underlying_turnover=(
+            args.max_annualized_weighted_underlying_turnover
+        ),
     )
     budget_path = write_portfolio_path_risk_budget_report(budget, args.output_dir)
 
