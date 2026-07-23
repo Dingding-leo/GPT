@@ -83,7 +83,9 @@ def _assert_series_close(
         rtol=0.0,
         atol=tolerance,
     ):
-        difference = np.abs(actual.to_numpy(dtype=float) - expected.to_numpy(dtype=float))
+        difference = np.abs(
+            actual.to_numpy(dtype=float) - expected.to_numpy(dtype=float)
+        )
         position = int(np.argmax(difference))
         raise ValueError(
             f"{label} does not match persisted return accounting at row {position}; "
@@ -155,14 +157,18 @@ def verify_walk_forward_report(
         raise ValueError("walk-forward returns CSV is unreadable") from exc
     missing_columns = sorted(_REQUIRED_RETURN_COLUMNS - set(persisted.columns))
     if missing_columns:
-        raise ValueError(f"walk-forward returns CSV is missing required columns: {missing_columns}")
+        raise ValueError(
+            f"walk-forward returns CSV is missing required columns: {missing_columns}"
+        )
     if persisted.empty:
         raise ValueError("walk-forward returns CSV cannot be empty")
 
     try:
         timestamps = pd.to_datetime(persisted["timestamp"], utc=True, errors="raise")
     except (TypeError, ValueError) as exc:
-        raise ValueError("walk-forward returns timestamps must be valid UTC timestamps") from exc
+        raise ValueError(
+            "walk-forward returns timestamps must be valid UTC timestamps"
+        ) from exc
     index = pd.DatetimeIndex(timestamps, name="timestamp")
     if index.has_duplicates or not index.is_monotonic_increasing:
         raise ValueError("walk-forward returns timestamps must be unique and increasing")
@@ -170,7 +176,10 @@ def verify_walk_forward_report(
     numeric_names = sorted(_REQUIRED_RETURN_COLUMNS - {"timestamp"})
     numeric = {name: _numeric_column(persisted, name) for name in numeric_names}
     fold_values = numeric["fold"].to_numpy(copy=False)
-    if not np.equal(fold_values, np.floor(fold_values)).all() or (fold_values <= 0).any():
+    if (
+        not np.equal(fold_values, np.floor(fold_values)).all()
+        or (fold_values <= 0).any()
+    ):
         raise ValueError("walk-forward fold identifiers must be positive integers")
     persisted["fold"] = fold_values.astype(int)
     for name, values in numeric.items():
@@ -186,8 +195,17 @@ def verify_walk_forward_report(
         "transaction_cost_bps",
     )
 
+    previous_position = persisted["position"].shift(1, fill_value=0.0)
+    expected_turnover = (persisted["position"] - previous_position).abs()
+    _assert_series_close(
+        "turnover",
+        persisted["turnover"],
+        expected_turnover,
+        tolerance=tolerance,
+    )
+
     gross = persisted["position"] * persisted["asset_return"]
-    fee = persisted["turnover"] * fee_bps / 10_000.0
+    fee = expected_turnover * fee_bps / 10_000.0
     net = gross - fee
     _assert_series_close(
         "gross_strategy_return",
@@ -244,6 +262,14 @@ def verify_walk_forward_report(
             raise ValueError(f"fold {fold_id} test_start does not match persisted returns")
         if fold_frame.index[-1] != test_end:
             raise ValueError(f"fold {fold_id} test_end does not match persisted returns")
+        if len(fold_frame) > 1:
+            expected_position = fold_frame["target_position"].shift(1).iloc[1:]
+            _assert_series_close(
+                f"fold {fold_id} position",
+                fold_frame["position"].iloc[1:],
+                expected_position,
+                tolerance=tolerance,
+            )
         fold_metrics = performance_metrics(fold_frame, annualization=annualization)
         _assert_metric_mapping(
             f"fold {fold_id} test_metrics",
