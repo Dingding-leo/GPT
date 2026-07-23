@@ -46,7 +46,27 @@ jobs:
           python -m pip check
 
       - name: Lint and formatting
-        run: ruff check . && ruff format --check .
+        shell: bash
+        run: |
+          set +e
+          ruff check . > ruff-check.log 2>&1
+          lint_status=$?
+          ruff format --check . > ruff-format.log 2>&1
+          format_status=$?
+          cat ruff-check.log
+          cat ruff-format.log
+          if (( lint_status != 0 || format_status != 0 )); then
+            exit 1
+          fi
+
+      - name: Upload temporary Ruff diagnostics
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ruff-diagnostics
+          path: ruff-*.log
+          if-no-files-found: error
+          retention-days: 1
 
       - name: Test against public OKX data
         env:
