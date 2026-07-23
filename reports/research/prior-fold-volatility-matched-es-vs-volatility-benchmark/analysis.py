@@ -149,10 +149,9 @@ def reconstruct_volatility_benchmark(
 ) -> tuple[pd.DataFrame, float]:
     prices = snapshot.set_index("timestamp")["close"]
     log_returns = np.log(prices).diff()
-    realized = (
-        log_returns.rolling(VOLATILITY_LOOKBACK, min_periods=VOLATILITY_LOOKBACK).std(ddof=0)
-        * np.sqrt(ANNUALIZATION)
-    )
+    realized = log_returns.rolling(VOLATILITY_LOOKBACK, min_periods=VOLATILITY_LOOKBACK).std(
+        ddof=0
+    ) * np.sqrt(ANNUALIZATION)
     target = (TARGET_VOLATILITY / realized.replace(0.0, np.nan)).clip(0.0, MAX_POSITION)
     position = target.shift(1).fillna(0.0)
     asset_return = prices.pct_change().fillna(0.0)
@@ -230,9 +229,7 @@ def prior_fold_scaled_returns(
         current["prior_fold_scale"] = scale
         pieces.append(current)
     scaled = pd.concat(pieces, ignore_index=True)
-    scaled["scaled_benchmark_position"] = (
-        scaled["benchmark_position"] * scaled["prior_fold_scale"]
-    )
+    scaled["scaled_benchmark_position"] = scaled["benchmark_position"] * scaled["prior_fold_scale"]
     if bool((scaled["scaled_benchmark_position"] < 0.0).any()) or bool(
         (scaled["scaled_benchmark_position"] > MAX_POSITION + 1e-12).any()
     ):
@@ -240,9 +237,7 @@ def prior_fold_scaled_returns(
     turnover = scaled["scaled_benchmark_position"].diff().abs()
     turnover.iloc[0] = abs(float(scaled["scaled_benchmark_position"].iloc[0]))
     scaled["scaled_benchmark_turnover"] = turnover
-    scaled["scaled_benchmark_trading_cost"] = (
-        turnover * TRANSACTION_COST_BPS / 10_000.0
-    )
+    scaled["scaled_benchmark_trading_cost"] = turnover * TRANSACTION_COST_BPS / 10_000.0
     scaled["scaled_benchmark_return"] = (
         scaled["scaled_benchmark_position"] * scaled["asset_return"]
         - scaled["scaled_benchmark_trading_cost"]
