@@ -35,6 +35,11 @@ def test_docs_match_four_file_portfolio_artifact_bundle() -> None:
         assert f'"{output}"' in recovery_test
         assert f'"{output}"' in incomplete_rollback_test
 
+    assert "将 `portfolio_risk.json`、`portfolio_risk.md` 和 `portfolio_returns.csv`" not in readme
+    assert "- `portfolio_risk.json`、`portfolio_risk.md` 与 `portfolio_returns.csv`。" not in (
+        reproduction
+    )
+
     assert "paths = write_portfolio_risk_bundle(result, args.output_dir)" in script
     assert "path: reports/portfolio/" in workflow
 
