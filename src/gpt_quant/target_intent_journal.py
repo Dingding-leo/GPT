@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import hashlib
+import os
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -87,6 +90,31 @@ def _parse_journal_bytes(value: bytes) -> TargetPositionIntentJournal:
     return journal
 
 
+@contextmanager
+def _exclusive_writer_lock(journal_path: Path) -> Iterator[None]:
+    output = journal_path.parent
+    output_preexisted = output.exists()
+    if output.is_symlink():
+        raise ValueError(f"{_ERROR_LABEL} output directory must not be a symbolic link")
+    output.mkdir(parents=True, exist_ok=True)
+
+    lock_path = output / f".{journal_path.name}.lock"
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(lock_path, flags, 0o600)
+    except FileExistsError as exc:
+        raise RuntimeError(f"{_ERROR_LABEL} writer lock already exists") from exc
+
+    os.close(descriptor)
+    try:
+        yield
+    finally:
+        lock_path.unlink(missing_ok=True)
+        if not output_preexisted:
+            with suppress(OSError):
+                output.rmdir()
+
+
 def load_target_position_intent_journal(
     path: str | Path,
 ) -> TargetPositionIntentJournal:
@@ -110,27 +138,32 @@ def record_target_position_intent(
         raise TypeError("intent must be a TargetPositionIntent")
 
     journal_path = Path(path)
-    if journal_path.exists():
-        journal = load_target_position_intent_journal(journal_path)
-        matching = next(
-            (existing for existing in journal.intents if existing.intent_id == intent.intent_id),
-            None,
-        )
-        if matching is not None and matching.to_json_bytes() != intent.to_json_bytes():
-            raise ValueError(f"{_ERROR_LABEL} intent ID maps to conflicting bytes")
-        if matching is not None:
-            return journal
-        intents = (*journal.intents, intent)
-    else:
-        intents = (intent,)
+    with _exclusive_writer_lock(journal_path):
+        if journal_path.exists():
+            journal = load_target_position_intent_journal(journal_path)
+            matching = next(
+                (
+                    existing
+                    for existing in journal.intents
+                    if existing.intent_id == intent.intent_id
+                ),
+                None,
+            )
+            if matching is not None and matching.to_json_bytes() != intent.to_json_bytes():
+                raise ValueError(f"{_ERROR_LABEL} intent ID maps to conflicting bytes")
+            if matching is not None:
+                return journal
+            intents = (*journal.intents, intent)
+        else:
+            intents = (intent,)
 
-    updated = _journal_from_intents(tuple(intents))
-    publish_payloads_atomically(
-        journal_path.parent,
-        {"journal": journal_path},
-        {"journal": updated.to_bytes()},
-        commit_order=("journal",),
-        staging_prefix=_STAGING_PREFIX,
-        error_label=_ERROR_LABEL,
-    )
-    return updated
+        updated = _journal_from_intents(tuple(intents))
+        publish_payloads_atomically(
+            journal_path.parent,
+            {"journal": journal_path},
+            {"journal": updated.to_bytes()},
+            commit_order=("journal",),
+            staging_prefix=_STAGING_PREFIX,
+            error_label=_ERROR_LABEL,
+        )
+        return updated
