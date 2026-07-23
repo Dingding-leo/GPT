@@ -4,7 +4,7 @@ import hashlib
 import json
 from collections.abc import Iterator
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -32,7 +32,8 @@ def _fixture_response() -> bytes:
 
 def _clock(*values: str):
     timestamps: Iterator[datetime] = iter(
-        datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC) for value in values
+        datetime.fromisoformat(value.replace("Z", "+00:00")).astimezone(UTC)
+        for value in values
     )
     return lambda: next(timestamps)
 
@@ -60,7 +61,7 @@ def _evidence() -> ReconstructableOKXTopOfBookEvidence:
     )
 
 
-def test_reconstructable_quote_evidence_round_trips_real_okx_extract() -> None:
+def test_reconstructable_quote_evidence_round_trips_current_observation_contract() -> None:
     evidence = _evidence()
     replayed = ReconstructableOKXTopOfBookEvidence.from_json_bytes(evidence.to_json_bytes())
 
@@ -68,46 +69,41 @@ def test_reconstructable_quote_evidence_round_trips_real_okx_extract() -> None:
     assert replayed.server_time_request_started_utc == datetime(
         2021, 8, 26, 8, 27, 16, 460_000, tzinfo=UTC
     )
+    assert replayed.observation.server_time_request_started_utc == (
+        replayed.server_time_request_started_utc
+    )
+    assert replayed.observation.server_time_endpoint == "/api/v5/public/time"
+    assert replayed.observation.max_request_round_trip_seconds == 2.0
+    assert replayed.observation.max_server_round_trip_seconds == 2.0
+    assert replayed.observation.max_abs_midpoint_clock_skew_seconds == 5.0
     assert replayed.observation.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
     assert replayed.observation.quote.instrument_snapshot_sha256 == _INSTRUMENT_SNAPSHOT_SHA256
     assert replayed.timeout_seconds == 20.0
-    assert replayed.max_request_round_trip_seconds == 2.0
-    assert replayed.max_server_round_trip_seconds == 2.0
-    assert replayed.max_abs_midpoint_clock_skew_seconds == 5.0
     assert len(replayed.evidence_id) == 64
 
 
-def test_reconstructable_quote_evidence_rejects_forged_timing_and_policy() -> None:
+def test_reconstructable_quote_evidence_rejects_duplicate_timing_policy() -> None:
     evidence = _evidence()
 
-    with pytest.raises(ValueError, match="server-time round trip does not match"):
+    with pytest.raises(ValueError, match="request start does not match observation"):
         replace(
             evidence,
-            server_time_request_started_utc=datetime(
-                2021, 8, 26, 8, 27, 16, 470_000, tzinfo=UTC
-            ),
+            server_time_request_started_utc=evidence.server_time_request_started_utc
+            + timedelta(microseconds=1),
         )
+    with pytest.raises(ValueError, match="books round-trip policy does not match observation"):
+        replace(evidence, max_request_round_trip_seconds=3.0)
+    with pytest.raises(ValueError, match="server round-trip policy does not match observation"):
+        replace(evidence, max_server_round_trip_seconds=3.0)
+    with pytest.raises(ValueError, match="clock-skew policy does not match observation"):
+        replace(evidence, max_abs_midpoint_clock_skew_seconds=6.0)
 
-    forged_observation = replace(
-        evidence.observation,
-        server_time_response_received_utc=datetime(2026, 7, 23, 21, 0, 0, tzinfo=UTC),
-    )
-    with pytest.raises(ValueError, match="server-time round trip does not match"):
-        replace(evidence, observation=forged_observation)
 
-    with pytest.raises(ValueError, match="server-time round trip exceeds replay policy"):
-        replace(evidence, max_server_round_trip_seconds=0.01)
+def test_reconstructable_quote_evidence_rejects_forged_observation_timing() -> None:
+    evidence = _evidence()
 
-    with pytest.raises(ValueError, match="midpoint clock skew exceeds replay policy"):
-        skewed_observation = replace(
+    with pytest.raises(ValueError, match="round trip"):
+        replace(
             evidence.observation,
-            exchange_time_observed_utc=datetime(
-                2021, 8, 26, 8, 27, 16, 501_000, tzinfo=UTC
-            ),
-            midpoint_clock_skew_seconds=0.001,
-        )
-        replace(
-            evidence,
-            observation=skewed_observation,
-            max_abs_midpoint_clock_skew_seconds=0.0005,
+            server_time_response_received_utc=datetime(2026, 7, 23, 21, 0, 0, tzinfo=UTC),
         )
