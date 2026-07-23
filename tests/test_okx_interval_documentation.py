@@ -93,7 +93,8 @@ def test_okx_interval_guide_matches_open_ended_freshness_gate() -> None:
     assert (
         "max_age_seconds = 2 * expected_step_seconds "
         "+ _OPEN_ENDED_FRESHNESS_GRACE_SECONDS"
-    ) in source
+        in source
+    )
 
     live_reference = source.index("as_of_timestamp = _current_utc_timestamp()")
     getter_assignment = source.index("getter = get_json or _default_json_getter")
