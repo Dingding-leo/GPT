@@ -346,6 +346,26 @@ def _find_target(path: str | Path, decision: PaperOrderDecision) -> TargetPositi
     return target
 
 
+def _fsync_directory(directory: Path) -> None:
+    descriptor = os.open(
+        directory,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
+    )
+    try:
+        opened = os.fstat(descriptor)
+        if not stat.S_ISDIR(opened.st_mode):
+            raise ValueError("paper decision directory must be a regular directory")
+        current = os.stat(directory, follow_symlinks=False)
+        if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
+            raise RuntimeError("paper decision directory changed during publication")
+        os.fsync(descriptor)
+        current = os.stat(directory, follow_symlinks=False)
+        if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
+            raise RuntimeError("paper decision directory changed during publication")
+    finally:
+        os.close(descriptor)
+
+
 def record_paper_order_decision(
     target_journal_path: str | Path,
     decision_directory: str | Path,
@@ -380,6 +400,7 @@ def record_paper_order_decision(
             os.close(descriptor)
             descriptor = -1
             os.replace(temporary, path)
+            _fsync_directory(directory)
         finally:
             if descriptor >= 0:
                 os.close(descriptor)
