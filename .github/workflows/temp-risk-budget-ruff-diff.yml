@@ -1,8 +1,8 @@
 name: Temporary Risk Budget Ruff Diff
 
 on:
-  push:
-    branches: [auto/research/20260724-08-ex-ante-risk-budget]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
