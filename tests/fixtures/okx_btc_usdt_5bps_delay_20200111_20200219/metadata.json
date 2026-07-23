@@ -1,0 +1,17 @@
+{
+  "description": "Unchanged first 40 aligned rows from the canonical 5 bps BTC-USDT rolling OOS return artifact. Used only for deterministic execution-delay and cost-accounting regressions.",
+  "end_timestamp": "2020-02-19 00:00:00+00:00",
+  "fixture_sha256": "0143fa30db4b893c890ae7254286be8346cb670bbd2747ec64d740da68ba5b26",
+  "instrument": "BTC-USDT",
+  "market_type": "spot",
+  "provider": "OKX",
+  "rows": 40,
+  "source_artifact_id": 8566608828,
+  "source_artifact_name": "quant-research-source-2037-attempt-1",
+  "source_artifact_sha256": "ab0846180ff5b9397de26de8ca8d728ad237be00bdb92ba1612ef6ba243fc149",
+  "source_head_sha": "0d9c098f6408f4510bbefb95633e3d695f30dde3",
+  "source_return_file_sha256": "78707e21682013d290f10a66e45f78fae18f78e16de9d029c51ba9ff055dec3c",
+  "source_workflow_run_id": 30014704624,
+  "start_timestamp": "2020-01-11 00:00:00+00:00",
+  "timeframe": "1Dutc"
+}
