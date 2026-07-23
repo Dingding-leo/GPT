@@ -157,3 +157,60 @@ def test_publication_reports_incomplete_rollback(
         "operator-notes.txt",
     }
     assert not any(path.name.startswith(".research-report-") for path in output_dir.iterdir())
+
+
+def test_initial_publication_reports_incomplete_delete_rollback(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    output_dir = tmp_path / "holdout-report"
+    result = _real_result(btc_usdt_prices, transaction_cost_bps=10.0)
+
+    real_replace = os.replace
+    replace_calls = 0
+
+    def fail_markdown_commit(source: str | Path, destination: str | Path) -> None:
+        nonlocal replace_calls
+        source_path = Path(source)
+        destination_path = Path(destination)
+        if (
+            source_path.parent.name.startswith(".research-report-")
+            and destination_path.parent == output_dir
+            and destination_path.name in _REPORT_FILENAMES
+        ):
+            replace_calls += 1
+            if replace_calls == 2:
+                raise OSError("injected markdown commit failure")
+        real_replace(source, destination)
+
+    real_unlink = Path.unlink
+    unlink_calls = 0
+
+    def fail_json_rollback_delete(path: Path, missing_ok: bool = False) -> None:
+        nonlocal unlink_calls
+        if path == output_dir / "latest.json":
+            unlink_calls += 1
+            raise OSError("injected json rollback delete failure")
+        real_unlink(path, missing_ok=missing_ok)
+
+    monkeypatch.setattr(os, "replace", fail_markdown_commit)
+    monkeypatch.setattr(Path, "unlink", fail_json_rollback_delete)
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "research report commit failed and rollback was incomplete: "
+            "json: injected json rollback delete failure"
+        ),
+    ) as exc_info:
+        write_research_report(result, output_dir)
+
+    assert replace_calls == 2
+    assert unlink_calls == 1
+    assert isinstance(exc_info.value.__cause__, OSError)
+    assert str(exc_info.value.__cause__) == "injected markdown commit failure"
+    assert output_dir.is_dir()
+    assert {path.name for path in output_dir.iterdir()} == {"latest.json"}
+    assert (output_dir / "latest.json").read_bytes()
+    assert not any(path.name.startswith(".research-report-") for path in output_dir.iterdir())
