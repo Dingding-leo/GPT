@@ -39,6 +39,10 @@ def _intent(*, day: int = 22, target_position: float = 0.5) -> TargetPositionInt
     )
 
 
+def _lock_path(path: Path) -> Path:
+    return path.with_name(f".{path.name}.lock")
+
+
 def test_target_intent_journal_is_deterministic_and_idempotent(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -57,6 +61,7 @@ def test_target_intent_journal_is_deterministic_and_idempotent(
     assert journal.count == 2
     assert journal.sha256 == hashlib.sha256(expected).hexdigest()
     assert load_target_position_intent_journal(path) == journal
+    assert not _lock_path(path).exists()
 
     def fail_publish(*args: object, **kwargs: object) -> None:
         raise AssertionError("an identical intent must not rewrite the journal")
@@ -64,6 +69,7 @@ def test_target_intent_journal_is_deterministic_and_idempotent(
     monkeypatch.setattr(journal_module, "publish_payloads_atomically", fail_publish)
     assert record_target_position_intent(path, earlier) == journal
     assert path.read_bytes() == expected
+    assert not _lock_path(path).exists()
 
 
 def test_target_intent_journal_rejects_conflicting_target_for_one_signal(
@@ -80,6 +86,23 @@ def test_target_intent_journal_rejects_conflicting_target_for_one_signal(
         record_target_position_intent(path, conflicting)
 
     assert path.read_bytes() == before
+    assert not _lock_path(path).exists()
+
+
+def test_target_intent_journal_rejects_concurrent_writer(tmp_path: Path) -> None:
+    path = tmp_path / "target-intents.jsonl"
+    first = _intent(day=22, target_position=0.25)
+    second = _intent(day=23, target_position=0.75)
+    record_target_position_intent(path, first)
+    before = path.read_bytes()
+
+    lock_path = _lock_path(path)
+    lock_path.write_bytes(b"held")
+    with pytest.raises(RuntimeError, match="writer lock already exists"):
+        record_target_position_intent(path, second)
+
+    assert path.read_bytes() == before
+    assert lock_path.read_bytes() == b"held"
 
 
 def test_target_intent_journal_rejects_ambiguous_persisted_state(tmp_path: Path) -> None:
@@ -123,3 +146,4 @@ def test_target_intent_journal_preserves_old_state_when_publication_fails(
 
     assert path.read_bytes() == before
     assert load_target_position_intent_journal(path).intents == (first,)
+    assert not _lock_path(path).exists()
