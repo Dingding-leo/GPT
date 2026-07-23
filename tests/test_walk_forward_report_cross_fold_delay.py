@@ -25,7 +25,7 @@ def _shift_numeric_csv_cell(path: Path, *, row: int, column: str, delta: float) 
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def test_verifier_keeps_delay_checks_within_each_selected_fold(
+def test_verifier_rejects_cross_fold_position_delay_drift(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
 ) -> None:
@@ -51,21 +51,23 @@ def test_verifier_keeps_delay_checks_within_each_selected_fold(
     paths = write_walk_forward_report(result, tmp_path)
     original_bytes = paths["returns"].read_bytes()
     original = pd.read_csv(paths["returns"])
-    fold_boundaries = np.flatnonzero(original["fold"].ne(original["fold"].shift()).to_numpy())
+    fold_boundaries = np.flatnonzero(
+        original["fold"].ne(original["fold"].shift()).to_numpy()
+    )
     assert len(fold_boundaries) == 2
     assert verify_walk_forward_report is direct_verify
+    assert verify_walk_forward_report(tmp_path)["status"] == "passed"
 
     second_fold_start = int(fold_boundaries[1])
     previous_fold_last_row = second_fold_start - 1
-
     _shift_numeric_csv_cell(
         paths["returns"],
         row=previous_fold_last_row,
         column="target_position",
         delta=0.1,
     )
-    verification = verify_walk_forward_report(tmp_path)
-    assert verification["status"] == "passed"
+    with pytest.raises(ValueError, match="cross-fold delayed position"):
+        verify_walk_forward_report(tmp_path)
 
     paths["returns"].write_bytes(original_bytes)
     within_fold_target_row = previous_fold_last_row - 1
