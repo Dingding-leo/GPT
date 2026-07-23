@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -31,6 +32,7 @@ def _write_manifest_bound_report(prices: pd.Series, output: Path) -> dict[str, P
             "confirm": 1,
         }
     ).to_csv(snapshot_path, index=False)
+    snapshot_sha256 = hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
 
     strategy = StrategyConfig(
         min_position=0.0,
@@ -51,9 +53,7 @@ def _write_manifest_bound_report(prices: pd.Series, output: Path) -> dict[str, P
             "provider": "OKX",
             "instrument_id": "BTC-USDT",
             "bar": "1Dutc",
-            "normalized_csv_sha256": __import__("hashlib").sha256(
-                snapshot_path.read_bytes()
-            ).hexdigest(),
+            "normalized_csv_sha256": snapshot_sha256,
         },
     )
     paths = write_walk_forward_report(result, output)
@@ -76,9 +76,7 @@ def _write_manifest_bound_report(prices: pd.Series, output: Path) -> dict[str, P
     manifest_path = output / "experiment-manifest.jsonl"
     entry = build_experiment_manifest_entry(
         effective_config=effective_config,
-        data_hashes={
-            "normalized_csv": result.data_summary["provenance"]["normalized_csv_sha256"]
-        },
+        data_hashes={"normalized_csv": snapshot_sha256},
         data_paths={"normalized_csv": snapshot_path},
         artifact_paths={
             "candles": snapshot_path,
@@ -113,7 +111,7 @@ def test_manifest_verifier_binds_real_okx_report_to_exact_evidence(
     assert binding["manifest_candidate_count"] == 1
     assert binding["manifest_experiment_id"].startswith("exp-")
     assert binding["manifest_run_id"].startswith("run-")
-    assert binding["manifest_normalized_csv_sha256"] == __import__("hashlib").sha256(
+    assert binding["manifest_normalized_csv_sha256"] == hashlib.sha256(
         paths["snapshot"].read_bytes()
     ).hexdigest()
 
