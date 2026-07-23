@@ -50,7 +50,7 @@ def test_real_data_policy_matches_holdout_report_publication() -> None:
         "rolls completed replacements back in reverse order",
         "leaves no partial report files",
         "restores the prior JSON and Markdown bytes exactly",
-        "`research report commit failed and rollback was incomplete`",
+        "research report commit failed and rollback was incomplete",
         "indeterminate sealed-holdout report generation",
         "not atomic two-file visibility",
         "immutable real OKX BTC-USDT `1Dutc` fixture",
