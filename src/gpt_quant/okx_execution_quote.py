@@ -6,7 +6,6 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from math import isfinite
-from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -263,9 +262,7 @@ def _quote_from_raw_response(
 ) -> ExecutionQuoteSnapshot:
     payload = _parse_response(raw_response_json)
     if payload["code"] != "0":
-        raise RuntimeError(
-            f"OKX API error code={payload['code']!r} message={payload['msg']!r}"
-        )
+        raise RuntimeError(f"OKX API error code={payload['code']!r} message={payload['msg']!r}")
     if not isinstance(payload["msg"], str):
         raise ValueError("OKX books response message must be a string")
     data = payload["data"]
