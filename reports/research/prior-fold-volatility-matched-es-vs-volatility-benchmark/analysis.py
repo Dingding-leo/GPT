@@ -31,7 +31,9 @@ SOURCE = {
     "workflow_run_id": 29994613190,
     "artifact_id": 8558445273,
     "artifact_name": "quant-research-source-1826-attempt-1",
-    "artifact_sha256": "8c89b8ecc4904cba018ac95079305c46e25d92199242b95d3aeffaad1bc0799c",
+    "artifact_sha256": (
+        "8c89b8ecc4904cba018ac95079305c46e25d92199242b95d3aeffaad1bc0799c"
+    ),
     "source_head_sha": "348cfd30df9a0665b5b129fba32edaafc8a2428e",
 }
 CANONICAL_SIGNATURE = (
@@ -71,7 +73,9 @@ def _validated_timestamps(values: pd.Series) -> pd.DatetimeIndex:
     return timestamps
 
 
-def load_returns(path: str | Path, market: str, *, verify_hash: bool = True) -> pd.DataFrame:
+def load_returns(
+    path: str | Path, market: str, *, verify_hash: bool = True
+) -> pd.DataFrame:
     if market not in MARKETS:
         raise ValueError(f"unsupported market: {market}")
     if verify_hash:
@@ -104,7 +108,9 @@ def load_returns(path: str | Path, market: str, *, verify_hash: bool = True) -> 
 
 def complete_folds(frame: pd.DataFrame) -> list[int]:
     ordered = list(dict.fromkeys(frame[FOLD_COLUMN].tolist()))
-    if ordered != sorted(ordered) or ordered != list(range(ordered[0], ordered[-1] + 1)):
+    if ordered != sorted(ordered) or ordered != list(
+        range(ordered[0], ordered[-1] + 1)
+    ):
         raise ValueError("fold identifiers must be contiguous and increasing")
     sizes = frame.groupby(FOLD_COLUMN, sort=False).size().to_dict()
     incomplete = [fold for fold in ordered if sizes[fold] != COMPLETE_FOLD_SIZE]
@@ -112,14 +118,18 @@ def complete_folds(frame: pd.DataFrame) -> list[int]:
         if len(incomplete) != 1 or incomplete[0] != ordered[-1]:
             raise ValueError("only one trailing incomplete fold is allowed")
         if sizes[incomplete[0]] >= COMPLETE_FOLD_SIZE:
-            raise ValueError("the trailing incomplete fold must be shorter than 90 rows")
+            raise ValueError(
+                "the trailing incomplete fold must be shorter than 90 rows"
+            )
     completed = [fold for fold in ordered if sizes[fold] == COMPLETE_FOLD_SIZE]
     if len(completed) < 2:
         raise ValueError("at least two complete folds are required")
     return completed
 
 
-def prior_fold_scaled_returns(frame: pd.DataFrame) -> tuple[pd.DataFrame, dict[int, float]]:
+def prior_fold_scaled_returns(
+    frame: pd.DataFrame,
+) -> tuple[pd.DataFrame, dict[int, float]]:
     folds = complete_folds(frame)
     pieces: list[pd.DataFrame] = []
     scales: dict[int, float] = {}
@@ -129,12 +139,18 @@ def prior_fold_scaled_returns(frame: pd.DataFrame) -> tuple[pd.DataFrame, dict[i
         strategy_volatility = float(previous[STRATEGY_COLUMN].std(ddof=1))
         benchmark_volatility = float(previous[BENCHMARK_COLUMN].std(ddof=1))
         if not math.isfinite(strategy_volatility) or strategy_volatility < 0.0:
-            raise ValueError("previous-fold strategy volatility must be finite and non-negative")
+            raise ValueError(
+                "previous-fold strategy volatility must be finite and non-negative"
+            )
         if not math.isfinite(benchmark_volatility) or benchmark_volatility <= 0.0:
-            raise ValueError("previous-fold benchmark volatility must be finite and positive")
+            raise ValueError(
+                "previous-fold benchmark volatility must be finite and positive"
+            )
         scale = strategy_volatility / benchmark_volatility
         if not math.isfinite(scale) or scale < 0.0:
-            raise ValueError("prior-fold volatility scale must be finite and non-negative")
+            raise ValueError(
+                "prior-fold volatility scale must be finite and non-negative"
+            )
         scales[current_fold] = scale
         current["scaled_benchmark_return"] = current[BENCHMARK_COLUMN] * scale
         pieces.append(current)
@@ -170,13 +186,15 @@ def analyze_market(frame: pd.DataFrame, market: str) -> dict[str, Any]:
     delta = strategy_es - benchmark_es
     rng = np.random.default_rng(SEEDS[market])
     bootstrap_deltas = np.empty(RESAMPLES, dtype=float)
-    by_fold = {fold: scaled.loc[scaled[FOLD_COLUMN] == fold] for fold in evaluation_folds}
+    by_fold = {
+        fold: scaled.loc[scaled[FOLD_COLUMN] == fold] for fold in evaluation_folds
+    }
     for index in range(RESAMPLES):
         sampled_folds = sampled_fold_sequence(evaluation_folds, rng)
         sample = pd.concat([by_fold[fold] for fold in sampled_folds], ignore_index=True)
-        bootstrap_deltas[index] = expected_shortfall(sample[STRATEGY_COLUMN]) - expected_shortfall(
-            sample["scaled_benchmark_return"]
-        )
+        bootstrap_deltas[index] = expected_shortfall(
+            sample[STRATEGY_COLUMN]
+        ) - expected_shortfall(sample["scaled_benchmark_return"])
     alpha = (1.0 - CONFIDENCE) / 2.0
     lower, upper = np.quantile(bootstrap_deltas, [alpha, 1.0 - alpha])
     return {
@@ -209,14 +227,19 @@ def build_result(artifact_dir: str | Path) -> dict[str, Any]:
     return {
         "canonical_signature": CANONICAL_SIGNATURE,
         "hypothesis": (
-            "BTC-USDT and ETH-USDT strategy returns have less severe 5% expected shortfall "
-            "than volatility-targeted long when each current fold's benchmark is scaled using "
-            "only the immediately preceding complete fold's realised volatility ratio."
+            "BTC-USDT and ETH-USDT strategy returns have less severe 5% expected "
+            "shortfall than volatility-targeted long when each current fold's "
+            "benchmark "
+            "is scaled using only the immediately preceding complete fold's realised "
+            "volatility ratio."
         ),
         "method": {
             "tail_fraction": TAIL_FRACTION,
             "complete_fold_size": COMPLETE_FOLD_SIZE,
-            "scaling": "current fold benchmark multiplied by prior complete fold strategy-volatility / benchmark-volatility",
+            "scaling": (
+                "current fold benchmark multiplied by prior complete fold "
+                "strategy-volatility / benchmark-volatility"
+            ),
             "volatility": "sample standard deviation, ddof=1",
             "first_complete_fold": "used only to estimate fold-2 scale",
             "trailing_short_fold": "excluded",
