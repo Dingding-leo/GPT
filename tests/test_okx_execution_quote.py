@@ -41,11 +41,17 @@ def _clock(*values: str):
     return lambda: next(timestamps)
 
 
+def _server_time_response(expected_ms: str) -> bytes:
+    return f'{{"code":"0","msg":"","data":[{{"ts":"{expected_ms}"}}]}}'.encode("utf-8")
+
+
 def _server_time_getter(expected_ms: str):
-    def fake_getter(url: str, timeout: float) -> dict[str, object]:
+    response = _server_time_response(expected_ms)
+
+    def fake_getter(url: str, timeout: float) -> bytes:
         assert url == "https://test.okx.com/api/v5/public/time"
         assert timeout == 20.0
-        return {"code": "0", "msg": "", "data": [{"ts": expected_ms}]}
+        return response
 
     return fake_getter
 
@@ -64,7 +70,7 @@ def test_fetch_okx_top_of_book_binds_real_public_response_to_exchange_time() -> 
         base_url="https://test.okx.com",
         maximum_quote_age_ms=200,
         get_bytes=fake_books_getter,
-        get_json=_server_time_getter("1629966436500"),
+        get_server_time_bytes=_server_time_getter("1629966436500"),
         now=_clock(
             "2021-08-26T08:27:16.420000Z",
             "2021-08-26T08:27:16.450000Z",
@@ -76,6 +82,12 @@ def test_fetch_okx_top_of_book_binds_real_public_response_to_exchange_time() -> 
     assert requested_urls == ["https://test.okx.com/api/v5/market/books?instId=BTC-USDT&sz=1"]
     assert all("account" not in url and "trade" not in url for url in requested_urls)
     assert observation.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
+    assert observation.raw_server_time_response_json == _server_time_response(
+        "1629966436500"
+    )
+    assert observation.server_time_response_sha256 == hashlib.sha256(
+        observation.raw_server_time_response_json
+    ).hexdigest()
     assert observation.exchange_time_observed_utc == datetime(
         2021, 8, 26, 8, 27, 16, 500_000, tzinfo=UTC
     )
@@ -111,7 +123,7 @@ def test_fresh_quote_survives_bounded_slow_local_clock() -> None:
         maximum_quote_age_ms=200,
         max_abs_midpoint_clock_skew_seconds=0.2,
         get_bytes=lambda url, timeout: _fixture_response(),
-        get_json=_server_time_getter("1629966436500"),
+        get_server_time_bytes=_server_time_getter("1629966436500"),
         now=_clock(
             "2021-08-26T08:27:16.320000Z",
             "2021-08-26T08:27:16.350000Z",
@@ -142,7 +154,7 @@ def test_top_of_book_observation_revalidates_complete_timing_envelope() -> None:
         base_url="https://test.okx.com",
         maximum_quote_age_ms=200,
         get_bytes=lambda url, timeout: _fixture_response(),
-        get_json=_server_time_getter("1629966436500"),
+        get_server_time_bytes=_server_time_getter("1629966436500"),
         now=_clock(
             "2021-08-26T08:27:16.420000Z",
             "2021-08-26T08:27:16.450000Z",
@@ -176,7 +188,7 @@ def test_fetch_okx_top_of_book_rejects_exchange_stale_response() -> None:
             base_url="https://test.okx.com",
             maximum_quote_age_ms=500,
             get_bytes=lambda url, timeout: _fixture_response(),
-            get_json=_server_time_getter("1629966438500"),
+            get_server_time_bytes=_server_time_getter("1629966438500"),
             now=_clock(
                 "2021-08-26T08:27:16.420000Z",
                 "2021-08-26T08:27:16.450000Z",
@@ -195,7 +207,29 @@ def test_fetch_okx_top_of_book_rejects_duplicate_untrusted_response_fields() -> 
             instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
             base_url="https://test.okx.com",
             get_bytes=lambda url, timeout: corrupted,
-            get_json=_server_time_getter("1629966436500"),
+            get_server_time_bytes=_server_time_getter("1629966436500"),
+            now=_clock(
+                "2021-08-26T08:27:16.420000Z",
+                "2021-08-26T08:27:16.450000Z",
+                "2021-08-26T08:27:16.460000Z",
+                "2021-08-26T08:27:16.540000Z",
+            ),
+        )
+
+
+def test_fetch_okx_top_of_book_rejects_duplicate_public_time_fields() -> None:
+    corrupted = (
+        b'{"code":"0","msg":"","data":['
+        b'{"ts":"1629966438500","ts":"1629966436500"}]}'
+    )
+
+    with pytest.raises(ValueError, match="public-time JSON contains duplicate field 'ts'"):
+        fetch_okx_top_of_book(
+            instrument_id="BTC-USDT",
+            instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
+            base_url="https://test.okx.com",
+            get_bytes=lambda url, timeout: _fixture_response(),
+            get_server_time_bytes=lambda url, timeout: corrupted,
             now=_clock(
                 "2021-08-26T08:27:16.420000Z",
                 "2021-08-26T08:27:16.450000Z",
@@ -213,7 +247,7 @@ def test_fetch_okx_top_of_book_rejects_slow_public_response() -> None:
             base_url="https://test.okx.com",
             max_request_round_trip_seconds=0.1,
             get_bytes=lambda url, timeout: _fixture_response(),
-            get_json=_server_time_getter("1629966436500"),
+            get_server_time_bytes=_server_time_getter("1629966436500"),
             now=_clock(
                 "2021-08-26T08:27:16.000000Z",
                 "2021-08-26T08:27:16.450000Z",
@@ -247,7 +281,7 @@ def test_fetch_okx_top_of_book_rejects_unbounded_server_timing_before_io(
             instrument_id="BTC-USDT",
             instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
             get_bytes=forbidden,
-            get_json=forbidden,
+            get_server_time_bytes=forbidden,
             now=forbidden,
             **{field: value},
         )
