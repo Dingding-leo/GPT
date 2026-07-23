@@ -164,7 +164,9 @@ def test_fetch_okx_top_of_book_rejects_unbounded_server_timing_before_io(
     message: str,
 ) -> None:
     def forbidden(*args: object, **kwargs: object) -> object:
-        raise AssertionError("invalid timing policy must fail before public network or clock access")
+        raise AssertionError(
+            "invalid timing policy must fail before public network or clock access"
+        )
 
     with pytest.raises(ValueError, match=message):
         fetch_okx_top_of_book(
