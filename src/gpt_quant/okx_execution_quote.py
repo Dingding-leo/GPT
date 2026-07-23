@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from math import isfinite
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from urllib.request import Request, urlopen
 
 from .execution_quote import ExecutionQuoteSnapshot
@@ -240,9 +240,47 @@ def _default_raw_bytes_getter(url: str, timeout: float) -> bytes:
 
 
 def _required_base_url(value: object) -> str:
+    error = "base_url must be a trusted public OKX HTTPS origin"
     if not isinstance(value, str) or not value or any(character.isspace() for character in value):
-        raise ValueError("base_url must be a non-empty URL without whitespace")
-    return value.rstrip("/")
+        raise ValueError(error)
+
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError(error) from exc
+
+    hostname = parsed.hostname
+    labels = hostname.split(".") if hostname is not None else []
+    trusted_hostname = hostname == "okx.com" or (
+        len(hostname or "") <= 253
+        and len(labels) >= 3
+        and labels[-2:] == ["okx", "com"]
+        and all(
+            label
+            and len(label) <= 63
+            and label.isascii()
+            and label[0].isalnum()
+            and label[-1].isalnum()
+            and all(character.isalnum() or character == "-" for character in label)
+            for label in labels[:-2]
+        )
+    )
+    if (
+        parsed.scheme.lower() != "https"
+        or hostname is None
+        or parsed.netloc.lower() != hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or port is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+        or not trusted_hostname
+    ):
+        raise ValueError(error)
+
+    return f"https://{hostname}"
 
 
 def _required_utc_datetime(value: object, *, field: str) -> datetime:
