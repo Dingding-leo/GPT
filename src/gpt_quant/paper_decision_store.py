@@ -7,7 +7,7 @@ import re
 import stat
 import tempfile
 from collections.abc import Iterator, Mapping
-from contextlib import contextmanager, suppress
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -147,7 +147,9 @@ class PaperOrderDecision:
     decision_id: str = field(init=False)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "target_intent_id", _digest(self.target_intent_id, "target_intent_id"))
+        object.__setattr__(
+            self, "target_intent_id", _digest(self.target_intent_id, "target_intent_id")
+        )
         object.__setattr__(self, "instrument_id", _text(self.instrument_id, "instrument_id"))
         object.__setattr__(self, "decided_at_utc", _utc(self.decided_at_utc, "decided_at_utc"))
         object.__setattr__(
@@ -196,7 +198,9 @@ class PaperOrderDecision:
             raise ValueError("latency_ms must be a non-negative integer")
         if self.latency_ms < 0:
             raise ValueError("latency_ms must be a non-negative integer")
-        object.__setattr__(self, "decision_id", hashlib.sha256(_json_bytes(self._payload())).hexdigest())
+        object.__setattr__(
+            self, "decision_id", hashlib.sha256(_json_bytes(self._payload())).hexdigest()
+        )
 
     def _payload(self) -> dict[str, object]:
         return {
