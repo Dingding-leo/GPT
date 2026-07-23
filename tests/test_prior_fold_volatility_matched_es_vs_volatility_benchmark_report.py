@@ -23,7 +23,9 @@ _FIXTURE_DIR = (
     / "okx_btc_usdt_prior_fold_volatility_scaling_20200111_20200209"
 )
 
-_spec = importlib.util.spec_from_file_location("prior_fold_volatility_matched_es", _ANALYSIS_PATH)
+_spec = importlib.util.spec_from_file_location(
+    "prior_fold_volatility_matched_es", _ANALYSIS_PATH
+)
 assert _spec is not None and _spec.loader is not None
 analysis = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(analysis)
@@ -51,7 +53,9 @@ def test_prior_fold_scale_uses_only_previous_complete_fold() -> None:
     assert len(scaled) == 20
 
     structurally_altered = frame.copy()
-    structurally_altered.loc[structurally_altered["fold"] == 2, analysis.STRATEGY_COLUMN] *= 9.0
+    structurally_altered.loc[
+        structurally_altered["fold"] == 2, analysis.STRATEGY_COLUMN
+    ] *= 9.0
     analysis.COMPLETE_FOLD_SIZE = 10
     try:
         _, altered_scales = analysis.prior_fold_scaled_returns(structurally_altered)
@@ -62,7 +66,9 @@ def test_prior_fold_scale_uses_only_previous_complete_fold() -> None:
 
 
 def test_fold_validation_rejects_oversized_trailing_fold() -> None:
-    frame = analysis.load_returns(_FIXTURE_DIR / "returns.csv", "BTC-USDT", verify_hash=False)
+    frame = analysis.load_returns(
+        _FIXTURE_DIR / "returns.csv", "BTC-USDT", verify_hash=False
+    )
     original_size = analysis.COMPLETE_FOLD_SIZE
     analysis.COMPLETE_FOLD_SIZE = 10
     extra = frame.iloc[[-1]].copy()
@@ -71,7 +77,9 @@ def test_fold_validation_rejects_oversized_trailing_fold() -> None:
     oversized = pd.concat([frame, extra], ignore_index=True)
 
     try:
-        with pytest.raises(ValueError, match="trailing incomplete fold must be shorter"):
+        with pytest.raises(
+            ValueError, match="trailing incomplete fold must be shorter"
+        ):
             analysis.complete_folds(oversized)
     finally:
         analysis.COMPLETE_FOLD_SIZE = original_size
@@ -82,7 +90,10 @@ def test_result_records_complete_candidate_accounting_and_rejection() -> None:
 
     assert result["candidate_accounting"] == {"searched": 1, "passed": 0, "rejected": 1}
     assert result["verdict"] == "rejected"
-    assert result["method"]["first_complete_fold"] == "used only to estimate fold-2 scale"
+    assert (
+        result["method"]["first_complete_fold"]
+        == "used only to estimate fold-2 scale"
+    )
     assert result["method"]["trailing_short_fold"] == "excluded"
     assert result["source"]["artifact_sha256"] == (
         "8c89b8ecc4904cba018ac95079305c46e25d92199242b95d3aeffaad1bc0799c"
