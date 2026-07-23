@@ -43,9 +43,8 @@ def _validated_returns(series: pd.Series) -> pd.Series:
         float_values = values.astype(float, copy=False)
     elif kind == "O":
         for position, value in enumerate(values):
-            if (
-                not isinstance(value, Number)
-                or isinstance(value, (bool, np.bool_, complex, np.complexfloating))
+            if not isinstance(value, Number) or isinstance(
+                value, bool | np.bool_ | complex | np.complexfloating
             ):
                 raise _invalid_return_error(series, position)
         float_values = np.asarray(values, dtype=float)
