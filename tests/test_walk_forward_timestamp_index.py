@@ -39,3 +39,15 @@ def test_timestamp_index_keeps_non_utc_evidence_fail_closed(timestamp: str) -> N
 
     with pytest.raises(ValueError, match="explicit UTC offset"):
         verify_gate._timestamp_index(values, "walk-forward returns timestamp")
+
+
+def test_timestamp_index_identifies_non_utc_row_after_valid_utc_evidence() -> None:
+    values = pd.Series(
+        [
+            "2026-07-20T00:00:00+00:00",
+            "2026-07-21T01:00:00+01:00",
+        ]
+    )
+
+    with pytest.raises(ValueError, match="row 1 must include an explicit UTC offset"):
+        verify_gate._timestamp_index(values, "walk-forward returns timestamp")
