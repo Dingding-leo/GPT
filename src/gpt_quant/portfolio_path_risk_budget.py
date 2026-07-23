@@ -197,7 +197,9 @@ def evaluate_portfolio_path_risk_budget(
     if not drawdown_passes:
         failure_reasons.append("maximum drawdown breaches the declared floor")
     if not turnover_passes:
-        failure_reasons.append("annualized weighted underlying turnover breaches the declared limit")
+        failure_reasons.append(
+            "annualized weighted underlying turnover breaches the declared limit"
+        )
     passes = not failure_reasons
 
     payload = {
