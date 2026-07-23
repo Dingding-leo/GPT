@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -78,8 +79,15 @@ def test_fetch_okx_top_of_book_binds_real_public_response_to_exchange_time() -> 
         2021, 8, 26, 8, 27, 16, 500_000, tzinfo=UTC
     )
     assert observation.request_round_trip_seconds == pytest.approx(0.03)
+    assert observation.server_time_endpoint == "/api/v5/public/time"
+    assert observation.server_time_request_started_utc == datetime(
+        2021, 8, 26, 8, 27, 16, 460_000, tzinfo=UTC
+    )
     assert observation.server_round_trip_seconds == pytest.approx(0.08)
     assert observation.midpoint_clock_skew_seconds == pytest.approx(0.0)
+    assert observation.max_request_round_trip_seconds == 2.0
+    assert observation.max_server_round_trip_seconds == 2.0
+    assert observation.max_abs_midpoint_clock_skew_seconds == 5.0
 
     quote = observation.quote
     assert quote.instrument_id == "BTC-USDT"
@@ -92,6 +100,39 @@ def test_fetch_okx_top_of_book_binds_real_public_response_to_exchange_time() -> 
     assert quote.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
     assert quote.instrument_snapshot_sha256 == _INSTRUMENT_SNAPSHOT_SHA256
     assert quote.spread_bps > 0
+
+
+def test_top_of_book_observation_revalidates_complete_timing_envelope() -> None:
+    observation = fetch_okx_top_of_book(
+        instrument_id="BTC-USDT",
+        instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
+        base_url="https://example.test",
+        maximum_quote_age_ms=200,
+        get_bytes=lambda url, timeout: _fixture_response(),
+        get_json=_server_time_getter("1629966436500"),
+        now=_clock(
+            "2021-08-26T08:27:16.420000Z",
+            "2021-08-26T08:27:16.450000Z",
+            "2021-08-26T08:27:16.460000Z",
+            "2021-08-26T08:27:16.540000Z",
+        ),
+    )
+
+    future_server_receipt = datetime(2026, 7, 23, 21, 0, tzinfo=UTC)
+    forged_round_trip = (
+        future_server_receipt - observation.server_time_request_started_utc
+    ).total_seconds()
+    with pytest.raises(ValueError, match="clock skew does not match its timestamps"):
+        replace(
+            observation,
+            server_time_response_received_utc=future_server_receipt,
+            server_round_trip_seconds=forged_round_trip,
+            max_server_round_trip_seconds=forged_round_trip + 1.0,
+            midpoint_clock_skew_seconds=0.0,
+        )
+
+    with pytest.raises(ValueError, match="books request round trip exceeds"):
+        replace(observation, max_request_round_trip_seconds=0.01)
 
 
 def test_fetch_okx_top_of_book_rejects_exchange_stale_response() -> None:
