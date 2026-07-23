@@ -27,6 +27,7 @@ from .research import ResearchResult, run_holdout_research
 from .research_report import write_research_report
 from .walk_forward import WalkForwardResult, run_walk_forward_research
 from .walk_forward_report import write_walk_forward_report
+from .walk_forward_verify import verify_walk_forward_report
 
 __all__ = [
     "BacktestResult",
@@ -50,6 +51,7 @@ __all__ = [
     "run_holdout_research",
     "run_walk_forward_research",
     "validate_prices",
+    "verify_walk_forward_report",
     "write_okx_snapshot",
     "write_portfolio_risk_report",
     "write_research_report",

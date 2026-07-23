@@ -47,6 +47,14 @@ def test_hourly_workflow_publishes_portfolio_from_source_artifact_evidence() -> 
     source_upload = workflow.index("- name: Upload immutable sleeve research source")
     portfolio = workflow.index("- name: Generate verified portfolio risk report")
     portfolio_upload = workflow.index("- name: Upload verified portfolio risk artifact")
+    source_artifact_name = (
+        'SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-attempt-'
+        '${{ github.run_attempt }}"'
+    )
+    portfolio_artifact_name = (
+        'PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-attempt-'
+        '${{ github.run_attempt }}"'
+    )
 
     assert research < hashes < source_upload < portfolio < portfolio_upload
     assert workflow.count("id: source-artifact") == 1
@@ -55,15 +63,8 @@ def test_hourly_workflow_publishes_portfolio_from_source_artifact_evidence() -> 
     assert "steps.source-artifact.outputs.artifact-digest" in workflow
     assert "steps.return-hashes.outputs.btc_sha256" in workflow
     assert "steps.return-hashes.outputs.eth_sha256" in workflow
-    assert (
-        'SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-attempt-'
-        '${{ github.run_attempt }}"' in workflow
-    )
-    assert (
-        'PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-attempt-'
-        '${{ github.run_attempt }}"' in workflow
-    )
-    assert workflow.count("github.run_attempt") == 2
+    assert workflow.count(source_artifact_name) == 1
+    assert workflow.count(portfolio_artifact_name) == 1
     assert 'sha256sum "$btc_returns"' in workflow
     assert 'sha256sum "$eth_returns"' in workflow
     assert '--source-workflow-run "$GITHUB_RUN_ID"' in workflow

@@ -28,6 +28,7 @@ def write_walk_forward_report(
         encoding="utf-8",
     )
     returns = result.combined_frame.copy()
+    returns["exchange_fee_cost"] = returns["trading_cost"]
     for name, frame in result.benchmark_frames.items():
         returns[f"benchmark_{name}_return"] = frame["strategy_return"].reindex(returns.index)
     returns.reset_index(names="timestamp").to_csv(paths["returns"], index=False)
