@@ -81,8 +81,13 @@ def test_execution_quote_store_replays_one_deterministic_root(tmp_path: Path) ->
 
     expected_snapshots = (earlier, later)
     expected_payload = b"".join(record.to_json_bytes() for record in complete.records)
+    independently_replayed = tuple(
+        ExecutionQuoteEvidence.from_json_bytes(record.to_json_bytes())
+        for record in complete.records
+    )
     assert first.snapshots == (later,)
     assert complete.snapshots == expected_snapshots
+    assert independently_replayed == complete.records
     assert complete.sha256 == hashlib.sha256(expected_payload).hexdigest()
     assert repeated == complete
     assert replayed == complete
