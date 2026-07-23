@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .experiment_registry import (
+    _fsync_directory,
     _registry_lock,
     load_manifest_entries,
     validate_manifest_entry,
@@ -32,8 +33,9 @@ def append_experiment_manifest(
     validated_entry = validate_manifest_entry(entry)
     output = Path(path)
     with _registry_lock(output):
+        created = not output.exists()
         existing_entries: list[dict[str, Any]] = []
-        if output.exists():
+        if not created:
             existing_entries = load_manifest_entries(output)
             if output.read_bytes() != _canonical_jsonl(existing_entries):
                 raise ValueError(f"{output} is not canonical JSONL")
@@ -51,4 +53,6 @@ def append_experiment_manifest(
             handle.write(_canonical_jsonl([validated_entry]))
             handle.flush()
             os.fsync(handle.fileno())
+        if created:
+            _fsync_directory(output.parent)
         return output, True
