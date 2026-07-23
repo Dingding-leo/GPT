@@ -1,0 +1,158 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "equal-weight-candidate-ensemble-vs-adaptive-v1|markets=BTC-USDT,ETH-USDT|source=immutable-OKX-snapshots-and-persisted-net-rolling-oos-returns|ensemble=equal-weight-mean-of-all-27-declared-candidate-positions|grid=momentum30,90,180-reversal2,5,10-trend0.55,0.70,0.85|execution=one-bar-delay-long-cash-10bps-continuous-position-cash-entry-at-evaluation-start|comparison=ensemble-minus-adaptive-winner-take-all|metrics=annualized-arithmetic-mean-delta,annualized-sharpe-delta|turnover=adaptive-minus-ensemble-annualized-absolute-position-turnover|resampling=paired-noncircular-moving-block-bootstrap|block-length=20-sessions|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072323,ETH-USDT:2026072324|pass=mean-and-sharpe-lower-bounds-positive-in-both-markets|candidate_count=1",
+  "claim_scope": "Development-market comparison only; no sealed-holdout, alpha, or deployment claim.",
+  "economic_rationale": "Averaging the fixed candidate grid should diversify parameter-selection error and reduce unnecessary position changes if winner-take-all selection is unstable.",
+  "hypothesis": "An equal-weight ensemble of all 27 declared candidate positions improves both annualized arithmetic mean net return and annualized Sharpe over the persisted adaptive winner-take-all path in BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "adaptive_annualized_arithmetic_mean": 0.16842803083842145,
+      "adaptive_annualized_sharpe": 0.7189841313439647,
+      "adaptive_annualized_turnover": 15.491048275995992,
+      "adaptive_total_return": 1.513770347623903,
+      "annualized_arithmetic_mean_delta": 0.003031883697541954,
+      "annualized_arithmetic_mean_delta_interval": {
+        "lower": -0.10244973506446073,
+        "upper": 0.10529499562799008
+      },
+      "annualized_arithmetic_mean_delta_probability_positive": 0.506,
+      "annualized_sharpe_delta": 0.15320867252267478,
+      "annualized_sharpe_delta_interval": {
+        "lower": -0.24219499294809269,
+        "upper": 0.5766473163581146
+      },
+      "annualized_sharpe_delta_probability_positive": 0.76,
+      "annualized_turnover_reduction": 2.5077821272680785,
+      "annualized_turnover_reduction_interval": {
+        "lower": 0.3694502943079489,
+        "upper": 4.959494352671249
+      },
+      "annualized_turnover_reduction_probability_positive": 0.989,
+      "constituent_candidates": 27,
+      "ensemble_annualized_arithmetic_mean": 0.1714599145359634,
+      "ensemble_annualized_sharpe": 0.8721928038666394,
+      "ensemble_annualized_turnover": 12.983266148727914,
+      "ensemble_total_return": 1.702902467493701,
+      "evaluation_end": "2026-07-22T00:00:00+00:00",
+      "evaluation_start": "2020-01-11T00:00:00+00:00",
+      "failure_reasons": [
+        "annualized arithmetic mean delta lower bound is non-positive",
+        "annualized Sharpe delta lower bound is non-positive"
+      ],
+      "observations": 2385,
+      "passes": false,
+      "source_hashes": {
+        "returns": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+        "snapshot": "407aeba3d1ad4c8e8682a6a689c1c6327139f42bc7587aaae75c77fce047dec1"
+      }
+    },
+    "ETH-USDT": {
+      "adaptive_annualized_arithmetic_mean": 0.14018780920033044,
+      "adaptive_annualized_sharpe": 0.5549793202250379,
+      "adaptive_annualized_turnover": 16.29448479543764,
+      "adaptive_total_return": 1.0297171784360155,
+      "annualized_arithmetic_mean_delta": 0.03408648835357159,
+      "annualized_arithmetic_mean_delta_interval": {
+        "lower": -0.07725421233938948,
+        "upper": 0.16044078482767618
+      },
+      "annualized_arithmetic_mean_delta_probability_positive": 0.748,
+      "annualized_sharpe_delta": 0.268933529140284,
+      "annualized_sharpe_delta_interval": {
+        "lower": -0.16380526732435902,
+        "upper": 0.7723367112052348
+      },
+      "annualized_sharpe_delta_probability_positive": 0.897,
+      "annualized_turnover_reduction": 5.112139512289068,
+      "annualized_turnover_reduction_interval": {
+        "lower": 2.8682282779501165,
+        "upper": 7.14579466161584
+      },
+      "annualized_turnover_reduction_probability_positive": 1.0,
+      "constituent_candidates": 27,
+      "ensemble_annualized_arithmetic_mean": 0.17427429755390203,
+      "ensemble_annualized_sharpe": 0.8239128493653219,
+      "ensemble_annualized_turnover": 11.182345283148573,
+      "ensemble_total_return": 1.6972905567390666,
+      "evaluation_end": "2026-07-22T00:00:00+00:00",
+      "evaluation_start": "2020-01-11T00:00:00+00:00",
+      "failure_reasons": [
+        "annualized arithmetic mean delta lower bound is non-positive",
+        "annualized Sharpe delta lower bound is non-positive"
+      ],
+      "observations": 2385,
+      "passes": false,
+      "source_hashes": {
+        "returns": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047",
+        "snapshot": "842b4bbbb0ad7afbe2a1c9ee375443671d818a799266d5dc25cc6a548571ad7f"
+      }
+    }
+  },
+  "method": {
+    "bootstrap": {
+      "block_length": 20,
+      "confidence": 0.95,
+      "kind": "paired non-circular moving-block bootstrap over observed daily rows",
+      "resamples": 2000,
+      "seeds": {
+        "BTC-USDT": 2026072323,
+        "ETH-USDT": 2026072324
+      }
+    },
+    "comparison": "equal-weight ensemble minus persisted adaptive winner-take-all path",
+    "constituent_count": 27,
+    "diagnostic_metric": "adaptive minus ensemble annualized turnover",
+    "ensemble_constituents": [
+      {"momentum_lookback": 30, "reversal_lookback": 2, "reversal_weight": 0.45, "trend_weight": 0.55},
+      {"momentum_lookback": 30, "reversal_lookback": 2, "reversal_weight": 0.3, "trend_weight": 0.7},
+      {"momentum_lookback": 30, "reversal_lookback": 2, "reversal_weight": 0.15, "trend_weight": 0.85},
+      {"momentum_lookback": 30, "reversal_lookback": 5, "reversal_weight": 0.45, "trend_weight": 0.55},
+      {"momentum_lookback": 30, "reversal_lookback": 5, "reversal_weight": 0.3, "trend_weight": 0.7},
+      {"momentum_lookback": 30, "reversal_lookback": 5, "reversal_weight": 0.15, "trend_weight": 0.85},
+      {"momentum_lookback": 30, "reversal_lookback": 10, "reversal_weight": 0.45, "trend_weight": 0.55},
+      {"momentum_lookback": 30, "reversal_lookback": 10, "reversal_weight": 0.3, "trend_weight": 0.7},
+      {"momentum_lookback": 30, "reversal_lookback": 10, "reversal_weight": 0.15, "trend_weight": 0.85},
+      {"momentum_lookback": 90, "reversal_lookback": 2, "reversal_weight": 0.45, "trend_weight": 0.55},
+      {"momentum_lookback": 90, "reversal_lookback": 2, "reversal_weight": 0.3, "trend_weight": 0.7},
+      {"momentum_lookback": 90, "reversal_lookback": 2, "reversal_weight": 0.15, "trend_weight": 0.85},
+      {"momentum_lookback": 90, "reversal_lookback": 5, "reversal_weight": 0.45, "trend_weight": 0.55},
+      {"momentum_lookback": 90, "reversal_lookback": 5, "reversal_weight": 0.3, "trend_weight": 0.7},
+      {"momentum_lookback": 90, "reversal_lookback": 5, "reversal_weight": 0.15, "trend_weight": 0.85},
+      {"momentum_lookback": 90, "reversal_lookback": 10, "reversal_weight": 0.45, "trend_weight": 0.55},
+      {"momentum_lookback": 90, "reversal_lookback": 10, "reversal_weight": 0.3, "trend_weight": 0.7},
+      {"momentum_lookback": 90, "reversal_lookback": 10, "reversal_weight": 0.15, "trend_weight": 0.85},
+      {"momentum_lookback": 180, "reversal_lookback": 2, "reversal_weight": 0.45, "trend_weight": 0.55},
+      {"momentum_lookback": 180, "reversal_lookback": 2, "reversal_weight": 0.3, "trend_weight": 0.7},
+      {"momentum_lookback": 180, "reversal_lookback": 2, "reversal_weight": 0.15, "trend_weight": 0.85},
+      {"momentum_lookback": 180, "reversal_lookback": 5, "reversal_weight": 0.45, "trend_weight": 0.55},
+      {"momentum_lookback": 180, "reversal_lookback": 5, "reversal_weight": 0.3, "trend_weight": 0.7},
+      {"momentum_lookback": 180, "reversal_lookback": 5, "reversal_weight": 0.15, "trend_weight": 0.85},
+      {"momentum_lookback": 180, "reversal_lookback": 10, "reversal_weight": 0.45, "trend_weight": 0.55},
+      {"momentum_lookback": 180, "reversal_lookback": 10, "reversal_weight": 0.3, "trend_weight": 0.7},
+      {"momentum_lookback": 180, "reversal_lookback": 10, "reversal_weight": 0.15, "trend_weight": 0.85}
+    ],
+    "execution": "one-bar delayed long/cash positions; 10 bps per unit turnover; continuous position after cash entry at evaluation start",
+    "pass_rule": "both primary metric 95% lower bounds must be positive in both markets",
+    "primary_metrics": [
+      "annualized arithmetic mean delta",
+      "annualized Sharpe delta"
+    ],
+    "strategy_candidates_searched": 1,
+    "weighting": "equal weight across all constituent positions on every session"
+  },
+  "source": {
+    "artifact_id": 8562021482,
+    "artifact_name": "quant-research-source-1927-attempt-1",
+    "artifact_sha256": "852ef5a2a643d3d8332410ce9f34a9a5b32a8ca69fb42b8058546719c25068e4",
+    "market_type": "spot",
+    "provider": "OKX",
+    "source_head_sha": "abb0e4a1837c403026219273a65cc9ec7645d273",
+    "timeframe": "1Dutc",
+    "workflow_run_id": 30003533823
+  },
+  "verdict": "rejected"
+}
