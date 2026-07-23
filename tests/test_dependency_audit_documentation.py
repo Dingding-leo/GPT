@@ -99,13 +99,28 @@ def test_dependency_audit_guide_matches_trusted_workflow_and_policy() -> None:
     ):
         assert claim in guide
 
-    assert '"build": frozenset({"setuptools"})' in direct_policy
-    assert '"project": frozenset({"numpy", "pandas", "pytest", "ruff"})' in direct_policy
-    assert "unapproved direct dependency names" in direct_policy
+    for policy_declaration in (
+        '"build": frozenset({"setuptools"})',
+        '"runtime": frozenset({"numpy", "pandas"})',
+        '"optional:dev": frozenset({"pytest", "ruff"})',
+    ):
+        assert policy_declaration in direct_policy
+    for error in (
+        "must declare each canonical dependency name at most once",
+        "must not be repeated across declaration scopes",
+        "unapproved direct dependency declaration scopes",
+        "unapproved direct dependency names",
+    ):
+        assert error in direct_policy
+
     for claim in (
-        "build scope（`[build-system].requires`）只批准 `setuptools`",
-        "只批准 `numpy`、`pandas`、`pytest`、`ruff`",
-        "错误 scope",
+        "`build`（`[build-system].requires`）只批准 `setuptools`",
+        "`runtime`（`[project].dependencies`）只批准 `numpy`、`pandas`",
+        "`optional:dev`（`[project.optional-dependencies].dev`）只批准 `pytest`、`ruff`",
+        "不会把 runtime 和 optional 声明压平为一个 `project` scope",
+        "同一 scope 内最多声明一次",
+        "不能跨 scope 重复",
+        "`schema_version: 2`",
         "`direct-dependency-policy.json`",
         "scripts/dependency_audit_direct_policy.py",
         "tests/test_dependency_direct_policy.py",
@@ -117,6 +132,8 @@ def test_dependency_audit_guide_matches_trusted_workflow_and_policy() -> None:
     assert "scripts/dependency_audit_inputs.py prepare" in guide
     assert "tests/test_dependency_audit_documentation.py" in guide
     assert "不会在本地复现 GitHub Actions 的全部 20 个 Python/平台解析任务" in guide
+    assert "schema_version: 1" not in guide
+    assert "project scope（`[project].dependencies` 与所有 optional-dependency" not in guide
 
 
 def test_documented_direct_policy_command_records_current_scopes(tmp_path: Path) -> None:
@@ -129,13 +146,15 @@ def test_documented_direct_policy_command_records_current_scopes(tmp_path: Path)
     assert json.loads(evidence_path.read_text(encoding="utf-8")) == {
         "approved_direct_dependencies": {
             "build": ["setuptools"],
-            "project": ["numpy", "pandas", "pytest", "ruff"],
+            "optional:dev": ["pytest", "ruff"],
+            "runtime": ["numpy", "pandas"],
         },
         "declared_direct_dependencies": {
             "build": ["setuptools"],
-            "project": ["numpy", "pandas", "pytest", "ruff"],
+            "optional:dev": ["pytest", "ruff"],
+            "runtime": ["numpy", "pandas"],
         },
-        "schema_version": 1,
+        "schema_version": 2,
     }
 
 
@@ -157,6 +176,71 @@ def test_documented_direct_policy_rejects_unapproved_name_before_evidence(
     assert completed.stdout == ""
     assert "unapproved direct dependency names" in completed.stderr
     assert "example-package" in completed.stderr
+    assert not evidence_path.parent.exists()
+
+
+def test_documented_direct_policy_rejects_unapproved_optional_scope(
+    tmp_path: Path,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    evidence_path = tmp_path / "security" / "direct-dependency-policy.json"
+    proposed = PYPROJECT_PATH.read_text(encoding="utf-8").replace(
+        "[project.optional-dependencies]\ndev =",
+        "[project.optional-dependencies]\nqa =",
+        1,
+    )
+    pyproject_path.write_text(proposed, encoding="utf-8")
+
+    completed = _run_direct_policy(pyproject_path, evidence_path)
+
+    assert completed.returncode == 2
+    assert completed.stdout == ""
+    assert "unapproved direct dependency declaration scopes" in completed.stderr
+    assert "optional:qa" in completed.stderr
+    assert not evidence_path.parent.exists()
+
+
+def test_documented_direct_policy_rejects_same_scope_duplicate(
+    tmp_path: Path,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    evidence_path = tmp_path / "security" / "direct-dependency-policy.json"
+    proposed = PYPROJECT_PATH.read_text(encoding="utf-8").replace(
+        "dependencies = [\n",
+        'dependencies = [\n  "NumPy<3",\n',
+        1,
+    )
+    pyproject_path.write_text(proposed, encoding="utf-8")
+
+    completed = _run_direct_policy(pyproject_path, evidence_path)
+
+    assert completed.returncode == 2
+    assert completed.stdout == ""
+    assert "must declare each canonical dependency name at most once" in completed.stderr
+    assert "numpy" in completed.stderr
+    assert not evidence_path.parent.exists()
+
+
+def test_documented_direct_policy_rejects_cross_scope_duplicate(
+    tmp_path: Path,
+) -> None:
+    pyproject_path = tmp_path / "pyproject.toml"
+    evidence_path = tmp_path / "security" / "direct-dependency-policy.json"
+    proposed = PYPROJECT_PATH.read_text(encoding="utf-8").replace(
+        "dependencies = [\n",
+        'dependencies = [\n  "pytest>=8,<10",\n',
+        1,
+    )
+    pyproject_path.write_text(proposed, encoding="utf-8")
+
+    completed = _run_direct_policy(pyproject_path, evidence_path)
+
+    assert completed.returncode == 2
+    assert completed.stdout == ""
+    assert "must not be repeated across declaration scopes" in completed.stderr
+    assert "pytest" in completed.stderr
+    assert "runtime" in completed.stderr
+    assert "optional:dev" in completed.stderr
     assert not evidence_path.parent.exists()
 
 
