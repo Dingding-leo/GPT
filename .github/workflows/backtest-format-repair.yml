@@ -1,9 +1,13 @@
 name: Backtest Format Repair
 
 on:
-  push:
-    branches:
-      - auto/backtest/20260724-00-gross-net-fee-decomposition
+  pull_request:
+    paths:
+      - src/gpt_quant/backtest.py
+      - src/gpt_quant/metrics.py
+      - src/gpt_quant/walk_forward_report.py
+      - tests/test_walk_forward_fee_decomposition.py
+      - .github/workflows/backtest-format-repair.yml
 
 permissions:
   contents: read
