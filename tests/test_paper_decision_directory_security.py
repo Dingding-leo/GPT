@@ -85,7 +85,10 @@ def test_store_creates_private_directory_under_permissive_umask(tmp_path: Path) 
         os.umask(previous_umask)
 
     assert stat.S_IMODE(decision_directory.stat().st_mode) == 0o700
-    assert replay_paper_order_decision_store(target_path, decision_directory).pending_target_intents == ()
+    assert (
+        replay_paper_order_decision_store(target_path, decision_directory).pending_target_intents
+        == ()
+    )
 
 
 def test_store_rejects_group_world_writable_directory_before_consumption(
