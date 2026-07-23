@@ -159,9 +159,7 @@ def performance_metrics(
             rtol=0.0,
             atol=1e-12,
         ):
-            raise ValueError(
-                "strategy_return must equal gross_strategy_return minus trading_cost"
-            )
+            raise ValueError("strategy_return must equal gross_strategy_return minus trading_cost")
 
         gross_growth, gross_total_return = _compounded_return(gross_returns)
         gross_cagr = gross_growth ** (1.0 / years) - 1.0 if gross_growth > 0 else -1.0
