@@ -48,6 +48,23 @@ jobs:
       - name: Lint and formatting
         run: ruff check . && ruff format --check .
 
+      - name: Capture Ruff diagnostics
+        if: failure()
+        run: |
+          ruff check src/gpt_quant/walk_forward_verify_gate.py tests/test_walk_forward_contiguous_source_rows.py > ruff-check.txt 2>&1 || true
+          ruff format --check src/gpt_quant/walk_forward_verify_gate.py tests/test_walk_forward_contiguous_source_rows.py > ruff-format.txt 2>&1 || true
+
+      - name: Upload Ruff diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: diagnostic-ruff-text-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: |
+            ruff-check.txt
+            ruff-format.txt
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Test against public OKX data
         env:
           OKX_BASE_URL: https://www.okx.com
