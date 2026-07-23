@@ -135,7 +135,11 @@ def _retry_delay_seconds(error: Exception, *, attempt: int) -> float:
 
     server_delay: float | None = None
     if value.isascii() and value.isdecimal():
-        server_delay = float(int(value))
+        normalized_digits = value.lstrip("0") or "0"
+        if len(normalized_digits) > len(str(int(_MAX_RETRY_DELAY_SECONDS))):
+            server_delay = _MAX_RETRY_DELAY_SECONDS
+        else:
+            server_delay = float(int(normalized_digits))
     else:
         try:
             retry_at = parsedate_to_datetime(value)

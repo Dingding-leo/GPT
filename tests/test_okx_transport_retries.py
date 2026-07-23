@@ -244,6 +244,37 @@ def test_public_downloader_honors_and_caps_retry_after_delta_seconds(
     assert snapshot.metadata["raw_rows"] == 5
 
 
+def test_public_downloader_caps_oversized_retry_after_without_integer_parsing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    payload = _real_okx_payload()
+    attempts = 0
+    sleeps: list[float] = []
+
+    def fake_urlopen(request: Any, timeout: float) -> _Response:
+        nonlocal attempts
+        attempts += 1
+        _assert_request_contract(request, timeout)
+        if attempts == 1:
+            raise HTTPError(
+                request.full_url,
+                429,
+                "rate limited",
+                hdrs={"Retry-After": "9" * 10_000},
+                fp=None,
+            )
+        return _Response.from_payload(payload)
+
+    monkeypatch.setattr(okx, "urlopen", fake_urlopen)
+    monkeypatch.setattr(okx.time, "sleep", sleeps.append)
+
+    snapshot = _download_with_default_transport()
+
+    assert attempts == 2
+    assert sleeps == [5.0]
+    assert snapshot.metadata["raw_rows"] == 5
+
+
 def test_public_downloader_honors_retry_after_http_date(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
