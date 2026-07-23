@@ -33,9 +33,18 @@ def _real_okx_result(prices: pd.Series):
     )
 
 
+def _path_diagnostics(frame: pd.DataFrame) -> dict[str, float | int | str | bool]:
+    return walk_forward_path_diagnostics(
+        frame,
+        annualization=365,
+        minimum_position=0.0,
+        maximum_absolute_position=1.0,
+    )
+
+
 def _assert_diagnostics_equal(
-    actual: dict[str, float | int | str],
-    expected: dict[str, float | int | str],
+    actual: dict[str, float | int | str | bool],
+    expected: dict[str, float | int | str | bool],
 ) -> None:
     assert actual.keys() == expected.keys()
     for key, expected_value in expected.items():
@@ -51,20 +60,20 @@ def test_report_persists_recomputable_position_path_diagnostics(
     tmp_path: Path,
 ) -> None:
     result = _real_okx_result(btc_usdt_prices)
-    expected = walk_forward_path_diagnostics(
-        result.combined_frame,
-        annualization=365,
-    )
+    expected = _path_diagnostics(result.combined_frame)
 
     paths = write_walk_forward_report(result, tmp_path)
     payload = json.loads(paths["json"].read_text(encoding="utf-8"))
     _assert_diagnostics_equal(payload["path_diagnostics"], expected)
 
     persisted = pd.read_csv(paths["returns"], parse_dates=["timestamp"]).set_index("timestamp")
-    recomputed = walk_forward_path_diagnostics(persisted, annualization=365)
+    recomputed = _path_diagnostics(persisted)
     _assert_diagnostics_equal(recomputed, expected)
 
     assert expected["observations"] == len(result.combined_frame)
+    assert expected["position_limit_passes"] is True
+    assert expected["declared_minimum_position"] == 0.0
+    assert expected["declared_maximum_absolute_position"] == 1.0
     assert expected["total_absolute_turnover"] == pytest.approx(
         result.combined_frame["turnover"].sum(),
         abs=1e-12,
@@ -83,6 +92,7 @@ def test_report_persists_recomputable_position_path_diagnostics(
 
     markdown = paths["markdown"].read_text(encoding="utf-8")
     assert "## Position-path diagnostics" in markdown
+    assert "Configured position limits pass" in markdown
     assert "not exchange orders or fills" in markdown
 
 
@@ -94,4 +104,20 @@ def test_position_path_diagnostics_reject_turnover_not_derived_from_position(
     corrupted.iloc[10, corrupted.columns.get_loc("turnover")] += 0.1
 
     with pytest.raises(ValueError, match="absolute position changes"):
-        walk_forward_path_diagnostics(corrupted, annualization=365)
+        _path_diagnostics(corrupted)
+
+
+@pytest.mark.parametrize("breaching_position", [1.05, -0.05])
+def test_position_path_diagnostics_reject_configured_position_limit_breach(
+    btc_usdt_prices: pd.Series,
+    breaching_position: float,
+) -> None:
+    result = _real_okx_result(btc_usdt_prices)
+    corrupted = result.combined_frame.copy()
+    corrupted.iloc[10, corrupted.columns.get_loc("position")] = breaching_position
+    corrupted["turnover"] = (
+        corrupted["position"] - corrupted["position"].shift(1, fill_value=0.0)
+    ).abs()
+
+    with pytest.raises(ValueError, match="configured position limits"):
+        _path_diagnostics(corrupted)

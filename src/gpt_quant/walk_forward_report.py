@@ -16,10 +16,13 @@ def write_walk_forward_report(
     output_dir: str | Path,
 ) -> dict[str, Path]:
     payload = result.to_dict()
-    annualization = int(result.settings["base_config"]["annualization"])
+    base_config = result.settings["base_config"]
+    annualization = int(base_config["annualization"])
     path_diagnostics = walk_forward_path_diagnostics(
         result.combined_frame,
         annualization=annualization,
+        minimum_position=float(base_config["min_position"]),
+        maximum_absolute_position=float(base_config["max_abs_position"]),
     )
     payload["path_diagnostics"] = path_diagnostics
 
@@ -143,6 +146,10 @@ def write_walk_forward_report(
         "",
         f"- Evaluation range: `{path_diagnostics['evaluation_start']}` to "
         f"`{path_diagnostics['evaluation_end']}`",
+        f"- Configured position limits pass: `{path_diagnostics['position_limit_passes']}`; "
+        f"allowed range "
+        f"`[{path_diagnostics['declared_minimum_position']:.6f}, "
+        f"{path_diagnostics['declared_maximum_absolute_position']:.6f}]`",
         f"- Total absolute underlying turnover: "
         f"`{path_diagnostics['total_absolute_turnover']:.6f}`",
         f"- Annualized underlying turnover: "
