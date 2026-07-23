@@ -54,7 +54,7 @@ def test_verifier_rejects_cross_fold_position_delay_drift(
     fold_boundaries = np.flatnonzero(original["fold"].ne(original["fold"].shift()).to_numpy())
     assert len(fold_boundaries) == 2
     assert verify_walk_forward_report is direct_verify
-    assert verify_walk_forward_report(tmp_path)["status"] == "passed"
+    assert verify_walk_forward_report(tmp_path, tolerance=1e-10)["status"] == "passed"
 
     second_fold_start = int(fold_boundaries[1])
     previous_fold_last_row = second_fold_start - 1
@@ -65,7 +65,7 @@ def test_verifier_rejects_cross_fold_position_delay_drift(
         delta=0.1,
     )
     with pytest.raises(ValueError, match="cross-fold delayed position"):
-        verify_walk_forward_report(tmp_path)
+        verify_walk_forward_report(tmp_path, tolerance=1e-10)
 
     paths["returns"].write_bytes(original_bytes)
     within_fold_target_row = previous_fold_last_row - 1
@@ -76,4 +76,4 @@ def test_verifier_rejects_cross_fold_position_delay_drift(
         delta=0.1,
     )
     with pytest.raises(ValueError, match="fold 1 position"):
-        verify_walk_forward_report(tmp_path)
+        verify_walk_forward_report(tmp_path, tolerance=1e-10)
