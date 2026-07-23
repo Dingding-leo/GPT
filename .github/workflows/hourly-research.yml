@@ -45,36 +45,8 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Capture lint and formatting diagnostics
-        shell: bash
-        run: |
-          set +e
-          ruff check . > ruff-check.txt 2>&1
-          check_status=$?
-          ruff format --diff tests/test_okx_live_signal_cutoff.py > ruff-format.txt 2>&1
-          ruff format --check . > /dev/null 2>&1
-          format_status=$?
-          printf 'check_status=%s\nformat_status=%s\n' "$check_status" "$format_status" > ruff-status.txt
-
-      - name: Upload lint diagnostics
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: data-lint-diagnostic-${{ github.run_number }}-attempt-${{ github.run_attempt }}
-          path: |
-            ruff-check.txt
-            ruff-format.txt
-            ruff-status.txt
-          if-no-files-found: error
-          retention-days: 1
-
-      - name: Enforce lint and formatting
-        shell: bash
-        run: |
-          cat ruff-check.txt
-          cat ruff-format.txt
-          source ruff-status.txt
-          test "$check_status" -eq 0
-          test "$format_status" -eq 0
+      - name: Lint and formatting
+        run: ruff check . && ruff format --check .
 
       - name: Test against public OKX data
         env:
