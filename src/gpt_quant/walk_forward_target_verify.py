@@ -81,9 +81,7 @@ def _require_selected_config_compatibility(
         if name in _SEARCH_PARAMETER_FIELDS:
             continue
         if selected_values[name] != expected:
-            raise ValueError(
-                f"fold {fold_id} selected_parameters changes non-search field {name}"
-            )
+            raise ValueError(f"fold {fold_id} selected_parameters changes non-search field {name}")
 
 
 def verify_source_bound_position_paths(
@@ -105,7 +103,9 @@ def verify_source_bound_position_paths(
     if not isinstance(source_close.index, pd.DatetimeIndex):
         raise ValueError("source position verification requires a DatetimeIndex")
     if source_close.index.has_duplicates or not source_close.index.is_monotonic_increasing:
-        raise ValueError("source position verification requires unique increasing source timestamps")
+        raise ValueError(
+            "source position verification requires unique increasing source timestamps"
+        )
     if (source_positions <= 0).any():
         raise ValueError("source position verification requires a preceding signal bar")
     if (source_positions >= len(source_close)).any():
@@ -144,9 +144,7 @@ def verify_source_bound_position_paths(
             raise ValueError(f"walk-forward returns rows for fold {fold_id} must be contiguous")
 
         fold_source_positions = source_positions[row_positions]
-        if len(fold_source_positions) > 1 and not np.equal(
-            np.diff(fold_source_positions), 1
-        ).all():
+        if len(fold_source_positions) > 1 and not np.equal(np.diff(fold_source_positions), 1).all():
             raise ValueError(f"immutable source rows for fold {fold_id} must be contiguous")
 
         selected = _strategy_config(
@@ -161,7 +159,9 @@ def verify_source_bound_position_paths(
         source_prefix = source_close.iloc[: prefix_end + 1]
         regenerated_target = build_target_position(source_prefix, selected)
         expected_target = regenerated_target.iloc[fold_source_positions].reset_index(drop=True)
-        expected_position = regenerated_target.iloc[fold_source_positions - 1].reset_index(drop=True)
+        expected_position = regenerated_target.iloc[fold_source_positions - 1].reset_index(
+            drop=True
+        )
 
         actual_target = target_position.iloc[row_positions].reset_index(drop=True)
         actual_position = position.iloc[row_positions].reset_index(drop=True)
@@ -185,7 +185,8 @@ def verify_source_bound_position_paths(
         raise ValueError("walk-forward report fold identifiers do not match persisted returns")
 
     model_switches = sum(
-        left != right for left, right in zip(selected_identities, selected_identities[1:], strict=False)
+        left != right
+        for left, right in zip(selected_identities, selected_identities[1:], strict=False)
     )
     return {
         "source_selected_config_folds_verified": len(expected_fold_ids),
