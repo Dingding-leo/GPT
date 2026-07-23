@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 import argparse
+import math
 from collections.abc import Sequence
 from pathlib import Path
 
 from gpt_quant.portfolio import validate_portfolio_provenance
+from gpt_quant.portfolio_path_risk_budget import (
+    evaluate_portfolio_path_risk_budget,
+    write_portfolio_path_risk_budget_report,
+)
 from gpt_quant.portfolio_underlying_risk import (
     build_underlying_sleeve_risk,
     write_underlying_sleeve_risk_report,
@@ -19,6 +24,20 @@ def _positive_int(value: str) -> int:
     parsed = int(value)
     if parsed <= 0:
         raise argparse.ArgumentTypeError("value must be a positive integer")
+    return parsed
+
+
+def _positive_float(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed) or parsed <= 0.0:
+        raise argparse.ArgumentTypeError("value must be a positive finite number")
+    return parsed
+
+
+def _drawdown_floor(value: str) -> float:
+    parsed = float(value)
+    if not math.isfinite(parsed) or not -1.0 < parsed < 0.0:
+        raise argparse.ArgumentTypeError("value must be a finite number in (-1, 0)")
     return parsed
 
 
@@ -43,7 +62,8 @@ def _git_commit(value: str) -> str:
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Expose source-bound underlying sleeve exposure, turnover, and 5 bps fee risk."
+            "Expose source-bound underlying sleeve risk and enforce explicit portfolio "
+            "volatility and drawdown budgets."
         )
     )
     parser.add_argument("--btc-returns", required=True)
@@ -53,6 +73,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--btc-weight", type=float, default=0.5)
     parser.add_argument("--eth-weight", type=float, default=0.5)
     parser.add_argument("--annualization", type=int, default=365)
+    parser.add_argument(
+        "--max-annualized-net-volatility",
+        required=True,
+        type=_positive_float,
+    )
+    parser.add_argument(
+        "--maximum-drawdown-floor",
+        required=True,
+        type=_drawdown_floor,
+    )
+    parser.add_argument("--fail-on-reject", action="store_true")
     parser.add_argument("--provider", required=True, choices=("OKX",))
     parser.add_argument("--market-type", required=True, choices=("spot",))
     parser.add_argument("--timeframe", required=True, choices=("1Dutc",))
@@ -107,8 +138,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         annualization=args.annualization,
         exchange_fee_bps=_EXCHANGE_FEE_BASELINE_BPS,
     )
-    path = write_underlying_sleeve_risk_report(result, args.output_dir)
-    print(f"underlying_risk_path={path}")
+    underlying_path = write_underlying_sleeve_risk_report(result, args.output_dir)
+    budget = evaluate_portfolio_path_risk_budget(
+        result,
+        max_annualized_net_volatility=args.max_annualized_net_volatility,
+        maximum_drawdown_floor=args.maximum_drawdown_floor,
+    )
+    budget_path = write_portfolio_path_risk_budget_report(budget, args.output_dir)
+
+    print(f"underlying_risk_path={underlying_path}")
+    print(f"portfolio_path_risk_budget_path={budget_path}")
     print(
         "current_absolute_market_exposure="
         f"{result.portfolio_metrics['current_absolute_market_exposure']:.6f}"
@@ -120,6 +159,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(
         f"portfolio_exchange_fee_sum={result.portfolio_metrics['portfolio_exchange_fee_sum']:.6f}"
     )
+    print(f"annualized_net_volatility={budget.metrics['annualized_net_volatility']:.6f}")
+    print(f"maximum_drawdown={budget.metrics['maximum_drawdown']:.6f}")
+    print(f"portfolio_path_risk_budget_status={budget.payload['risk_budget']['status']}")
+    if args.fail_on_reject and not budget.passes:
+        return 1
     return 0
 
 
