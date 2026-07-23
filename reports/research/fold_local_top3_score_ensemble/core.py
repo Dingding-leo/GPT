@@ -158,9 +158,7 @@ def load_canonical_returns(
         raise ValueError("unexpected evaluation start")
     if validated["timestamp"].iloc[-1] != EXPECTED_EVALUATION_END:
         raise ValueError("unexpected evaluation end")
-    return_columns = validated[
-        ["strategy_return", "benchmark_volatility_targeted_long_return"]
-    ]
+    return_columns = validated[["strategy_return", "benchmark_volatility_targeted_long_return"]]
     if (return_columns <= -1.0).any().any():
         raise ValueError("returns must remain greater than -100%")
     return validated.set_index("timestamp")
@@ -185,9 +183,9 @@ def build_target_position(
     reversal_score = -recent_return / (
         risk_scale.replace(0.0, np.nan) * math.sqrt(reversal_lookback)
     )
-    ensemble_score = (
-        trend_weight * trend_score + (1.0 - trend_weight) * reversal_score
-    ).clip(-4.0, 4.0)
+    ensemble_score = (trend_weight * trend_score + (1.0 - trend_weight) * reversal_score).clip(
+        -4.0, 4.0
+    )
     directional_signal = pd.Series(
         np.tanh(ensemble_score.to_numpy(dtype=float)),
         index=ensemble_score.index,
@@ -238,8 +236,7 @@ def _rebased_window(frame: pd.DataFrame, previous_position: float, cost_bps: flo
     result.iloc[0, result.columns.get_loc("trading_cost")] = (
         float(result["turnover"].iloc[0]) * cost_bps / 10_000.0
     )
-    result.iloc[0, result.columns.get_loc("strategy_return")] = (
-        float(result["gross_strategy_return"].iloc[0])
-        - float(result["trading_cost"].iloc[0])
-    )
+    result.iloc[0, result.columns.get_loc("strategy_return")] = float(
+        result["gross_strategy_return"].iloc[0]
+    ) - float(result["trading_cost"].iloc[0])
     return result

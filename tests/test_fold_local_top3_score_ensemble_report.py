@@ -84,18 +84,14 @@ def test_persisted_result_rejects_architecture_and_preserves_exact_metrics() -> 
     assert btc["metrics_5bps"]["annualized_turnover"] == pytest.approx(14.321919517629233)
     assert btc["fold_stability"]["profitable_folds"] == 13
     assert btc["fold_stability"]["passes"] is False
-    assert btc["fold_stability"]["max_positive_fold_share"] == pytest.approx(
-        0.45659607753384496
-    )
+    assert btc["fold_stability"]["max_positive_fold_share"] == pytest.approx(0.45659607753384496)
 
     assert eth["metrics_5bps"]["total_return"] == pytest.approx(1.6264537442482534)
     assert eth["metrics_5bps"]["sharpe"] == pytest.approx(0.7216293857158551)
     assert eth["metrics_5bps"]["annualized_turnover"] == pytest.approx(14.331492844793107)
     assert eth["fold_stability"]["profitable_folds"] == 17
     assert eth["fold_stability"]["passes"] is True
-    assert eth["fold_stability"]["max_positive_fold_share"] == pytest.approx(
-        0.2301373784969282
-    )
+    assert eth["fold_stability"]["max_positive_fold_share"] == pytest.approx(0.2301373784969282)
 
 
 def test_persisted_result_discloses_all_cost_neighbourhood_and_delay_scenarios() -> None:

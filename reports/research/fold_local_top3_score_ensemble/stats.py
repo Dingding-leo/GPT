@@ -32,17 +32,11 @@ def return_metrics(returns: pd.Series | np.ndarray) -> dict[str, float | int]:
     standard_deviation = float(values.std(ddof=0))
     annualized_mean = mean * ANNUALIZATION
     annualized_volatility = standard_deviation * math.sqrt(ANNUALIZATION)
-    sharpe = (
-        mean / standard_deviation * math.sqrt(ANNUALIZATION)
-        if standard_deviation > 0
-        else 0.0
-    )
+    sharpe = mean / standard_deviation * math.sqrt(ANNUALIZATION) if standard_deviation > 0 else 0.0
     downside = np.minimum(values, 0.0)
     downside_deviation = float(np.sqrt(np.mean(np.square(downside))))
     sortino = (
-        mean / downside_deviation * math.sqrt(ANNUALIZATION)
-        if downside_deviation > 0
-        else 0.0
+        mean / downside_deviation * math.sqrt(ANNUALIZATION) if downside_deviation > 0 else 0.0
     )
     nav = np.concatenate(([1.0], np.cumprod(1.0 + values)))
     drawdown = nav / np.maximum.accumulate(nav) - 1.0
