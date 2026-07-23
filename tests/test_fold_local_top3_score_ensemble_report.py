@@ -36,7 +36,7 @@ def test_candidate_definition_is_single_predeclared_top3_architecture() -> None:
     assert analysis.MARKETS == ("BTC-USDT", "ETH-USDT")
     assert "SOL-USDT" not in analysis.MARKETS
     assert analysis.TOP_K == 3
-    assert analysis.BASELINE_COST_BPS == pytest.approx(5.0)
+    assert pytest.approx(5.0) == analysis.BASELINE_COST_BPS
     assert analysis.ALL_IN_COSTS_BPS == (5.0, 7.5, 10.0, 15.0)
     assert analysis.NEIGHBOUR_TOP_K == (2, 4)
     assert len(grid) == 27
@@ -51,7 +51,7 @@ def test_noncircular_block_indices_are_seeded_and_contiguous_within_blocks() -> 
 
     assert np.array_equal(first, second)
     assert first.shape == (40,)
-    assert np.all((0 <= first) & (first < 40))
+    assert np.all((first >= 0) & (first < 40))
     for start in range(0, 35, 7):
         block = first[start : start + 7]
         assert np.array_equal(np.diff(block), np.ones(len(block) - 1, dtype=int))

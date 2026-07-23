@@ -35,10 +35,12 @@ from .stats import (
     expected_shortfall_5pct,
     fold_stability,
     frame_metrics,
-    noncircular_block_indices as noncircular_block_indices,
     paired_metric_delta_bootstrap,
     reprice,
     return_metrics,
+)
+from .stats import (
+    noncircular_block_indices as noncircular_block_indices,
 )
 
 
