@@ -1,0 +1,81 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "volatility-matched-expected-shortfall-vs-buy-and-hold-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=buy-and-hold-scaled-per-sample-to-strategy-sample-volatility|volatility=sample-standard-deviation-ddof1|metric=mean-worst-ceil-5pct-returns|tail-fraction=0.05|claim=strategy-minus-volatility-matched-benchmark-expected-shortfall>0-in-both-markets|resampling=paired-noncircular-moving-block-bootstrap|volatility-scale-recomputed-per-resample=true|block-length=20-sessions|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072315,ETH-USDT:2026072316|candidate_count=1",
+  "claim_scope": "Development-market tail-shape diagnostic only; a rejected result means the raw expected-shortfall reduction versus buy-and-hold is not shown to survive simple sample-volatility matching.",
+  "hypothesis": "The adaptive strategy has less severe 5% expected shortfall than buy-and-hold after buy-and-hold is scaled to the strategy's sample volatility in both BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "bootstrap_scale_ci_lower": 0.32858185404341594,
+      "bootstrap_scale_ci_upper": 0.45161171315360304,
+      "ci_lower": -0.003968156489439959,
+      "ci_upper": 0.0015135738232911764,
+      "observations": 2385,
+      "observed_delta": -0.0013651238078511742,
+      "passed": false,
+      "period_end": "2026-07-22T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.178,
+      "return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "strategy_expected_shortfall": -0.0290198365319767,
+      "tail_observations": 120,
+      "volatility_match_scale": 0.3861342825146449,
+      "volatility_matched_benchmark_expected_shortfall": -0.027654712724125525
+    },
+    "ETH-USDT": {
+      "bootstrap_scale_ci_lower": 0.2720786851256934,
+      "bootstrap_scale_ci_upper": 0.3491198576479069,
+      "ci_lower": -0.006659367734654571,
+      "ci_upper": -0.0012586298244496392,
+      "observations": 2385,
+      "observed_delta": -0.004134251674638052,
+      "passed": false,
+      "period_end": "2026-07-22T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.003,
+      "return_file_sha256": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047",
+      "strategy_expected_shortfall": -0.03348469335215429,
+      "tail_observations": 120,
+      "volatility_match_scale": 0.3104614760125097,
+      "volatility_matched_benchmark_expected_shortfall": -0.029350441677516236
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "expected_return_file_sha256": {
+      "BTC-USDT": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "ETH-USDT": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047"
+    },
+    "market_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8551491583,
+    "source_artifact_name": "quant-research-source-1580-attempt-1",
+    "source_artifact_sha256": "dc86c60ecff638ca3d9b6419e3d562391462588daec7466f64445168781c95ea",
+    "source_code_commit": "d9591ce1ba4d378f60cfc52e645ca8bd94442738",
+    "source_main_base": "2baa7cd6418184ca42fe7802f9e34b809476db1b",
+    "source_workflow_run_id": 29976177263,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reason": "The 95% paired moving-block-bootstrap lower bound for the strategy-minus-volatility-matched-buy-and-hold expected-shortfall delta was non-positive in: BTC-USDT, ETH-USDT",
+  "settings": {
+    "benchmark": "buy-and-hold scaled to strategy sample volatility",
+    "block_length_sessions": 20,
+    "confidence": 0.95,
+    "expected_shortfall_definition": "mean of worst ceil(tail_fraction * n) returns",
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072315,
+      "ETH-USDT": 2026072316
+    },
+    "tail_fraction": 0.05,
+    "volatility_definition": "sample standard deviation with ddof=1",
+    "volatility_scale_recomputed_per_resample": true
+  },
+  "verdict": "rejected"
+}
