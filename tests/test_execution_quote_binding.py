@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime, timedelta, timezone
+from decimal import localcontext
 
 import pytest
 
@@ -63,7 +64,9 @@ def test_binding_is_canonical_and_reconstructs_exact_quote_and_intent() -> None:
     assert replayed.target_intent_id == intent.intent_id
     assert replayed.quote_snapshot_id == quote.snapshot_id
     assert replayed.instrument_snapshot_sha256 == quote.instrument_snapshot_sha256
-    assert replayed.observed_spread_bps == format(quote.spread_bps, "f").rstrip("0").rstrip(".")
+    assert replayed.observed_spread_bps == (
+        "0.030250824713108741127054976336292368170687253361245"
+    )
     replayed.assert_reconstructs(intent, quote)
 
 
@@ -152,7 +155,7 @@ def test_direct_binding_and_canonical_replay_reject_stale_quote_evidence() -> No
         "quote_observed_at_utc": quote.observed_at_utc,
         "quote_received_at_utc": quote.received_at_utc,
         "instrument_snapshot_sha256": quote.instrument_snapshot_sha256,
-        "observed_spread_bps": format(quote.spread_bps, "f").rstrip("0").rstrip("."),
+        "observed_spread_bps": "0.030250824713108741127054976336292368170687253361245",
     }
 
     with pytest.raises(ValueError, match="stale"):
@@ -169,3 +172,36 @@ def test_direct_binding_and_canonical_replay_reject_stale_quote_evidence() -> No
     serialized = json.dumps(stale_payload, separators=(",", ":"), sort_keys=True).encode() + b"\n"
     with pytest.raises(ValueError, match="stale"):
         ExecutionQuoteBinding.from_json_bytes(serialized)
+
+
+def test_binding_identity_and_reconstruction_ignore_decimal_context() -> None:
+    intent = _intent()
+    quote = _quote()
+    decision_at = datetime(2026, 7, 21, 0, 0, 0, 400_000, tzinfo=UTC)
+
+    with localcontext() as context:
+        context.prec = 10
+        low_precision = bind_execution_quote(
+            intent,
+            quote,
+            decision_at_utc=decision_at,
+            maximum_age_ms=250,
+        )
+    with localcontext() as context:
+        context.prec = 50
+        high_precision = bind_execution_quote(
+            intent,
+            quote,
+            decision_at_utc=decision_at,
+            maximum_age_ms=250,
+        )
+
+    assert low_precision.to_json_bytes() == high_precision.to_json_bytes()
+    assert low_precision.binding_id == high_precision.binding_id
+    assert low_precision.observed_spread_bps == (
+        "0.030250824713108741127054976336292368170687253361245"
+    )
+
+    with localcontext() as context:
+        context.prec = 6
+        low_precision.assert_reconstructs(intent, quote)
