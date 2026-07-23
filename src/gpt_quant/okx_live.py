@@ -89,7 +89,9 @@ def _validated_server_time_sample(
     max_abs_clock_skew_seconds: float,
 ) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, float, float]:
     if not sample.base_url or any(character.isspace() for character in sample.base_url):
-        raise ValueError("OKX server-time sample base_url must be a non-empty URL without whitespace")
+        raise ValueError(
+            "OKX server-time sample base_url must be a non-empty URL without whitespace"
+        )
     if sample.base_url.rstrip("/") != sample.base_url:
         raise ValueError("OKX server-time sample base_url must be normalized")
     if sample.endpoint != _SERVER_TIME_ENDPOINT:
