@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -64,7 +64,6 @@ def _explicit_utc_timestamp(value: object) -> str:
         raise ValueError("manifest recorded_at_utc must include an explicit UTC offset")
     if parsed.utcoffset() != timedelta(0):
         raise ValueError("manifest recorded_at_utc must use UTC")
-    parsed.astimezone(UTC)
     return timestamp
 
 
