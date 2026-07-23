@@ -78,3 +78,19 @@ def test_hourly_workflow_publishes_portfolio_from_source_artifact_evidence() -> 
     assert '--max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION"' in workflow
     assert "path: reports/okx/" in workflow
     assert "path: reports/portfolio/" in workflow
+
+
+def test_hourly_workflow_never_publishes_rejected_portfolio_as_verified() -> None:
+    workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    generation = workflow.index("- name: Generate verified portfolio risk report")
+    upload = workflow.index("- name: Upload verified portfolio risk artifact")
+    upload_block = workflow[upload:]
+
+    assert generation < upload
+    assert "--fail-on-reject" in workflow[generation:upload]
+    assert (
+        "if: ${{ success() && hashFiles('reports/portfolio/portfolio_risk.json') != '' }}"
+        in upload_block
+    )
+    assert "always()" not in upload_block
