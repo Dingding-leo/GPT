@@ -1,0 +1,39 @@
+name: Research Format Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v6.0.0
+        with:
+          python-version: "3.14"
+      - run: python -m pip install "ruff==0.15.22"
+      - run: |
+          ruff check \
+            reports/research/persisted-live-metric-contract/analysis.py \
+            tests/test_persisted_live_metric_contract_report.py \
+            > ruff-check.txt 2>&1 || true
+          ruff format \
+            reports/research/persisted-live-metric-contract/analysis.py \
+            tests/test_persisted_live_metric_contract_report.py
+          mkdir formatted
+          cp reports/research/persisted-live-metric-contract/analysis.py formatted/analysis.py
+          cp tests/test_persisted_live_metric_contract_report.py formatted/test.py
+          cp ruff-check.txt formatted/ruff-check.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
+        with:
+          name: research-format-diagnostic
+          path: formatted
+          if-no-files-found: error
+          retention-days: 1
