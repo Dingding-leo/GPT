@@ -64,9 +64,7 @@ def _journal_from_bindings(
         decision = _decision_key(binding)
         previous_id = decisions.get(decision)
         if previous_id is not None and previous_id != binding.binding_id:
-            raise ValueError(
-                f"{_ERROR_LABEL} contains conflicting quotes for one target decision"
-            )
+            raise ValueError(f"{_ERROR_LABEL} contains conflicting quotes for one target decision")
         decisions[decision] = binding.binding_id
 
     payload = b"".join(binding.to_json_bytes() for binding in ordered)
