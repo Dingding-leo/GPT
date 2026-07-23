@@ -98,9 +98,9 @@ def test_underlying_risk_exposes_real_sleeve_exposure_turnover_and_fee(tmp_path:
     assert result.portfolio_metrics["annualized_net_variance_contribution_sum"] == pytest.approx(
         annualized_variance
     )
-    assert result.portfolio_metrics[
-        "annualized_net_volatility_contribution_sum"
-    ] == pytest.approx(annualized_variance**0.5)
+    assert result.portfolio_metrics["annualized_net_volatility_contribution_sum"] == pytest.approx(
+        annualized_variance**0.5
+    )
     assert result.portfolio_metrics["net_variance_contribution_fraction_sum"] == pytest.approx(1.0)
     assert result.portfolio_metrics["risk_contribution_status"] == "measured"
 
