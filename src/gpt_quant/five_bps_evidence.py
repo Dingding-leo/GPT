@@ -73,8 +73,10 @@ def _validate_instrument(
     if payload.get("status") != "passed":
         raise ValueError(f"{instrument} persisted walk-forward verification did not pass")
     fee = payload.get("transaction_cost_bps")
-    if isinstance(fee, bool) or not isinstance(fee, int | float) or not math.isclose(
-        float(fee), _BASELINE_FEE_BPS, rel_tol=0.0, abs_tol=1e-12
+    if (
+        isinstance(fee, bool)
+        or not isinstance(fee, int | float)
+        or not math.isclose(float(fee), _BASELINE_FEE_BPS, rel_tol=0.0, abs_tol=1e-12)
     ):
         raise ValueError(f"{instrument} is not verified at the 5 bps one-way baseline")
     if payload.get("selection_source") != _SELECTION_SOURCE:
@@ -162,9 +164,12 @@ def build_five_bps_walk_forward_evidence(
 def write_five_bps_walk_forward_evidence(payload: Mapping[str, Any], path: str | Path) -> str:
     destination = Path(path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    ) + b"\n"
+    encoded = (
+        json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
+        + b"\n"
+    )
     destination.write_bytes(encoded)
     return _sha256(encoded)
 
