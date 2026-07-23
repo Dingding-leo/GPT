@@ -22,16 +22,17 @@ jobs:
           python-version: "3.12"
       - name: Install Ruff
         run: python -m pip install "ruff==0.9.10"
-      - name: Format and print files
+      - name: Format files
         run: |
           ruff check --fix src/gpt_quant/okx_live_response_evidence.py tests/test_okx_live_response_evidence.py || true
           ruff format src/gpt_quant/okx_live_response_evidence.py tests/test_okx_live_response_evidence.py
-          echo MODULE_BEGIN
-          base64 -w0 src/gpt_quant/okx_live_response_evidence.py
-          echo
-          echo MODULE_END
-          echo TEST_BEGIN
-          base64 -w0 tests/test_okx_live_response_evidence.py
-          echo
-          echo TEST_END
           ruff check src/gpt_quant/okx_live_response_evidence.py tests/test_okx_live_response_evidence.py || true
+      - name: Upload formatted files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
+        with:
+          name: data-ruff-formatted
+          path: |
+            src/gpt_quant/okx_live_response_evidence.py
+            tests/test_okx_live_response_evidence.py
+          if-no-files-found: error
+          retention-days: 1
