@@ -1,0 +1,36 @@
+name: Data Ruff Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install Ruff
+        run: python -m pip install "ruff==0.9.10"
+      - name: Format and print files
+        run: |
+          ruff check --fix src/gpt_quant/okx_live_response_evidence.py tests/test_okx_live_response_evidence.py
+          ruff format src/gpt_quant/okx_live_response_evidence.py tests/test_okx_live_response_evidence.py
+          echo MODULE_BEGIN
+          base64 -w0 src/gpt_quant/okx_live_response_evidence.py
+          echo
+          echo MODULE_END
+          echo TEST_BEGIN
+          base64 -w0 tests/test_okx_live_response_evidence.py
+          echo
+          echo TEST_END
