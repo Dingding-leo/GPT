@@ -64,9 +64,7 @@ def test_binding_is_canonical_and_reconstructs_exact_quote_and_intent() -> None:
     assert replayed.target_intent_id == intent.intent_id
     assert replayed.quote_snapshot_id == quote.snapshot_id
     assert replayed.instrument_snapshot_sha256 == quote.instrument_snapshot_sha256
-    assert replayed.observed_spread_bps == (
-        "0.030250824713108741127054976336292368170687253361245"
-    )
+    assert replayed.observed_spread_bps == ("0.030250824713108741127054976336292368170687253361245")
     replayed.assert_reconstructs(intent, quote)
 
 

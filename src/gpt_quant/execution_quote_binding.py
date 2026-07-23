@@ -6,7 +6,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from decimal import Context, Decimal, ROUND_HALF_EVEN, localcontext
+from decimal import ROUND_HALF_EVEN, Context, Decimal, localcontext
 from fractions import Fraction
 
 from .execution_intent import TargetPositionIntent
@@ -90,9 +90,7 @@ def _deterministic_spread_bps(quote: ExecutionQuoteSnapshot) -> str:
     ask = Fraction(Decimal(quote.ask_price))
     exact_spread_bps = (ask - bid) * 20_000 / (ask + bid)
     with localcontext(Context(prec=50, rounding=ROUND_HALF_EVEN)):
-        spread_bps = Decimal(exact_spread_bps.numerator) / Decimal(
-            exact_spread_bps.denominator
-        )
+        spread_bps = Decimal(exact_spread_bps.numerator) / Decimal(exact_spread_bps.denominator)
     return _canonical_non_negative_decimal(
         spread_bps,
         field_name="observed_spread_bps",
