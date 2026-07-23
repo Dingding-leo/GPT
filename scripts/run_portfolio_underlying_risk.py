@@ -118,8 +118,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"{result.portfolio_metrics['annualized_weighted_underlying_turnover']:.6f}"
     )
     print(
-        "portfolio_exchange_fee_sum="
-        f"{result.portfolio_metrics['portfolio_exchange_fee_sum']:.6f}"
+        f"portfolio_exchange_fee_sum={result.portfolio_metrics['portfolio_exchange_fee_sum']:.6f}"
     )
     return 0
 
