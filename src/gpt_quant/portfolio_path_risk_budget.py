@@ -27,6 +27,7 @@ class PortfolioPathRiskBudgetResult:
     _underlying: UnderlyingSleeveRiskResult = field(repr=False, compare=False)
     _max_annualized_net_volatility: float = field(repr=False, compare=False)
     _maximum_drawdown_floor: float = field(repr=False, compare=False)
+    _max_annualized_weighted_underlying_turnover: float = field(repr=False, compare=False)
     _tolerance: float = field(repr=False, compare=False)
 
     @property
@@ -97,6 +98,7 @@ def evaluate_portfolio_path_risk_budget(
     *,
     max_annualized_net_volatility: float,
     maximum_drawdown_floor: float,
+    max_annualized_weighted_underlying_turnover: float,
     accounting_tolerance: float = 1e-12,
 ) -> PortfolioPathRiskBudgetResult:
     """Evaluate explicit paper-risk budgets from the verified underlying net path."""
@@ -108,10 +110,19 @@ def evaluate_portfolio_path_risk_budget(
         "max_annualized_net_volatility",
     )
     drawdown_floor = _drawdown_floor(maximum_drawdown_floor)
+    turnover_limit = _positive_finite(
+        max_annualized_weighted_underlying_turnover,
+        "max_annualized_weighted_underlying_turnover",
+    )
     tolerance = _nonnegative_finite(accounting_tolerance, "accounting_tolerance")
 
     frame = underlying.frame
-    required = {"portfolio_net_return", "portfolio_gross_return", "portfolio_exchange_fee"}
+    required = {
+        "portfolio_net_return",
+        "portfolio_gross_return",
+        "portfolio_exchange_fee",
+        "portfolio_weighted_underlying_turnover",
+    }
     missing = required - set(frame)
     if missing:
         raise ValueError(f"underlying risk frame is missing required columns: {sorted(missing)}")
@@ -133,6 +144,24 @@ def evaluate_portfolio_path_risk_budget(
         abs_tol=tolerance,
     ):
         raise RuntimeError("portfolio net volatility does not reconcile to underlying risk")
+
+    weighted_turnover = pd.to_numeric(
+        frame["portfolio_weighted_underlying_turnover"],
+        errors="raise",
+    ).astype(float)
+    if not np.isfinite(weighted_turnover.to_numpy()).all() or bool((weighted_turnover < 0.0).any()):
+        raise ValueError("portfolio weighted underlying turnover must be finite and non-negative")
+    annualized_weighted_underlying_turnover = float(weighted_turnover.mean() * annualization)
+    recorded_turnover = float(
+        underlying.portfolio_metrics["annualized_weighted_underlying_turnover"]
+    )
+    if not math.isclose(
+        annualized_weighted_underlying_turnover,
+        recorded_turnover,
+        rel_tol=0.0,
+        abs_tol=tolerance,
+    ):
+        raise RuntimeError("portfolio underlying turnover does not reconcile to underlying risk")
 
     nav = (1.0 + net_return).cumprod().rename("portfolio_net_nav")
     running_peak = pd.Series(
@@ -161,11 +190,14 @@ def evaluate_portfolio_path_risk_budget(
 
     volatility_passes = annualized_net_volatility <= volatility_limit + tolerance
     drawdown_passes = maximum_drawdown >= drawdown_floor - tolerance
+    turnover_passes = annualized_weighted_underlying_turnover <= turnover_limit + tolerance
     failure_reasons: list[str] = []
     if not volatility_passes:
         failure_reasons.append("annualized net volatility breaches the declared limit")
     if not drawdown_passes:
         failure_reasons.append("maximum drawdown breaches the declared floor")
+    if not turnover_passes:
+        failure_reasons.append("annualized weighted underlying turnover breaches the declared limit")
     passes = not failure_reasons
 
     payload = {
@@ -178,6 +210,7 @@ def evaluate_portfolio_path_risk_budget(
             "annualization": annualization,
             "max_annualized_net_volatility": volatility_limit,
             "maximum_drawdown_floor": drawdown_floor,
+            "max_annualized_weighted_underlying_turnover": turnover_limit,
             "expected_shortfall_tail_probability": _EXPECTED_SHORTFALL_TAIL_PROBABILITY,
             "expected_shortfall_method": (
                 "mean of the worst ceil(observations * 5%) daily net returns"
@@ -186,12 +219,17 @@ def evaluate_portfolio_path_risk_budget(
             "underwater_definition": (
                 "portfolio drawdown strictly below negative accounting tolerance"
             ),
+            "turnover_definition": (
+                "annualization times mean start-of-bar sleeve-weighted absolute "
+                "underlying position turnover"
+            ),
         },
         "metrics": {
             "observations": len(net_return),
             "evaluation_start": net_return.index[0].isoformat(),
             "evaluation_end": net_return.index[-1].isoformat(),
             "annualized_net_volatility": annualized_net_volatility,
+            "annualized_weighted_underlying_turnover": annualized_weighted_underlying_turnover,
             "historical_expected_shortfall_95": expected_shortfall,
             "expected_shortfall_tail_observations": tail_observations,
             "worst_day_timestamp": worst_timestamp.isoformat(),
@@ -204,6 +242,7 @@ def evaluate_portfolio_path_risk_budget(
         "risk_budget": {
             "volatility_budget_passes": volatility_passes,
             "drawdown_budget_passes": drawdown_passes,
+            "turnover_budget_passes": turnover_passes,
             "passes": passes,
             "status": "pass" if passes else "reject",
             "failure_reasons": failure_reasons,
@@ -215,6 +254,7 @@ def evaluate_portfolio_path_risk_budget(
         _underlying=underlying,
         _max_annualized_net_volatility=volatility_limit,
         _maximum_drawdown_floor=drawdown_floor,
+        _max_annualized_weighted_underlying_turnover=turnover_limit,
         _tolerance=tolerance,
     )
 
@@ -229,6 +269,9 @@ def write_portfolio_path_risk_budget_report(
         result._underlying,
         max_annualized_net_volatility=result._max_annualized_net_volatility,
         maximum_drawdown_floor=result._maximum_drawdown_floor,
+        max_annualized_weighted_underlying_turnover=(
+            result._max_annualized_weighted_underlying_turnover
+        ),
         accounting_tolerance=result._tolerance,
     )
     if result.to_dict() != expected.to_dict():
