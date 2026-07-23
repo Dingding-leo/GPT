@@ -238,9 +238,10 @@ def test_replay_is_target_ordered_and_content_addressed(tmp_path: Path) -> None:
 
     assert replay.decisions == (first_decision, second_decision)
     assert replay.pending_target_intents == ()
-    assert replay.target_journal_sha256 == hashlib.sha256(
-        first_target.to_json_bytes() + second_target.to_json_bytes()
-    ).hexdigest()
+    assert (
+        replay.target_journal_sha256
+        == hashlib.sha256(first_target.to_json_bytes() + second_target.to_json_bytes()).hexdigest()
+    )
     expected_evidence = {
         "schema_version": 1,
         "target_journal_sha256": replay.target_journal_sha256,
