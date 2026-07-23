@@ -61,9 +61,7 @@ def _journal_from_intents(
         decision = _decision_key(intent)
         previous_id = decisions.get(decision)
         if previous_id is not None and previous_id != intent.intent_id:
-            raise ValueError(
-                f"{_ERROR_LABEL} contains conflicting targets for one signal decision"
-            )
+            raise ValueError(f"{_ERROR_LABEL} contains conflicting targets for one signal decision")
         decisions[decision] = intent.intent_id
 
     payload = b"".join(intent.to_json_bytes() for intent in ordered)
