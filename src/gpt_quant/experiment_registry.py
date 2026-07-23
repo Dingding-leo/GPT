@@ -111,12 +111,8 @@ def validate_experiment_manifest_entry(entry: Mapping[str, Any]) -> dict[str, An
     ):
         raise ValueError("code_commit must be a lowercase 40- or 64-character commit id")
 
-    normalized["config_sha256"] = _validate_digest(
-        "config_sha256", normalized["config_sha256"]
-    )
-    normalized["data_sha256"] = _validate_digest_mapping(
-        "data_sha256", normalized["data_sha256"]
-    )
+    normalized["config_sha256"] = _validate_digest("config_sha256", normalized["config_sha256"])
+    normalized["data_sha256"] = _validate_digest_mapping("data_sha256", normalized["data_sha256"])
     normalized["artifact_sha256"] = _validate_digest_mapping(
         "artifact_sha256", normalized["artifact_sha256"]
     )
@@ -148,7 +144,7 @@ def validate_experiment_manifest_entry(entry: Mapping[str, Any]) -> dict[str, An
     expected_run_id = f"run-{canonical_json_sha256(run_evidence)[:24]}"
     if normalized["run_id"] != expected_run_id:
         raise ValueError(
-            "run_id does not match canonical run evidence: " f"expected {expected_run_id}"
+            f"run_id does not match canonical run evidence: expected {expected_run_id}"
         )
     return normalized
 
@@ -208,9 +204,7 @@ def merge_experiment_manifests(
     existing = _read_manifest(registry, registry=True) if registry.exists() else []
     merged = list(existing)
     by_run_id = {entry["run_id"]: entry for entry in existing}
-    by_experiment_id = {
-        entry["experiment_id"]: _experiment_evidence(entry) for entry in existing
-    }
+    by_experiment_id = {entry["experiment_id"]: _experiment_evidence(entry) for entry in existing}
     added_runs = 0
     skipped_runs = 0
 
