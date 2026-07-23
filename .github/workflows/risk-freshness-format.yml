@@ -22,17 +22,11 @@ jobs:
           python-version: "3.13"
       - name: Install focused tools
         run: python -m pip install ruff==0.15.22 pytest==8.4.2
-      - name: Apply canonical formatting and verify
+      - name: Apply canonical formatting
         run: |
           set -euo pipefail
           python -m ruff format \
             src/gpt_quant/portfolio_freshness_risk.py \
-            tests/test_portfolio_freshness_risk.py
-          python -m ruff check \
-            src/gpt_quant/portfolio_freshness_risk.py \
-            tests/test_portfolio_freshness_risk.py
-          PYTHONPATH=src python -m pytest -q \
-            tests/test_portfolio_target_risk.py \
             tests/test_portfolio_freshness_risk.py
       - name: Commit canonical files and remove formatter
         run: |
@@ -47,3 +41,15 @@ jobs:
           git diff --cached --check
           git commit -m "style(risk): format freshness gate"
           git push origin HEAD:${{ github.head_ref }}
+      - name: Verify focused risk gate
+        run: |
+          set -euo pipefail
+          python -m ruff check \
+            src/gpt_quant/portfolio_freshness_risk.py \
+            tests/test_portfolio_freshness_risk.py
+          python -m ruff format --check \
+            src/gpt_quant/portfolio_freshness_risk.py \
+            tests/test_portfolio_freshness_risk.py
+          PYTHONPATH=src python -m pytest -q \
+            tests/test_portfolio_target_risk.py \
+            tests/test_portfolio_freshness_risk.py
