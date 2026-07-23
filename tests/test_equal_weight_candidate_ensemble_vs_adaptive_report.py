@@ -12,11 +12,7 @@ from gpt_quant import StrategyConfig, run_backtest
 
 _ROOT = Path(__file__).parents[1]
 _ANALYSIS_PATH = (
-    _ROOT
-    / "reports"
-    / "research"
-    / "equal-weight-candidate-ensemble-vs-adaptive"
-    / "analysis.py"
+    _ROOT / "reports" / "research" / "equal-weight-candidate-ensemble-vs-adaptive" / "analysis.py"
 )
 _RESULT_PATH = _ANALYSIS_PATH.with_name("result.json")
 
