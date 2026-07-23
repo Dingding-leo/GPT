@@ -21,7 +21,7 @@ jobs:
       - name: Capture Ruff diagnostics
         run: |
           ruff check . > /tmp/ruff-check.txt 2>&1 || true
-          ruff format --diff . > /tmp/ruff-format.diff
+          ruff format --diff . > /tmp/ruff-format.diff || true
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ruff-diagnostic-${{ github.run_id }}
