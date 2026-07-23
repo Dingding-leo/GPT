@@ -112,7 +112,7 @@ def _validate_source_returns(
     output: Path,
     payload: Mapping[str, object],
     persisted: pd.DataFrame,
-) -> str:
+) -> tuple[str, str]:
     data_summary = _mapping(payload.get("data_summary"), "data_summary")
     provenance = _mapping(data_summary.get("provenance"), "data_summary.provenance")
     if provenance.get("provider") != "OKX":
@@ -153,13 +153,16 @@ def _validate_source_returns(
     source_close = pd.Series(
         snapshot_close.to_numpy(copy=False), index=snapshot_index, name="close"
     )
-    aligned_close = source_close.reindex(persisted_index)
-    expected_asset_return = source_close.pct_change().fillna(0.0).reindex(persisted_index)
-    if aligned_close.isna().any() or expected_asset_return.isna().any():
+    source_positions = snapshot_index.get_indexer(persisted_index)
+    if (source_positions < 0).any():
         raise ValueError(
             "walk-forward timestamps are not fully covered by the normalized OKX snapshot"
         )
+    if (source_positions == 0).any():
+        raise ValueError("normalized OKX snapshot lacks the preceding close for an asset return")
 
+    aligned_close = source_close.iloc[source_positions]
+    expected_asset_return = source_close.pct_change().iloc[source_positions]
     persisted_close = _numeric(persisted, "close")
     persisted_asset_return = _numeric(persisted, "asset_return")
     _assert_accounting(
@@ -172,7 +175,8 @@ def _validate_source_returns(
         persisted_asset_return,
         expected_asset_return.reset_index(drop=True),
     )
-    return snapshot_sha256
+    predecessor = snapshot_index[int(source_positions[0]) - 1].isoformat()
+    return snapshot_sha256, predecessor
 
 
 def _validate_accounting(payload: Mapping[str, object], persisted: pd.DataFrame) -> None:
@@ -225,7 +229,9 @@ def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int 
     payload_mapping = _mapping(payload, "walk-forward report")
 
     _validate_explicit_timestamps(payload_mapping, persisted)
-    source_snapshot_sha256 = _validate_source_returns(output, payload_mapping, persisted)
+    source_snapshot_sha256, source_preceding_close_timestamp = _validate_source_returns(
+        output, payload_mapping, persisted
+    )
     _validate_accounting(payload_mapping, persisted)
     verification = _verify_report_metrics(output, tolerance=_METRIC_TOLERANCE)
 
@@ -240,5 +246,6 @@ def verify_walk_forward_report(output_dir: str | Path) -> dict[str, float | int 
     verification["metric_tolerance"] = _METRIC_TOLERANCE
     verification["source_snapshot_sha256"] = source_snapshot_sha256
     verification["source_price_rows_verified"] = len(persisted)
+    verification["source_preceding_close_timestamp"] = source_preceding_close_timestamp
     verification["asset_return_source"] = "immutable_normalized_okx_close_pct_change"
     return verification
