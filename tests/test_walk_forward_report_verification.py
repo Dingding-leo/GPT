@@ -13,8 +13,21 @@ from gpt_quant.walk_forward_verify_gate import verify_walk_forward_report
 
 
 def _write_real_okx_report(prices: pd.Series, output: Path) -> dict[str, Path]:
+    source_prices = prices.iloc[:500]
+    snapshot_dir = output / "snapshot"
+    snapshot_dir.mkdir(parents=True, exist_ok=True)
+    snapshot_path = snapshot_dir / "okx-BTC-USDT-1Dutc.csv"
+    pd.DataFrame(
+        {
+            "timestamp": source_prices.index.map(lambda value: value.isoformat()),
+            "close": source_prices.to_numpy(copy=False),
+            "confirm": 1,
+        }
+    ).to_csv(snapshot_path, index=False)
+    snapshot_sha256 = hashlib.sha256(snapshot_path.read_bytes()).hexdigest()
+
     result = run_walk_forward_research(
-        prices.iloc[:500],
+        source_prices,
         base_config=StrategyConfig(
             min_position=0.0,
             transaction_cost_bps=5.0,
@@ -30,9 +43,12 @@ def _write_real_okx_report(prices: pd.Series, output: Path) -> dict[str, Path]:
             "provider": "OKX",
             "instrument_id": "BTC-USDT",
             "bar": "1Dutc",
+            "normalized_csv_sha256": snapshot_sha256,
         },
     )
-    return write_walk_forward_report(result, output)
+    paths = write_walk_forward_report(result, output)
+    paths["snapshot"] = snapshot_path
+    return paths
 
 
 def _without_explicit_offset(value: object) -> str:
@@ -61,6 +77,11 @@ def test_verifier_recomputes_persisted_real_okx_report(
     assert verification["within_fold_delayed_position_rows_verified"] == len(returns) - 2
     assert verification["accounting_tolerance"] == 1e-12
     assert verification["metric_tolerance"] == 1e-9
+    assert verification["source_price_rows_verified"] == len(returns)
+    assert verification["asset_return_source"] == "immutable_normalized_okx_close_pct_change"
+    assert verification["source_snapshot_sha256"] == hashlib.sha256(
+        paths["snapshot"].read_bytes()
+    ).hexdigest()
     assert (
         verification["report_json_sha256"] == hashlib.sha256(paths["json"].read_bytes()).hexdigest()
     )
@@ -72,6 +93,22 @@ def test_verifier_recomputes_persisted_real_okx_report(
     assert verification["slippage_model"] == "not_modeled"
     assert verification["market_impact_model"] == "not_modeled"
     assert verification["latency_model"] == "not_modeled"
+
+
+def test_verifier_rejects_asset_return_drift_hidden_by_flat_position(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    paths = _write_real_okx_report(btc_usdt_prices, tmp_path)
+    returns = pd.read_csv(paths["returns"])
+    flat_rows = returns.index[(returns["position"] == 0.0) & (returns.index > 0)]
+    assert len(flat_rows) > 0
+    row = int(flat_rows[0])
+    returns.loc[row, "asset_return"] += 0.01
+    returns.to_csv(paths["returns"], index=False)
+
+    with pytest.raises(ValueError, match="asset_return from immutable normalized OKX snapshot"):
+        verify_walk_forward_report(tmp_path)
 
 
 def test_verifier_rejects_self_consistent_turnover_fee_tamper(
