@@ -94,3 +94,20 @@ def test_target_position_intent_fails_closed_on_invalid_live_boundaries() -> Non
 
     expired = _intent(expires_at_utc=datetime(2026, 7, 23, 0, 0, 4, tzinfo=UTC))
     assert expired.expires_at_utc - expired.decision_not_before_utc == timedelta(seconds=1)
+
+
+def test_target_position_intent_rejects_noncanonical_or_ambiguous_json() -> None:
+    intent = _intent()
+    canonical = intent.to_json_bytes().decode("utf-8")
+
+    noncanonical = json.dumps(intent.to_dict(), indent=2, sort_keys=False)
+    with pytest.raises(ValueError, match="canonical encoding"):
+        TargetPositionIntent.from_json_bytes(noncanonical)
+
+    duplicate = canonical.replace(
+        '"bar":"1Dutc"',
+        '"bar":"1Dutc","bar":"1Dutc"',
+        1,
+    )
+    with pytest.raises(ValueError, match="unreadable"):
+        TargetPositionIntent.from_json_bytes(duplicate)
