@@ -43,7 +43,7 @@ def _clock(*values: str):
 
 def _server_time_getter(expected_ms: str):
     def fake_getter(url: str, timeout: float) -> dict[str, object]:
-        assert url == "https://example.test/api/v5/public/time"
+        assert url == "https://test.okx.com/api/v5/public/time"
         assert timeout == 20.0
         return {"code": "0", "msg": "", "data": [{"ts": expected_ms}]}
 
@@ -61,7 +61,7 @@ def test_fetch_okx_top_of_book_binds_real_public_response_to_exchange_time() -> 
     observation = fetch_okx_top_of_book(
         instrument_id="BTC-USDT",
         instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
-        base_url="https://example.test",
+        base_url="https://test.okx.com",
         maximum_quote_age_ms=200,
         get_bytes=fake_books_getter,
         get_json=_server_time_getter("1629966436500"),
@@ -73,7 +73,7 @@ def test_fetch_okx_top_of_book_binds_real_public_response_to_exchange_time() -> 
         ),
     )
 
-    assert requested_urls == ["https://example.test/api/v5/market/books?instId=BTC-USDT&sz=1"]
+    assert requested_urls == ["https://test.okx.com/api/v5/market/books?instId=BTC-USDT&sz=1"]
     assert all("account" not in url and "trade" not in url for url in requested_urls)
     assert observation.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
     assert observation.exchange_time_observed_utc == datetime(
@@ -107,7 +107,7 @@ def test_fresh_quote_survives_bounded_slow_local_clock() -> None:
     observation = fetch_okx_top_of_book(
         instrument_id="BTC-USDT",
         instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
-        base_url="https://example.test",
+        base_url="https://test.okx.com",
         maximum_quote_age_ms=200,
         max_abs_midpoint_clock_skew_seconds=0.2,
         get_bytes=lambda url, timeout: _fixture_response(),
@@ -139,7 +139,7 @@ def test_top_of_book_observation_revalidates_complete_timing_envelope() -> None:
     observation = fetch_okx_top_of_book(
         instrument_id="BTC-USDT",
         instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
-        base_url="https://example.test",
+        base_url="https://test.okx.com",
         maximum_quote_age_ms=200,
         get_bytes=lambda url, timeout: _fixture_response(),
         get_json=_server_time_getter("1629966436500"),
@@ -173,7 +173,7 @@ def test_fetch_okx_top_of_book_rejects_exchange_stale_response() -> None:
         fetch_okx_top_of_book(
             instrument_id="BTC-USDT",
             instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
-            base_url="https://example.test",
+            base_url="https://test.okx.com",
             maximum_quote_age_ms=500,
             get_bytes=lambda url, timeout: _fixture_response(),
             get_json=_server_time_getter("1629966438500"),
@@ -193,7 +193,7 @@ def test_fetch_okx_top_of_book_rejects_duplicate_untrusted_response_fields() -> 
         fetch_okx_top_of_book(
             instrument_id="BTC-USDT",
             instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
-            base_url="https://example.test",
+            base_url="https://test.okx.com",
             get_bytes=lambda url, timeout: corrupted,
             get_json=_server_time_getter("1629966436500"),
             now=_clock(
@@ -210,7 +210,7 @@ def test_fetch_okx_top_of_book_rejects_slow_public_response() -> None:
         fetch_okx_top_of_book(
             instrument_id="BTC-USDT",
             instrument_snapshot_sha256=_INSTRUMENT_SNAPSHOT_SHA256,
-            base_url="https://example.test",
+            base_url="https://test.okx.com",
             max_request_round_trip_seconds=0.1,
             get_bytes=lambda url, timeout: _fixture_response(),
             get_json=_server_time_getter("1629966436500"),
