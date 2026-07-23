@@ -193,6 +193,7 @@ def test_binding_journal_rejects_noncanonical_or_tampered_replay(tmp_path: Path)
     )
 
     path.write_bytes(b"\n" + binding.to_json_bytes())
+    path.chmod(0o600)
     with pytest.raises(ValueError, match="canonical newline-terminated"):
         load_execution_quote_binding_journal(
             path,
