@@ -45,7 +45,5 @@ After that error, the affected destination must be treated as an indeterminate s
 Executable verification from a checkout with development dependencies installed:
 
 ```bash
-pytest \
-  tests/test_okx_snapshot_integrity.py \
-  tests/test_real_data_policy_documentation.py
+pytest tests/test_okx_snapshot_integrity.py
 ```
