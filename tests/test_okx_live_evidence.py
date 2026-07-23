@@ -20,12 +20,7 @@ from gpt_quant.okx_live_evidence import (
     write_okx_live_timing_evidence,
 )
 
-_FIXTURE_DIR = (
-    Path(__file__).parent
-    / "fixtures"
-    / "okx"
-    / "btc-usdt-1dutc-raw-20260717-20260721"
-)
+_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
 _ROWS_PATH = _FIXTURE_DIR / "rows.json"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
 _EXPECTED_FIXTURE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
