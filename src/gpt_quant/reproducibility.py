@@ -122,13 +122,38 @@ def _validate_path_mapping(
     return {key: normalized[key] for key in sorted(normalized)}
 
 
-def resolve_git_commit(repository_root: str | Path = ".") -> str:
-    """Resolve the exact checked-out commit, with GITHUB_SHA as a source-archive fallback."""
+def _require_clean_tracked_worktree(repository_root: Path) -> None:
+    """Reject commit provenance when tracked checkout bytes differ from HEAD."""
 
     try:
         completed = subprocess.run(
+            ["git", "diff", "--quiet", "HEAD", "--"],
+            cwd=repository_root,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (FileNotFoundError, subprocess.SubprocessError) as exc:
+        raise RuntimeError("unable to verify tracked worktree cleanliness") from exc
+
+    if completed.returncode == 0:
+        return
+    if completed.returncode == 1:
+        raise RuntimeError(
+            "tracked worktree differs from HEAD; refusing to record incomplete code provenance"
+        )
+    raise RuntimeError("unable to verify tracked worktree cleanliness")
+
+
+def resolve_git_commit(repository_root: str | Path = ".") -> str:
+    """Resolve the exact checked-out commit, with GITHUB_SHA as a source-archive fallback."""
+
+    root = Path(repository_root)
+    try:
+        completed = subprocess.run(
             ["git", "rev-parse", "HEAD"],
-            cwd=Path(repository_root),
+            cwd=root,
             check=True,
             capture_output=True,
             text=True,
@@ -140,6 +165,7 @@ def resolve_git_commit(repository_root: str | Path = ".") -> str:
     if completed is not None:
         commit = completed.stdout.strip().lower()
         if _valid_git_commit(commit):
+            _require_clean_tracked_worktree(root)
             return commit
 
     github_sha = os.environ.get("GITHUB_SHA", "").strip().lower()
