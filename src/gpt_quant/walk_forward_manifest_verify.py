@@ -36,11 +36,7 @@ def _sha256_digest(value: object, label: str) -> str:
 
 
 def _git_commit(value: object) -> str:
-    if (
-        not isinstance(value, str)
-        or len(value) not in {40, 64}
-        or set(value) - _HEX_DIGITS
-    ):
+    if not isinstance(value, str) or len(value) not in {40, 64} or set(value) - _HEX_DIGITS:
         raise ValueError("manifest code_commit must be a lowercase hexadecimal commit id")
     return value
 
@@ -69,9 +65,7 @@ def _load_manifest(path: Path) -> list[Mapping[str, Any]]:
         try:
             entry = json.loads(line)
         except json.JSONDecodeError as exc:
-            raise ValueError(
-                f"experiment manifest line {line_number} is invalid JSON"
-            ) from exc
+            raise ValueError(f"experiment manifest line {line_number} is invalid JSON") from exc
         entries.append(_mapping(entry, f"experiment manifest line {line_number}"))
     if not entries:
         raise ValueError("experiment manifest cannot be empty")
@@ -102,9 +96,7 @@ def verify_walk_forward_manifest(
     bar = _required_text(provenance.get("bar"), "bar")
     snapshot_path = snapshot_dir / f"okx-{instrument_id}-{bar}.csv"
     if not returns_path.is_file() or not snapshot_path.is_file():
-        raise ValueError(
-            "manifest verification requires persisted returns and normalized snapshot"
-        )
+        raise ValueError("manifest verification requires persisted returns and normalized snapshot")
 
     config_data = _mapping(effective_config.get("data"), "effective configuration data")
     if config_data.get("inst_id") != instrument_id or config_data.get("bar") != bar:
