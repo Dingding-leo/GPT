@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 from gpt_quant.walk_forward_manifest_verify import verify_walk_forward_manifest
+from gpt_quant.walk_forward_selection_verify import verify_walk_forward_selection
 from gpt_quant.walk_forward_verify_gate import verify_walk_forward_report
 
 
@@ -26,6 +27,11 @@ def main() -> int:
     args = parse_args()
     output = Path(args.output_dir)
     verification = verify_walk_forward_report(output)
+    selection_binding = verify_walk_forward_selection(output)
+    overlap = sorted(set(verification) & set(selection_binding))
+    if overlap:
+        raise RuntimeError(f"verification payload key collision: {overlap}")
+    verification.update(selection_binding)
     manifest_binding = verify_walk_forward_manifest(output, args.manifest_path)
     overlap = sorted(set(verification) & set(manifest_binding))
     if overlap:
