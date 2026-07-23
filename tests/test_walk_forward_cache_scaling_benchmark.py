@@ -75,7 +75,10 @@ def test_linear_fit_reports_persisted_scaling_evidence(
         candidates,
         [87_728_128, 90_005_504, 96_894_976, 110_211_072],
     )
-    assert peak_rss_fit.intercept == pytest.approx(87_251_205.356, abs=1e-3)
+    assert peak_rss_fit.intercept == pytest.approx(
+        87_251_205.356,
+        abs=1e-3,
+    )
     assert peak_rss_fit.slope == pytest.approx(358_348.586, abs=1e-3)
     assert peak_rss_fit.r_squared == pytest.approx(0.999907577, abs=1e-9)
 
@@ -123,7 +126,11 @@ def test_scaling_measurement_alternates_order_and_checks_repetitions(
         calls.append("equivalence")
         assert reference is repeated
 
-    monkeypatch.setattr(benchmark, "_subprocess_measurement", subprocess_measurement)
+    monkeypatch.setattr(
+        benchmark,
+        "_subprocess_measurement",
+        subprocess_measurement,
+    )
     monkeypatch.setattr(benchmark.cache_benchmark, "_assert_equal", assert_equal)
 
     medians = benchmark._scaling_medians(
@@ -133,7 +140,18 @@ def test_scaling_measurement_alternates_order_and_checks_repetitions(
         repetitions=3,
     )
 
-    assert calls == [1, 2, 2, "equivalence", 1, "equivalence", 1, "equivalence", 2, "equivalence"]
+    assert calls == [
+        1,
+        2,
+        2,
+        "equivalence",
+        1,
+        "equivalence",
+        1,
+        "equivalence",
+        2,
+        "equivalence",
+    ]
     assert medians == [
         benchmark.ScalingMedian(1, 1, 1.0, 100, 20, 5),
         benchmark.ScalingMedian(2, 8, 2.0, 200, 40, 10),
