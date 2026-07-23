@@ -65,7 +65,9 @@ def test_canonical_baseline_selects_every_fold_under_five_bps(
         for fold in result.folds
     }
     multipliers = [float(value) for value in result.settings["cost_multipliers"]]
-    absolute_costs_bps = [base_config.transaction_cost_bps * value for value in multipliers]
+    absolute_costs_bps = [
+        base_config.transaction_cost_bps * value for value in multipliers
+    ]
     cost_drag = [
         result.cost_stress_metrics[f"{multiplier:g}x"]["cost_drag_sum"]
         for multiplier in multipliers
