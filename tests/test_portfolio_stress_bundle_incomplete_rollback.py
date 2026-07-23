@@ -58,9 +58,7 @@ def test_incomplete_bundle_rollback_is_reported_and_caller_files_survive(
         _build_result(btc_weight=0.5, eth_weight=0.5),
         output_dir,
     )
-    original_payloads = {
-        name: path.read_bytes() for name, path in original_paths.items()
-    }
+    original_payloads = {name: path.read_bytes() for name, path in original_paths.items()}
     sentinel = output_dir / "operator-notes.txt"
     sentinel_payload = b"preserve caller-owned evidence\n"
     sentinel.write_bytes(sentinel_payload)
@@ -74,8 +72,7 @@ def test_incomplete_bundle_rollback_is_reported_and_caller_files_survive(
         source_path = Path(source)
         destination_path = Path(destination)
         is_report_destination = (
-            destination_path.parent == output_dir
-            and destination_path.name in _REPORT_FILENAMES
+            destination_path.parent == output_dir and destination_path.name in _REPORT_FILENAMES
         )
         is_restore = source_path.name.startswith("restore-")
         if (
@@ -110,7 +107,7 @@ def test_incomplete_bundle_rollback_is_reported_and_caller_files_survive(
     assert sentinel.read_bytes() == sentinel_payload
     assert original_paths["json"].read_bytes() == original_payloads["json"]
     assert original_paths["markdown"].read_bytes() == original_payloads["markdown"]
-    assert original_paths["stress_correlation"].read_bytes() == original_payloads[
-        "stress_correlation"
-    ]
+    assert (
+        original_paths["stress_correlation"].read_bytes() == original_payloads["stress_correlation"]
+    )
     assert original_paths["returns"].read_bytes() != original_payloads["returns"]
