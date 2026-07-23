@@ -81,6 +81,102 @@ def test_persisted_walk_forward_report_recomputes_from_real_okx_data(
     )
 
 
+def test_persisted_walk_forward_verifier_reconstructs_path_diagnostics(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+) -> None:
+    paths = _write_real_report(btc_usdt_prices, tmp_path)
+    verification = verify_walk_forward_report(tmp_path)
+    returns = pd.read_csv(paths["returns"])
+
+    threshold = 1e-12
+    material_threshold = 0.01
+    active_threshold = 0.01
+    active = returns["position"].abs().gt(active_threshold)
+    starts = active & ~active.shift(1, fill_value=False)
+    completed = active & ~active.shift(-1, fill_value=False)
+    completed.iloc[-1] = False
+
+    completed_episode_returns: list[float] = []
+    row = 0
+    while row < len(returns):
+        if not bool(active.iloc[row]):
+            row += 1
+            continue
+        start = row
+        while row + 1 < len(returns) and bool(active.iloc[row + 1]):
+            row += 1
+        if row + 1 < len(returns):
+            episode = returns["strategy_return"].iloc[start : row + 2]
+            completed_episode_returns.append(float((1.0 + episode).prod() - 1.0))
+        row += 1
+
+    positive_profit = sum(value for value in completed_episode_returns if value > 0.0)
+    negative_loss = -sum(value for value in completed_episode_returns if value < 0.0)
+
+    equity = (1.0 + returns["strategy_return"]).cumprod().to_numpy()
+    peaks = np.maximum.accumulate(np.concatenate(([1.0], equity)))[1:]
+    drawdown = equity / peaks - 1.0
+    underwater = drawdown < -threshold
+    runs: list[int] = []
+    running = 0
+    for value in underwater:
+        if bool(value):
+            running += 1
+            runs.append(running)
+        else:
+            running = 0
+
+    assert verification["diagnostic_schema"] == "persisted_path_v1"
+    assert verification["position_adjustment_threshold"] == threshold
+    assert verification["material_position_adjustment_threshold"] == material_threshold
+    assert verification["active_position_threshold"] == active_threshold
+    assert verification["drawdown_threshold"] == threshold
+    assert verification["position_adjustment_count"] == int(
+        returns["turnover"].gt(threshold).sum()
+    )
+    assert verification["material_position_adjustment_count"] == int(
+        returns["turnover"].gt(material_threshold).sum()
+    )
+    assert verification["total_absolute_turnover"] == pytest.approx(
+        returns["turnover"].sum()
+    )
+    assert verification["annualized_instrument_turnover"] == pytest.approx(
+        returns["turnover"].mean() * 365
+    )
+    assert verification["holding_episode_count"] == int(starts.sum())
+    assert verification["completed_holding_episode_count"] == int(completed.sum())
+    assert verification["open_holding_episode_count"] == int(active.iloc[-1])
+    assert verification["completed_holding_episode_win_rate"] == pytest.approx(
+        sum(value > 0.0 for value in completed_episode_returns)
+        / len(completed_episode_returns)
+    )
+    assert verification["completed_holding_episode_profit_factor"] == pytest.approx(
+        positive_profit / negative_loss
+    )
+    assert verification["average_absolute_exposure"] == pytest.approx(
+        returns["position"].abs().mean()
+    )
+    assert verification["current_absolute_exposure"] == pytest.approx(
+        abs(returns["position"].iloc[-1])
+    )
+    assert verification["maximum_absolute_exposure"] == pytest.approx(
+        returns["position"].abs().max()
+    )
+    assert verification["current_drawdown"] == pytest.approx(drawdown[-1])
+    assert verification["recomputed_maximum_drawdown"] == pytest.approx(drawdown.min())
+    assert verification["longest_underwater_duration_bars"] == max(runs, default=0)
+    assert verification["current_underwater_duration_bars"] == (
+        runs[-1] if len(runs) and bool(underwater[-1]) else 0
+    )
+    assert verification["evaluation_start"] == pd.Timestamp(
+        returns["timestamp"].iloc[0]
+    ).isoformat()
+    assert verification["evaluation_end"] == pd.Timestamp(
+        returns["timestamp"].iloc[-1]
+    ).isoformat()
+
+
 def test_persisted_walk_forward_verifier_rejects_report_metric_drift(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
