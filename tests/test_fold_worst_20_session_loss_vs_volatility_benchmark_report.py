@@ -45,10 +45,7 @@ def _real_btc_returns() -> np.ndarray:
 def test_worst_compounded_window_uses_observed_real_returns() -> None:
     analysis = _load_analysis()
     returns = _real_btc_returns()[:20]
-    expected = min(
-        float(np.prod(1.0 + returns[start : start + 10]) - 1.0)
-        for start in range(11)
-    )
+    expected = min(float(np.prod(1.0 + returns[start : start + 10]) - 1.0) for start in range(11))
 
     observed = analysis.worst_compounded_window_return(returns, window=10)
 
@@ -160,6 +157,4 @@ def test_result_records_one_supported_candidate_and_bound_provenance() -> None:
     assert result["markets"]["BTC-USDT"]["observed_mean_delta"] == pytest.approx(
         0.10058014337943202
     )
-    assert result["markets"]["ETH-USDT"]["observed_mean_delta"] == pytest.approx(
-        0.0880561681794593
-    )
+    assert result["markets"]["ETH-USDT"]["observed_mean_delta"] == pytest.approx(0.0880561681794593)
