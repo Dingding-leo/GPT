@@ -82,7 +82,10 @@ def validate_frame(frame: pd.DataFrame) -> pd.DataFrame:
     result = pd.DataFrame(
         {"timestamp": pd.to_datetime(raw_timestamp, utc=True, errors="raise")}
     )
-    if result["timestamp"].duplicated().any() or not result["timestamp"].is_monotonic_increasing:
+    if (
+        result["timestamp"].duplicated().any()
+        or not result["timestamp"].is_monotonic_increasing
+    ):
         raise ValueError("timestamps must be unique and strictly increasing")
     if len(result) > 1:
         cadence = result["timestamp"].diff().iloc[1:]
@@ -224,6 +227,32 @@ def scenario_name(total_delay_bars: int, all_in_cost_bps: float) -> str:
     return f"delay_{total_delay_bars}_bars_cost_{all_in_cost_bps:g}_bps"
 
 
+def compact_scenario(metrics: dict[str, Any], *, baseline: bool = False) -> dict[str, Any]:
+    result = {
+        "total_delay_bars": metrics["total_delay_bars"],
+        "extra_delay_bars": metrics["extra_delay_bars"],
+        "all_in_cost_bps": metrics["all_in_cost_bps"],
+        "total_return": metrics["total_return"],
+        "sharpe": metrics["sharpe"],
+        "max_drawdown": metrics["max_drawdown"],
+        "annualized_mean_95pct_lower": metrics["bootstrap_95pct"][
+            "annualized_arithmetic_mean"
+        ][0],
+        "sharpe_95pct_lower": metrics["bootstrap_95pct"]["sharpe"][0],
+        "passes_delay_gate": metrics["passes_delay_gate"],
+        "failed_checks": metrics["failed_checks"],
+    }
+    if baseline:
+        result.update(
+            {
+                "cagr": metrics["cagr"],
+                "annualized_arithmetic_mean": metrics["annualized_arithmetic_mean"],
+                "annualized_turnover": metrics["annualized_turnover"],
+            }
+        )
+    return result
+
+
 def analyze_market(frame: pd.DataFrame, *, seed: int) -> dict[str, Any]:
     scenario_specs = [(1, BASELINE_FEE_BPS)] + [
         (delay, cost)
@@ -280,9 +309,13 @@ def analyze_market(frame: pd.DataFrame, *, seed: int) -> dict[str, Any]:
             )
 
     return {
-        "baseline_5bps": scenarios[scenario_name(1, BASELINE_FEE_BPS)],
+        "baseline_5bps": compact_scenario(
+            scenarios[scenario_name(1, BASELINE_FEE_BPS)], baseline=True
+        ),
         "stress_scenarios": {
-            name: metrics for name, metrics in scenarios.items() if metrics["live_critical"]
+            name: compact_scenario(metrics)
+            for name, metrics in scenarios.items()
+            if metrics["live_critical"]
         },
         "delay_gate_passes": not failed_scenarios,
         "failed_scenarios": failed_scenarios,
