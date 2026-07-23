@@ -11,11 +11,16 @@ from urllib.request import Request, urlopen
 
 from .execution_quote import ExecutionQuoteSnapshot
 from .okx import JSONGetter
-from .okx_live import sample_okx_server_time
+from .okx_live import (
+    OKXServerTimeSample,
+    sample_okx_server_time,
+    validate_okx_server_time_sample,
+)
 
 RawBytesGetter = Callable[[str, float], bytes]
 Clock = Callable[[], datetime]
 _ENDPOINT = "/api/v5/market/books"
+_SERVER_TIME_ENDPOINT = "/api/v5/public/time"
 _MAX_RESPONSE_BYTES = 1_000_000
 _EXPECTED_TOP_LEVEL_KEYS = {"code", "msg", "data"}
 _EXPECTED_BOOK_KEYS = {"asks", "bids", "ts", "seqId"}
@@ -34,11 +39,16 @@ class OKXTopOfBookObservation:
     endpoint: str
     request_started_utc: datetime
     response_received_utc: datetime
+    server_time_endpoint: str
+    server_time_request_started_utc: datetime
     exchange_time_observed_utc: datetime
     server_time_response_received_utc: datetime
     request_round_trip_seconds: float
     server_round_trip_seconds: float
     midpoint_clock_skew_seconds: float
+    max_request_round_trip_seconds: float
+    max_server_round_trip_seconds: float
+    max_abs_midpoint_clock_skew_seconds: float
     maximum_quote_age_ms: int
     raw_response_json: bytes
     quote: ExecutionQuoteSnapshot
@@ -57,6 +67,12 @@ class OKXTopOfBookObservation:
             self.response_received_utc,
             field="OKX books response receipt",
         )
+        if self.server_time_endpoint != _SERVER_TIME_ENDPOINT:
+            raise ValueError("OKX server-time endpoint is not the public time endpoint")
+        server_started = _required_utc_datetime(
+            self.server_time_request_started_utc,
+            field="OKX server-time request start",
+        )
         exchange_observed = _required_utc_datetime(
             self.exchange_time_observed_utc,
             field="OKX exchange-time observation",
@@ -68,6 +84,7 @@ class OKXTopOfBookObservation:
         for field_name, value in (
             ("request_started_utc", request_started),
             ("response_received_utc", response_received),
+            ("server_time_request_started_utc", server_started),
             ("exchange_time_observed_utc", exchange_observed),
             ("server_time_response_received_utc", server_received),
         ):
@@ -75,8 +92,42 @@ class OKXTopOfBookObservation:
 
         if response_received < request_started:
             raise ValueError("local clock moved backward during OKX books request")
-        if server_received < response_received:
+        if server_started < response_received:
             raise ValueError("OKX server time must be sampled after the books response")
+
+        request_round_trip_bound = _required_finite_number(
+            self.max_request_round_trip_seconds,
+            field="max_request_round_trip_seconds",
+        )
+        if request_round_trip_bound <= 0:
+            raise ValueError("max_request_round_trip_seconds must be positive")
+        server_round_trip_bound = _required_finite_number(
+            self.max_server_round_trip_seconds,
+            field="max_server_round_trip_seconds",
+        )
+        if server_round_trip_bound <= 0:
+            raise ValueError("max_server_round_trip_seconds must be positive")
+        clock_skew_bound = _required_finite_number(
+            self.max_abs_midpoint_clock_skew_seconds,
+            field="max_abs_midpoint_clock_skew_seconds",
+        )
+        if clock_skew_bound < 0:
+            raise ValueError("max_abs_midpoint_clock_skew_seconds cannot be negative")
+        object.__setattr__(
+            self,
+            "max_request_round_trip_seconds",
+            request_round_trip_bound,
+        )
+        object.__setattr__(
+            self,
+            "max_server_round_trip_seconds",
+            server_round_trip_bound,
+        )
+        object.__setattr__(
+            self,
+            "max_abs_midpoint_clock_skew_seconds",
+            clock_skew_bound,
+        )
 
         expected_round_trip = (response_received - request_started).total_seconds()
         request_round_trip = _required_nonnegative_finite_number(
@@ -85,23 +136,48 @@ class OKXTopOfBookObservation:
         )
         if abs(request_round_trip - expected_round_trip) > 1e-9:
             raise ValueError("OKX books request round trip does not match its timestamps")
+        if request_round_trip > request_round_trip_bound:
+            raise ValueError("OKX books request round trip exceeds the configured bound")
         object.__setattr__(self, "request_round_trip_seconds", request_round_trip)
-        object.__setattr__(
-            self,
-            "server_round_trip_seconds",
-            _required_nonnegative_finite_number(
-                self.server_round_trip_seconds,
-                field="OKX server-time round trip",
-            ),
+
+        server_time_sample = OKXServerTimeSample(
+            base_url=normalized_base_url,
+            endpoint=self.server_time_endpoint,
+            local_request_started_utc=server_started,
+            local_response_received_utc=server_received,
+            server_time_utc=exchange_observed,
+            round_trip_seconds=self.server_round_trip_seconds,
+            midpoint_clock_skew_seconds=self.midpoint_clock_skew_seconds,
+        )
+        (
+            validated_server_started,
+            validated_server_received,
+            validated_exchange_observed,
+            server_round_trip,
+            midpoint_clock_skew,
+        ) = validate_okx_server_time_sample(
+            server_time_sample,
+            max_round_trip_seconds=server_round_trip_bound,
+            max_abs_clock_skew_seconds=clock_skew_bound,
         )
         object.__setattr__(
             self,
-            "midpoint_clock_skew_seconds",
-            _required_finite_number(
-                self.midpoint_clock_skew_seconds,
-                field="OKX midpoint clock skew",
-            ),
+            "server_time_request_started_utc",
+            validated_server_started.to_pydatetime(),
         )
+        object.__setattr__(
+            self,
+            "server_time_response_received_utc",
+            validated_server_received.to_pydatetime(),
+        )
+        object.__setattr__(
+            self,
+            "exchange_time_observed_utc",
+            validated_exchange_observed.to_pydatetime(),
+        )
+        object.__setattr__(self, "server_round_trip_seconds", server_round_trip)
+        object.__setattr__(self, "midpoint_clock_skew_seconds", midpoint_clock_skew)
+        exchange_observed = validated_exchange_observed.to_pydatetime()
 
         maximum_quote_age_ms = _required_nonnegative_integer(
             self.maximum_quote_age_ms,
@@ -400,6 +476,10 @@ def fetch_okx_top_of_book(
         endpoint=_ENDPOINT,
         request_started_utc=request_started,
         response_received_utc=response_received,
+        server_time_endpoint=server_time_sample.endpoint,
+        server_time_request_started_utc=(
+            server_time_sample.local_request_started_utc.to_pydatetime()
+        ),
         exchange_time_observed_utc=server_time_sample.server_time_utc.to_pydatetime(),
         server_time_response_received_utc=(
             server_time_sample.local_response_received_utc.to_pydatetime()
@@ -407,6 +487,9 @@ def fetch_okx_top_of_book(
         request_round_trip_seconds=request_round_trip,
         server_round_trip_seconds=server_time_sample.round_trip_seconds,
         midpoint_clock_skew_seconds=server_time_sample.midpoint_clock_skew_seconds,
+        max_request_round_trip_seconds=request_round_trip_bound,
+        max_server_round_trip_seconds=server_round_trip_bound,
+        max_abs_midpoint_clock_skew_seconds=clock_skew_bound,
         maximum_quote_age_ms=maximum_quote_age_ms,
         raw_response_json=raw_response,
         quote=quote,
