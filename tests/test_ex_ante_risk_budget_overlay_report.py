@@ -11,12 +11,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 ANALYSIS_PATH = ROOT / "reports" / "research" / "ex_ante_risk_budget_overlay" / "analysis.py"
 RESULT_PATH = ROOT / "reports" / "research" / "ex_ante_risk_budget_overlay" / "result.json"
-FIXTURE_DIR = (
-    ROOT
-    / "tests"
-    / "fixtures"
-    / "okx_btc_usdt_risk_budget_20180111_20200111"
-)
+FIXTURE_DIR = ROOT / "tests" / "fixtures" / "okx" / "btc_eth_oos_20200111_20200219"
 
 
 def _load_analysis():
@@ -28,52 +23,41 @@ def _load_analysis():
     return module
 
 
-def _fixture_prices() -> pd.Series:
+def _fixture_returns() -> pd.Series:
     metadata = json.loads((FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8"))
-    payload = (FIXTURE_DIR / "prices.csv").read_bytes()
-    assert hashlib.sha256(payload).hexdigest() == metadata["fixture_sha256"]
-    frame = pd.read_csv(FIXTURE_DIR / "prices.csv")
+    path = FIXTURE_DIR / "btc_usdt_returns.csv"
+    payload = path.read_bytes()
+    details = metadata["instruments"]["BTC-USDT"]
+    assert hashlib.sha256(payload).hexdigest() == details["fixture_sha256"]
+    frame = pd.read_csv(path)
     timestamps = pd.DatetimeIndex(pd.to_datetime(frame["timestamp"], utc=True, errors="raise"))
-    assert len(frame) == metadata["observations"] == 731
-    assert timestamps[0].isoformat() == "2018-01-11T00:00:00+00:00"
-    assert timestamps[-1].isoformat() == "2020-01-11T00:00:00+00:00"
-    return pd.Series(frame["close"].to_numpy(dtype=float), index=timestamps, name="close")
-
-
-def test_fold_scale_uses_only_prior_730_real_okx_sessions() -> None:
-    analysis = _load_analysis()
-    prices = _fixture_prices()
-    parameters = {
-        "momentum_lookback": 90,
-        "reversal_lookback": 10,
-        "trend_weight": 0.85,
-    }
-    frame = analysis.candidate_frame(prices, parameters)
-    selection = frame.iloc[: analysis.SELECTION_BARS]
-
-    expected = {
-        0.15: 0.6528538665900356,
-        0.20: 0.8704718221200476,
-        0.25: 1.0,
-    }
-    for risk_budget, expected_scale in expected.items():
-        result = analysis.estimate_fold_scale(
-            selection["gross_strategy_return"],
-            risk_budget,
-        )
-        assert result["estimated_annualized_gross_strategy_volatility"] == pytest.approx(
-            0.22976045280006527
-        )
-        assert result["applied_scale"] == pytest.approx(expected_scale)
-
-    altered = prices.copy()
-    altered.iloc[-1] *= 1.25
-    altered_frame = analysis.candidate_frame(altered, parameters)
-    altered_result = analysis.estimate_fold_scale(
-        altered_frame.iloc[: analysis.SELECTION_BARS]["gross_strategy_return"],
-        0.20,
+    assert len(frame) == details["observations"] == 40
+    return pd.Series(
+        frame["strategy_return"].to_numpy(dtype=float),
+        index=timestamps,
+        name="observed_return",
     )
-    assert altered_result["applied_scale"] == pytest.approx(expected[0.20])
+
+
+def test_fold_scale_uses_only_prior_observed_real_okx_returns() -> None:
+    analysis = _load_analysis()
+    observed = _fixture_returns()
+    selection = pd.concat([observed] * 19, ignore_index=True).iloc[: analysis.SELECTION_BARS]
+
+    result = analysis.estimate_fold_scale(selection, 0.10)
+    assert result["estimated_annualized_gross_strategy_volatility"] == pytest.approx(
+        0.14701525932865525
+    )
+    assert result["applied_scale"] == pytest.approx(0.6802015005561308)
+
+    # Deterministic resampling uses only observed real returns. Future rows are not part of
+    # the 730-observation estimation window and cannot alter the fold-local scale.
+    future_changed = pd.concat([selection, observed.iloc[:10] * -3.0], ignore_index=True)
+    changed = analysis.estimate_fold_scale(
+        future_changed.iloc[: analysis.SELECTION_BARS],
+        0.10,
+    )
+    assert changed == result
 
 
 def test_committed_result_discloses_all_candidates_and_rejection() -> None:
