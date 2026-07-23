@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 from collections.abc import Mapping
+from contextlib import suppress
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Protocol, runtime_checkable
+
+_RESEARCH_REPORT_FILENAMES = {
+    "json": "latest.json",
+    "markdown": "latest.md",
+}
 
 
 @runtime_checkable
@@ -29,21 +37,70 @@ def _format_metric(value: float | int) -> str:
     return f"{value:.6f}"
 
 
+def _publish_research_report_payloads(
+    output: Path,
+    payloads: Mapping[str, bytes],
+) -> tuple[Path, Path]:
+    paths = {name: output / filename for name, filename in _RESEARCH_REPORT_FILENAMES.items()}
+    if set(payloads) != set(paths):
+        raise ValueError("research report payloads must exactly match the report file set")
+
+    output_preexisted = output.exists()
+    output.mkdir(parents=True, exist_ok=True)
+    previous_payloads = {
+        name: path.read_bytes() if path.exists() else None for name, path in paths.items()
+    }
+
+    try:
+        with TemporaryDirectory(prefix=".research-report-", dir=output) as staging_name:
+            staging = Path(staging_name)
+            staged_paths = {name: staging / path.name for name, path in paths.items()}
+            for name, staged_path in staged_paths.items():
+                staged_path.write_bytes(payloads[name])
+
+            replaced: list[str] = []
+            try:
+                for name in ("json", "markdown"):
+                    os.replace(staged_paths[name], paths[name])
+                    replaced.append(name)
+            except BaseException as commit_error:
+                rollback_errors: list[str] = []
+                for name in reversed(replaced):
+                    destination = paths[name]
+                    previous_payload = previous_payloads[name]
+                    try:
+                        if previous_payload is None:
+                            destination.unlink(missing_ok=True)
+                        else:
+                            restore_path = staging / f"restore-{destination.name}"
+                            restore_path.write_bytes(previous_payload)
+                            os.replace(restore_path, destination)
+                    except OSError as rollback_error:
+                        rollback_errors.append(f"{name}: {rollback_error}")
+                if rollback_errors:
+                    details = "; ".join(rollback_errors)
+                    raise RuntimeError(
+                        f"research report commit failed and rollback was incomplete: {details}"
+                    ) from commit_error
+                raise
+    except BaseException:
+        if not output_preexisted:
+            with suppress(OSError):
+                output.rmdir()
+        raise
+
+    return paths["json"], paths["markdown"]
+
+
 def write_research_report(
     result: ResearchReportInput,
     output_dir: str | Path,
 ) -> tuple[Path, Path]:
     """Persist a holdout result through a reporting-only structural interface."""
 
-    output = Path(output_dir)
-    output.mkdir(parents=True, exist_ok=True)
-
-    json_path = output / "latest.json"
-    markdown_path = output / "latest.md"
-    json_path.write_text(
-        json.dumps(result.to_dict(), ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    json_payload = (
+        json.dumps(result.to_dict(), ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    ).encode("utf-8")
 
     lines = [
         "# Quant Research Report",
@@ -108,5 +165,9 @@ def write_research_report(
             "",
         ]
     )
-    markdown_path.write_text("\n".join(lines), encoding="utf-8")
-    return json_path, markdown_path
+    markdown_payload = "\n".join(lines).encode("utf-8")
+
+    return _publish_research_report_payloads(
+        Path(output_dir),
+        {"json": json_payload, "markdown": markdown_payload},
+    )
