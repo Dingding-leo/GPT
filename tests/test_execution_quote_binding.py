@@ -139,3 +139,33 @@ def test_binding_preserves_strict_post_receipt_and_staleness_rules() -> None:
             decision_at_utc=datetime(2026, 7, 21, 0, 0, 1, tzinfo=UTC),
             maximum_age_ms=250,
         )
+
+
+def test_direct_binding_and_canonical_replay_reject_stale_quote_evidence() -> None:
+    quote = _quote()
+    values = {
+        "target_intent_id": _intent().intent_id,
+        "quote_snapshot_id": quote.snapshot_id,
+        "instrument_id": quote.instrument_id,
+        "decision_at_utc": datetime(2026, 7, 21, 0, 0, 1, tzinfo=UTC),
+        "maximum_age_ms": 250,
+        "quote_observed_at_utc": quote.observed_at_utc,
+        "quote_received_at_utc": quote.received_at_utc,
+        "instrument_snapshot_sha256": quote.instrument_snapshot_sha256,
+        "observed_spread_bps": format(quote.spread_bps, "f").rstrip("0").rstrip("."),
+    }
+
+    with pytest.raises(ValueError, match="stale"):
+        ExecutionQuoteBinding(**values)
+
+    stale_payload = {"schema_version": 1, **values, "binding_id": "0" * 64}
+    stale_payload.update(
+        {
+            "decision_at_utc": "2026-07-21T00:00:01.000000Z",
+            "quote_observed_at_utc": "2026-07-21T00:00:00.300000Z",
+            "quote_received_at_utc": "2026-07-21T00:00:00.350000Z",
+        }
+    )
+    serialized = json.dumps(stale_payload, separators=(",", ":"), sort_keys=True).encode() + b"\n"
+    with pytest.raises(ValueError, match="stale"):
+        ExecutionQuoteBinding.from_json_bytes(serialized)
