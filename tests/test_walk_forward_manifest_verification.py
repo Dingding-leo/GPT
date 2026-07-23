@@ -101,10 +101,16 @@ def _write_manifest_bound_report(prices: pd.Series, output: Path) -> dict[str, P
 def test_manifest_verifier_binds_real_okx_report_to_exact_evidence(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     paths = _write_manifest_bound_report(btc_usdt_prices, tmp_path)
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
 
-    binding = verify_walk_forward_manifest(tmp_path, paths["manifest"])
+    binding = verify_walk_forward_manifest(
+        tmp_path,
+        paths["manifest"],
+        repository_root=tmp_path,
+    )
 
     assert binding["manifest_schema_version"] == 1
     assert binding["manifest_code_commit"] == "a" * 40
@@ -119,11 +125,33 @@ def test_manifest_verifier_binds_real_okx_report_to_exact_evidence(
 def test_manifest_verifier_rejects_self_consistent_report_outside_manifest(
     btc_usdt_prices: pd.Series,
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     paths = _write_manifest_bound_report(btc_usdt_prices, tmp_path)
+    monkeypatch.setenv("GITHUB_SHA", "a" * 40)
     entry = json.loads(paths["manifest"].read_text(encoding="utf-8"))
     entry["artifact_sha256"]["returns"] = "0" * 64
     paths["manifest"].write_text(_canonical_json(entry), encoding="utf-8")
 
     with pytest.raises(ValueError, match="exactly one entry bound"):
-        verify_walk_forward_manifest(tmp_path, paths["manifest"])
+        verify_walk_forward_manifest(
+            tmp_path,
+            paths["manifest"],
+            repository_root=tmp_path,
+        )
+
+
+def test_manifest_verifier_rejects_valid_but_wrong_checkout_commit(
+    btc_usdt_prices: pd.Series,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    paths = _write_manifest_bound_report(btc_usdt_prices, tmp_path)
+    monkeypatch.setenv("GITHUB_SHA", "b" * 40)
+
+    with pytest.raises(ValueError, match="does not match the verified checkout"):
+        verify_walk_forward_manifest(
+            tmp_path,
+            paths["manifest"],
+            repository_root=tmp_path,
+        )
