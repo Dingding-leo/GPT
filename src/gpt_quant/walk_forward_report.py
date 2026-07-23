@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from .walk_forward import WalkForwardResult
+from .walk_forward_diagnostics import walk_forward_path_diagnostics
 
 
 def _fmt(value: float | int) -> str:
@@ -15,6 +16,12 @@ def write_walk_forward_report(
     output_dir: str | Path,
 ) -> dict[str, Path]:
     payload = result.to_dict()
+    annualization = int(result.settings["base_config"]["annualization"])
+    path_diagnostics = walk_forward_path_diagnostics(
+        result.combined_frame,
+        annualization=annualization,
+    )
+    payload["path_diagnostics"] = path_diagnostics
 
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
@@ -124,13 +131,56 @@ def write_walk_forward_report(
         "",
         f"- Gross compounded return: `{strategy_metrics['gross_total_return']:.6f}`",
         f"- Net compounded return: `{strategy_metrics['net_total_return']:.6f}`",
-        f"- Compounded exchange-fee drag: `{strategy_metrics['compounded_exchange_fee_drag']:.6f}`",
-        f"- Sum of per-bar exchange-fee deductions: `{strategy_metrics['exchange_fee_sum']:.6f}`",
+        f"- Compounded exchange-fee drag: "
+        f"`{strategy_metrics['compounded_exchange_fee_drag']:.6f}`",
+        f"- Sum of per-bar exchange-fee deductions: "
+        f"`{strategy_metrics['exchange_fee_sum']:.6f}`",
         f"- Gross annualized arithmetic mean: "
         f"`{strategy_metrics['gross_annualized_arithmetic_mean']:.6f}`",
         f"- Net annualized arithmetic mean: "
         f"`{strategy_metrics['net_annualized_arithmetic_mean']:.6f}`",
         f"- Declared one-way exchange fee: `{fee_bps:g} bps` per unit of absolute turnover",
+        "",
+        "## Position-path diagnostics",
+        "",
+        f"- Evaluation range: `{path_diagnostics['evaluation_start']}` to "
+        f"`{path_diagnostics['evaluation_end']}`",
+        f"- Total absolute underlying turnover: "
+        f"`{path_diagnostics['total_absolute_turnover']:.6f}`",
+        f"- Annualized underlying turnover: "
+        f"`{path_diagnostics['annualized_instrument_turnover']:.6f}`",
+        f"- Position adjustments above "
+        f"`{path_diagnostics['position_adjustment_threshold']:.1e}`: "
+        f"`{path_diagnostics['position_adjustment_count']}`",
+        f"- Material position adjustments above "
+        f"`{path_diagnostics['material_position_adjustment_threshold']:.2f}`: "
+        f"`{path_diagnostics['material_position_adjustment_count']}`",
+        f"- Holding episodes (completed/open): "
+        f"`{path_diagnostics['holding_episode_count']}` "
+        f"(`{path_diagnostics['completed_holding_episode_count']}` / "
+        f"`{path_diagnostics['open_holding_episode_count']}`)",
+        f"- Average / median / maximum holding duration in bars: "
+        f"`{path_diagnostics['average_holding_duration_bars']:.3f}` / "
+        f"`{path_diagnostics['median_holding_duration_bars']:.3f}` / "
+        f"`{path_diagnostics['maximum_holding_duration_bars']}`",
+        f"- Non-zero-return bar hit rate: `{path_diagnostics['bar_hit_rate']:.2%}`",
+        f"- Completed holding-episode win rate: "
+        f"`{path_diagnostics['completed_holding_episode_win_rate']:.2%}`",
+        f"- Completed holding-episode profit factor: "
+        f"`{path_diagnostics['completed_holding_episode_profit_factor']}`",
+        f"- Average / current / maximum absolute exposure: "
+        f"`{path_diagnostics['average_absolute_exposure']:.6f}` / "
+        f"`{path_diagnostics['current_absolute_exposure']:.6f}` / "
+        f"`{path_diagnostics['maximum_absolute_exposure']:.6f}`",
+        f"- Worst observation return: `{path_diagnostics['worst_observation_return']:.6f}`",
+        f"- 95% expected shortfall ({path_diagnostics['expected_shortfall_tail_observations']} "
+        f"tail observations): `{path_diagnostics['expected_shortfall_95']:.6f}`",
+        f"- Current / maximum drawdown: `{path_diagnostics['current_drawdown']:.6f}` / "
+        f"`{path_diagnostics['recomputed_maximum_drawdown']:.6f}`",
+        f"- Current / longest underwater duration in bars: "
+        f"`{path_diagnostics['current_underwater_duration_bars']}` / "
+        f"`{path_diagnostics['longest_underwater_duration_bars']}`",
+        "- These are inferred position-path transitions, not exchange orders or fills.",
         "",
         "## Cost and parameter stress",
         "",
