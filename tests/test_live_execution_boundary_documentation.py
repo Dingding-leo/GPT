@@ -21,8 +21,8 @@ def test_live_execution_boundary_matches_current_code_and_config() -> None:
     okx = _OKX_PATH.read_text(encoding="utf-8")
 
     assert config["data"]["bar"] == "1Dutc"
-    assert config["strategy"]["transaction_cost_bps"] == 10.0
-    assert config["robustness"]["cost_multipliers"] == [1.0, 2.0, 4.0]
+    assert config["strategy"]["transaction_cost_bps"] == 5.0
+    assert config["robustness"]["cost_multipliers"] == [1.0, 1.5, 2.0, 3.0]
 
     assert "using information through time t" in features
     assert "lag this target by one bar" in features
@@ -40,18 +40,18 @@ def test_live_execution_boundary_matches_current_code_and_config() -> None:
         "asset_return_t    = close_t / close_{t-1} - 1",
         "trading_cost_t    = turnover_t * transaction_cost_bps / 10000",
         "strategy_return_t = position_t * asset_return_t - trading_cost_t",
-        "当前默认配置为",
-        "transaction_cost_bps = 10.0",
-        "cost_multipliers = [1.0, 2.0, 4.0]",
-        "不包含独立的",
-        "exchange fee",
+        "transaction_cost_bps = 5.0",
+        "cost_multipliers = [1.0, 1.5, 2.0, 3.0]",
+        "单边 `5 bps` 是每单位绝对仓位变化的交易所手续费研究基线",
+        "完整重新执行",
+        "单边 `7.5 / 10 / 15 bps` 重新计价",
+        "固定路径总成本敏感性",
+        "没有独立字段或观测证据来拆分",
         "bid-ask spread",
         "slippage",
         "market impact",
         "latency cost",
-        "不得把当前默认配置描述为 `5 bps` 基线",
-        "完整 walk-forward 候选选择与 OOS 评估",
-        "只给已持久化仓位重新计费不能替代 full reselection",
+        "只有 `5 bps` 基线路径执行完整候选重选",
         "没有可执行的 paper-run 或 live-run 命令",
         "不读取账户，不创建 order intent，不模拟订单生命周期，也不发送订单",
         "这些命令只验证文档与当前代码/配置一致",
@@ -60,10 +60,12 @@ def test_live_execution_boundary_matches_current_code_and_config() -> None:
         assert claim in guide
 
     forbidden_claims = (
-        "当前默认配置为每单位换手 5 bps",
+        "transaction_cost_bps = 10.0",
+        "cost_multipliers = [1.0, 2.0, 4.0]",
         "当前回测按 next-open 成交",
         "当前仓库已经支持 paper broker",
         "当前仓库已经支持 live order",
+        "7.5 / 10 / 15 bps 均完成重新选参",
     )
     for claim in forbidden_claims:
         assert claim not in guide
