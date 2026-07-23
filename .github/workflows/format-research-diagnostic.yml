@@ -47,6 +47,6 @@ jobs:
           name: formatted-loss-clustering
           path: |
             reports/research/loss-clustering-vs-volatility-benchmark/analysis.py
-            tests/test_loss_clustering_vs-volatility-benchmark_report.py
+            tests/test_loss_clustering_vs_volatility_benchmark_report.py
           if-no-files-found: error
           retention-days: 1
