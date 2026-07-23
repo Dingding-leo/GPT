@@ -24,6 +24,10 @@ _spec.loader.exec_module(analysis)
 
 def _real_fixture() -> pd.DataFrame:
     metadata = json.loads(_METADATA_FIXTURE.read_text(encoding="utf-8"))
+    assert metadata["provider"] == "OKX"
+    assert metadata["market_type"] == "spot"
+    assert metadata["instrument_id"] == "BTC-USDT"
+    assert metadata["bar"] == "1Dutc"
     assert hashlib.sha256(_RETURNS_FIXTURE.read_bytes()).hexdigest() == metadata["fixture_sha256"]
     frame = pd.read_csv(_RETURNS_FIXTURE)
     assert len(frame) == metadata["rows"]
