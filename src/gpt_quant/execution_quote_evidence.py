@@ -93,9 +93,9 @@ class ExecutionQuoteEvidence:
             "schema_version": self.schema_version,
             "snapshot": self.snapshot.to_dict(),
             "source_response_base64": base64.b64encode(self.source_response_bytes).decode("ascii"),
-            "instrument_snapshot_base64": base64.b64encode(
-                self.instrument_snapshot_bytes
-            ).decode("ascii"),
+            "instrument_snapshot_base64": base64.b64encode(self.instrument_snapshot_bytes).decode(
+                "ascii"
+            ),
         }
 
     def to_json_bytes(self) -> bytes:
