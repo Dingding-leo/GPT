@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import pandas as pd
 import pytest
 
@@ -9,6 +11,11 @@ from gpt_quant import StrategyConfig, WalkForwardResult, run_walk_forward_resear
 _SELECTION_BARS = 300
 _TEST_BARS = 100
 _LOOKBACK_DIMENSIONS = ("momentum", "reversal", "volatility")
+_ACTIVE_BOUNDARY_CASES = (
+    ("momentum", 248, 11, "longer_lookbacks"),
+    ("reversal", 248, 0, "longer_lookbacks"),
+    ("volatility", _SELECTION_BARS - 2, 50, "base"),
+)
 
 
 def _run_boundary_candidate(
@@ -16,6 +23,7 @@ def _run_boundary_candidate(
     *,
     dimension: str,
     lookback: int,
+    start_offset: int = 0,
 ) -> WalkForwardResult:
     base_config = StrategyConfig(
         min_position=0.0,
@@ -34,7 +42,7 @@ def _run_boundary_candidate(
         raise AssertionError(f"unsupported lookback dimension: {dimension}")
 
     return run_walk_forward_research(
-        prices.iloc[: _SELECTION_BARS + _TEST_BARS],
+        prices.iloc[start_offset : start_offset + _SELECTION_BARS + _TEST_BARS],
         base_config=base_config,
         momentum_lookbacks=momentum_lookbacks,
         reversal_lookbacks=reversal_lookbacks,
@@ -68,22 +76,34 @@ def test_walk_forward_rejects_lookback_without_delayed_selection_observation(
 
 
 @pytest.mark.parametrize(
-    ("dimension", "lookback"),
-    (("momentum", 248), ("reversal", 248), ("volatility", _SELECTION_BARS - 2)),
+    ("dimension", "lookback", "start_offset", "boundary_path"),
+    _ACTIVE_BOUNDARY_CASES,
 )
-def test_walk_forward_accepts_last_executable_lookback_boundary(
+def test_walk_forward_accepts_active_last_executable_lookback_boundary(
     btc_usdt_prices: pd.Series,
     dimension: str,
     lookback: int,
+    start_offset: int,
+    boundary_path: str,
 ) -> None:
     result = _run_boundary_candidate(
         btc_usdt_prices,
         dimension=dimension,
         lookback=lookback,
+        start_offset=start_offset,
     )
 
     assert len(result.folds) == 1
     assert result.folds[0]["candidates_tested"] == 1
+    boundary_frame = (
+        result.combined_frame
+        if boundary_path == "base"
+        else result.perturbation_frames[boundary_path]
+    )
+    assert boundary_frame.index[0].isoformat() == result.folds[0]["test_start"]
+    boundary_position = float(boundary_frame["position"].iloc[0])
+    assert math.isfinite(boundary_position)
+    assert 0.0 < abs(boundary_position) <= 1.0
 
 
 @pytest.mark.parametrize("dimension", ("momentum", "reversal"))
