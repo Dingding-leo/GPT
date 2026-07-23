@@ -33,6 +33,8 @@ def _validated_contract(
         )
     if any(path.is_symlink() for path in paths.values()):
         raise ValueError(f"{error_label} destinations must not be symbolic links")
+    if any(path.is_file() and path.stat().st_nlink > 1 for path in paths.values()):
+        raise ValueError(f"{error_label} destinations must not be hard-linked files")
     return ordered_names
 
 
