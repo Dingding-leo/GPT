@@ -21,10 +21,7 @@ def _fixture_inputs() -> tuple[dict[str, Path], dict[str, str], dict[str, object
         name: _FIXTURE_DIR / details["fixture_file"]
         for name, details in metadata["instruments"].items()
     }
-    hashes = {
-        name: details["fixture_sha256"]
-        for name, details in metadata["instruments"].items()
-    }
+    hashes = {name: details["fixture_sha256"] for name, details in metadata["instruments"].items()}
     provenance = {
         key: metadata[key]
         for key in (
@@ -60,9 +57,7 @@ def test_underlying_risk_exposes_real_sleeve_exposure_turnover_and_fee(tmp_path:
         assert metrics["current_absolute_exposure"] == pytest.approx(
             abs(frame["position"].iloc[-1])
         )
-        assert metrics["maximum_absolute_exposure"] == pytest.approx(
-            frame["position"].abs().max()
-        )
+        assert metrics["maximum_absolute_exposure"] == pytest.approx(frame["position"].abs().max())
         assert metrics["total_absolute_turnover"] == pytest.approx(frame["turnover"].sum())
         assert metrics["exchange_fee_sum"] == pytest.approx(frame["trading_cost"].sum())
         assert metrics["exchange_fee_sum"] == pytest.approx(
@@ -96,21 +91,17 @@ def test_underlying_risk_exposes_real_sleeve_exposure_turnover_and_fee(tmp_path:
             variance_contribution / annualized_variance**0.5
         )
 
-    assert result.portfolio_metrics["annualized_net_variance"] == pytest.approx(
-        annualized_variance
-    )
+    assert result.portfolio_metrics["annualized_net_variance"] == pytest.approx(annualized_variance)
     assert result.portfolio_metrics["annualized_net_volatility"] == pytest.approx(
         annualized_variance**0.5
     )
-    assert result.portfolio_metrics[
-        "annualized_net_variance_contribution_sum"
-    ] == pytest.approx(annualized_variance)
+    assert result.portfolio_metrics["annualized_net_variance_contribution_sum"] == pytest.approx(
+        annualized_variance
+    )
     assert result.portfolio_metrics[
         "annualized_net_volatility_contribution_sum"
     ] == pytest.approx(annualized_variance**0.5)
-    assert result.portfolio_metrics[
-        "net_variance_contribution_fraction_sum"
-    ] == pytest.approx(1.0)
+    assert result.portfolio_metrics["net_variance_contribution_fraction_sum"] == pytest.approx(1.0)
     assert result.portfolio_metrics["risk_contribution_status"] == "measured"
 
     assert result.portfolio_metrics["average_start_of_bar_absolute_market_exposure"] < 1.0
