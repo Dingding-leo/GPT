@@ -9,7 +9,7 @@ import pytest
 
 from gpt_quant import StrategyConfig, run_walk_forward_research
 from gpt_quant.walk_forward_report import write_walk_forward_report
-from gpt_quant.walk_forward_verify_gate import verify_walk_forward_report
+from gpt_quant.walk_forward_verify import verify_walk_forward_report
 
 
 def _write_real_okx_report(prices: pd.Series, output: Path) -> dict[str, Path]:
@@ -148,7 +148,7 @@ def test_verifier_rejects_naive_returns_timestamp(
 ) -> None:
     paths = _write_real_okx_report(btc_usdt_prices, tmp_path)
     returns = pd.read_csv(paths["returns"])
-    returns.loc[0, "timestamp"] = _without_explicit_offset(returns.loc[0, "timestamp"])
+    returns["timestamp"] = returns["timestamp"].map(_without_explicit_offset)
     returns.to_csv(paths["returns"], index=False)
 
     with pytest.raises(ValueError, match="explicit UTC offset"):
