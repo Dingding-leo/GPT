@@ -20,7 +20,12 @@ from gpt_quant.okx_live_evidence import (
     write_okx_live_timing_evidence,
 )
 
-_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
+_FIXTURE_DIR = (
+    Path(__file__).parent
+    / "fixtures"
+    / "okx"
+    / "btc-usdt-1dutc-raw-20260717-20260721"
+)
 _ROWS_PATH = _FIXTURE_DIR / "rows.json"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
 _EXPECTED_FIXTURE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
@@ -87,7 +92,9 @@ def _cutoff():
     )
 
 
-def test_real_okx_timing_evidence_is_canonical_immutable_and_hash_bound(tmp_path) -> None:
+def test_real_okx_timing_evidence_is_canonical_immutable_and_hash_bound(
+    tmp_path,
+) -> None:
     output = tmp_path / "okx-live-timing.json"
 
     path, digest = write_okx_live_timing_evidence(
@@ -104,7 +111,10 @@ def test_real_okx_timing_evidence_is_canonical_immutable_and_hash_bound(tmp_path
 
     assert second_path == path
     assert second_digest == digest
-    assert restored == build_okx_live_timing_evidence(sample=_sample(), cutoff=_cutoff())
+    assert restored == build_okx_live_timing_evidence(
+        sample=_sample(),
+        cutoff=_cutoff(),
+    )
     assert restored["provider"] == "OKX"
     assert restored["instrument_id"] == "BTC-USDT"
     assert restored["bar"] == "1Dutc"
@@ -112,7 +122,9 @@ def test_real_okx_timing_evidence_is_canonical_immutable_and_hash_bound(tmp_path
     assert restored["signal_not_before_utc"] == "2026-07-21T12:00:00.200000+00:00"
 
 
-def test_real_okx_timing_evidence_rejects_tampering_and_cutoff_drift(tmp_path) -> None:
+def test_real_okx_timing_evidence_rejects_tampering_and_cutoff_drift(
+    tmp_path,
+) -> None:
     output = tmp_path / "okx-live-timing.json"
     _, digest = write_okx_live_timing_evidence(
         output,
