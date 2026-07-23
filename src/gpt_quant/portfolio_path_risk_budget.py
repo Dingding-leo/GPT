@@ -125,9 +125,7 @@ def evaluate_portfolio_path_risk_budget(
     annualized_net_volatility = float(net_return.std(ddof=1) * math.sqrt(annualization))
     if not math.isfinite(annualized_net_volatility):
         raise RuntimeError("annualized portfolio net volatility must be finite")
-    recorded_volatility = float(
-        underlying.portfolio_metrics["annualized_net_volatility"]
-    )
+    recorded_volatility = float(underlying.portfolio_metrics["annualized_net_volatility"])
     if not math.isclose(
         annualized_net_volatility,
         recorded_volatility,
@@ -210,7 +208,7 @@ def evaluate_portfolio_path_risk_budget(
             "status": "pass" if passes else "reject",
             "failure_reasons": failure_reasons,
         },
-        "cost_attribution": underlying.cost_attribution,
+        "cost_attribution": deepcopy(underlying.cost_attribution),
     }
     return PortfolioPathRiskBudgetResult(
         payload=payload,
