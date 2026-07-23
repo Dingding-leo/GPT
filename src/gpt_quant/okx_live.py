@@ -87,12 +87,18 @@ def _required_finite_number(value: Any, *, field: str) -> float:
     return number
 
 
-def _validated_server_time_sample(
+def validate_okx_server_time_sample(
     sample: OKXServerTimeSample,
     *,
     max_round_trip_seconds: float,
     max_abs_clock_skew_seconds: float,
 ) -> tuple[pd.Timestamp, pd.Timestamp, pd.Timestamp, float, float]:
+    """Revalidate and normalize one persisted OKX public-time observation.
+
+    The caller supplies the exact policy bounds that governed the observation. This
+    makes downstream market-data records independently reconstructable instead of
+    trusting copied round-trip or clock-skew scalars.
+    """
     round_trip_bound = _required_finite_number(
         max_round_trip_seconds,
         field="max_round_trip_seconds",
@@ -277,7 +283,7 @@ def build_okx_completed_bar_cutoff(
         exchange_observed_at,
         server_round_trip_seconds,
         midpoint_clock_skew_seconds,
-    ) = _validated_server_time_sample(
+    ) = validate_okx_server_time_sample(
         server_time_sample,
         max_round_trip_seconds=round_trip_bound,
         max_abs_clock_skew_seconds=clock_skew_bound,
