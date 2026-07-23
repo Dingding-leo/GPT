@@ -72,6 +72,50 @@ def test_okx_interval_guide_matches_downloader_and_cli_end_coverage_gates() -> N
     assert "end - latest" in guide
     assert "严格小于一个声明周期" in guide
     assert "requested_start_reached=false" in guide
-    assert "不指定 `end`" in guide
     assert "tests/test_okx_end_coverage.py" in guide
     assert "tests/test_run_okx_research_end_coverage.py" in guide
+
+
+def test_okx_interval_guide_matches_open_ended_freshness_gate() -> None:
+    guide = _GUIDE_PATH.read_text(encoding="utf-8")
+    source = _SOURCE_PATH.read_text(encoding="utf-8")
+
+    runtime_messages = (
+        "OKX download contains a completed candle after the freshness reference",
+        "OKX open-ended download is stale",
+        "as_of is only valid with an injected get_json",
+    )
+    for message in runtime_messages:
+        assert message in guide
+        assert message in source
+
+    assert "_OPEN_ENDED_FRESHNESS_GRACE_SECONDS = 5 * 60" in source
+    assert (
+        "max_age_seconds = 2 * expected_step_seconds "
+        "+ _OPEN_ENDED_FRESHNESS_GRACE_SECONDS"
+    ) in source
+
+    live_reference = source.index("as_of_timestamp = _current_utc_timestamp()")
+    getter_assignment = source.index("getter = get_json or _default_json_getter")
+    parsed_rows = source.index("parsed = parse_okx_candle_rows(raw_rows)")
+    freshness_call = source.index(
+        "    freshness_age_seconds, freshness_max_age_seconds = "
+        "_validate_open_ended_freshness("
+    )
+    snapshot_return = source.index("return OKXCandleSnapshot(")
+    assert live_reference < getter_assignment < parsed_rows < freshness_call < snapshot_return
+
+    for metadata_field in (
+        "freshness_checked_at_utc",
+        "freshness_age_seconds",
+        "freshness_max_age_seconds",
+    ):
+        assert metadata_field in guide
+        assert metadata_field in source
+
+    assert "省略 `end`" in guide
+    assert "`2 × expected_step_seconds + 5 分钟`" in guide
+    assert "`48 小时 5 分钟`" in guide
+    assert "网络下载开始前采样 UTC 参考时刻" in guide
+    assert "PR #226" in guide
+    assert "tests/test_okx_open_ended_freshness.py" in guide
