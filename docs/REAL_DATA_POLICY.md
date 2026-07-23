@@ -69,3 +69,29 @@ Executable verification:
 ```bash
 pytest tests/test_research_report_failure_recovery.py
 ```
+
+## Portfolio bundle destination safety
+
+`write_portfolio_risk_bundle()` publishes the final four-file workflow artifact through the shared transactional publisher. Before it creates a staging directory or reads, replaces, or rolls back any destination bytes, the contract requires:
+
+- the final `output_dir` path itself is not a symbolic link;
+- every final destination is a unique direct child of that directory;
+- none of the four pre-existing destination entries is a symbolic link;
+- every staged source is a regular file and a direct child of the private staging directory.
+
+For the canonical CLI, violations fail closed with one of these errors:
+
+```text
+portfolio bundle output directory must not be a symbolic link
+portfolio bundle destinations must not be symbolic links
+```
+
+The regressions preserve the symbolic link, its external target bytes, and unrelated caller-owned files, proving that validation occurs before staging or destination replacement. Use a real output directory containing regular destination files, then regenerate the complete bundle; do not treat files reached through the rejected link as workflow-artifact evidence.
+
+This guard checks the final output-directory entry and final destination entries. It does not reject symbolic links in higher ancestor path components, serialize concurrent path changes, or eliminate a check-to-use race after validation.
+
+Executable verification:
+
+```bash
+pytest tests/test_atomic_publish.py tests/test_portfolio_stress_correlation.py
+```
