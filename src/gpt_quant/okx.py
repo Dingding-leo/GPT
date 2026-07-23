@@ -2,14 +2,17 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import time
 from collections.abc import Callable, Mapping, Sequence
+from contextlib import suppress
 from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from itertools import pairwise
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
@@ -575,24 +578,83 @@ def _verified_snapshot_bytes(
     return canonical_csv, canonical_raw, metadata_bytes, instrument, bar
 
 
+def _publish_okx_snapshot_payloads(
+    output: Path,
+    paths: Mapping[str, Path],
+    payloads: Mapping[str, bytes],
+) -> dict[str, Path]:
+    if set(payloads) != set(paths):
+        raise ValueError("OKX snapshot payloads must exactly match the snapshot file set")
+
+    output_preexisted = output.exists()
+    output.mkdir(parents=True, exist_ok=True)
+    previous_payloads = {
+        name: path.read_bytes() if path.exists() else None for name, path in paths.items()
+    }
+
+    try:
+        with TemporaryDirectory(prefix=".okx-snapshot-", dir=output) as staging_name:
+            staging = Path(staging_name)
+            staged_paths = {name: staging / path.name for name, path in paths.items()}
+            for name, staged_path in staged_paths.items():
+                staged_path.write_bytes(payloads[name])
+
+            replaced: list[str] = []
+            try:
+                for name in ("candles", "raw", "metadata"):
+                    os.replace(staged_paths[name], paths[name])
+                    replaced.append(name)
+            except BaseException as commit_error:
+                rollback_errors: list[str] = []
+                for name in reversed(replaced):
+                    destination = paths[name]
+                    previous_payload = previous_payloads[name]
+                    try:
+                        if previous_payload is None:
+                            destination.unlink(missing_ok=True)
+                        else:
+                            restore_path = staging / f"restore-{destination.name}"
+                            restore_path.write_bytes(previous_payload)
+                            os.replace(restore_path, destination)
+                    except OSError as rollback_error:
+                        rollback_errors.append(f"{name}: {rollback_error}")
+                if rollback_errors:
+                    details = "; ".join(rollback_errors)
+                    raise RuntimeError(
+                        f"OKX snapshot commit failed and rollback was incomplete: {details}"
+                    ) from commit_error
+                raise
+    except BaseException:
+        if not output_preexisted:
+            with suppress(OSError):
+                output.rmdir()
+        raise
+
+    return dict(paths)
+
+
 def write_okx_snapshot(
     snapshot: OKXCandleSnapshot,
     output_dir: str | Path,
 ) -> dict[str, Path]:
-    """Persist normalized candles, raw responses, and provenance metadata."""
+    """Persist a verified snapshot and roll back recoverable partial-write failures."""
 
     canonical_csv, canonical_raw, metadata_bytes, instrument, bar = _verified_snapshot_bytes(
         snapshot
     )
     output = Path(output_dir)
-    output.mkdir(parents=True, exist_ok=True)
     stem = f"okx-{instrument}-{bar}"
     paths = {
         "candles": output / f"{stem}.csv",
         "raw": output / f"{stem}.raw.json",
         "metadata": output / f"{stem}.metadata.json",
     }
-    paths["candles"].write_bytes(canonical_csv)
-    paths["raw"].write_bytes(canonical_raw)
-    paths["metadata"].write_bytes(metadata_bytes)
-    return paths
+    return _publish_okx_snapshot_payloads(
+        output,
+        paths,
+        {
+            "candles": canonical_csv,
+            "raw": canonical_raw,
+            "metadata": metadata_bytes,
+        },
+    )
