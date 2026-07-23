@@ -29,20 +29,12 @@ def test_walk_forward_warmup_guide_matches_enforced_delayed_boundary() -> None:
     strategy = config["strategy"]
 
     required_lookbacks = [
-        *(
-            _longer_lookback(value, 2)
-            for value in search["momentum_lookbacks"]
-        ),
-        *(
-            _longer_lookback(value, 1)
-            for value in search["reversal_lookbacks"]
-        ),
+        *(_longer_lookback(value, 2) for value in search["momentum_lookbacks"]),
+        *(_longer_lookback(value, 1) for value in search["reversal_lookbacks"]),
         strategy["volatility_lookback"],
     ]
     longest_required_lookback = max(required_lookbacks)
-    executable_observations = (
-        search["selection_bars"] - longest_required_lookback - 1
-    )
+    executable_observations = search["selection_bars"] - longest_required_lookback - 1
 
     assert search["selection_bars"] >= longest_required_lookback + 2
     assert max(search["momentum_lookbacks"]) == 180
