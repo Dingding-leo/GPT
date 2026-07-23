@@ -123,12 +123,8 @@ def test_bootstrap_recomputes_scale_for_each_paired_real_return_sample(
 
     assert result["ci_lower"] == pytest.approx(np.quantile(expected_deltas, 0.025))
     assert result["ci_upper"] == pytest.approx(np.quantile(expected_deltas, 0.975))
-    assert result["bootstrap_scale_ci_lower"] == pytest.approx(
-        np.quantile(expected_scales, 0.025)
-    )
-    assert result["bootstrap_scale_ci_upper"] == pytest.approx(
-        np.quantile(expected_scales, 0.975)
-    )
+    assert result["bootstrap_scale_ci_lower"] == pytest.approx(np.quantile(expected_scales, 0.025))
+    assert result["bootstrap_scale_ci_upper"] == pytest.approx(np.quantile(expected_scales, 0.975))
 
 
 def test_moving_blocks_are_deterministic_and_contiguous() -> None:
@@ -160,12 +156,8 @@ def test_result_records_single_rejected_candidate_and_bound_provenance() -> None
     )
     assert result["markets"]["BTC-USDT"]["observations"] == 2385
     assert result["markets"]["ETH-USDT"]["observations"] == 2385
-    assert result["markets"]["BTC-USDT"]["observed_delta"] == pytest.approx(
-        -0.0009550359305191547
-    )
-    assert result["markets"]["ETH-USDT"]["observed_delta"] == pytest.approx(
-        -0.004179768015039168
-    )
+    assert result["markets"]["BTC-USDT"]["observed_delta"] == pytest.approx(-0.0009550359305191547)
+    assert result["markets"]["ETH-USDT"]["observed_delta"] == pytest.approx(-0.004179768015039168)
     assert result["markets"]["ETH-USDT"]["ci_upper"] < 0.0
 
 
