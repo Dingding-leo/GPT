@@ -97,6 +97,38 @@ def test_attempt_binds_submission_fill_price_and_measured_latency() -> None:
     replayed.assert_reconstructs(intent, binding, quote)
 
 
+def test_attempt_caches_exact_canonical_serialization() -> None:
+    quote = _quote()
+    attempt = record_paper_execution_attempt(
+        _binding(),
+        quote,
+        submitted_at_utc=datetime(2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC),
+        outcome_at_utc=datetime(2026, 7, 21, 0, 0, 0, 500_000, tzinfo=UTC),
+        side="buy",
+        requested_base_quantity="0.1",
+        outcome="filled",
+        filled_base_quantity="0.1",
+        average_fill_price=quote.ask_price,
+        reason_code="paper-touch-fill",
+    )
+
+    expected = (
+        json.dumps(
+            attempt.to_dict(),
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        ).encode("utf-8")
+        + b"\n"
+    )
+    first = attempt.to_json_bytes()
+    second = attempt.to_json_bytes()
+
+    assert first == expected
+    assert first is second
+    assert PaperExecutionAttempt.from_json_bytes(first).to_json_bytes() == first
+
+
 @pytest.mark.parametrize(
     ("overrides", "error"),
     [
