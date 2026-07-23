@@ -49,12 +49,13 @@ def test_verifier_recomputes_persisted_real_okx_report(
     assert verification["folds"] == returns["fold"].nunique()
     assert verification["fold_boundary_position_transitions_verified"] == 1
     assert verification["within_fold_delayed_position_rows_verified"] == len(returns) - 2
-    assert verification["report_json_sha256"] == hashlib.sha256(
-        paths["json"].read_bytes()
-    ).hexdigest()
-    assert verification["returns_csv_sha256"] == hashlib.sha256(
-        paths["returns"].read_bytes()
-    ).hexdigest()
+    assert (
+        verification["report_json_sha256"] == hashlib.sha256(paths["json"].read_bytes()).hexdigest()
+    )
+    assert (
+        verification["returns_csv_sha256"]
+        == hashlib.sha256(paths["returns"].read_bytes()).hexdigest()
+    )
     assert verification["spread_model"] == "not_modeled"
     assert verification["slippage_model"] == "not_modeled"
     assert verification["market_impact_model"] == "not_modeled"
