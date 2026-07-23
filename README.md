@@ -76,11 +76,11 @@ python scripts/run_okx_research.py \
 4. OOS fold 切换时按真实前一 OOS 仓位重新计算换手与成本，不在每折重置为现金；
 5. 同期比较买入持有、波动率目标长仓和简单趋势长仓/现金；
 6. 所有基准从现金开始，并计入样本外起点的建仓成本；
-7. 将交易成本提高到 2 倍和 4 倍；
+7. 在单边 5 bps 交易所手续费下完成全部候选的逐 fold 选择，并将该已选路径分别按单边 7.5、10 和 15 bps 固定路径重新计价；
 8. 对回看期和信号权重做小幅扰动；
 9. 报告区分“alpha 候选”和“低回撤风险控制候选”，不通过稳健性条件则标记为 `reject`。
 
-默认成本假设为每单位换手 10 bps，是可配置的研究参数，不代表任何账户的实际 OKX 费率。
+默认基线为每单位绝对仓位换手收取单边 5 bps **交易所手续费**。7.5、10 和 15 bps 是固定已选路径的总成本敏感性，不是已测量的点差、滑点、市场冲击或延迟。当前收盘价收益引擎仍不是可执行成交模型，也不代表任何账户的实际 OKX 费率。
 
 报告会写入：
 
@@ -117,7 +117,7 @@ python scripts/run_research.py \
   --output-dir reports/holdout/BTC-USDT
 ```
 
-此示例使用 `config/okx_holdout.json`。其中 strategy 参数、365 日年化、每单位换手 10 bps 成本及候选参数族与 `config/okx_research.json` 保持一致；但它使用固定 validation/holdout 比例，而 rolling OOS 使用 730/90 bar folds，因此两类报告不是同一种样本外证据，指标不应直接横向比较。
+此示例使用 `config/okx_holdout.json`。其中 strategy 参数、365 日年化、单边 5 bps 交易所手续费基线及候选参数族与 `config/okx_research.json` 保持一致；但它使用固定 validation/holdout 比例，而 rolling OOS 使用 730/90 bar folds，因此两类报告不是同一种样本外证据，指标不应直接横向比较。
 
 加载器会在研究开始前核对相对路径约束、SHA-256、精确 header 与每行字段数、观测数、显式时区、唯一且严格递增的时间戳、首尾边界，以及有限且严格为正的 close。旧的 `--csv`、`--timestamp-col` 和 `--close-col` 会直接失败。manifest 的 provenance 标识和 timeframe 目前只做结构/声明校验，不会联网证明标识真实性，也不会从 timeframe 推导 cadence；完整字段说明和证据边界见 [`docs/REPRODUCTION.md`](docs/REPRODUCTION.md)。
 
