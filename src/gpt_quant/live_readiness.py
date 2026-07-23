@@ -71,6 +71,7 @@ _REQUIRED_CI_CHECKS = (
     "tests",
     "walk_forward",
     "walk_forward_verification",
+    "five_bps_evidence",
     "return_hashes",
     "source_artifact",
     "portfolio_risk",
@@ -162,6 +163,7 @@ def _validate_evidence(
     relative_path: str,
     expected: Mapping[str, Any],
     head_sha: str,
+    tested_sha: str,
 ) -> LiveReadinessBlocker | None:
     path = repo_root / relative_path
     if path.is_symlink() or not path.is_file():
@@ -177,6 +179,11 @@ def _validate_evidence(
         return LiveReadinessBlocker(
             code=f"stale_{name}",
             detail=f"{relative_path} is not bound to head {head_sha}",
+        )
+    if payload.get("tested_sha") != tested_sha:
+        return LiveReadinessBlocker(
+            code=f"stale_{name}",
+            detail=f"{relative_path} is not bound to tested revision {tested_sha}",
         )
     mismatches = [
         key
@@ -305,6 +312,7 @@ def evaluate_live_readiness(
             relative_path=relative_path,
             expected=expected,
             head_sha=source_head_sha,
+            tested_sha=tested_revision_sha,
         )
         if blocker is None:
             passed.append(name)
