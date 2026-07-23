@@ -52,9 +52,7 @@ def test_real_okx_fixture_provenance_and_delay_accounting() -> None:
     expected_gross = expected_position * frame["asset_return"]
     expected_cost = expected_turnover * 0.0015
 
-    assert delayed["delayed_position"].to_numpy() == pytest.approx(
-        expected_position.to_numpy()
-    )
+    assert delayed["delayed_position"].to_numpy() == pytest.approx(expected_position.to_numpy())
     assert delayed["turnover"].to_numpy() == pytest.approx(expected_turnover.to_numpy())
     assert delayed["gross_return"].to_numpy() == pytest.approx(expected_gross.to_numpy())
     assert delayed["cost"].to_numpy() == pytest.approx(expected_cost.to_numpy())
