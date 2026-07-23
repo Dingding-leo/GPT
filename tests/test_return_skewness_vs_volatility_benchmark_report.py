@@ -10,13 +10,10 @@ import pandas as pd
 import pytest
 
 _ROOT = Path(__file__).parents[1]
-_ANALYSIS_PATH = (
-    _ROOT / "reports/research/return-skewness-vs-volatility-benchmark/analysis.py"
-)
+_ANALYSIS_PATH = _ROOT / "reports/research/return-skewness-vs-volatility-benchmark/analysis.py"
 _RESULT_PATH = _ANALYSIS_PATH.with_name("result.json")
 _FIXTURE_PATH = (
-    _ROOT
-    / "tests/fixtures/okx_btc_usdt_oos_strategy_volatility_benchmark_20200111_20200219.csv"
+    _ROOT / "tests/fixtures/okx_btc_usdt_oos_strategy_volatility_benchmark_20200111_20200219.csv"
 )
 _METADATA_PATH = _FIXTURE_PATH.with_suffix(".metadata.json")
 
@@ -78,8 +75,7 @@ def test_paired_block_bootstrap_is_deterministic_and_contiguous() -> None:
     second = _ANALYSIS.bootstrap_skewness_delta(strategy, benchmark, **kwargs)
     assert first == second
     assert first["observed_delta"] == pytest.approx(
-        _independent_adjusted_skewness(strategy)
-        - _independent_adjusted_skewness(benchmark)
+        _independent_adjusted_skewness(strategy) - _independent_adjusted_skewness(benchmark)
     )
 
     indices = _ANALYSIS.moving_block_indices(40, 10, np.random.default_rng(17))
