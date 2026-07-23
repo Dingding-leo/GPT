@@ -18,6 +18,7 @@ def test_package_workflow_builds_sdist_then_verifies_wheel() -> None:
     verify_block = workflow[verify:upload]
 
     backend_install = build_block.index('"setuptools==${BUILD_BACKEND_VERSION}"')
+    build_dependency_check = build_block.index("python -m pip check")
     backend_check = build_block.index('os.environ["BUILD_BACKEND_VERSION"]')
     distribution_build = build_block.index("python -m build --no-isolation")
     wheel_install = verify_block.index(
@@ -34,6 +35,7 @@ def test_package_workflow_builds_sdist_then_verifies_wheel() -> None:
     assert workflow.count('pip install "pip==${PIP_BOOTSTRAP_VERSION}"') == 2
     assert workflow.count('"build==${BUILD_FRONTEND_VERSION}"') == 1
     assert workflow.count('"setuptools==${BUILD_BACKEND_VERSION}"') == 1
+    assert workflow.count("python -m pip check") == 2
     assert workflow.count('os.environ["BUILD_BACKEND_VERSION"]') == 1
     assert workflow.count("python -m build --no-isolation") == 1
     assert "python -m build\n" not in workflow
@@ -55,7 +57,7 @@ def test_package_workflow_builds_sdist_then_verifies_wheel() -> None:
     assert "if-no-files-found: error" in workflow
     assert workflow.count("github.run_attempt") == 1
     assert build < verify < upload
-    assert backend_install < backend_check < distribution_build
+    assert backend_install < build_dependency_check < backend_check < distribution_build
     assert wheel_install < dependency_check < import_check
 
 
