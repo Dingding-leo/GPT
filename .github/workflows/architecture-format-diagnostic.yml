@@ -1,9 +1,8 @@
 name: Architecture Format Diagnostic
 
 on:
-  push:
-    branches:
-      - auto/architecture/20260724-02-intent-journal
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
