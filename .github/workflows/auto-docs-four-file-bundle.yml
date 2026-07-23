@@ -1,0 +1,410 @@
+name: Auto docs four-file bundle repair
+
+on:
+  push:
+    branches:
+      - auto/docs/20260722-01-reproduction-guide
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out docs branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: auto/docs/20260722-01-reproduction-guide
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Merge current main without committing
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git merge --no-commit --no-ff -X ours origin/main
+
+      - name: Repair four-file bundle documentation
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: str, old: str, new: str) -> None:
+              target = Path(path)
+              text = target.read_text(encoding="utf-8")
+              count = text.count(old)
+              if count != 1:
+                  raise RuntimeError(f"expected one match in {path}, found {count}: {old[:80]!r}")
+              target.write_text(text.replace(old, new), encoding="utf-8")
+
+          replace_once(
+              "README.md",
+              "- 将 `portfolio_risk.json`、`portfolio_risk.md` 和 `portfolio_returns.csv` 单独上传为 `quant-portfolio-risk-<run-number>-attempt-<run-attempt>` artifact。",
+              "- 将 `portfolio_risk.json`、`portfolio_returns.csv`、`portfolio_risk.md` 与 `portfolio_stress_correlation.json` 作为同一四文件 generation，单独上传为 `quant-portfolio-risk-<run-number>-attempt-<run-attempt>` artifact；stress correlation 固定 `report_only=true`、`gate_status=not_evaluated`、`threshold=null`，只用于 development-market 诊断，不参与聚合风险门禁。",
+          )
+          replace_once(
+              "README.md",
+              "工作流启用 `--fail-on-reject` 后，任一组合约束使聚合 `concentration.passes=false` 时，portfolio CLI 会先通过事务式发布完整提交三个 report 文件并打印 `risk_gate_passes=false`，随后返回非零状态，使该 Actions gate 失败。portfolio upload step 使用 `always()` 与 `portfolio_risk.json` file-exists guard，因此 reject 证据仍会上传；若输入或 provenance 在报告生成前失败且没有 JSON，则不会上传空 artifact。未传入该 flag 的手动 CLI 调用保留 report-only 兼容模式，reject 报告本身仍返回零状态。",
+              "工作流启用 `--fail-on-reject` 后，任一组合约束使聚合 `concentration.passes=false` 时，portfolio CLI 会先通过外层 `write_portfolio_risk_bundle()` 发布完整四文件 generation 并打印 `risk_gate_passes=false`，随后返回非零状态，使该 Actions gate 失败。portfolio upload step 使用 `always()` 与 `portfolio_risk.json` file-exists guard，因此 reject 证据仍会上传；若输入或 provenance 在报告生成前失败且没有 JSON，则不会上传空 artifact。未传入该 flag 的手动 CLI 调用保留 report-only 兼容模式，reject 报告本身仍返回零状态。",
+          )
+          replace_once(
+              "README.md",
+              "三个 report payload 会先在输出目录内的临时 staging 目录完整生成，再按 JSON、returns、Markdown 顺序用原子文件替换发布。若发布中途失败且 rollback 成功，已替换文件会按逆序回滚：输出目录此前不存在时，不会留下新建的部分 report 目录；替换已有完整 report 时，会恢复原有三个文件的精确字节。若 rollback 自身也失败，写入器会抛出 `portfolio report commit failed and rollback was incomplete`；此时不能把该目录当作一致证据，必须保留失败日志并重新生成。",
+              "外层 bundle 先在 staging 目录调用 lower-level 三文件 core writer 生成 JSON、returns 与 Markdown，再生成 report-only stress correlation。四个 payload 全部就绪后，才按 JSON、returns、Markdown、stress correlation 顺序替换到最终目录。若外层发布中途失败且 rollback 成功，已替换文件会按逆序回滚：首次发布不会留下部分 report 目录，替换已有 generation 时会恢复原有四个文件的精确字节。若外层 rollback 自身也失败，会抛出 `portfolio bundle commit failed and rollback was incomplete`；此时不能把该目录当作一致证据，必须保留失败日志并重新生成。lower-level 三文件 core writer 的 `portfolio report commit failed and rollback was incomplete` 只适用于 staging 层，不是 workflow artifact 的最终一致性边界。",
+          )
+
+          replace_once(
+              "docs/REPRODUCTION.md",
+              "7. 使用该来源 artifact 的 ID、digest、workflow run ID、exact head SHA 和两份 return 文件哈希生成固定初始权重、无再平衡的 BTC/ETH portfolio-risk 报告；",
+              "7. 使用该来源 artifact 的 ID、digest、workflow run ID、exact head SHA 和两份 return 文件哈希生成固定初始权重、无再平衡的 BTC/ETH 四文件 portfolio bundle；其中 stress correlation 固定 `report_only=true`、`gate_status=not_evaluated`、`threshold=null`，不参与 `concentration.passes`；",
+          )
+          replace_once(
+              "docs/REPRODUCTION.md",
+              "- `portfolio_risk.json`、`portfolio_risk.md` 与 `portfolio_returns.csv`。",
+              "- `portfolio_risk.json`、`portfolio_returns.csv`、`portfolio_risk.md` 与 `portfolio_stress_correlation.json`。",
+          )
+          replace_once(
+              "docs/REPRODUCTION.md",
+              "历史绿色 workflow 只对其确切 commit、配置和两个对应 artifact 有效，不能自动替代当前 head 的验证。portfolio artifact 必须能追溯到同一运行先上传的 source artifact；不能把不同 run 或 attempt 的证据拼接在一起。",
+              "历史绿色 workflow 只对其确切 commit、配置和两个对应 artifact 有效，不能自动替代当前 head 的验证。portfolio artifact 必须能追溯到同一运行先上传的 source artifact；不能把不同 run 或 attempt 的证据拼接在一起。\n\nportfolio CLI 会先用 lower-level 三文件 core writer 在 staging 目录生成 JSON、returns 与 Markdown，再加入 stress diagnostic；外层 bundle 仅在四个文件全部就绪后，按 JSON、returns、Markdown、stress correlation 顺序发布。处理中的失败会逆序回滚；若出现 `portfolio bundle commit failed and rollback was incomplete`，该目录不能当作一致的 workflow artifact 证据，必须重新生成。lower-level 三文件 core writer 的错误只描述 staging 层，不替代外层四文件 bundle 的最终证据边界。",
+          )
+          PY
+
+          cat > tests/test_readme_workflow_documentation.py <<'PYTEST'
+          from pathlib import Path
+
+          _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+          _README_PATH = _REPOSITORY_ROOT / "README.md"
+          _WORKFLOW_PATH = _REPOSITORY_ROOT / ".github" / "workflows" / "hourly-research.yml"
+          _PORTFOLIO_SCRIPT_PATH = _REPOSITORY_ROOT / "scripts" / "run_portfolio_risk.py"
+          _PORTFOLIO_MODULE_PATH = _REPOSITORY_ROOT / "src" / "gpt_quant" / "portfolio.py"
+          _PORTFOLIO_STRESS_MODULE_PATH = (
+              _REPOSITORY_ROOT / "src" / "gpt_quant" / "portfolio_stress.py"
+          )
+          _PORTFOLIO_RECOVERY_TEST_PATH = (
+              _REPOSITORY_ROOT / "tests" / "test_portfolio_report_failure_recovery.py"
+          )
+          _PORTFOLIO_BUNDLE_RECOVERY_TEST_PATH = (
+              _REPOSITORY_ROOT / "tests" / "test_portfolio_stress_correlation.py"
+          )
+          _PORTFOLIO_BUNDLE_INCOMPLETE_ROLLBACK_TEST_PATH = (
+              _REPOSITORY_ROOT / "tests" / "test_portfolio_stress_bundle_incomplete_rollback.py"
+          )
+
+          _PORTFOLIO_OUTPUTS = (
+              "portfolio_risk.json",
+              "portfolio_returns.csv",
+              "portfolio_risk.md",
+              "portfolio_stress_correlation.json",
+          )
+
+
+          def test_readme_matches_hourly_portfolio_artifact_pipeline() -> None:
+              readme = _README_PATH.read_text(encoding="utf-8")
+              workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
+              portfolio_script = _PORTFOLIO_SCRIPT_PATH.read_text(encoding="utf-8")
+              portfolio_module = _PORTFOLIO_MODULE_PATH.read_text(encoding="utf-8")
+              stress_module = _PORTFOLIO_STRESS_MODULE_PATH.read_text(encoding="utf-8")
+              recovery_test = _PORTFOLIO_RECOVERY_TEST_PATH.read_text(encoding="utf-8")
+              bundle_recovery_test = _PORTFOLIO_BUNDLE_RECOVERY_TEST_PATH.read_text(
+                  encoding="utf-8"
+              )
+              incomplete_rollback_test = (
+                  _PORTFOLIO_BUNDLE_INCOMPLETE_ROLLBACK_TEST_PATH.read_text(encoding="utf-8")
+              )
+
+              source_pattern = "quant-research-source-<run-number>-attempt-<run-attempt>"
+              portfolio_pattern = "quant-portfolio-risk-<run-number>-attempt-<run-attempt>"
+              assert readme.count(source_pattern) == 1
+              assert readme.count(portfolio_pattern) == 1
+
+              source_declaration = (
+                  'SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-'
+                  'attempt-${{ github.run_attempt }}"'
+              )
+              portfolio_declaration = (
+                  'PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-'
+                  'attempt-${{ github.run_attempt }}"'
+              )
+              assert source_declaration in workflow
+              assert portfolio_declaration in workflow
+
+              for output in _PORTFOLIO_OUTPUTS:
+                  assert output in readme
+                  assert output in stress_module
+
+              research_step = workflow.index("- name: Run OKX rolling out-of-sample research")
+              source_upload = workflow.index("- name: Upload immutable sleeve research source")
+              portfolio_step = workflow.index("- name: Generate verified portfolio risk report")
+              portfolio_upload = workflow.index("- name: Upload verified portfolio risk artifact")
+              assert research_step < source_upload < portfolio_step < portfolio_upload
+
+              variance_declaration = 'MAX_VARIANCE_CONTRIBUTION: "0.75"'
+              variance_argument = '--max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION"'
+              correlation_declaration = 'MAX_PAIRWISE_CORRELATION: "0.90"'
+              correlation_argument = '--max-pairwise-correlation "$MAX_PAIRWISE_CORRELATION"'
+              assert variance_declaration in workflow
+              assert variance_argument in workflow
+              assert correlation_declaration in workflow
+              assert correlation_argument in workflow
+              assert workflow.index(variance_declaration) < portfolio_step
+              assert workflow.index(correlation_declaration) < portfolio_step
+              assert workflow.index(variance_argument) > portfolio_step
+              assert workflow.index(correlation_argument) > portfolio_step
+
+              fail_closed_argument = "--fail-on-reject"
+              rejected_report_upload_guard = (
+                  "if: ${{ always() && hashFiles('reports/portfolio/portfolio_risk.json') != '' }}"
+              )
+              portfolio_block = workflow[portfolio_step:portfolio_upload]
+              upload_block = workflow[portfolio_upload:]
+              assert workflow.count(fail_closed_argument) == 1
+              assert fail_closed_argument in portfolio_block
+              assert workflow.count(rejected_report_upload_guard) == 1
+              assert rejected_report_upload_guard in upload_block
+
+              assert 'parser.add_argument("--max-sleeve-weight", type=float, default=0.75)' in (
+                  portfolio_script
+              )
+              assert (
+                  'parser.add_argument("--max-variance-contribution", type=float, default=0.75)'
+                  in portfolio_script
+              )
+              assert (
+                  'parser.add_argument("--max-pairwise-correlation", type=float, default=0.90)'
+                  in portfolio_script
+              )
+              assert '"--fail-on-reject"' in portfolio_script
+              report_write = portfolio_script.index("paths = write_portfolio_risk_bundle(")
+              gate_return = portfolio_script.index(
+                  "return 1 if args.fail_on_reject and not risk_gate_passes else 0"
+              )
+              assert report_write < gate_return
+              assert (
+                  'print(f"risk_gate_passes={str(risk_gate_passes).lower()}")'
+                  in portfolio_script
+              )
+
+              assert "value > max_pairwise_correlation" in portfolio_module
+              assert (
+                  "correlation_control_passes = not correlation_breaches and not "
+                  "unavailable_correlation_pairs"
+              ) in portfolio_module
+              for claim in (
+                  "`MAX_VARIANCE_CONTRIBUTION=0.75`",
+                  "`MAX_PAIRWISE_CORRELATION=0.90`",
+                  "默认最大 sleeve weight 为 75%",
+                  "单一 sleeve 的最大方差贡献同样为 75%",
+                  "任意可计算 sleeve pair 的收益相关系数上限为 90%",
+                  "相关系数严格高于上限",
+                  "因零方差等原因不可计算",
+                  "都会标记为 `reject`",
+                  "固定初始权重与 development-return covariance",
+                  "按对齐的 development-return observations 计算",
+                  "不是新的优化权重或 untouched-holdout 证据",
+                  "启用 `--fail-on-reject`",
+                  "聚合 `concentration.passes=false`",
+                  "打印 `risk_gate_passes=false`",
+                  "返回非零状态",
+                  "`always()` 与 `portfolio_risk.json` file-exists guard",
+                  "reject 证据仍会上传",
+                  "report-only 兼容模式",
+              ):
+                  assert claim in readme
+              assert "两项约束都通过时才标记为 `pass`" not in readme
+
+              diagnostic_start = stress_module.index(
+                  "def build_portfolio_stress_correlation_diagnostic("
+              )
+              standalone_writer_start = stress_module.index(
+                  "def write_portfolio_stress_correlation_report("
+              )
+              diagnostic_builder = stress_module[diagnostic_start:standalone_writer_start]
+              for implementation_claim in (
+                  "report_only=True",
+                  'gate_status="not_evaluated"',
+                  '"threshold": None',
+                  "development-market diagnostic only; not used for selection or pass/reject",
+              ):
+                  assert implementation_claim in diagnostic_builder
+
+              for declaration in (
+                  '"json": "portfolio_risk.json"',
+                  '"returns": "portfolio_returns.csv"',
+                  '"markdown": "portfolio_risk.md"',
+                  '"stress_correlation": _STRESS_CORRELATION_FILENAME',
+              ):
+                  assert declaration in stress_module
+              bundle_start = stress_module.index("def write_portfolio_risk_bundle(")
+              bundle = stress_module[bundle_start:]
+              for implementation_claim in (
+                  'with TemporaryDirectory(prefix=".portfolio-risk-bundle-", dir=output)',
+                  "staged_paths = write_portfolio_risk_report(result, staging)",
+                  'staged_paths["stress_correlation"] = write_portfolio_stress_correlation_report(',
+                  "for name in _PORTFOLIO_BUNDLE_FILENAMES:",
+                  "os.replace(staged_paths[name], destinations[name])",
+                  "for name in reversed(replaced):",
+                  "destination.unlink(missing_ok=True)",
+                  "os.replace(restore_path, destination)",
+                  "portfolio bundle commit failed and rollback was incomplete",
+              ):
+                  assert implementation_claim in bundle
+              assert bundle.index(
+                  "staged_paths = write_portfolio_risk_report(result, staging)"
+              ) < bundle.index(
+                  'staged_paths["stress_correlation"] = write_portfolio_stress_correlation_report('
+              )
+              assert bundle.index(
+                  "os.replace(staged_paths[name], destinations[name])"
+              ) < bundle.index("for name in reversed(replaced):")
+
+              publisher_start = portfolio_module.index(
+                  "def _publish_portfolio_report_payloads("
+              )
+              report_writer_start = portfolio_module.index("def write_portfolio_risk_report(")
+              publisher = portfolio_module[publisher_start:report_writer_start]
+              for implementation_claim in (
+                  'with TemporaryDirectory(prefix=".portfolio-risk-", dir=output)',
+                  'for name in ("json", "returns", "markdown"):',
+                  "os.replace(staged_paths[name], paths[name])",
+                  "for name in reversed(replaced):",
+                  "portfolio report commit failed and rollback was incomplete",
+              ):
+                  assert implementation_claim in publisher
+
+              assert '@pytest.mark.parametrize("existing_report", [False, True])' in recovery_test
+              assert "assert not output_dir.exists()" in recovery_test
+              assert "== original_bytes" in recovery_test
+              for output in _PORTFOLIO_OUTPUTS:
+                  assert f'"{output}"' in bundle_recovery_test
+                  assert f'"{output}"' in incomplete_rollback_test
+              assert "if final_replacements == 4" in bundle_recovery_test
+              assert "for name, path in original_paths.items()" in bundle_recovery_test
+              assert "portfolio bundle commit failed and rollback was incomplete" in (
+                  incomplete_rollback_test
+              )
+
+              for claim in (
+                  "同一四文件 generation",
+                  "`portfolio_stress_correlation.json`",
+                  "`report_only=true`",
+                  "`gate_status=not_evaluated`",
+                  "`threshold=null`",
+                  "不参与聚合风险门禁",
+                  "外层 `write_portfolio_risk_bundle()`",
+                  "lower-level 三文件 core writer",
+                  "四个 payload",
+                  "JSON、returns、Markdown、stress correlation 顺序",
+                  "已替换文件会按逆序回滚",
+                  "恢复原有四个文件的精确字节",
+                  "`portfolio bundle commit failed and rollback was incomplete`",
+                  "只适用于 staging 层",
+                  "不能把该目录当作一致证据",
+              ):
+                  assert claim in readme
+
+              duplicate_source_error = (
+                  "portfolio sleeves must use distinct verified return source columns"
+              )
+              cli_duplicate_hash_error = (
+                  "BTC-USDT and ETH-USDT return files must have distinct SHA-256 digests"
+              )
+              assert duplicate_source_error in portfolio_module
+              assert cli_duplicate_hash_error in portfolio_script
+              binding_check = portfolio_module.index(
+                  "bindings = _validate_return_source_bindings("
+              )
+              metric_calculation = portfolio_module.index(
+                  "portfolio_metrics = performance_metrics("
+              )
+              assert binding_check < metric_calculation
+              for claim in (
+                  "用已记录的 SHA-256 重新读取每个 return source",
+                  "逐字节对应已验证来源",
+                  "`(文件 SHA-256, timestamp 列, return 列, 所选时间戳)`",
+                  "把同一个已验证 return 列改名成 BTC 与 ETH 两个 sleeve",
+                  "两份 return 文件的 SHA-256 本身不同",
+              ):
+                  assert claim in readme
+
+              assert "path: reports/okx/" in workflow
+              assert "path: reports/portfolio/" in workflow
+              assert workflow.count("retention-days: 14") == 2
+              assert "报告和原始数据快照作为 GitHub Actions artifact 保存 14 天。" not in readme
+
+
+          def test_reproduction_guide_matches_hourly_portfolio_artifact_pipeline() -> None:
+              guide = (_REPOSITORY_ROOT / "docs" / "REPRODUCTION.md").read_text(
+                  encoding="utf-8"
+              )
+              workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
+              stress_module = _PORTFOLIO_STRESS_MODULE_PATH.read_text(encoding="utf-8")
+
+              source_pattern = "quant-research-source-<run-number>-attempt-<run-attempt>"
+              portfolio_pattern = "quant-portfolio-risk-<run-number>-attempt-<run-attempt>"
+              assert guide.count(source_pattern) == 1
+              assert guide.count(portfolio_pattern) == 1
+
+              for output in _PORTFOLIO_OUTPUTS:
+                  assert guide.count(output) == 1
+
+              for claim in (
+                  "四文件 portfolio bundle",
+                  "`report_only=true`",
+                  "`gate_status=not_evaluated`",
+                  "`threshold=null`",
+                  "不参与 `concentration.passes`",
+                  "JSON、returns、Markdown、stress correlation",
+                  "`portfolio bundle commit failed and rollback was incomplete`",
+                  "lower-level 三文件 core writer",
+                  "不能当作一致的 workflow artifact 证据",
+              ):
+                  assert claim in guide
+              assert "portfolio bundle commit failed and rollback was incomplete" in stress_module
+
+              assert "`reports/okx/`" in guide
+              assert "`reports/portfolio/`" in guide
+              assert "source artifact 的 ID、名称、下载包 SHA-256 digest" in guide
+              assert "portfolio artifact 的 ID、名称、下载包 SHA-256 digest" in guide
+              assert "不能把不同 run 或 attempt 的证据拼接在一起" in guide
+              assert "上传 `reports/` artifact，保留 14 天" not in guide
+
+              research_step = workflow.index("- name: Run OKX rolling out-of-sample research")
+              source_upload = workflow.index("- name: Upload immutable sleeve research source")
+              portfolio_step = workflow.index("- name: Generate verified portfolio risk report")
+              portfolio_upload = workflow.index("- name: Upload verified portfolio risk artifact")
+              assert research_step < source_upload < portfolio_step < portfolio_upload
+              assert workflow.count("retention-days: 14") == 2
+          PYTEST
+
+      - name: Install and verify
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==26.1.2"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+          ruff format tests/test_readme_workflow_documentation.py
+          ruff check .
+          ruff format --check .
+          pytest tests/test_readme_workflow_documentation.py
+          pytest
+
+      - name: Commit repaired docs
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/auto-docs-four-file-bundle.yml
+          git add README.md docs/REPRODUCTION.md tests/test_readme_workflow_documentation.py
+          git diff --check
+          git commit -m "docs: document four-file portfolio artifact bundle"
+          git push origin HEAD:auto/docs/20260722-01-reproduction-guide
