@@ -1,9 +1,8 @@
 name: Docs Format Diagnostic
 
 on:
-  push:
-    branches:
-      - auto/docs/20260724-11-okx-order-constraint-gate
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
