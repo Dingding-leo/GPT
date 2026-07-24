@@ -23,7 +23,7 @@ def test_hourly_workflow_pins_and_validates_install_before_quality_gates() -> No
     assert workflow.index(dependency_check) < workflow.index(lint_step)
 
 
-def test_hourly_workflow_scopes_concurrency_by_event_and_ref() -> None:
+def test_hourly_workflow_scopes_concurrency_by_event_and_tested_sha() -> None:
     workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
 
     concurrency_start = workflow.index("concurrency:")
@@ -31,11 +31,12 @@ def test_hourly_workflow_scopes_concurrency_by_event_and_ref() -> None:
     concurrency_block = workflow[concurrency_start:jobs_start]
 
     assert concurrency_block.count("github.event_name") == 1
-    assert concurrency_block.count("github.ref") == 1
+    assert concurrency_block.count("inputs.target_sha || github.sha") == 1
     assert (
-        "group: hourly-quant-research-${{ github.event_name }}-${{ github.ref }}"
-        in concurrency_block
+        "group: hourly-quant-research-${{ github.event_name }}-"
+        "${{ inputs.target_sha || github.sha }}" in concurrency_block
     )
+    assert "github.ref" not in concurrency_block
     assert "cancel-in-progress: true" in concurrency_block
 
 
