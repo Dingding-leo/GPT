@@ -1,9 +1,8 @@
 name: Security Lint Diagnostic
 
 on:
-  push:
-    branches:
-      - auto/architecture/20260724-10-paper-decision-domain
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -46,7 +45,7 @@ jobs:
           exit 0
 
       - name: Upload diagnostics
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: security-lint-diagnostic-${{ github.run_id }}
           path: security-lint-diagnostic
