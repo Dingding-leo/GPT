@@ -1,0 +1,13 @@
+{
+  "provider": "OKX",
+  "market_type": "spot",
+  "instrument": "BTC-USDT",
+  "timeframe": "1H",
+  "start": "2022-01-25T08:00:00Z",
+  "end": "2022-01-25T23:00:00Z",
+  "observations": 16,
+  "source": "Immutable completed-candle extract from the portable canonical BTC-USDT 1H artifact used by PR #475",
+  "source_artifact_id": 8586473477,
+  "source_snapshot_sha256": "bbba1e9b36e17b03ff6aed237a4de949b4a39b1d17eaf1b4979627794acb909c",
+  "fixture_sha256": "c5738ff91221c196b701c032c141d56fed1de687a6b983b89e3715952545d04f"
+}
