@@ -13,7 +13,8 @@ from .execution_intent import TargetPositionIntent
 from .execution_quote import ExecutionQuoteSnapshot
 from .execution_quote_binding import ExecutionQuoteBinding
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
+_LEGACY_SCHEMA_VERSION = 1
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 _DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
@@ -21,6 +22,7 @@ _FILL_PRICE_CONVENTION = "market-vwap-at-touch-or-worse"
 _FIELDS = {
     "schema_version",
     "binding_id",
+    "target_intent_id",
     "quote_snapshot_id",
     "instrument_id",
     "decision_at_utc",
@@ -44,6 +46,8 @@ _FIELDS = {
     "submission_to_outcome_latency_us",
 }
 _SERIALIZED_FIELDS = _FIELDS | {"attempt_id"}
+_LEGACY_FIELDS = _FIELDS - {"target_intent_id"}
+_LEGACY_SERIALIZED_FIELDS = _LEGACY_FIELDS | {"attempt_id"}
 
 
 def _hash(value: object, name: str) -> str:
@@ -138,6 +142,7 @@ class PaperExecutionAttempt:
     """
 
     binding_id: str
+    target_intent_id: str
     quote_snapshot_id: str
     instrument_id: str
     decision_at_utc: datetime
@@ -164,6 +169,11 @@ class PaperExecutionAttempt:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "binding_id", _hash(self.binding_id, "binding_id"))
+        object.__setattr__(
+            self,
+            "target_intent_id",
+            _hash(self.target_intent_id, "target_intent_id"),
+        )
         object.__setattr__(
             self,
             "quote_snapshot_id",
@@ -262,6 +272,7 @@ class PaperExecutionAttempt:
         return {
             "schema_version": self.schema_version,
             "binding_id": self.binding_id,
+            "target_intent_id": self.target_intent_id,
             "quote_snapshot_id": self.quote_snapshot_id,
             "instrument_id": self.instrument_id,
             "decision_at_utc": _format_utc(self.decision_at_utc),
@@ -309,6 +320,7 @@ class PaperExecutionAttempt:
             raise TypeError("quote must be an ExecutionQuoteSnapshot")
         binding.assert_reconstructs(intent, quote)
         expected = record_paper_execution_attempt(
+            intent,
             binding,
             quote,
             submitted_at_utc=self.submitted_at_utc,
@@ -327,6 +339,15 @@ class PaperExecutionAttempt:
     def from_mapping(cls, value: object) -> PaperExecutionAttempt:
         if not isinstance(value, Mapping):
             raise ValueError("paper execution attempt must be a mapping")
+        schema_version = value.get("schema_version")
+        if isinstance(schema_version, bool) or not isinstance(schema_version, int):
+            raise ValueError(f"unsupported paper execution attempt schema {schema_version!r}")
+        if schema_version == _LEGACY_SCHEMA_VERSION:
+            raise ValueError(
+                "paper execution attempt schema 1 requires explicit evidence-bound migration"
+            )
+        if schema_version != _SCHEMA_VERSION:
+            raise ValueError(f"unsupported paper execution attempt schema {schema_version!r}")
         keys = set(value)
         if keys != _SERIALIZED_FIELDS:
             missing = sorted(_SERIALIZED_FIELDS - keys)
@@ -335,17 +356,11 @@ class PaperExecutionAttempt:
                 "paper execution attempt fields do not match schema; "
                 f"missing={missing}, unexpected={unexpected}"
             )
-        schema_version = value["schema_version"]
-        if (
-            isinstance(schema_version, bool)
-            or not isinstance(schema_version, int)
-            or schema_version != _SCHEMA_VERSION
-        ):
-            raise ValueError(f"unsupported paper execution attempt schema {schema_version!r}")
         if value["fill_price_convention"] != _FILL_PRICE_CONVENTION:
             raise ValueError("unsupported paper fill-price convention")
         attempt = cls(
             binding_id=value["binding_id"],
+            target_intent_id=value["target_intent_id"],
             quote_snapshot_id=value["quote_snapshot_id"],
             instrument_id=value["instrument_id"],
             decision_at_utc=value["decision_at_utc"],
@@ -387,8 +402,69 @@ class PaperExecutionAttempt:
             raise ValueError("paper execution attempt JSON must use canonical encoding")
         return attempt
 
+    @classmethod
+    def migrate_v1_json_bytes(
+        cls,
+        value: bytes,
+        intent: TargetPositionIntent,
+        binding: ExecutionQuoteBinding,
+        quote: ExecutionQuoteSnapshot,
+    ) -> PaperExecutionAttempt:
+        """Migrate one canonical schema-v1 record using its exact lineage evidence."""
+
+        try:
+            text = value.decode("utf-8")
+            payload = json.loads(text, object_pairs_hook=_reject_duplicates)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("paper execution attempt JSON is unreadable") from exc
+        if not isinstance(payload, Mapping):
+            raise ValueError("paper execution attempt must be a mapping")
+        keys = set(payload)
+        if keys != _LEGACY_SERIALIZED_FIELDS:
+            missing = sorted(_LEGACY_SERIALIZED_FIELDS - keys)
+            unexpected = sorted(repr(key) for key in keys - _LEGACY_SERIALIZED_FIELDS)
+            raise ValueError(
+                "legacy paper execution attempt fields do not match schema; "
+                f"missing={missing}, unexpected={unexpected}"
+            )
+        if payload["schema_version"] != _LEGACY_SCHEMA_VERSION:
+            raise ValueError(
+                f"unsupported legacy paper execution attempt schema {payload['schema_version']!r}"
+            )
+        if payload["fill_price_convention"] != _FILL_PRICE_CONVENTION:
+            raise ValueError("unsupported paper fill-price convention")
+
+        migrated = record_paper_execution_attempt(
+            intent,
+            binding,
+            quote,
+            submitted_at_utc=payload["submitted_at_utc"],
+            outcome_at_utc=payload["outcome_at_utc"],
+            side=payload["side"],
+            requested_base_quantity=payload["requested_base_quantity"],
+            outcome=payload["outcome"],
+            filled_base_quantity=payload["filled_base_quantity"],
+            average_fill_price=payload["average_fill_price"],
+            reason_code=payload["reason_code"],
+        )
+        expected_payload = migrated._payload()
+        expected_payload.pop("target_intent_id")
+        expected_payload["schema_version"] = _LEGACY_SCHEMA_VERSION
+        expected = {
+            **expected_payload,
+            "attempt_id": hashlib.sha256(_json_bytes(expected_payload)).hexdigest(),
+        }
+        if payload != expected:
+            raise ValueError(
+                "legacy paper execution attempt does not reconstruct from supplied evidence"
+            )
+        if _json_bytes(expected) + b"\n" != value:
+            raise ValueError("paper execution attempt JSON must use canonical encoding")
+        return migrated
+
 
 def record_paper_execution_attempt(
+    intent: TargetPositionIntent,
     binding: ExecutionQuoteBinding,
     quote: ExecutionQuoteSnapshot,
     *,
@@ -403,10 +479,14 @@ def record_paper_execution_attempt(
 ) -> PaperExecutionAttempt:
     """Create one auditable paper submission outcome from exact quote evidence."""
 
+    if not isinstance(intent, TargetPositionIntent):
+        raise TypeError("intent must be a TargetPositionIntent")
     if not isinstance(binding, ExecutionQuoteBinding):
         raise TypeError("binding must be an ExecutionQuoteBinding")
     if not isinstance(quote, ExecutionQuoteSnapshot):
         raise TypeError("quote must be an ExecutionQuoteSnapshot")
+    binding.assert_reconstructs(intent, quote)
+    intent.assert_active_at(submitted_at_utc)
     if binding.quote_snapshot_id != quote.snapshot_id:
         raise ValueError("execution quote binding does not reference the supplied quote")
     if binding.instrument_id != quote.instrument_id:
@@ -421,6 +501,7 @@ def record_paper_execution_attempt(
         raise ValueError("execution quote binding instrument evidence does not match")
     return PaperExecutionAttempt(
         binding_id=binding.binding_id,
+        target_intent_id=intent.intent_id,
         quote_snapshot_id=quote.snapshot_id,
         instrument_id=quote.instrument_id,
         decision_at_utc=binding.decision_at_utc,
