@@ -131,7 +131,9 @@ def verify_intraday_1h_timestamp_grid(output_dir: str | Path) -> dict[str, objec
     if not timestamps.is_monotonic_increasing:
         raise ValueError("canonical intraday snapshot timestamps must be strictly increasing")
     if not (timestamps == timestamps.floor("h")).all():
-        raise ValueError("canonical intraday snapshot timestamps must align to exact UTC-hour boundaries")
+        raise ValueError(
+            "canonical intraday snapshot timestamps must align to exact UTC-hour boundaries"
+        )
     if len(timestamps) > 1:
         deltas = timestamps[1:] - timestamps[:-1]
         if not (deltas == pd.Timedelta(hours=1)).all():
