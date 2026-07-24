@@ -60,16 +60,13 @@ def test_example_executes_current_paper_attempt_gate_deterministically(
         "archive_idempotent": True,
         "lot_size": "0.00000001",
         "minimum_order_size_base": "0.00001",
-        "raw_response_sha256": (
-            "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"
-        ),
+        "raw_response_sha256": ("290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"),
         "state": "live",
         "tick_size": "0.1",
     }
     assert summary["minimum_buy_quote_equivalent_at_observed_ask"] == "0.410068"
     assert (
-        summary["minimum_quote_notional_constraint"]
-        == "not_reported_by_public_instrument_endpoint"
+        summary["minimum_quote_notional_constraint"] == "not_reported_by_public_instrument_endpoint"
     )
 
     assert summary["constraint_probe"] == {
@@ -110,9 +107,7 @@ def test_example_executes_current_paper_attempt_gate_deterministically(
         "this_gate": "timeframe_neutral_offline_constraint_probe",
     }
     assert "one_hour_research_pipeline_not_implemented" in summary["paper_order_blockers"]
-    assert "maker_post_only_order_lifecycle_not_implemented" in summary[
-        "paper_order_blockers"
-    ]
+    assert "maker_post_only_order_lifecycle_not_implemented" in summary["paper_order_blockers"]
 
     quote = summary["quote"]
     assert quote["bid_price"] == "41006.3"
@@ -204,6 +199,9 @@ def test_documentation_matches_current_executable_boundary() -> None:
     normalized = " ".join(content.split())
 
     assert "python examples/okx_spot_instrument_replay.py" in content
+    assert "pytest -q tests/test_okx_spot_instrument_replay_example.py" in content
+    assert "rejects_requested_notional_below_declared_paper_floor" in content
+    assert "3 passed, 3 deselected" in content
     assert "partial paper-attempt construction and canonical replay" in content
     assert "validate_okx_paper_execution_attempt_constraints()" in content
     assert "10 USDT paper-policy floor" in content
