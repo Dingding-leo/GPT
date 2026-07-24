@@ -83,6 +83,29 @@ order_submission=not_performed
 paper_order_eligible=false
 ```
 
+## Run the fail-closed constraint regressions
+
+The successful probe is not sufficient evidence by itself. Execute the three operator-facing
+negative checks that prove the current boundary rejects off-tick prices, off-lot partial
+fills, and a request below the explicitly declared paper quote-notional floor:
+
+```bash
+pytest -q tests/test_okx_spot_instrument_replay_example.py \
+  -k 'rejects_off_tick_limit_price or rejects_off_lot_partial_fill or rejects_requested_notional_below_declared_paper_floor'
+```
+
+Expected result:
+
+```text
+3 passed, 3 deselected
+```
+
+These regressions remain offline. They structurally substitute an off-tick `41006.85`
+limit price, an off-lot `0.040000005 BTC` partial fill, and a `5000 USDT` paper-policy
+floor above the deterministic `4100.68 USDT` requested touch notional. Each case must fail
+before any adapter boundary. The tests perform no network request, account access, or order
+submission.
+
 ## Implemented constraint meaning
 
 `validate_okx_spot_limit_order_constraints()` proves only that:
