@@ -46,7 +46,9 @@ def _required_canonical_bar_window(
         expected_duration = _SUPPORTED_BAR_DURATIONS[bar]
     except KeyError as exc:
         supported = ", ".join(sorted(_SUPPORTED_BAR_DURATIONS))
-        raise ValueError(f"unsupported completed signal bar {bar!r}; supported bars: {supported}") from exc
+        raise ValueError(
+            f"unsupported completed signal bar {bar!r}; supported bars: {supported}"
+        ) from exc
 
     bar_duration = signal_bar_close - signal_bar_open
     if bar_duration != expected_duration:
