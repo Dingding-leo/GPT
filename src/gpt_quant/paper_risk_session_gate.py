@@ -17,7 +17,7 @@ from .paper_risk_kill_switch import (
     evaluate_paper_risk_kill_switch,
 )
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 _TRIGGER_ORDER = (
     "stale_portfolio_state",
@@ -28,13 +28,20 @@ _TRIGGER_ORDER = (
 )
 
 
-def _nonnegative_fraction(value: object, *, field_name: str) -> float:
+def _nonnegative_real(value: object, *, field_name: str) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
-        raise TypeError(f"{field_name} must be a finite fraction in [0, 1]")
+        raise TypeError(f"{field_name} must be a finite non-negative real number")
     parsed = float(value)
-    if not math.isfinite(parsed) or parsed < 0.0 or parsed > 1.0:
-        raise ValueError(f"{field_name} must be a finite fraction in [0, 1]")
+    if not math.isfinite(parsed) or parsed < 0.0:
+        raise ValueError(f"{field_name} must be a finite non-negative real number")
     return 0.0 if parsed == 0.0 else parsed
+
+
+def _nonnegative_fraction(value: object, *, field_name: str) -> float:
+    parsed = _nonnegative_real(value, field_name=field_name)
+    if parsed > 1.0:
+        raise ValueError(f"{field_name} must be a finite fraction in [0, 1]")
+    return parsed
 
 
 def _required_hash(value: object, *, field_name: str) -> str:
@@ -74,6 +81,7 @@ class PaperRiskSessionHighWatermarks:
     portfolio_state_sha256: str
     maximum_daily_loss_fraction: float
     maximum_drawdown_fraction: float
+    maximum_daily_underlying_turnover: float
     previous_high_watermark_id: str | None
     schema_version: int = field(default=_SCHEMA_VERSION, init=False)
     high_watermark_id: str = field(init=False)
@@ -85,6 +93,7 @@ class PaperRiskSessionHighWatermarks:
         snapshot: PaperRiskStateSnapshot,
         maximum_daily_loss_fraction: float,
         maximum_drawdown_fraction: float,
+        maximum_daily_underlying_turnover: float,
         previous_high_watermark_id: str | None,
     ) -> Self:
         instance = object.__new__(cls)
@@ -109,6 +118,10 @@ class PaperRiskSessionHighWatermarks:
             maximum_drawdown_fraction,
             field_name="maximum_drawdown_fraction",
         )
+        maximum_daily_turnover = _nonnegative_real(
+            maximum_daily_underlying_turnover,
+            field_name="maximum_daily_underlying_turnover",
+        )
         previous_id = (
             None
             if previous_high_watermark_id is None
@@ -132,6 +145,11 @@ class PaperRiskSessionHighWatermarks:
             "maximum_drawdown_fraction",
             maximum_drawdown,
         )
+        object.__setattr__(
+            instance,
+            "maximum_daily_underlying_turnover",
+            maximum_daily_turnover,
+        )
         object.__setattr__(instance, "previous_high_watermark_id", previous_id)
         object.__setattr__(instance, "schema_version", _SCHEMA_VERSION)
 
@@ -143,6 +161,7 @@ class PaperRiskSessionHighWatermarks:
             "portfolio_state_sha256": state_hash,
             "maximum_daily_loss_fraction": maximum_daily_loss,
             "maximum_drawdown_fraction": maximum_drawdown,
+            "maximum_daily_underlying_turnover": maximum_daily_turnover,
             "previous_high_watermark_id": previous_id,
         }
         object.__setattr__(
@@ -166,6 +185,13 @@ class PaperRiskSessionHighWatermarks:
             raise ValueError("maximum_daily_loss_fraction cannot be below current daily loss")
         if self.maximum_drawdown_fraction + tolerance < snapshot.drawdown_fraction:
             raise ValueError("maximum_drawdown_fraction cannot be below current drawdown")
+        if (
+            self.maximum_daily_underlying_turnover + tolerance
+            < snapshot.daily_underlying_turnover
+        ):
+            raise ValueError(
+                "maximum_daily_underlying_turnover cannot be below current turnover"
+            )
 
 
 def advance_paper_risk_session_high_watermarks(
@@ -179,12 +205,18 @@ def advance_paper_risk_session_high_watermarks(
         raise TypeError("snapshot must be a PaperRiskStateSnapshot")
     tolerance = 1e-12
     if previous is None:
-        if snapshot.daily_loss_fraction > tolerance or snapshot.drawdown_fraction > tolerance:
+        if (
+            snapshot.daily_loss_fraction > tolerance
+            or snapshot.drawdown_fraction > tolerance
+            or snapshot.daily_underlying_turnover > tolerance
+        ):
             raise ValueError(
-                "initial session high-watermarks require a zero-loss, zero-drawdown snapshot"
+                "initial session high-watermarks require a zero-loss, zero-drawdown, "
+                "zero-turnover snapshot"
             )
         maximum_daily_loss = snapshot.daily_loss_fraction
         maximum_drawdown = snapshot.drawdown_fraction
+        maximum_daily_turnover = snapshot.daily_underlying_turnover
         previous_id = None
     else:
         if not isinstance(previous, PaperRiskSessionHighWatermarks):
@@ -199,6 +231,11 @@ def advance_paper_risk_session_high_watermarks(
         if same_observation:
             previous.assert_compatible(snapshot)
             return previous
+        if (
+            snapshot.daily_underlying_turnover + tolerance
+            < previous.maximum_daily_underlying_turnover
+        ):
+            raise ValueError("daily_underlying_turnover cannot decrease within one session")
         maximum_daily_loss = max(
             previous.maximum_daily_loss_fraction,
             snapshot.daily_loss_fraction,
@@ -207,12 +244,17 @@ def advance_paper_risk_session_high_watermarks(
             previous.maximum_drawdown_fraction,
             snapshot.drawdown_fraction,
         )
+        maximum_daily_turnover = max(
+            previous.maximum_daily_underlying_turnover,
+            snapshot.daily_underlying_turnover,
+        )
         previous_id = previous.high_watermark_id
 
     return PaperRiskSessionHighWatermarks._create(
         snapshot=snapshot,
         maximum_daily_loss_fraction=maximum_daily_loss,
         maximum_drawdown_fraction=maximum_drawdown,
+        maximum_daily_underlying_turnover=maximum_daily_turnover,
         previous_high_watermark_id=previous_id,
     )
 
@@ -228,6 +270,7 @@ class PaperRiskSessionDecision:
     blockers: tuple[str, ...]
     maximum_daily_loss_fraction: float
     maximum_drawdown_fraction: float
+    maximum_daily_underlying_turnover: float
     base_decision: PaperRiskKillSwitchDecision
 
     def assert_allowed(self) -> None:
@@ -262,6 +305,11 @@ def evaluate_paper_risk_session_gate(
         trigger_names.add("daily_loss_limit")
     if high_watermarks.maximum_drawdown_fraction >= policy.drawdown_trigger_fraction:
         trigger_names.add("drawdown_limit")
+    if (
+        high_watermarks.maximum_daily_underlying_turnover
+        >= policy.daily_underlying_turnover_trigger
+    ):
+        trigger_names.add("abnormal_turnover_limit")
     active_triggers = tuple(name for name in _TRIGGER_ORDER if name in trigger_names)
     mode: Literal["normal", "reduce_only"] = "reduce_only" if active_triggers else "normal"
     blockers = (
@@ -283,6 +331,9 @@ def evaluate_paper_risk_session_gate(
         "blockers": list(blockers),
         "maximum_daily_loss_fraction": high_watermarks.maximum_daily_loss_fraction,
         "maximum_drawdown_fraction": high_watermarks.maximum_drawdown_fraction,
+        "maximum_daily_underlying_turnover": (
+            high_watermarks.maximum_daily_underlying_turnover
+        ),
     }
     return PaperRiskSessionDecision(
         decision_id=hashlib.sha256(_canonical_json_bytes(payload)).hexdigest(),
@@ -294,5 +345,8 @@ def evaluate_paper_risk_session_gate(
         blockers=blockers,
         maximum_daily_loss_fraction=high_watermarks.maximum_daily_loss_fraction,
         maximum_drawdown_fraction=high_watermarks.maximum_drawdown_fraction,
+        maximum_daily_underlying_turnover=(
+            high_watermarks.maximum_daily_underlying_turnover
+        ),
         base_decision=base_decision,
     )
