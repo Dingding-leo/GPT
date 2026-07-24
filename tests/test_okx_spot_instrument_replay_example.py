@@ -14,13 +14,9 @@ import pytest
 _SCRIPT = Path(__file__).resolve().parents[1] / "examples/okx_spot_instrument_replay.py"
 _DOC = Path(__file__).resolve().parents[1] / "docs/OKX_SPOT_INSTRUMENT_GATE.md"
 _INSTRUMENT_DIR = (
-    Path(__file__).resolve().parent
-    / "fixtures/okx/public_instruments_btc_usdt_20251125"
+    Path(__file__).resolve().parent / "fixtures/okx/public_instruments_btc_usdt_20251125"
 )
-_BOOK_DIR = (
-    Path(__file__).resolve().parent
-    / "fixtures/okx/order-book-btc-usdt-docs-20210826"
-)
+_BOOK_DIR = Path(__file__).resolve().parent / "fixtures/okx/order-book-btc-usdt-docs-20210826"
 
 
 def _run(output_dir: Path) -> subprocess.CompletedProcess[str]:
@@ -33,9 +29,7 @@ def _run(output_dir: Path) -> subprocess.CompletedProcess[str]:
 
 
 def _load_example_module() -> ModuleType:
-    spec = importlib.util.spec_from_file_location(
-        "okx_spot_instrument_replay_example", _SCRIPT
-    )
+    spec = importlib.util.spec_from_file_location("okx_spot_instrument_replay_example", _SCRIPT)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -115,9 +109,7 @@ def test_example_executes_current_paper_attempt_gate_deterministically(
         "intraday_1h": "not_implemented",
         "this_gate": "timeframe_neutral_offline_constraint_probe",
     }
-    assert "one_hour_research_pipeline_not_implemented" in summary[
-        "paper_order_blockers"
-    ]
+    assert "one_hour_research_pipeline_not_implemented" in summary["paper_order_blockers"]
     assert "maker_post_only_order_lifecycle_not_implemented" in summary[
         "paper_order_blockers"
     ]
@@ -219,10 +211,7 @@ def test_documentation_matches_current_executable_boundary() -> None:
     assert "Current `main` still produces canonical research only for `1Dutc`" in content
     assert "There is no implemented, verified `1h` research command" in content
     assert "maker/post-only order lifecycle" in content
-    assert (
-        "order expiry, queue position, no-fill, timeout, cancel, or requote events"
-        in content
-    )
+    assert "order expiry, queue position, no-fill, timeout, cancel, or requote events" in content
     assert "does not connect to an account" in normalized
     assert "7.5" not in content
     assert "10 bps" not in content
