@@ -5,17 +5,19 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
+    if: github.head_ref == 'auto/research/20260724-14-dual-horizon-hysteresis'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Check out repository
+      - name: Check out branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          persist-credentials: false
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -27,23 +29,18 @@ jobs:
           python -m pip install "pip==26.1.2"
           python -m pip install -e ".[dev]"
 
-      - name: Generate exact Ruff-formatted files
+      - name: Apply exact Ruff formatting
         run: |
           ruff format \
             reports/research/dual-horizon-hysteresis-1h \
             tests/test_dual_horizon_hysteresis_1h_report.py
-          mkdir -p /tmp/dual-horizon-formatted/reports /tmp/dual-horizon-formatted/tests
-          cp -R \
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
             reports/research/dual-horizon-hysteresis-1h \
-            /tmp/dual-horizon-formatted/reports/
-          cp \
-            tests/test_dual_horizon_hysteresis_1h_report.py \
-            /tmp/dual-horizon-formatted/tests/
-
-      - name: Upload exact Ruff-formatted files
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: dual-horizon-ruff-formatted-${{ github.run_number }}-${{ github.run_attempt }}
-          path: /tmp/dual-horizon-formatted/
-          if-no-files-found: error
-          retention-days: 1
+            tests/test_dual_horizon_hysteresis_1h_report.py
+          git commit -m "style(research): apply exact Ruff formatting"
+          git push origin HEAD:${{ github.head_ref }}
