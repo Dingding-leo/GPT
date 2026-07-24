@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any
 
 from gpt_quant.artifact_manifest import verify_manifest
+from gpt_quant.intraday_1h_source_provenance import (
+    verify_intraday_1h_source_provenance,
+)
 
 _OUTPUT_NAME = "intraday-cross-market-gate.json"
 _EXPECTED_INSTRUMENTS = ("BTC-USDT", "ETH-USDT")
@@ -111,11 +114,39 @@ def _artifact_directory(artifacts_root: Path, instrument_id: str) -> Path:
     return matches[0]
 
 
+def _expected_source_binding(
+    artifact_dir: Path,
+    instrument_id: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    provenance_path = artifact_dir / "intraday-1h-source-provenance.json"
+    provenance = verify_intraday_1h_source_provenance(
+        artifact_dir,
+        inst_id=instrument_id,
+    )
+    binding = {
+        "source_provenance_sha256": _sha256_file(provenance_path),
+        "source_response_inventory_sha256": provenance["source_response_inventory_sha256"],
+        "source_response_count": provenance["source_response_count"],
+        "source_response_total_bytes": provenance["source_response_total_bytes"],
+        "normalized_csv_sha256": provenance["normalized_csv_sha256"],
+        "raw_pages_sha256": provenance["raw_pages_sha256"],
+        "metadata_sha256": provenance["metadata_sha256"],
+        "effective_start": provenance["effective_start"],
+        "effective_end": provenance["effective_end"],
+        "observations": provenance["observations"],
+    }
+    return provenance, binding
+
+
 def _validate_market_artifact(artifact_dir: Path, instrument_id: str) -> dict[str, Any]:
     verify_manifest(artifact_dir)
     manifest_path = artifact_dir / "artifact-manifest.sha256"
     gate_path = artifact_dir / "intraday-promotion-gate.json"
     gate = _load_json_object(gate_path)
+    provenance, expected_source_binding = _expected_source_binding(
+        artifact_dir,
+        instrument_id,
+    )
 
     if gate.get("schema_version") != 1:
         raise ValueError(f"{instrument_id} promotion gate schema must equal 1")
@@ -127,6 +158,11 @@ def _validate_market_artifact(artifact_dir: Path, instrument_id: str) -> dict[st
     economics = _require_mapping(gate, "modeled_economics", label=instrument_id)
     if dict(economics) != _modeled_economics():
         raise ValueError(f"{instrument_id} modeled economics must remain exactly 5 bps-only")
+
+    source_artifacts = _require_mapping(gate, "source_artifacts", label=instrument_id)
+    for key, expected in expected_source_binding.items():
+        if source_artifacts.get(key) != expected:
+            raise ValueError(f"{instrument_id} promotion gate does not bind exact source {key}")
 
     research = _require_mapping(gate, "research_gate", label=instrument_id)
     eligible = _require_bool(
@@ -167,6 +203,13 @@ def _validate_market_artifact(artifact_dir: Path, instrument_id: str) -> dict[st
     return {
         "artifact_manifest_sha256": _sha256_file(manifest_path),
         "promotion_gate_sha256": _sha256_file(gate_path),
+        "source_provenance_sha256": expected_source_binding["source_provenance_sha256"],
+        "source_response_inventory_sha256": provenance["source_response_inventory_sha256"],
+        "source_response_count": provenance["source_response_count"],
+        "source_response_total_bytes": provenance["source_response_total_bytes"],
+        "effective_start": provenance["effective_start"],
+        "effective_end": provenance["effective_end"],
+        "observations": provenance["observations"],
         "research_candidate_eligible": eligible,
         "research_blockers": research_blockers,
         "paper_blockers": paper_blockers,
