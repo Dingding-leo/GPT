@@ -11,7 +11,8 @@ _HOURLY_BARS_PER_DAY = 24
 
 
 def _load_config(name: str) -> dict[str, object]:
-    return json.loads((_REPOSITORY_ROOT / "config" / name).read_text(encoding="utf-8"))
+    path = _REPOSITORY_ROOT / "config" / name
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def test_canonical_1h_profile_preserves_daily_horizons_at_five_bps() -> None:
@@ -33,35 +34,32 @@ def test_canonical_1h_profile_preserves_daily_horizons_at_five_bps() -> None:
     assert isinstance(hourly_search, dict)
 
     assert hourly_data["bar"] == "1H"
-    assert int(hourly_data["limit"]) * int(hourly_data["max_pages"]) >= (
-        5 * _DAILY_BARS_PER_YEAR * _HOURLY_BARS_PER_DAY
-    )
+    page_capacity = int(hourly_data["limit"]) * int(hourly_data["max_pages"])
+    minimum_five_year_bars = 5 * _DAILY_BARS_PER_YEAR * _HOURLY_BARS_PER_DAY
+    assert page_capacity >= minimum_five_year_bars
 
     validated = StrategyConfig(**hourly_strategy)
     assert validated.transaction_cost_bps == 5.0
     assert validated.annualization == _DAILY_BARS_PER_YEAR * _HOURLY_BARS_PER_DAY
 
     for key in ("momentum_lookback", "reversal_lookback", "volatility_lookback"):
-        assert int(hourly_strategy[key]) == int(daily_strategy[key]) * _HOURLY_BARS_PER_DAY
+        expected = int(daily_strategy[key]) * _HOURLY_BARS_PER_DAY
+        assert int(hourly_strategy[key]) == expected
 
     for key in ("momentum_lookbacks", "reversal_lookbacks"):
-        assert hourly_search[key] == [
-            int(value) * _HOURLY_BARS_PER_DAY for value in daily_search[key]
-        ]
+        expected = [int(value) * _HOURLY_BARS_PER_DAY for value in daily_search[key]]
+        assert hourly_search[key] == expected
 
-    assert int(hourly_search["selection_bars"]) == (
-        int(daily_search["selection_bars"]) * _HOURLY_BARS_PER_DAY
-    )
-    assert int(hourly_search["test_bars"]) == (
-        int(daily_search["test_bars"]) * _HOURLY_BARS_PER_DAY
-    )
+    expected_selection_bars = int(daily_search["selection_bars"]) * _HOURLY_BARS_PER_DAY
+    expected_test_bars = int(daily_search["test_bars"]) * _HOURLY_BARS_PER_DAY
+    assert int(hourly_search["selection_bars"]) == expected_selection_bars
+    assert int(hourly_search["test_bars"]) == expected_test_bars
     assert hourly["robustness"] == {"cost_multipliers": [1.0]}
 
 
 def test_workflow_executes_and_verifies_the_canonical_1h_profile() -> None:
-    workflow = (
-        _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
-    ).read_text(encoding="utf-8")
+    path = _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
+    workflow = path.read_text(encoding="utf-8")
 
     assert workflow.count("--config config/okx_research_1h.json") == 1
     assert workflow.count("reports/okx/1h/BTC-USDT") == 2
