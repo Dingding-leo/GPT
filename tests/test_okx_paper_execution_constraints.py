@@ -112,6 +112,7 @@ def _attempt(
     requested: str,
     outcome: str,
     filled: str,
+    average_fill_price: str | None = None,
 ):
     return record_paper_execution_attempt(
         _binding(quote),
@@ -122,7 +123,11 @@ def _attempt(
         requested_base_quantity=requested,
         outcome=outcome,
         filled_base_quantity=filled,
-        average_fill_price=quote.ask_price if Decimal(filled) > 0 else "0",
+        average_fill_price=(
+            average_fill_price
+            if average_fill_price is not None
+            else quote.ask_price if Decimal(filled) > 0 else "0"
+        ),
         reason_code="paper-touch-fill" if Decimal(filled) > 0 else "paper-accepted",
     )
 
@@ -188,6 +193,29 @@ def test_okx_attempt_gate_rejects_a_different_instrument_snapshot() -> None:
     attempt = _attempt(quote, requested="0.1", outcome="filled", filled="0.1")
 
     with pytest.raises(ValueError, match="does not reference the supplied OKX instrument"):
+        validate_okx_paper_execution_attempt_constraints(
+            snapshot,
+            quote,
+            attempt,
+            maximum_snapshot_age_ms=1_000,
+        )
+
+
+def test_okx_attempt_gate_rejects_off_tick_average_fill_price() -> None:
+    snapshot = _instrument_snapshot()
+    quote = _quote(snapshot.raw_response_sha256)
+    attempt = _attempt(
+        quote,
+        requested="0.1",
+        outcome="filled",
+        filled="0.1",
+        average_fill_price="41006.85",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="average_fill_price is not an exact multiple of the OKX tick size",
+    ):
         validate_okx_paper_execution_attempt_constraints(
             snapshot,
             quote,
