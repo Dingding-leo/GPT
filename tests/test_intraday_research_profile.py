@@ -8,6 +8,7 @@ from gpt_quant import StrategyConfig
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 _DAILY_BARS_PER_YEAR = 365
 _HOURLY_BARS_PER_DAY = 24
+_CANONICAL_INTRADAY_INSTRUMENTS = ("BTC-USDT", "ETH-USDT")
 
 
 def _load_config(name: str) -> dict[str, object]:
@@ -57,13 +58,18 @@ def test_canonical_1h_profile_preserves_daily_horizons_at_five_bps() -> None:
     assert hourly["robustness"] == {"cost_multipliers": [1.0]}
 
 
-def test_workflow_executes_and_verifies_the_canonical_1h_profile() -> None:
+def test_workflow_reselects_and_verifies_btc_and_eth_independently() -> None:
     path = _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
     workflow = path.read_text(encoding="utf-8")
 
+    matrix = f"inst_id: [{', '.join(_CANONICAL_INTRADAY_INSTRUMENTS)}]"
+    assert workflow.count(matrix) == 1
     assert workflow.count("--config config/okx_research_1h.json") == 1
-    assert workflow.count("reports/okx/1h/BTC-USDT") == 2
-    assert "Run canonical BTC-USDT 1h full walk-forward research" in workflow
-    assert "Verify persisted canonical BTC-USDT 1h evidence" in workflow
+    assert workflow.count('--inst-id "${{ matrix.inst_id }}"') == 1
+    assert workflow.count('reports/okx/1h/${{ matrix.inst_id }}') == 5
+    assert workflow.count("experiment-manifest.jsonl") == 2
+    assert "Run canonical 1h full walk-forward research" in workflow
+    assert "Verify persisted canonical 1h evidence" in workflow
+    assert "fail-fast: false" in workflow
     assert "persist-credentials: false" in workflow
     assert "OKX_BASE_URL: https://www.okx.com" in workflow
