@@ -1,9 +1,8 @@
 name: Risk Format Probe
 
 on:
-  push:
-    branches:
-      - auto/risk/20260724-11-session-kill-switch
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
