@@ -303,7 +303,10 @@ def build_paper_post_only_order_intent(
         raise ValueError("paper order decision exchange fee must be exactly 5 bps one-way")
     if decision.target_intent_id != target.intent_id:
         raise ValueError("paper order decision does not reference the exact target intent")
-    if decision.instrument_id != target.instrument_id or target.instrument_id != quote.instrument_id:
+    if (
+        decision.instrument_id != target.instrument_id
+        or target.instrument_id != quote.instrument_id
+    ):
         raise ValueError("paper order decision instrument does not match target and quote evidence")
     if decision.market_snapshot_sha256 != quote.snapshot_id:
         raise ValueError("paper order decision does not reference the exact execution quote")
