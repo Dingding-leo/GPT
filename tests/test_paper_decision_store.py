@@ -319,7 +319,11 @@ def test_decision_record_read_limit_rejects_growth_after_fstat(
     descriptor = os.open(path, os.O_RDONLY)
     chunks = iter((b"a" * 8, b"b", b""))
     monkeypatch.setattr(core_module, "_MAX_DECISION_RECORD_BYTES", 8)
-    monkeypatch.setattr(core_module.os, "read", lambda _descriptor, _size: next(chunks))
+
+    def read_next_chunk(_descriptor: int, _size: int) -> bytes:
+        return next(chunks)
+
+    monkeypatch.setattr(core_module.os, "read", read_next_chunk)
     try:
         with pytest.raises(ValueError, match="exceeds the maximum record size"):
             core_module._read_decision_descriptor(descriptor, "paper order decision")
