@@ -14,9 +14,7 @@ from gpt_quant.execution_quote import ExecutionQuoteSnapshot
 from gpt_quant.execution_quote_binding import bind_execution_quote
 from gpt_quant.okx_instruments import fetch_okx_spot_instrument_snapshot
 from gpt_quant.okx_live import OKXServerTimeSample
-from gpt_quant.okx_order_constraints import (
-    validate_okx_paper_execution_attempt_constraints,
-)
+from gpt_quant.okx_order_constraints import validate_okx_paper_execution_attempt_constraints
 from gpt_quant.paper_execution_attempt import record_paper_execution_attempt
 
 _FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "okx"
