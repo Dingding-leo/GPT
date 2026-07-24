@@ -85,9 +85,7 @@ def test_verifier_accepts_exact_persisted_five_bps_only_profile(tmp_path: Path) 
         ),
         (
             "walk_forward.json",
-            lambda payload: payload["cost_stress_metrics"]["1x"].update(
-                net_total_return=0.1
-            ),
+            lambda payload: payload["cost_stress_metrics"]["1x"].update(net_total_return=0.1),
             "1x metric net_total_return does not match aggregate metrics",
         ),
     ],
