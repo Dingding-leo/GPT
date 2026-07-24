@@ -25,10 +25,10 @@ _CONFIG_SHA256 = "6b06037376bce5df483311704f7b701c5e03a2a2735b2dd3361036fccd94da
 def _target(
     *,
     config_sha256: str = _CONFIG_SHA256,
-    decision_not_before_utc: datetime = datetime(
-        2026, 7, 21, 0, 0, 0, 200_000, tzinfo=UTC
-    ),
+    decision_not_before_utc: datetime | None = None,
 ) -> TargetPositionIntent:
+    if decision_not_before_utc is None:
+        decision_not_before_utc = datetime(2026, 7, 21, 0, 0, 0, 200_000, tzinfo=UTC)
     return TargetPositionIntent(
         instrument_id="BTC-USDT",
         bar="1H",
@@ -168,9 +168,7 @@ def test_post_only_order_intent_rejects_taker_or_stale_requests() -> None:
 
 
 def test_post_only_order_intent_rejects_pre_activation_quote() -> None:
-    target = _target(
-        decision_not_before_utc=datetime(2026, 7, 21, 0, 0, 0, 350_000, tzinfo=UTC)
-    )
+    target = _target(decision_not_before_utc=datetime(2026, 7, 21, 0, 0, 0, 350_000, tzinfo=UTC))
 
     with pytest.raises(ValueError, match="predates target-intent activation"):
         _intent(target=target, decision=_decision(target=target))
