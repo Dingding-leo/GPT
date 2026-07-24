@@ -79,7 +79,8 @@ def test_hourly_workflow_publishes_portfolio_from_source_artifact_evidence() -> 
     assert '--source-artifact-id "$SOURCE_ARTIFACT_ID"' in workflow
     assert '--source-artifact-name "$SOURCE_ARTIFACT_NAME"' in workflow
     assert '--source-artifact-sha256 "$source_artifact_digest"' in workflow
-    assert '--source-head-sha "$GITHUB_SHA"' in workflow
+    assert '--source-head-sha "$LIVE_READINESS_TESTED_SHA"' in workflow
+    assert '--source-head-sha "$GITHUB_SHA"' not in workflow
     assert '--max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION"' in workflow
     assert "path: reports/okx/" in workflow
     assert "path: reports/portfolio/" in workflow
