@@ -1,9 +1,7 @@
 name: Temporary Ruff Format Diagnostic
 
 on:
-  push:
-    branches:
-      - auto/data/20260724-12-okx-1h-coverage
+  pull_request:
 
 permissions:
   contents: read
