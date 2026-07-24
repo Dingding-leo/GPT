@@ -99,12 +99,12 @@ jobs:
         env:
           OKX_BASE_URL: https://www.okx.com
         run: |
-          for instrument in BTC-USDT ETH-USDT; do
-            python scripts/run_okx_research.py \
-              --inst-id "$instrument" \
-              --output-dir "reports/okx/$instrument" \
-              --manifest-path reports/okx/experiment-manifest.jsonl
-          done
+          python scripts/run_okx_research_batch.py \
+            --inst-id BTC-USDT \
+            --inst-id ETH-USDT \
+            --max-workers 2 \
+            --output-root reports/okx \
+            --manifest-path reports/okx/experiment-manifest.jsonl
 
       - name: Verify persisted walk-forward evidence
         id: walk_forward_verification
