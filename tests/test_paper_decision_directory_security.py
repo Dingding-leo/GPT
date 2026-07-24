@@ -10,6 +10,7 @@ import pytest
 from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.paper_decision_store import (
     PaperOrderDecision,
+    initialize_paper_order_decision_store,
     record_paper_order_decision,
     replay_paper_order_decision_store,
 )
@@ -80,6 +81,7 @@ def test_store_creates_private_directory_under_permissive_umask(tmp_path: Path) 
     target_path, decision_directory, target = _paths(tmp_path)
     previous_umask = os.umask(0)
     try:
+        initialize_paper_order_decision_store(target_path, decision_directory)
         record_paper_order_decision(target_path, decision_directory, _decision(target))
     finally:
         os.umask(previous_umask)
@@ -98,6 +100,8 @@ def test_store_rejects_group_world_writable_directory_before_consumption(
     decision_directory.mkdir(mode=0o700)
     decision_directory.chmod(0o777)
 
+    with pytest.raises(ValueError, match="group/world writable"):
+        initialize_paper_order_decision_store(target_path, decision_directory)
     with pytest.raises(ValueError, match="group/world writable"):
         record_paper_order_decision(target_path, decision_directory, _decision(target))
     with pytest.raises(ValueError, match="group/world writable"):
