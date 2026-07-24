@@ -6,6 +6,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
+
 from gpt_quant.paper_risk_kill_switch import (
     InstrumentExposure,
     PaperRiskKillSwitchPolicy,
