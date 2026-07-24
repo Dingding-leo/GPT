@@ -3,6 +3,7 @@
 from .backtest import BacktestResult, run_backtest
 from .config import StrategyConfig
 from .data import load_price_csv, validate_prices
+from .manifest_io import append_experiment_manifest
 from .metrics import performance_metrics
 from .okx import (
     OKXCandleSnapshot,
@@ -23,7 +24,6 @@ from .portfolio import (
     write_portfolio_risk_report,
 )
 from .reproducibility import (
-    append_experiment_manifest,
     build_experiment_manifest_entry,
     canonical_json_sha256,
     file_sha256,
