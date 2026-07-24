@@ -62,6 +62,8 @@ jobs:
             tests/test_intraday_1h_promotion_gate.py \
             tests/test_intraday_1h_cross_market_gate.py \
             tests/test_verify_intraday_1h_timestamp_grid.py \
+            tests/test_intraday_1h_source_provenance.py \
+            tests/test_exact_okx_1h_research_workflow.py \
             tests/test_artifact_manifest.py
 
       - name: Acquire replay-verifiable exact-byte 1h source
@@ -87,6 +89,12 @@ jobs:
           set -euo pipefail
           cp "$SOURCE_ROOT/coverage-manifest.json" "$REPORT_DIR/source-coverage-manifest.json"
           cp "$SOURCE_ROOT/okx-public-time.canonical.json" "$REPORT_DIR/source-public-time.canonical.json"
+
+      - name: Verify replay-bound exact-byte 1h source provenance
+        run: |
+          python -m gpt_quant.intraday_1h_source_provenance \
+            --output-dir "$REPORT_DIR" \
+            --inst-id "${{ matrix.inst_id }}"
 
       - name: Verify exact persisted UTC-hour timestamp grid
         run: |
@@ -127,6 +135,7 @@ jobs:
           test -s "$REPORT_DIR/walk_forward.json"
           test -s "$REPORT_DIR/walk_forward_returns.csv"
           test -s "$REPORT_DIR/experiment-manifest.jsonl"
+          test -s "$REPORT_DIR/intraday-1h-source-provenance.json"
           test -s "$REPORT_DIR/intraday-promotion-gate.json"
           test -s "$REPORT_DIR/source-coverage-manifest.json"
           test -s "$REPORT_DIR/source-public-time.canonical.json"
