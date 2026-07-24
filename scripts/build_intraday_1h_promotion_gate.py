@@ -162,9 +162,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     arguments = parse_args(argv)
     payload = build_intraday_1h_promotion_gate(arguments.output_dir)
     print(json.dumps(payload, sort_keys=True, separators=(",", ":")))
-    if arguments.enforce_research_promotion and not payload["research_gate"][
-        "research_candidate_eligible"
-    ]:
+    if (
+        arguments.enforce_research_promotion
+        and not payload["research_gate"]["research_candidate_eligible"]
+    ):
         return 1
     return 0
 
