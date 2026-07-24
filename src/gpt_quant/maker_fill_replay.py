@@ -281,9 +281,7 @@ class MakerFillReplay:
                 _format_utc(self.filled_at_utc) if self.filled_at_utc is not None else None
             ),
             "cancelled_at_utc": (
-                _format_utc(self.cancelled_at_utc)
-                if self.cancelled_at_utc is not None
-                else None
+                _format_utc(self.cancelled_at_utc) if self.cancelled_at_utc is not None else None
             ),
             "requote_eligible": self.requote_eligible,
         }
@@ -361,9 +359,7 @@ def simulate_post_only_maker_fill(
             touch_count += 1
             touch_quantity += quantity
             continue
-        is_trade_through = (side == "buy" and price < limit) or (
-            side == "sell" and price > limit
-        )
+        is_trade_through = (side == "buy" and price < limit) or (side == "sell" and price > limit)
         if not is_trade_through:
             continue
         through_count += 1
@@ -396,9 +392,7 @@ def simulate_post_only_maker_fill(
         cancelled_at = expires
         requote_eligible = True
     average_fill_price = limit if filled > 0 else Decimal("0")
-    exchange_fee_quote = filled * average_fill_price * _EXCHANGE_FEE_ONE_WAY_BPS / Decimal(
-        "10000"
-    )
+    exchange_fee_quote = filled * average_fill_price * _EXCHANGE_FEE_ONE_WAY_BPS / Decimal("10000")
     return MakerFillReplay(
         order_intent_id=order_intent_id,
         trade_snapshot_id=snapshot.snapshot_id,

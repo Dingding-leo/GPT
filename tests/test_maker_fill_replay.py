@@ -12,11 +12,7 @@ from gpt_quant.maker_fill_replay import (
 )
 
 _FIXTURE = (
-    Path(__file__).parent
-    / "fixtures"
-    / "okx"
-    / "trades-btc-usdt-docs-20220602"
-    / "response.json"
+    Path(__file__).parent / "fixtures" / "okx" / "trades-btc-usdt-docs-20220602" / "response.json"
 )
 _ORDER_INTENT_ID = "a" * 64
 _SIGNAL = datetime(2022, 6, 2, 9, 0, tzinfo=UTC)
