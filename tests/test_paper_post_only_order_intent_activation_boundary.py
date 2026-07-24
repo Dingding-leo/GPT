@@ -66,6 +66,7 @@ def test_post_only_order_intent_accepts_quote_observed_at_target_activation() ->
         latency_ms=50,
     )
 
+    # Exclusive expiry keeps every representable active instant inside the quote window.
     intent = build_paper_post_only_order_intent(
         decision,
         target,
