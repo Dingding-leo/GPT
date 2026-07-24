@@ -1,0 +1,106 @@
+name: Apply exact five bps backtest patch
+
+on:
+  push:
+    branches:
+      - auto/backtest/20260724-12-exact-five-bps-profile-main
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out support branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Apply bounded cost-profile patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/gpt_quant/walk_forward.py")
+          content = path.read_text(encoding="utf-8")
+          replacements = [
+              (
+                  "    doubled_cost: Mapping[str, float | int],\n",
+                  "    doubled_cost: Mapping[str, float | int] | None,\n",
+              ),
+              (
+                  "    if float(doubled_cost[\"total_return\"]) <= 0:\n",
+                  "    if doubled_cost is not None and float(doubled_cost[\"total_return\"]) <= 0:\n",
+              ),
+              (
+                  "    multipliers = sorted(\n"
+                  "        {_validated_cost_multiplier(value) for value in cost_multipliers} | {1.0, 2.0}\n"
+                  "    )\n",
+                  "    multipliers = sorted({_validated_cost_multiplier(value) for value in cost_multipliers})\n"
+                  "    if not multipliers:\n"
+                  "        raise ValueError(\"cost multipliers cannot be empty\")\n"
+                  "    if 1.0 not in multipliers:\n"
+                  "        raise ValueError(\"cost multipliers must include the 1x fee baseline\")\n",
+              ),
+              (
+                  "        doubled_cost=cost_metrics[\"2x\"],\n",
+                  "        doubled_cost=cost_metrics.get(\"2x\"),\n",
+              ),
+          ]
+          for old, new in replacements:
+              count = content.count(old)
+              if count != 1:
+                  raise RuntimeError(f"expected one exact replacement, found {count}: {old!r}")
+              content = content.replace(old, new)
+          path.write_text(content, encoding="utf-8")
+          PY
+
+      - name: Run focused gates
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            src/gpt_quant/walk_forward.py \
+            tests/test_cost_stress_floor.py \
+            tests/test_run_okx_research_config.py
+          ruff check \
+            src/gpt_quant/walk_forward.py \
+            tests/test_cost_stress_floor.py \
+            tests/test_run_okx_research_config.py
+          ruff format --check \
+            src/gpt_quant/walk_forward.py \
+            tests/test_cost_stress_floor.py \
+            tests/test_run_okx_research_config.py
+          pytest -q \
+            tests/test_cost_stress_floor.py \
+            tests/test_run_okx_research_config.py
+
+      - name: Publish bounded patch and remove helper workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/backtest-exact-five-bps-patch.yml
+          git add \
+            src/gpt_quant/walk_forward.py \
+            tests/test_cost_stress_floor.py \
+            tests/test_run_okx_research_config.py
+          git commit -m "fix(backtest): respect explicit cost profile"
+          git push \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "HEAD:auto/backtest/20260724-12-exact-five-bps-profile-main"
