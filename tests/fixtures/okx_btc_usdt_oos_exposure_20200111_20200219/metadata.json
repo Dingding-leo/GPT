@@ -1,0 +1,26 @@
+{
+  "columns": [
+    "timestamp",
+    "strategy_return",
+    "strategy_position",
+    "benchmark_return",
+    "benchmark_position"
+  ],
+  "fixture_sha256": "f157b0b637b2263572f60e93d8dcd45d83868c408206732e166b33bf6fdc3eba",
+  "instrument_id": "BTC-USDT",
+  "market_type": "spot",
+  "note": "Unchanged aligned extract of persisted strategy rows and independently reconstructed volatility-targeted-long benchmark positions and returns. Performance claims use the complete immutable source artifact, not this fixture.",
+  "observations": 40,
+  "period_end": "2020-02-19T00:00:00+00:00",
+  "period_start": "2020-01-11T00:00:00+00:00",
+  "provider": "OKX",
+  "source_artifact_id": 8563252094,
+  "source_artifact_name": "quant-research-source-1960-attempt-1",
+  "source_artifact_sha256": "e42b2b125328c945ace98c41c48a84d6b10d1876da03e20ee8fc3f25335e04e8",
+  "source_manifest_code_commit": "72144e9f22dfeceda744d33222d3e0512e489a9d",
+  "source_return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+  "source_snapshot_file_sha256": "407aeba3d1ad4c8e8682a6a689c1c6327139f42bc7587aaae75c77fce047dec1",
+  "source_workflow_head_sha": "8d5ca1d00aee75c3ef2303d62784d9c6fcfe5888",
+  "source_workflow_run_id": 30006567781,
+  "timeframe": "1Dutc"
+}
