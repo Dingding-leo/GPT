@@ -469,9 +469,7 @@ def _quote_from_raw_response(
     exchange_observed_at = _unix_milliseconds_to_datetime(
         book["ts"], field="OKX books timestamp"
     )
-    local_observed_at = exchange_observed_at - timedelta(
-        seconds=midpoint_clock_skew_seconds
-    )
+    local_observed_at = exchange_observed_at - timedelta(seconds=midpoint_clock_skew_seconds)
 
     return (
         ExecutionQuoteSnapshot(
