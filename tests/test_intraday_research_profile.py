@@ -58,15 +58,14 @@ def test_canonical_1h_profile_preserves_daily_horizons_at_five_bps() -> None:
     assert hourly["robustness"] == {"cost_multipliers": [1.0]}
 
 
-def test_hourly_workflow_executes_and_verifies_the_canonical_1h_profile() -> None:
-    workflow = (_REPOSITORY_ROOT / ".github/workflows/hourly-research.yml").read_text(
-        encoding="utf-8"
-    )
+def test_workflow_executes_and_verifies_the_canonical_1h_profile() -> None:
+    workflow = (
+        _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
+    ).read_text(encoding="utf-8")
 
     assert workflow.count("--config config/okx_research_1h.json") == 1
-    assert workflow.count('reports/okx/1h/BTC-USDT') == 2
-    assert '"intraday_1h":"${{ steps.intraday_1h.outcome }}"' in workflow
-    assert (
-        '"intraday_1h_verification":"${{ steps.intraday_1h_verification.outcome }}"'
-        in workflow
-    )
+    assert workflow.count("reports/okx/1h/BTC-USDT") == 2
+    assert "Run canonical BTC-USDT 1h full walk-forward research" in workflow
+    assert "Verify persisted canonical BTC-USDT 1h evidence" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "OKX_BASE_URL: https://www.okx.com" in workflow
