@@ -1,0 +1,83 @@
+{
+  "candidate_count": 1,
+  "canonical_signature": "paired-portfolio-drawdown-diversification-v1|markets=BTC-USDT,ETH-USDT|portfolio=fixed-initial-weights-50-50-no-rebalancing|metric=max-drawdown-reduction-vs-each-sleeve|resampling=paired-noncircular-moving-block|block=20|resamples=2000|confidence=0.95|seed=20260722|candidate_count=1",
+  "claim_boundary": "This is one predeclared paired-block-bootstrap diagnostic on BTC-USDT and ETH-USDT development evidence. The portfolio uses fixed 50/50 initial weights and no rebalancing, matching the repository portfolio construction. It does not optimize weights, retune signals, alter fees or execution timing, or create a new holdout. It is not a liquidity, capacity, spread, impact, or live-fill model.",
+  "failure_reasons": [
+    "portfolio drawdown reduction versus BTC-USDT lower confidence bound is not positive",
+    "portfolio drawdown reduction versus ETH-USDT lower confidence bound is not positive"
+  ],
+  "hypothesis": "The fixed-initial-weight 50/50 no-rebalancing BTC-USDT/ETH-USDT portfolio has less severe maximum drawdown than each individual sleeve, with both 95% paired moving-block-bootstrap lower bounds for drawdown reduction above zero.",
+  "joint_supported": false,
+  "portfolio": {
+    "comparisons": {
+      "BTC-USDT": {
+        "bootstrap": {
+          "ci_lower": -0.09805040699661177,
+          "ci_upper": 0.16325782286947263,
+          "lower_bound_positive": false,
+          "median": 0.01809143996991841,
+          "probability_positive": 0.643
+        },
+        "drawdown_reduction": 0.028896759214424583,
+        "sleeve_max_drawdown": -0.2909835802289441
+      },
+      "ETH-USDT": {
+        "bootstrap": {
+          "ci_lower": -0.046864714680122405,
+          "ci_upper": 0.23307865253059065,
+          "lower_bound_positive": false,
+          "median": 0.06419244808028518,
+          "probability_positive": 0.8715
+        },
+        "drawdown_reduction": 0.01708766385111793,
+        "sleeve_max_drawdown": -0.27917448486563745
+      }
+    },
+    "observations": 2340,
+    "portfolio_max_drawdown": -0.2620868210145195,
+    "portfolio_total_return": 1.2350815887306408,
+    "seed": 20260722,
+    "sleeve_total_returns": {
+      "BTC-USDT": 1.5141335570323782,
+      "ETH-USDT": 0.9560296204289283
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "provider": "OKX",
+    "source_artifact_id": 8515639605,
+    "source_artifact_name": "quant-research-426",
+    "source_artifact_sha256": "396903281f1ef4ec71edbe0dded7c091c4c3545ffbaa7a502cc15bda4880b478",
+    "source_base_commit": "006df4340a2f0cf73a716255e5148e56856a31cc",
+    "source_merge_commit": "8b1003c8b680664f5e96ff6818694c9d30fe1b7f",
+    "source_persistent_head": "43d4f8b10d8f654b5fbcf974793493a967e125e4",
+    "source_workflow_run_id": 29883451981,
+    "walk_forward_report_sha256": {
+      "BTC-USDT": "eadade3fd883744d6bf9edeb798a0c8ca2bd62b621d936c70717a4e38e11fd9a",
+      "ETH-USDT": "b2bf91d7ed00e016931ffe4d892827d769a44fb0dae8af58bc1d6785a0207067"
+    },
+    "walk_forward_returns_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    }
+  },
+  "specification": {
+    "block_length": 20,
+    "confidence": 0.95,
+    "initial_weights": {
+      "BTC-USDT": 0.5,
+      "ETH-USDT": 0.5
+    },
+    "metric": "portfolio maximum drawdown minus sleeve maximum drawdown",
+    "portfolio_rule": "fixed initial weights; no rebalancing",
+    "resamples": 2000,
+    "resampling": "paired non-circular moving-block bootstrap",
+    "seed": 20260722
+  },
+  "verdict": "rejected"
+}
