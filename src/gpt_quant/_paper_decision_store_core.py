@@ -216,10 +216,7 @@ def _create_temporary_file(directory_descriptor: int) -> tuple[int, str]:
         try:
             descriptor = os.open(
                 name,
-                os.O_CREAT
-                | os.O_EXCL
-                | os.O_RDWR
-                | getattr(os, "O_NOFOLLOW", 0),
+                os.O_CREAT | os.O_EXCL | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0),
                 0o600,
                 dir_fd=directory_descriptor,
             )
