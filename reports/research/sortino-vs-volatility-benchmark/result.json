@@ -1,0 +1,67 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "sortino-vs-volatility-benchmark-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=volatility-targeted-long|metric=annualized-sortino-zero-mar|downside-deviation=sqrt(mean(min(return,0)^2))|claim=strategy-minus-benchmark-sortino>0-in-both-markets|resampling=paired-noncircular-moving-block-bootstrap|block-length=20-sessions|resamples=2000|confidence=0.95|annualization=365|seeds=BTC-USDT:2026072305,ETH-USDT:2026072306|candidate_count=1",
+  "claim_scope": "Development-market diagnostic only; no deployable strategy improvement is claimed.",
+  "hypothesis": "The strategy has a higher annualized zero-MAR Sortino ratio than the volatility-targeted-long benchmark in both BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "benchmark_sortino": 1.0435368590440326,
+      "ci_lower": -0.9395628018326726,
+      "ci_upper": 1.100209883335002,
+      "observations": 2340,
+      "observed_delta": 0.0805473285358802,
+      "passed": false,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.549,
+      "return_file_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "strategy_sortino": 1.1240841875799128
+    },
+    "ETH-USDT": {
+      "benchmark_sortino": 1.333570355701543,
+      "ci_lower": -1.5585242286321184,
+      "ci_upper": 0.47735631800158,
+      "observations": 2340,
+      "observed_delta": -0.538701082629214,
+      "passed": false,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.1455,
+      "return_file_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "strategy_sortino": 0.794869273072329
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "market_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8538033369,
+    "source_artifact_name": "quant-research-source-1198-attempt-1",
+    "source_artifact_sha256": "30523ece44c47c7c3317f7a5f5e6273eb5886cccb213dae2cc177b86dce007df",
+    "source_head_sha": "1f6e5a133cb012be1b8222b0e655b18f675fdb1e",
+    "source_workflow_run": 29940617808,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reason": "The 95% paired moving-block-bootstrap lower bound for the strategy-minus-benchmark Sortino delta was non-positive in: BTC-USDT, ETH-USDT",
+  "settings": {
+    "annualization": 365,
+    "benchmark": "volatility-targeted-long",
+    "block_length_sessions": 20,
+    "confidence": 0.95,
+    "downside_deviation": "sqrt(mean(min(return, 0)^2))",
+    "minimum_acceptable_return": 0.0,
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072305,
+      "ETH-USDT": 2026072306
+    }
+  },
+  "verdict": "rejected"
+}
