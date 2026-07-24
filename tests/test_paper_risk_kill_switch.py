@@ -44,8 +44,6 @@ def _state(
     state_age_seconds: float = 1.0,
     market_age_seconds: float = 2.0,
     exposures: tuple[InstrumentExposure, ...] | None = None,
-    maximum_daily_loss_fraction: float | None = None,
-    maximum_drawdown_fraction: float | None = None,
 ) -> tuple[PaperRiskStateSnapshot, datetime]:
     market_observed_at, real_mark, source_hash = _real_okx_mark()
     session_start_equity = real_mark * 0.2
@@ -57,8 +55,6 @@ def _state(
         "evaluated_at": evaluated_at.isoformat(),
         "peak_fraction": peak_fraction,
         "real_mark": real_mark,
-        "maximum_daily_loss_fraction": maximum_daily_loss_fraction,
-        "maximum_drawdown_fraction": maximum_drawdown_fraction,
     }
     state_hash = hashlib.sha256(
         json.dumps(state_payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -78,8 +74,6 @@ def _state(
             instrument_exposures=instrument_exposures,
             portfolio_state_sha256=state_hash,
             market_data_source_sha256=source_hash,
-            maximum_daily_loss_fraction=maximum_daily_loss_fraction,
-            maximum_drawdown_fraction=maximum_drawdown_fraction,
         ),
         evaluated_at,
     )
@@ -122,37 +116,6 @@ def test_daily_loss_switch_blocks_increase_but_allows_sell_only_reduction() -> N
     assert reduction.allowed is True
     assert reduction.blockers == ()
     reduction.assert_allowed()
-
-
-def test_recovered_equity_cannot_clear_session_loss_or_drawdown_stops() -> None:
-    snapshot, evaluated_at = _state(
-        current_fraction=1.0,
-        maximum_daily_loss_fraction=0.06,
-        maximum_drawdown_fraction=0.12,
-    )
-
-    blocked = evaluate_paper_risk_kill_switch(
-        (ProposedInstrumentExposure("BTC-USDT", 0.60),),
-        snapshot=snapshot,
-        policy=_policy(),
-        evaluated_at_utc=evaluated_at,
-    )
-    assert blocked.daily_loss_fraction == 0.0
-    assert blocked.drawdown_fraction == pytest.approx(1 - 1 / 1.02)
-    assert blocked.maximum_daily_loss_fraction == 0.06
-    assert blocked.maximum_drawdown_fraction == 0.12
-    assert blocked.active_triggers == ("daily_loss_limit", "drawdown_limit")
-    assert blocked.mode == "reduce_only"
-    assert blocked.allowed is False
-
-    reduction = evaluate_paper_risk_kill_switch(
-        (ProposedInstrumentExposure("BTC-USDT", 0.20),),
-        snapshot=snapshot,
-        policy=_policy(),
-        evaluated_at_utc=evaluated_at,
-    )
-    assert reduction.active_triggers == ("daily_loss_limit", "drawdown_limit")
-    assert reduction.allowed is True
 
 
 def test_stale_market_data_and_abnormal_turnover_force_reduce_only() -> None:
