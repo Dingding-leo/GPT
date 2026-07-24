@@ -9,11 +9,7 @@ import pytest
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 _ANALYSIS_PATH = (
-    _REPOSITORY_ROOT
-    / "reports"
-    / "research"
-    / "canonical-eth-1h-replication"
-    / "analysis.py"
+    _REPOSITORY_ROOT / "reports" / "research" / "canonical-eth-1h-replication" / "analysis.py"
 )
 _RESULT_PATH = _ANALYSIS_PATH.with_name("result.json")
 
@@ -38,13 +34,9 @@ def test_committed_eth_replication_result_discloses_rejection_and_all_candidates
         "fold_local_internal_candidates": 27,
         "oos_folds": 12,
     }
-    assert result["metrics_5bps"]["net_total_return"] == pytest.approx(
-        0.21375686810673078
-    )
+    assert result["metrics_5bps"]["net_total_return"] == pytest.approx(0.21375686810673078)
     assert result["metrics_5bps"]["sharpe"] == pytest.approx(0.3945134663059659)
-    assert result["metrics_5bps"]["annualized_turnover"] == pytest.approx(
-        55.779778541287605
-    )
+    assert result["metrics_5bps"]["annualized_turnover"] == pytest.approx(55.779778541287605)
     assert result["fold_stability"]["profitable_folds"] == 4
     assert result["month_stability"]["profitable_complete_months"] == 9
     assert result["year_stability"]["complete_years"] == 2
@@ -65,13 +57,13 @@ def test_analysis_contract_matches_the_persisted_source_and_exact_cost_claim() -
     module = _load_analysis()
     result = json.loads(_RESULT_PATH.read_text(encoding="utf-8"))
 
-    assert module.CANONICAL_SIGNATURE == result["canonical_signature"]
+    assert result["canonical_signature"] == module.CANONICAL_SIGNATURE
     assert module.EXPECTED["artifact"] == result["source"]["artifact_sha256"]
     assert module.EXPECTED["returns"] == result["source"]["returns_sha256"]
     assert module.EXPECTED["report"] == result["source"]["report_sha256"]
     assert module.EXPECTED["snapshot"] == result["source"]["snapshot_sha256"]
-    assert module.SOURCE_WORKFLOW_RUN_ID == result["source"]["workflow_run_id"]
-    assert module.SOURCE_ARTIFACT_ID == result["source"]["artifact_id"]
+    assert result["source"]["workflow_run_id"] == module.SOURCE_WORKFLOW_RUN_ID
+    assert result["source"]["artifact_id"] == module.SOURCE_ARTIFACT_ID
     assert result["design"]["fee_bps_one_way"] == 5.0
     assert result["design"]["canonical_cost_scenarios_in_pnl"] == [5.0]
     assert result["design"]["separate_execution_diagnostics"] == [

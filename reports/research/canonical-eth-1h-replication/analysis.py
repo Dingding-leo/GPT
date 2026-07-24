@@ -125,8 +125,11 @@ def _calendar_summary(frame: pd.DataFrame, period: str) -> dict[str, Any]:
     positive = [record for record in complete if record["return"] > 0.0]
     ratio = len(positive) / len(complete) if complete else 0.0
     positive_sum = sum(record["return"] for record in positive)
-    share = max((record["return"] for record in positive), default=0.0) / positive_sum \
-        if positive_sum > 0.0 else None
+    share = (
+        max((record["return"] for record in positive), default=0.0) / positive_sum
+        if positive_sum > 0.0
+        else None
+    )
     passes = (
         len(complete) >= (24 if period == "month" else 3)
         and ratio >= 0.5
@@ -166,10 +169,7 @@ def _activity(frame: pd.DataFrame) -> dict[str, Any]:
         "maximum_holding_hours": int(max(durations)) if durations else None,
         "annualized_effective_round_trips": float(frame["turnover"].sum() / (2.0 * years)),
         "passes": bool(
-            episodes >= 100
-            and episodes / years >= 24
-            and median is not None
-            and median <= 72
+            episodes >= 100 and episodes / years >= 24 and median is not None and median <= 72
         ),
     }
 
@@ -227,9 +227,7 @@ def build_result(artifact_dir: str | Path) -> dict[str, Any]:
         "source_data_and_reselection_reproducible": "pass" if source_pass else "fail",
         "exact_5bps_profile_fidelity": "pass" if exact_profile else "fail",
         "positive_5bps_oos_path": (
-            "pass"
-            if metrics["net_total_return"] > 0 and metrics["sharpe"] > 0
-            else "fail"
+            "pass" if metrics["net_total_return"] > 0 and metrics["sharpe"] > 0 else "fail"
         ),
         "benchmark_relative_risk_adjusted": "pass" if benchmark_pass else "fail",
         "fold_stability": "pass" if folds["passes"] else "fail",
@@ -279,16 +277,27 @@ def build_result(artifact_dir: str | Path) -> dict[str, Any]:
             "evaluation_start": report["data_summary"]["evaluation_start"],
             "evaluation_end": report["data_summary"]["evaluation_end"],
             "separate_execution_diagnostics": [
-                "maker_fill_quality", "no_fill", "partial_fill", "timeout",
-                "adverse_selection", "latency",
+                "maker_fill_quality",
+                "no_fill",
+                "partial_fill",
+                "timeout",
+                "adverse_selection",
+                "latency",
             ],
         },
         "metrics_5bps": {
             key: float(metrics[key])
             for key in (
-                "gross_total_return", "net_total_return", "net_cagr",
-                "net_annualized_arithmetic_mean", "sharpe", "sortino", "calmar",
-                "max_drawdown", "annualized_turnover", "average_abs_exposure",
+                "gross_total_return",
+                "net_total_return",
+                "net_cagr",
+                "net_annualized_arithmetic_mean",
+                "sharpe",
+                "sortino",
+                "calmar",
+                "max_drawdown",
+                "annualized_turnover",
+                "average_abs_exposure",
                 "exchange_fee_sum",
             )
         },
