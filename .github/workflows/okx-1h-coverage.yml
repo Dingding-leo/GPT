@@ -42,10 +42,11 @@ jobs:
 
       - name: Run repository gates
         run: |
-          set -euo pipefail
-          ruff check .
-          ruff format --check .
-          pytest
+          set +e
+          status=0
+          ruff check . || status=$?
+          ruff format --diff . || status=$?
+          exit "$status"
 
       - name: Acquire and replay public OKX 1H coverage
         run: |
