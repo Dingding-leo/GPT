@@ -240,10 +240,7 @@ def _recover_stale_stages(directory_descriptor: int) -> None:
                 label=f"{_ERROR_LABEL} staged file",
             )
             path_stat = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
-            if (
-                path_stat.st_dev != staged_stat.st_dev
-                or path_stat.st_ino != staged_stat.st_ino
-            ):
+            if path_stat.st_dev != staged_stat.st_dev or path_stat.st_ino != staged_stat.st_ino:
                 raise RuntimeError(f"{_ERROR_LABEL} staged file changed during recovery")
         finally:
             os.close(descriptor)
