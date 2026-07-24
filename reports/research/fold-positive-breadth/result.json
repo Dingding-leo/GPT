@@ -1,0 +1,127 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "positive-fold-breadth-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|folds=26x90-nonoverlapping|fold-metric=compounded-net-return|success=fold-return>0|claim=positive-fold-share>0.5-in-both-markets|resampling=noncircular-moving-block-bootstrap-over-consecutive-folds|block-length=3-folds|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072301,ETH-USDT:2026072302",
+  "design": {
+    "annualization": 365,
+    "block_length_folds": 3,
+    "confidence": 0.95,
+    "expected_fold_observations": 90,
+    "expected_folds": 26,
+    "fold_success_rule": "compounded net strategy return > 0",
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072301,
+      "ETH-USDT": 2026072302
+    }
+  },
+  "hypothesis": "BTC-USDT and ETH-USDT each have a positive compounded net return in more than half of their 90-session rolling OOS folds, with a 95% moving-block-bootstrap lower bound above 0.5.",
+  "markets": {
+    "BTC-USDT": {
+      "annualized_arithmetic_mean": 0.17168956582497064,
+      "confidence_lower": 0.3076923076923077,
+      "confidence_upper": 0.6923076923076923,
+      "end": "2026-06-07T00:00:00+00:00",
+      "fold_returns": [
+        -0.23941135936713842,
+        -0.034979047134904406,
+        0.06208308583544642,
+        1.044396962807753,
+        0.12465675784138863,
+        -0.05532611856727687,
+        0.13395851610340825,
+        0.05248411253442331,
+        -0.001604624984328562,
+        -0.09323757952162348,
+        -0.021881997332782954,
+        -0.11770556552332212,
+        0.07160271928166417,
+        0.05746419843360839,
+        -0.029289573821077997,
+        0.18180070284999372,
+        0.19255911235330614,
+        0.07602103801991955,
+        -0.09548048438954693,
+        0.29620020611375053,
+        -0.09960389789161916,
+        -0.008150405225081925,
+        0.050823974908152714,
+        -0.03510549571636956,
+        0.0,
+        -0.10081468632111801
+      ],
+      "folds": 26,
+      "median_fold_return": -0.000802312492164281,
+      "positive_fold_share": 0.46153846153846156,
+      "positive_folds": 12,
+      "probability_share_above_half": 0.422,
+      "start": "2020-01-11T00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "annualized_arithmetic_mean": 0.13704095296450977,
+      "confidence_lower": 0.46153846153846156,
+      "confidence_upper": 0.8076923076923077,
+      "end": "2026-06-07T00:00:00+00:00",
+      "fold_returns": [
+        -0.19035191524703632,
+        0.040963339426477896,
+        0.001242996466659374,
+        0.5212580441373669,
+        0.1587440516920784,
+        0.11067830602492523,
+        0.1358147891622037,
+        0.005624495314947575,
+        0.04642779105441841,
+        -0.12293508095577388,
+        0.014049781060085698,
+        -0.02752437348554726,
+        0.057201992301554316,
+        0.06743925793249472,
+        -0.026566389582348804,
+        0.03449012798824724,
+        -0.04616972862637814,
+        0.1350932266829421,
+        -0.23688322326324085,
+        0.10333285664836445,
+        -0.06949426645131418,
+        0.1318307217615311,
+        0.2873943822312326,
+        -0.04082393633108217,
+        -0.10299785305070386,
+        -0.05231246157668068
+      ],
+      "folds": 26,
+      "median_fold_return": 0.02426995452416647,
+      "positive_fold_share": 0.6153846153846154,
+      "positive_folds": 16,
+      "probability_share_above_half": 0.919,
+      "start": "2020-01-11T00:00:00+00:00"
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "market_type": "spot",
+    "provider": "OKX",
+    "return_file_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "source_artifact_id": 8534337020,
+    "source_artifact_name": "quant-research-source-1112-attempt-1",
+    "source_artifact_sha256": "d0e890b3aeefbff8420f6f8dbfcb7be6cf332839b206bde5b64566ac1b1600af",
+    "source_head_sha": "07b2baf4a1112767ec45c865fbf0381b28ba69b7",
+    "source_workflow_run_id": 29931682704,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reasons": [
+    "BTC-USDT positive-fold-share 95% lower bound 0.307692 is not above 0.5",
+    "ETH-USDT positive-fold-share 95% lower bound 0.461538 is not above 0.5"
+  ],
+  "verdict": "reject"
+}
