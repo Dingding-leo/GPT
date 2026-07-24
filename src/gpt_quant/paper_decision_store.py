@@ -43,8 +43,11 @@ def _validate_private_directory(descriptor: int) -> os.stat_result:
         raise ValueError("paper decision directory must be a regular directory")
     if hasattr(os, "geteuid") and directory_stat.st_uid != os.geteuid():
         raise ValueError("paper decision directory must be owned by the current user")
-    if stat.S_IMODE(directory_stat.st_mode) & 0o022:
+    directory_mode = stat.S_IMODE(directory_stat.st_mode)
+    if directory_mode & 0o022:
         raise ValueError("paper decision directory must not be group/world writable")
+    if directory_mode != 0o700:
+        raise ValueError("paper decision directory must use owner-only 0700 permissions")
     return directory_stat
 
 
