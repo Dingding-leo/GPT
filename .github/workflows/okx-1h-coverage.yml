@@ -40,13 +40,28 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Run repository gates
+      - name: Capture repository gate diagnostics
         run: |
           set +e
+          mkdir -p reports/ruff-diagnostics
           status=0
-          ruff check . || status=$?
-          ruff format --diff . || status=$?
-          exit "$status"
+          ruff check . > reports/ruff-diagnostics/check.txt 2>&1 || status=$?
+          ruff format --diff . > reports/ruff-diagnostics/format.diff 2>&1 || status=$?
+          printf '%s\n' "$status" > reports/ruff-diagnostics/status.txt
+
+      - name: Upload repository gate diagnostics
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ruff-diagnostics-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: reports/ruff-diagnostics/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Enforce repository gates
+        run: |
+          set -euo pipefail
+          test "$(cat reports/ruff-diagnostics/status.txt)" = "0"
+          pytest
 
       - name: Acquire and replay public OKX 1H coverage
         run: |
