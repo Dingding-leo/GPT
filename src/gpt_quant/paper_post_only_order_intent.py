@@ -176,9 +176,7 @@ class PaperPostOnlyOrderIntent:
 
         maximum_age = _maximum_age(self.maximum_quote_age_ms)
         object.__setattr__(self, "maximum_quote_age_ms", maximum_age)
-        if self.created_at_utc - self.quote_observed_at_utc > timedelta(
-            milliseconds=maximum_age
-        ):
+        if self.created_at_utc - self.quote_observed_at_utc > timedelta(milliseconds=maximum_age):
             raise ValueError("execution quote is stale at post-only order intent creation")
 
         if self.side not in {"buy", "sell"}:
@@ -268,8 +266,7 @@ class PaperPostOnlyOrderIntent:
         intent = cls(
             **{
                 name: payload[name]
-                for name in _FIELDS
-                - {"schema_version", "time_in_force", "exchange_fee_bps"}
+                for name in _FIELDS - {"schema_version", "time_in_force", "exchange_fee_bps"}
             }
         )
         if payload["order_intent_id"] != intent.order_intent_id:
