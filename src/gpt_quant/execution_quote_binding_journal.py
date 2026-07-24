@@ -82,12 +82,35 @@ def _parse_journal_bytes(value: bytes) -> ExecutionQuoteBindingJournal:
     lines = value.splitlines(keepends=True)
     if any(not line.endswith(b"\n") or line == b"\n" for line in lines):
         raise ValueError(f"{_ERROR_LABEL} must contain canonical newline-terminated bindings")
-    journal = _journal_from_bindings(
-        tuple(ExecutionQuoteBinding.from_json_bytes(line) for line in lines)
+
+    bindings: list[ExecutionQuoteBinding] = []
+    seen_ids: set[str] = set()
+    decisions: dict[tuple[object, ...], str] = {}
+    previous_sort_key: tuple[object, ...] | None = None
+    for line in lines:
+        binding = ExecutionQuoteBinding.from_json_bytes(line)
+        sort_key = _sort_key(binding)
+        if previous_sort_key is not None and sort_key < previous_sort_key:
+            raise ValueError(f"{_ERROR_LABEL} entries must use canonical chronological ordering")
+        previous_sort_key = sort_key
+
+        if binding.binding_id in seen_ids:
+            raise ValueError(
+                f"{_ERROR_LABEL} contains duplicate binding ID {binding.binding_id}"
+            )
+        seen_ids.add(binding.binding_id)
+
+        decision = _decision_key(binding)
+        previous_id = decisions.get(decision)
+        if previous_id is not None and previous_id != binding.binding_id:
+            raise ValueError(f"{_ERROR_LABEL} contains conflicting quotes for one target decision")
+        decisions[decision] = binding.binding_id
+        bindings.append(binding)
+
+    return ExecutionQuoteBindingJournal(
+        bindings=tuple(bindings),
+        sha256=hashlib.sha256(value).hexdigest(),
     )
-    if journal.to_bytes() != value:
-        raise ValueError(f"{_ERROR_LABEL} entries must use canonical chronological ordering")
-    return journal
 
 
 def _verify_reconstruction(
