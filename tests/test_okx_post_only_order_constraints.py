@@ -148,7 +148,7 @@ def _intent(
         quote,
         created_at_utc=datetime(2026, 7, 24, 0, 0, 0, 450_000, tzinfo=UTC),
         expires_at_utc=(expires_at_utc or datetime(2026, 7, 24, 0, 0, 0, 900_000, tzinfo=UTC)),
-        maximum_quote_age_ms=250,
+        maximum_quote_age_ms=1_000,
         limit_price=limit_price,
     )
     return target, decision, quote, intent
