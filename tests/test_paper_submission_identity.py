@@ -83,6 +83,16 @@ def test_identity_has_canonical_restart_round_trip_bound_to_exact_intent() -> No
     }
 
 
+def test_identity_restart_requires_bytes_and_exact_intent_type() -> None:
+    intent = _intent()
+    serialized = PaperSubmissionIdentity.from_order_intent(intent).to_json_bytes()
+
+    with pytest.raises(TypeError, match="value must be bytes"):
+        PaperSubmissionIdentity.from_json_bytes(serialized.decode(), intent=intent)  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="PaperPostOnlyOrderIntent"):
+        PaperSubmissionIdentity.from_json_bytes(serialized, intent=b"not-an-intent")  # type: ignore[arg-type]
+
+
 def test_identity_restart_rejects_changed_intent_and_noncanonical_bytes() -> None:
     intent = _intent()
     serialized = PaperSubmissionIdentity.from_order_intent(intent).to_json_bytes()
