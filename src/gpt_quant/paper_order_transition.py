@@ -312,10 +312,7 @@ class PaperOrderStateTransitionRequest:
         if payload["exchange_fee_bps"] != _EXCHANGE_FEE_BPS:
             raise ValueError(f"{_ERROR} exchange fee must be exactly 5 bps one-way")
         request = cls(
-            **{
-                name: payload[name]
-                for name in _FIELDS - {"schema_version", "exchange_fee_bps"}
-            }
+            **{name: payload[name] for name in _FIELDS - {"schema_version", "exchange_fee_bps"}}
         )
         if payload["event_id"] != request.event_id:
             raise ValueError(f"{_ERROR} ID does not match its payload")
