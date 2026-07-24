@@ -280,13 +280,15 @@ def test_cli_writes_ci_outcomes_before_returning_failure(tmp_path: Path) -> None
 def test_hourly_workflow_publishes_and_optionally_enforces_live_readiness() -> None:
     workflow_path = _REPOSITORY_ROOT / ".github/workflows/hourly-research.yml"
     workflow = workflow_path.read_text(encoding="utf-8")
-    binding = "${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}"
+    head_binding = "${{ github.event.pull_request.head.sha || github.sha }}"
+    tested_binding = "${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}"
 
     assert "enforce_live_readiness:" in workflow
     assert "default: false" in workflow
     assert "LIVE_READINESS_ARTIFACT_NAME" in workflow
-    assert f"LIVE_READINESS_HEAD_SHA: {binding}" in workflow
-    assert f"LIVE_READINESS_TESTED_SHA: {binding}" in workflow
+    assert f"LIVE_READINESS_HEAD_SHA: {head_binding}" in workflow
+    assert f"LIVE_READINESS_TESTED_SHA: {tested_binding}" in workflow
+    assert "LIVE_READINESS_HEAD_SHA: ${{ inputs.target_sha ||" not in workflow
     assert "Write live-readiness blocker summary" in workflow
     assert "Build verified 5 bps launch evidence" in workflow
     assert "Upload live-readiness blocker summary" in workflow
