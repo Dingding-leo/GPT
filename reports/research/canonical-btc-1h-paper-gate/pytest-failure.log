@@ -1,0 +1,83 @@
+...................................................F.................... [  8%]
+........................................................................ [ 17%]
+........................................................................ [ 26%]
+........................................................................ [ 35%]
+........................................................................ [ 44%]
+........................................................................ [ 53%]
+........................................................................ [ 61%]
+........................................................................ [ 70%]
+........................................................................ [ 79%]
+........................................................................ [ 88%]
+........................................................................ [ 97%]
+.....................                                                    [100%]
+=================================== FAILURES ===================================
+_______ test_metric_helpers_are_exercised_on_immutable_real_okx_returns ________
+
+    def test_metric_helpers_are_exercised_on_immutable_real_okx_returns() -> None:
+        analysis = _load_analysis()
+        observed_sha256 = hashlib.sha256(_REAL_OKX_FIXTURE.read_bytes()).hexdigest()
+        assert observed_sha256 == _REAL_OKX_FIXTURE_SHA256
+    
+        frame = pd.read_csv(_REAL_OKX_FIXTURE)
+        returns = pd.to_numeric(frame["strategy_return"], errors="raise")
+>       assert analysis._compound(returns) == 0.0
+E       AssertionError: assert -0.035231009243043676 == 0.0
+E        +  where -0.035231009243043676 = <function _compound at 0x7f16507c0220>(0    -0.000000\n1     0.000000\n2    -0.000000\n3     0.000000\n4    -0.000002\n5    -0.000007\n6     0.001288\n7    -0.00003...004022\n35   -0.014873\n36    0.000426\n37   -0.011366\n38    0.025172\n39   -0.032694\nName: strategy_return, dtype: float64)
+E        +    where <function _compound at 0x7f16507c0220> = <module 'canonical_btc_1h_paper_gate' from '/home/runner/work/GPT/GPT/reports/research/canonical-btc-1h-paper-gate/analysis.py'>._compound
+
+tests/test_canonical_btc_1h_paper_gate_report.py:66: AssertionError
+=============================== warnings summary ===============================
+src/gpt_quant/portfolio.py:23
+  /home/runner/work/GPT/GPT/src/gpt_quant/portfolio.py:23: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    _DAILY_INTERVAL = pd.Timedelta(days=1)
+
+tests/test_backtest.py::test_future_observation_cannot_change_prior_positions
+  /home/runner/work/GPT/GPT/tests/conftest.py:122: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    deltas.eq(pd.Timedelta(days=1)).all(),
+
+tests/test_bootstrap.py::test_chronological_validation_parses_utc_and_daily_cadence
+tests/test_bootstrap.py::test_chronological_validation_rejects_invalid_market_time[<lambda>-cadence must be exactly]
+  /home/runner/work/GPT/GPT/src/gpt_quant/bootstrap.py:68: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    interval = pd.Timedelta(expected_frequency)
+
+tests/test_bootstrap.py::test_chronological_validation_parses_utc_and_daily_cadence
+  /home/runner/work/GPT/GPT/tests/test_bootstrap.py:61: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    assert validated["timestamp"].diff().iloc[1:].eq(pd.Timedelta(days=1)).all()
+
+tests/test_okx_boundary_timezone_normalization.py::test_timezone_equivalent_boundaries_select_identical_real_okx_bars
+tests/test_okx_boundary_timezone_normalization.py::test_timezone_equivalent_boundaries_select_identical_real_okx_bars
+tests/test_okx_boundary_timezone_normalization.py::test_timezone_equivalent_boundaries_select_identical_real_okx_bars
+tests/test_okx_boundary_timezone_normalization.py::test_timezone_equivalent_boundaries_select_identical_real_okx_bars
+tests/test_okx_end_coverage.py::test_downloader_accepts_explicit_end_covered_by_latest_completed_candle
+tests/test_okx_end_coverage.py::test_downloader_accepts_end_inside_latest_completed_bar_interval
+tests/test_okx_end_coverage.py::test_downloader_rejects_explicit_end_missing_boundary_candle
+tests/test_okx_snapshot_integrity.py::test_writer_rolls_back_partial_snapshot_commit[True]
+  /home/runner/work/GPT/GPT/src/gpt_quant/okx.py:230: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    if gap >= pd.Timedelta(seconds=expected_step_seconds):
+
+tests/test_okx_live_evidence.py: 6 warnings
+tests/test_okx_live_latest_completed_bar.py: 1 warning
+tests/test_okx_live_response_evidence.py: 6 warnings
+tests/test_okx_live_signal_cutoff.py: 2 warnings
+  /home/runner/work/GPT/GPT/src/gpt_quant/okx_live.py:344: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    bar_close = latest_open + pd.Timedelta(seconds=step_seconds)
+
+tests/test_portfolio.py::test_return_loader_rejects_daily_rows_not_anchored_to_midnight_utc
+  /home/runner/work/GPT/GPT/tests/test_portfolio.py:218: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    assert bool(((shifted[1:] - shifted[:-1]) == pd.Timedelta(days=1)).all())
+
+tests/test_real_data_fixture.py::test_okx_fixture_is_complete_daily_history
+  /home/runner/work/GPT/GPT/tests/test_real_data_fixture.py:21: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    assert btc_usdt_prices.index.to_series().diff().dropna().eq(pd.Timedelta(days=1)).all()
+
+tests/test_run_okx_research_end_coverage.py::test_explicit_end_accepts_latest_completed_candle_at_boundary
+tests/test_run_okx_research_end_coverage.py::test_explicit_end_rejects_history_missing_boundary_candle
+tests/test_run_okx_research_end_coverage.py::test_cli_rejects_missing_end_coverage_before_artifacts
+  /home/runner/work/GPT/GPT/scripts/run_okx_research.py:108: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
+    if gap >= pd.Timedelta(seconds=expected_step_seconds):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_canonical_btc_1h_paper_gate_report.py::test_metric_helpers_are_exercised_on_immutable_real_okx_returns - AssertionError: assert -0.035231009243043676 == 0.0
+ +  where -0.035231009243043676 = <function _compound at 0x7f16507c0220>(0    -0.000000\n1     0.000000\n2    -0.000000\n3     0.000000\n4    -0.000002\n5    -0.000007\n6     0.001288\n7    -0.00003...004022\n35   -0.014873\n36    0.000426\n37   -0.011366\n38    0.025172\n39   -0.032694\nName: strategy_return, dtype: float64)
+ +    where <function _compound at 0x7f16507c0220> = <module 'canonical_btc_1h_paper_gate' from '/home/runner/work/GPT/GPT/reports/research/canonical-btc-1h-paper-gate/analysis.py'>._compound
