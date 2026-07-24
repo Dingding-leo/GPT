@@ -129,9 +129,7 @@ def test_real_okx_spot_constraints_are_exact_and_hash_bound(tmp_path: Path) -> N
 def test_snapshot_revalidates_complete_server_time_envelope() -> None:
     snapshot, _ = _snapshot()
     future_receipt = datetime(2027, 7, 24, 0, 0, tzinfo=UTC)
-    forged_round_trip = (
-        future_receipt - snapshot.server_time_request_started_utc
-    ).total_seconds()
+    forged_round_trip = (future_receipt - snapshot.server_time_request_started_utc).total_seconds()
 
     with pytest.raises(ValueError, match="clock skew does not match its timestamps"):
         replace(
