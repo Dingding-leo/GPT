@@ -1,38 +1,226 @@
 name: Hourly Quant Research
 
 on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      enforce_live_readiness:
+        description: Fail unless every paper/live launch gate has current-head evidence
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: hourly-quant-research-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   research:
     runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+      BUILD_FRONTEND_VERSION: "1.5.0"
+      BUILD_BACKEND_VERSION: "83.0.0"
+      MAX_VARIANCE_CONTRIBUTION: "0.75"
+      MAX_PAIRWISE_CORRELATION: "0.90"
+      SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+      PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+      LIVE_READINESS_ARTIFACT_NAME: "live-readiness-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+      LIVE_READINESS_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      LIVE_READINESS_TESTED_SHA: ${{ github.sha }}
+
     steps:
       - name: Check out repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
       - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        id: python_setup
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
-      - name: Install Ruff
-        run: python -m pip install "ruff>=0.9,<1"
-      - name: Format lifecycle files
-        run: ruff format src/gpt_quant/paper_order_transition.py tests/test_paper_order_transition.py
-      - name: Verify formatted lifecycle files
+          cache: pip
+
+      - name: Install project
+        id: install
+        shell: bash
         run: |
-          ruff check src/gpt_quant/paper_order_transition.py tests/test_paper_order_transition.py
-          ruff format --check src/gpt_quant/paper_order_transition.py tests/test_paper_order_transition.py
-      - name: Upload formatted lifecycle files
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install \
+            "build==${BUILD_FRONTEND_VERSION}" \
+            "setuptools==${BUILD_BACKEND_VERSION}"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+          python -c 'import os, setuptools; assert setuptools.__version__ == os.environ["BUILD_BACKEND_VERSION"]'
+
+          rm -rf dist /tmp/gpt-live-readiness-wheel-venv
+          python -m build --wheel --no-isolation
+          shopt -s nullglob
+          wheels=(dist/gpt_quant_lab-*.whl)
+          test "${#wheels[@]}" -eq 1
+          python -m venv /tmp/gpt-live-readiness-wheel-venv
+          /tmp/gpt-live-readiness-wheel-venv/bin/pip install "${wheels[0]}"
+          /tmp/gpt-live-readiness-wheel-venv/bin/pip check
+          /tmp/gpt-live-readiness-wheel-venv/bin/python - <<'PY'
+          from pathlib import Path
+
+          import gpt_quant
+
+          module_path = Path(gpt_quant.__file__).resolve()
+          venv_path = Path("/tmp/gpt-live-readiness-wheel-venv").resolve()
+          if not module_path.is_relative_to(venv_path):
+              raise SystemExit(f"gpt_quant imported outside release wheel venv: {module_path}")
+          print(module_path)
+          PY
+
+      - name: Lint and formatting
+        id: lint_format
+        run: ruff check . && ruff format --check .
+
+      - name: Test against public OKX data
+        id: tests
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: pytest
+
+      - name: Run OKX rolling out-of-sample research
+        id: walk_forward
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: |
+          for instrument in BTC-USDT ETH-USDT; do
+            python scripts/run_okx_research.py \
+              --inst-id "$instrument" \
+              --output-dir "reports/okx/$instrument" \
+              --manifest-path reports/okx/experiment-manifest.jsonl
+          done
+
+      - name: Verify persisted walk-forward evidence
+        id: walk_forward_verification
+        run: |
+          for instrument in BTC-USDT ETH-USDT; do
+            python scripts/verify_walk_forward_report.py \
+              --output-dir "reports/okx/$instrument" \
+              --manifest-path reports/okx/experiment-manifest.jsonl
+          done
+
+      - name: Build verified 5 bps launch evidence
+        id: five_bps_evidence
+        run: |
+          python -m gpt_quant.five_bps_evidence \
+            --reports-root reports/okx \
+            --source-head-sha "$LIVE_READINESS_HEAD_SHA" \
+            --tested-sha "$LIVE_READINESS_TESTED_SHA" \
+            --output-path reports/live_readiness/five_bps_walk_forward.json
+
+      - name: Hash portfolio return inputs
+        id: return-hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          btc_returns="reports/okx/BTC-USDT/walk_forward_returns.csv"
+          eth_returns="reports/okx/ETH-USDT/walk_forward_returns.csv"
+          test -s "$btc_returns"
+          test -s "$eth_returns"
+          printf 'btc_sha256=%s\n' "$(sha256sum "$btc_returns" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+          printf 'eth_sha256=%s\n' "$(sha256sum "$eth_returns" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Upload immutable sleeve research source
+        id: source-artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: architecture-lifecycle-formatted-files
-          path: |
-            src/gpt_quant/paper_order_transition.py
-            tests/test_paper_order_transition.py
+          name: ${{ env.SOURCE_ARTIFACT_NAME }}
+          path: reports/okx/
           if-no-files-found: error
-          retention-days: 1
+          retention-days: 14
+
+      - name: Generate verified portfolio risk report
+        id: portfolio_risk
+        shell: bash
+        env:
+          BTC_RETURN_SHA256: ${{ steps.return-hashes.outputs.btc_sha256 }}
+          ETH_RETURN_SHA256: ${{ steps.return-hashes.outputs.eth_sha256 }}
+          SOURCE_ARTIFACT_ID: ${{ steps.source-artifact.outputs.artifact-id }}
+          SOURCE_ARTIFACT_DIGEST: ${{ steps.source-artifact.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          source_artifact_digest="${SOURCE_ARTIFACT_DIGEST#sha256:}"
+          source_artifact_digest="${source_artifact_digest,,}"
+          [[ "$SOURCE_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$source_artifact_digest" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$BTC_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$ETH_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          python scripts/run_portfolio_risk.py \
+            --btc-returns reports/okx/BTC-USDT/walk_forward_returns.csv \
+            --eth-returns reports/okx/ETH-USDT/walk_forward_returns.csv \
+            --btc-sha256 "$BTC_RETURN_SHA256" \
+            --eth-sha256 "$ETH_RETURN_SHA256" \
+            --provider OKX \
+            --market-type spot \
+            --timeframe 1Dutc \
+            --source-workflow-run "$GITHUB_RUN_ID" \
+            --source-artifact-id "$SOURCE_ARTIFACT_ID" \
+            --source-artifact-name "$SOURCE_ARTIFACT_NAME" \
+            --source-artifact-sha256 "$source_artifact_digest" \
+            --source-head-sha "$GITHUB_SHA" \
+            --max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION" \
+            --max-pairwise-correlation "$MAX_PAIRWISE_CORRELATION" \
+            --fail-on-reject \
+            --output-dir reports/portfolio
+
+      - name: Upload verified portfolio risk artifact
+        id: portfolio_artifact
+        if: ${{ success() && hashFiles('reports/portfolio/portfolio_risk.json') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.PORTFOLIO_ARTIFACT_NAME }}
+          path: reports/portfolio/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Write live-readiness blocker summary
+        if: ${{ !cancelled() }}
+        env:
+          LIVE_READINESS_CI_STATUS_JSON: >-
+            {"python_setup":"${{ steps.python_setup.outcome }}","install":"${{ steps.install.outcome }}","lint_format":"${{ steps.lint_format.outcome }}","tests":"${{ steps.tests.outcome }}","walk_forward":"${{ steps.walk_forward.outcome }}","walk_forward_verification":"${{ steps.walk_forward_verification.outcome }}","five_bps_evidence":"${{ steps.five_bps_evidence.outcome }}","return_hashes":"${{ steps.return-hashes.outcome }}","source_artifact":"${{ steps.source-artifact.outcome }}","portfolio_risk":"${{ steps.portfolio_risk.outcome }}","portfolio_artifact":"${{ steps.portfolio_artifact.outcome }}"}
+        run: |
+          PYTHONPATH=src python -m gpt_quant.live_readiness \
+            --head-sha "$LIVE_READINESS_HEAD_SHA" \
+            --tested-sha "$LIVE_READINESS_TESTED_SHA" \
+            --ci-status-json "$LIVE_READINESS_CI_STATUS_JSON" \
+            --output-dir reports/live-readiness-gate \
+            --report-only
+
+      - name: Upload live-readiness blocker summary
+        if: ${{ !cancelled() && hashFiles('reports/live-readiness-gate/live_readiness.json') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.LIVE_READINESS_ARTIFACT_NAME }}
+          path: |
+            reports/live-readiness-gate/
+            reports/live_readiness/five_bps_walk_forward.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce fail-closed live-readiness gate
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.enforce_live_readiness }}
+        env:
+          LIVE_READINESS_CI_STATUS_JSON: >-
+            {"python_setup":"${{ steps.python_setup.outcome }}","install":"${{ steps.install.outcome }}","lint_format":"${{ steps.lint_format.outcome }}","tests":"${{ steps.tests.outcome }}","walk_forward":"${{ steps.walk_forward.outcome }}","walk_forward_verification":"${{ steps.walk_forward_verification.outcome }}","five_bps_evidence":"${{ steps.five_bps_evidence.outcome }}","return_hashes":"${{ steps.return-hashes.outcome }}","source_artifact":"${{ steps.source-artifact.outcome }}","portfolio_risk":"${{ steps.portfolio_risk.outcome }}","portfolio_artifact":"${{ steps.portfolio_artifact.outcome }}"}
+        run: |
+          PYTHONPATH=src python -m gpt_quant.live_readiness \
+            --head-sha "$LIVE_READINESS_HEAD_SHA" \
+            --tested-sha "$LIVE_READINESS_TESTED_SHA" \
+            --ci-status-json "$LIVE_READINESS_CI_STATUS_JSON" \
+            --output-dir reports/live-readiness-gate
