@@ -27,7 +27,7 @@ def test_paper_launch_status_matches_current_fail_closed_gates() -> None:
         "copies every manifested file into a private temporary tree",
         "The presence of these commands in documentation or a workflow definition is not",
         "A missing run is **UNVERIFIED**, not a pass or a failure.",
-        "Historical green runs cannot authorize a moved PR head",
+        "green runs cannot authorize a moved PR head",
         "Python Package Build",
         "Hourly Quant Research",
         "Canonical BTC ETH 1h Research",
