@@ -1,0 +1,33 @@
+{
+  "data": {
+    "inst_id": "BTC-USDT",
+    "bar": "1H",
+    "base_url": "https://www.okx.com",
+    "limit": 100,
+    "max_pages": 600,
+    "pause_seconds": 0.12,
+    "start": "2021-07-01"
+  },
+  "strategy": {
+    "momentum_lookback": 2160,
+    "reversal_lookback": 120,
+    "volatility_lookback": 720,
+    "target_volatility": 0.5,
+    "max_abs_position": 1.0,
+    "min_position": 0.0,
+    "trend_weight": 0.7,
+    "reversal_weight": 0.3,
+    "transaction_cost_bps": 5.0,
+    "annualization": 8760
+  },
+  "search": {
+    "momentum_lookbacks": [720, 2160, 4320],
+    "reversal_lookbacks": [48, 120, 240],
+    "trend_weights": [0.55, 0.7, 0.85],
+    "selection_bars": 17520,
+    "test_bars": 2160
+  },
+  "robustness": {
+    "cost_multipliers": [1.0]
+  }
+}
