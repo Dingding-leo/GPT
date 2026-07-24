@@ -10,12 +10,9 @@ import pandas as pd
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 _REPORT_DIR = _REPOSITORY_ROOT / "reports/research/canonical-btc-1h-paper-gate"
 _REAL_OKX_FIXTURE = (
-    _REPOSITORY_ROOT
-    / "tests/fixtures/okx/btc_eth_oos_20200111_20200219/btc_usdt_returns.csv"
+    _REPOSITORY_ROOT / "tests/fixtures/okx/btc_eth_oos_20200111_20200219/btc_usdt_returns.csv"
 )
-_REAL_OKX_FIXTURE_SHA256 = (
-    "417ff56ee3e71d8e2e8545ee4eb79091bd6f173bde29c79371aae96b65b12587"
-)
+_REAL_OKX_FIXTURE_SHA256 = "417ff56ee3e71d8e2e8545ee4eb79091bd6f173bde29c79371aae96b65b12587"
 
 
 def _load_analysis():

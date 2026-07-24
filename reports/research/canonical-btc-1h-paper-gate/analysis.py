@@ -11,18 +11,10 @@ import numpy as np
 import pandas as pd
 
 ANNUALIZATION = 8_760
-EXPECTED_ARTIFACT_SHA256 = (
-    "b0ef75175a74331e636bc0f20e5084194746bea82c41b3dd94488d9c5271a9c2"
-)
-EXPECTED_RETURN_SHA256 = (
-    "a10404c8d24dc7899baf382d7695198118d4490065838a3a1d41720da1edba92"
-)
-EXPECTED_REPORT_SHA256 = (
-    "ee6a6f61e59d8511aba0046cc04e7b7fec4a54bb6a35c0a2c38238155aa632a1"
-)
-EXPECTED_SNAPSHOT_SHA256 = (
-    "21f6eba97e0120912cf1c9e5679d2c3132e8ac9cbfe221f9f405aa7b654c2ca7"
-)
+EXPECTED_ARTIFACT_SHA256 = "b0ef75175a74331e636bc0f20e5084194746bea82c41b3dd94488d9c5271a9c2"
+EXPECTED_RETURN_SHA256 = "a10404c8d24dc7899baf382d7695198118d4490065838a3a1d41720da1edba92"
+EXPECTED_REPORT_SHA256 = "ee6a6f61e59d8511aba0046cc04e7b7fec4a54bb6a35c0a2c38238155aa632a1"
+EXPECTED_SNAPSHOT_SHA256 = "21f6eba97e0120912cf1c9e5679d2c3132e8ac9cbfe221f9f405aa7b654c2ca7"
 SOURCE_WORKFLOW_RUN_ID = 30_062_329_424
 SOURCE_ARTIFACT_ID = 8_585_012_784
 SOURCE_HEAD_SHA = "0f76d9671a009cb8b397ad4ef64c5a311ff35b7b"
@@ -292,9 +284,7 @@ def build_result(artifact_dir: str | Path) -> dict[str, Any]:
         "turnover_holding_and_trade_sufficiency": {
             "status": "pass" if activity["passes"] else "fail"
         },
-        "parameter_neighbourhood_stability": {
-            "status": "pass" if neighbourhood_passes else "fail"
-        },
+        "parameter_neighbourhood_stability": {"status": "pass" if neighbourhood_passes else "fail"},
         "tail_risk": {"status": "pass" if tail_passes else "fail"},
         "cross_market_replication": {
             "status": "blocked",
