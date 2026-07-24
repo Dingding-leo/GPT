@@ -41,12 +41,13 @@ def validate_okx_paper_post_only_order_intent_constraints(
 ) -> None:
     """Bind one approved maker intent to exact public OKX order constraints.
 
-    This offline gate performs no account or order operation. It first reconstructs
-    the intent from the exact approved paper decision, target intent, and execution
-    quote. It then verifies the immutable OKX instrument response and enforces the
-    exact lot and tick increments plus one explicit paper-policy quote-notional floor
-    at the maker limit. The floor is not an inferred exchange minimum, and no spread,
-    slippage, impact, latency, or fill probability is added.
+    This offline gate performs no account or order operation. The decision and target
+    are required evidence, not optional caller context: the intent must reconstruct
+    from them and the exact execution quote before any OKX sizing check runs. The gate
+    then verifies the immutable OKX instrument response and enforces exact lot and tick
+    increments plus one explicit paper-policy quote-notional floor at the maker limit.
+    The floor is not an inferred exchange minimum, and no spread, slippage, impact,
+    latency, or fill probability is added.
     """
 
     if not isinstance(snapshot, OKXSpotInstrumentSnapshot):
