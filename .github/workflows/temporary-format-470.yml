@@ -1,0 +1,44 @@
+name: Temporary format PR 470
+
+on:
+  push:
+    branches:
+      - auto/research/20260724-12-eth-1h-replication
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: auto/research/20260724-12-eth-1h-replication
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Apply exact repository formatting
+        run: |
+          set -euo pipefail
+          python -m pip install -e ".[dev]"
+          ruff check --fix \
+            reports/research/canonical-eth-1h-replication/analysis.py \
+            tests/test_canonical_eth_1h_replication_report.py
+          ruff format \
+            reports/research/canonical-eth-1h-replication/analysis.py \
+            tests/test_canonical_eth_1h_replication_report.py
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            reports/research/canonical-eth-1h-replication/analysis.py \
+            tests/test_canonical_eth_1h_replication_report.py
+          git commit -m "style(research): format ETH 1h replication"
+          git push origin HEAD:auto/research/20260724-12-eth-1h-replication
