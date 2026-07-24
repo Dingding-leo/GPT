@@ -199,7 +199,7 @@ def test_documentation_matches_current_executable_boundary() -> None:
     normalized = " ".join(content.split())
 
     assert "python examples/okx_spot_instrument_replay.py" in content
-    assert "pytest -q tests/test_okx_spot_instrument_replay_example.py" in content
+    assert "pytest tests/test_okx_spot_instrument_replay_example.py" in content
     assert "rejects_requested_notional_below_declared_paper_floor" in content
     assert "3 passed, 4 deselected" in content
     assert "partial paper-attempt construction and canonical replay" in content
