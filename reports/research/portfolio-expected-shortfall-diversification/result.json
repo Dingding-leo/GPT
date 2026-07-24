@@ -1,0 +1,76 @@
+{
+  "candidate_count": 1,
+  "canonical_signature": "paired-portfolio-expected-shortfall-diversification-v1|markets=BTC-USDT,ETH-USDT|portfolio=fixed-initial-weights-50-50-no-rebalancing|metric=expected-shortfall-5pct-reduction-vs-each-sleeve|tail_fraction=0.05|resampling=paired-noncircular-moving-block|block=20|resamples=2000|confidence=0.95|seed=20260722|candidate_count=1",
+  "claim_boundary": "This is one predeclared paired-block-bootstrap diagnostic on BTC-USDT and ETH-USDT development evidence. The portfolio uses fixed 50/50 initial weights and no rebalancing, matching the repository portfolio construction. Expected shortfall is the arithmetic mean of the worst ceil(5%) observed net returns. The experiment does not optimize weights, retune signals, alter fees or execution timing, or create a new holdout. It is not a liquidity, capacity, spread, impact, or live-fill model.",
+  "failure_reasons": [
+    "portfolio expected-shortfall reduction versus BTC-USDT lower confidence bound is not positive"
+  ],
+  "hypothesis": "The fixed-initial-weight 50/50 no-rebalancing BTC-USDT/ETH-USDT portfolio has less severe 5% expected shortfall than each individual sleeve, with both 95% paired moving-block-bootstrap lower bounds for expected-shortfall reduction above zero.",
+  "joint_supported": false,
+  "portfolio": {
+    "comparisons": {
+      "BTC-USDT": {
+        "bootstrap": {
+          "ci_lower": -0.0016901782636966872,
+          "ci_upper": 0.002162376145687786,
+          "lower_bound_positive": false,
+          "median": 0.0004925795274309409,
+          "probability_positive": 0.685
+        },
+        "expected_shortfall_reduction": 0.0005381419975034503,
+        "sleeve_expected_shortfall": -0.029357772313739594
+      },
+      "ETH-USDT": {
+        "bootstrap": {
+          "ci_lower": 0.0024857518462064855,
+          "ci_upper": 0.00792254092605231,
+          "lower_bound_positive": true,
+          "median": 0.004845664896891545,
+          "probability_positive": 1.0
+        },
+        "expected_shortfall_reduction": 0.005057202789240409,
+        "sleeve_expected_shortfall": -0.03387683310547655
+      }
+    },
+    "observations": 2340,
+    "portfolio_expected_shortfall": -0.028819630316236144,
+    "portfolio_total_return": 1.2350815887306408,
+    "seed": 20260722,
+    "sleeve_total_returns": {
+      "BTC-USDT": 1.5141335570323782,
+      "ETH-USDT": 0.9560296204289283
+    },
+    "tail_fraction": 0.05,
+    "tail_observations": 117
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "provider": "OKX",
+    "source_artifact_id": 8516824262,
+    "source_artifact_name": "quant-research-484",
+    "source_artifact_sha256": "b1f271e4267cc1c1007bbccd11c53c1a59d3f1e3fe3f1e3f07423c6907b83605",
+    "source_code_head": "cfc0a08048ac584a375f15e4ed146c00266e2e17",
+    "source_workflow_run_id": 29886881484,
+    "walk_forward_report_sha256": {
+      "BTC-USDT": "36c13d611e09ddeb65788ea2f597979e763aa797ef79b0fd341ef9aba33b3eca",
+      "ETH-USDT": "d51ee25fe582da2ffd1a234372758b8eee5c05bdfdce3a4021716bc9e781628e"
+    },
+    "walk_forward_returns_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    }
+  },
+  "resampling": {
+    "block_length": 20,
+    "confidence": 0.95,
+    "method": "paired non-circular moving-block bootstrap",
+    "resamples": 2000,
+    "seed": 20260722
+  },
+  "verdict": "rejected"
+}
