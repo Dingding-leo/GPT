@@ -9,10 +9,60 @@ from analysis import build_result
 
 
 def compact_result(result: dict) -> dict:
-    for details in result["markets"].values():
-        details["month_stability"].pop("records", None)
-        details["year_stability"].pop("records", None)
-    return result
+    compact_markets: dict[str, dict] = {}
+    for market, details in result["markets"].items():
+        compact_markets[market] = {
+            "market": market,
+            "provenance": details["provenance"],
+            "metrics": details["metrics"],
+            "benchmark_bootstrap": details["benchmark_bootstrap"],
+            "fold_stability": {
+                key: value
+                for key, value in details["fold_stability"].items()
+                if key != "fold_returns"
+            },
+            "month_stability": {
+                key: value
+                for key, value in details["month_stability"].items()
+                if key != "records"
+            },
+            "year_stability": {
+                key: value
+                for key, value in details["year_stability"].items()
+                if key != "records"
+            },
+            "activity": details["activity"],
+            "neighbourhood": {
+                "passes": details["neighbourhood"]["passes"],
+                "variants": {
+                    name: {
+                        "net_total_return": values["net_total_return"],
+                        "sharpe": values["sharpe"],
+                    }
+                    for name, values in details["neighbourhood"]["variants"].items()
+                },
+            },
+            "tail_risk": details["tail_risk"],
+            "capacity": details["capacity"],
+            "retrospective_gates": details["retrospective_gates"],
+            "retrospective_passes": details["retrospective_passes"],
+        }
+    return {
+        "canonical_signature": result["canonical_signature"],
+        "hypothesis": result["hypothesis"],
+        "candidate_accounting": result["candidate_accounting"],
+        "fixed_architecture": result["fixed_architecture"],
+        "evaluation": result["evaluation"],
+        "markets": compact_markets,
+        "joint_retrospective_passes": result["joint_retrospective_passes"],
+        "prospective_execution_diagnostics": result[
+            "prospective_execution_diagnostics"
+        ],
+        "paper_testable": result["paper_testable"],
+        "live_eligible": result["live_eligible"],
+        "verdict": result["verdict"],
+        "rejection_reasons": result["rejection_reasons"],
+    }
 
 
 def main(argv: Sequence[str] | None = None) -> int:
