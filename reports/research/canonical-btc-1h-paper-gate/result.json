@@ -1,0 +1,218 @@
+{
+  "accounting": {
+    "maximum_absolute_error": 9.999054535747565e-17
+  },
+  "activity": {
+    "adjustment_count": 14397,
+    "annualized_adjustment_count": 4865.652777777778,
+    "annualized_effective_round_trips": 26.47910232533034,
+    "annualized_exposure_episode_count": 57.45370370370371,
+    "annualized_turnover": 52.95820465066068,
+    "exposure_episode_count": 170,
+    "maximum_holding_hours": 4738,
+    "mean_holding_hours": 83.68823529411765,
+    "median_holding_hours": 3.0,
+    "passes": true
+  },
+  "benchmark_metrics": {
+    "buy_and_hold": {
+      "calmar": 0.5608915491117141,
+      "max_drawdown": -0.5286328964451099,
+      "net_total_return": 1.1561985503353847,
+      "sharpe": 0.7912925127058376
+    },
+    "simple_trend_long_cash": {
+      "calmar": 0.8803352070581657,
+      "max_drawdown": -0.2934159271079293,
+      "net_total_return": 0.9735872609083653,
+      "sharpe": 0.8439211960688333
+    },
+    "volatility_targeted_long": {
+      "calmar": 0.5487646718987447,
+      "max_drawdown": -0.5314421411072355,
+      "net_total_return": 1.1323264238476276,
+      "sharpe": 0.8032329929723323
+    }
+  },
+  "candidate_accounting": {
+    "architecture_candidates_passed": 0,
+    "architecture_candidates_rejected": 1,
+    "architecture_candidates_searched": 1,
+    "fold_local_internal_candidates": 27,
+    "oos_folds": 12
+  },
+  "canonical_signature": "canonical-btc-1h-paper-gate-v1|market=BTC-USDT|provider=OKX-spot|bar=1H|architecture=daily-horizons-scaled-24x|selection=17520|test=2160|internal-candidates=27|fee=5bps-one-way|execution=one-bar-delayed-close-return|claim=all-source-oos-risk-stability-activity-tail-capacity-paper-gates-pass|candidate_count=1",
+  "design": {
+    "annualization": 8760,
+    "cost_scenarios_in_pnl": [5.0],
+    "evaluation_end": "2026-06-14T23:00:00+00:00",
+    "evaluation_start": "2023-07-01T00:00:00+00:00",
+    "fee_bps_one_way": 5.0,
+    "modeled_execution": "one-bar-delayed close-to-close return",
+    "oos_observations": 25920,
+    "selection_bars": 17520,
+    "separate_execution_diagnostics": [
+      "maker_fill_quality",
+      "no_fill",
+      "partial_fill",
+      "timeout",
+      "adverse_selection",
+      "latency"
+    ],
+    "test_bars": 2160
+  },
+  "fold_stability": {
+    "best_fold_total_return": 0.28364620264997353,
+    "failure_reasons": ["fewer than half of out-of-sample folds are profitable"],
+    "fold_count": 12,
+    "losing_or_flat_folds": 7,
+    "max_positive_fold_share": 0.4010046335075536,
+    "maximum_allowed_positive_fold_share": 0.5,
+    "minimum_profitable_folds": 6,
+    "minimum_required_folds": 3,
+    "passes": false,
+    "positive_fold_ratio": 0.4166666666666667,
+    "profitable_folds": 5,
+    "worst_fold_total_return": -0.11236307506567478
+  },
+  "gates": {
+    "benchmark_relative_risk_adjusted": {"status": "fail"},
+    "capacity": {
+      "reason": "no frozen point-in-time 1h capacity protocol is persisted",
+      "status": "blocked"
+    },
+    "cross_market_replication": {
+      "reason": "ETH-USDT canonical 1h evidence is not present",
+      "status": "blocked"
+    },
+    "fold_stability": {"status": "fail"},
+    "maker_execution_diagnostics": {
+      "reason": "fill quality, no-fill, partial fill, timeout, adverse selection, and latency are not present and are not added to PnL",
+      "status": "blocked"
+    },
+    "month_stability": {"status": "fail"},
+    "parameter_neighbourhood_stability": {"status": "pass"},
+    "positive_5bps_oos_path": {"status": "pass"},
+    "prospective_paper_evidence": {
+      "reason": "no prospective 1h signal and maker-order replay exists",
+      "status": "blocked"
+    },
+    "source_complete_and_reproducible": {"status": "pass"},
+    "tail_risk": {"status": "pass"},
+    "turnover_holding_and_trade_sufficiency": {"status": "pass"},
+    "year_stability": {"status": "fail"}
+  },
+  "hypothesis": "The canonical BTC-USDT 1h full-reselection strategy clears every minimum source, OOS, stability, activity, tail, capacity, cross-market, maker, and prospective paper gate at exactly 5 bps one-way fee.",
+  "metrics_5bps": {
+    "annualized_turnover": 52.95820465066092,
+    "average_abs_exposure": 0.292240358262018,
+    "calmar": 0.27878293700096823,
+    "exchange_fee_sum": 0.07834912468864902,
+    "max_drawdown": -0.2741554117455839,
+    "net_annualized_arithmetic_mean": 0.09651856222115202,
+    "net_cagr": 0.07642985088114362,
+    "net_total_return": 0.24349120050203132,
+    "sharpe": 0.4515216668870213,
+    "sortino": 0.6305783196131318
+  },
+  "month_stability": {
+    "complete_months": 35,
+    "max_positive_month_share": 0.2592047038001869,
+    "passes": false,
+    "profitable_complete_month_ratio": 0.37142857142857144,
+    "profitable_complete_months": 13,
+    "records": [
+      {"complete": true, "month": "2023-07", "observations": 744, "total_return": -0.02134561004046942},
+      {"complete": true, "month": "2023-08", "observations": 744, "total_return": -0.05867759504835601},
+      {"complete": true, "month": "2023-09", "observations": 720, "total_return": 0.00019228259222714428},
+      {"complete": true, "month": "2023-10", "observations": 744, "total_return": 0.00794858211201066},
+      {"complete": true, "month": "2023-11", "observations": 720, "total_return": 0.05852326222156301},
+      {"complete": true, "month": "2023-12", "observations": 744, "total_return": 0.1167205124946562},
+      {"complete": true, "month": "2024-01", "observations": 744, "total_return": -0.028587369722043454},
+      {"complete": true, "month": "2024-02", "observations": 696, "total_return": 0.21929765083419106},
+      {"complete": true, "month": "2024-03", "observations": 744, "total_return": 0.12297162790062965},
+      {"complete": true, "month": "2024-04", "observations": 720, "total_return": -0.11635305172070953},
+      {"complete": true, "month": "2024-05", "observations": 744, "total_return": 0.08412158841603401},
+      {"complete": true, "month": "2024-06", "observations": 720, "total_return": -0.05923608942668279},
+      {"complete": true, "month": "2024-07", "observations": 744, "total_return": 0.0073090104574529136},
+      {"complete": true, "month": "2024-08", "observations": 744, "total_return": -0.06532535070076584},
+      {"complete": true, "month": "2024-09", "observations": 720, "total_return": 0.0},
+      {"complete": true, "month": "2024-10", "observations": 744, "total_return": 0.021349382324284738},
+      {"complete": true, "month": "2024-11", "observations": 720, "total_return": 0.09693149457225214},
+      {"complete": true, "month": "2024-12", "observations": 744, "total_return": -0.015893899507664955},
+      {"complete": true, "month": "2025-01", "observations": 744, "total_return": -0.037293064326800796},
+      {"complete": true, "month": "2025-02", "observations": 672, "total_return": -0.01987556661211054},
+      {"complete": true, "month": "2025-03", "observations": 744, "total_return": -0.0004939105060169924},
+      {"complete": true, "month": "2025-04", "observations": 720, "total_return": 0.00424105011071263},
+      {"complete": true, "month": "2025-05", "observations": 744, "total_return": 0.08466789264348185},
+      {"complete": true, "month": "2025-06", "observations": 720, "total_return": -0.010278132147049535},
+      {"complete": true, "month": "2025-07", "observations": 744, "total_return": -0.019260773159323175},
+      {"complete": true, "month": "2025-08", "observations": 744, "total_return": -0.0023546506028628844},
+      {"complete": true, "month": "2025-09", "observations": 720, "total_return": -0.013768366915400954},
+      {"complete": true, "month": "2025-10", "observations": 744, "total_return": 0.02176606158133576},
+      {"complete": true, "month": "2025-11", "observations": 720, "total_return": 0.0},
+      {"complete": true, "month": "2025-12", "observations": 744, "total_return": 0.0},
+      {"complete": true, "month": "2026-01", "observations": 744, "total_return": 0.0},
+      {"complete": true, "month": "2026-02", "observations": 672, "total_return": 0.0},
+      {"complete": true, "month": "2026-03", "observations": 744, "total_return": 0.0},
+      {"complete": true, "month": "2026-04", "observations": 720, "total_return": 0.0},
+      {"complete": true, "month": "2026-05", "observations": 744, "total_return": -0.055058899758842816},
+      {"complete": false, "month": "2026-06", "observations": 336, "total_return": -0.039060578021946735}
+    ]
+  },
+  "parameter_stability": {
+    "parameter_switch_rate": 0.45454545454545453,
+    "parameter_switches": 5,
+    "selection_frequency": {
+      "m=2160|r=120|trend=0.8500": 2,
+      "m=2160|r=240|trend=0.8500": 3,
+      "m=4320|r=240|trend=0.8500": 3,
+      "m=720|r=240|trend=0.7000": 2,
+      "m=720|r=240|trend=0.8500": 2
+    },
+    "selection_frequency_records": [
+      {"momentum_lookback": 4320, "reversal_lookback": 240, "selections": 3, "trend_weight": 0.85},
+      {"momentum_lookback": 2160, "reversal_lookback": 240, "selections": 3, "trend_weight": 0.85},
+      {"momentum_lookback": 2160, "reversal_lookback": 120, "selections": 2, "trend_weight": 0.85},
+      {"momentum_lookback": 720, "reversal_lookback": 240, "selections": 2, "trend_weight": 0.85},
+      {"momentum_lookback": 720, "reversal_lookback": 240, "selections": 2, "trend_weight": 0.7}
+    ],
+    "unique_parameter_sets": 5
+  },
+  "source": {
+    "artifact_id": 8585012784,
+    "artifact_sha256": "b0ef75175a74331e636bc0f20e5084194746bea82c41b3dd94488d9c5271a9c2",
+    "bar": "1H",
+    "instrument": "BTC-USDT",
+    "market_type": "spot",
+    "provider": "OKX",
+    "report_sha256": "ee6a6f61e59d8511aba0046cc04e7b7fec4a54bb6a35c0a2c38238155aa632a1",
+    "return_sha256": "a10404c8d24dc7899baf382d7695198118d4490065838a3a1d41720da1edba92",
+    "snapshot_sha256": "21f6eba97e0120912cf1c9e5679d2c3132e8ac9cbfe221f9f405aa7b654c2ca7",
+    "source_head_sha": "0f76d9671a009cb8b397ad4ef64c5a311ff35b7b",
+    "workflow_run_id": 30062329424
+  },
+  "tail_risk": {
+    "passes": true,
+    "strategy_expected_shortfall": -0.005780189412153187,
+    "tail_fraction": 0.05,
+    "volatility_targeted_long_expected_shortfall": -0.011360762186109978
+  },
+  "verdict": {
+    "live_eligible": false,
+    "paper_testable": false,
+    "reason": "The 1h path is net profitable at 5 bps but lacks benchmark-relative edge, fold/month/year stability, ETH replication, capacity, maker execution, and prospective paper evidence.",
+    "status": "rejected"
+  },
+  "year_stability": {
+    "complete_years": 2,
+    "passes": false,
+    "profitable_complete_years": 2,
+    "records": [
+      {"complete": false, "observations": 4416, "total_return": 0.09782855274126878, "year": 2023},
+      {"complete": true, "observations": 8784, "total_return": 0.24433877135370086, "year": 2024},
+      {"complete": true, "observations": 8760, "total_return": 0.002464060987312333, "year": 2025},
+      {"complete": false, "observations": 3960, "total_return": -0.09196884533095762, "year": 2026}
+    ]
+  }
+}
