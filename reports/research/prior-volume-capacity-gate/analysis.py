@@ -57,9 +57,7 @@ def file_sha256(path: Path) -> str:
 
 def _timestamps(values: pd.Series) -> pd.DatetimeIndex:
     raw = values.astype("string")
-    if not bool(
-        raw.map(lambda value: bool(_EXPLICIT_ZONE.search(str(value)))).all()
-    ):
+    if not bool(raw.map(lambda value: bool(_EXPLICIT_ZONE.search(str(value)))).all()):
         raise ValueError("timestamps must contain an explicit timezone")
     timestamps = pd.DatetimeIndex(pd.to_datetime(raw, utc=True, errors="raise"))
     if timestamps.has_duplicates or not timestamps.is_monotonic_increasing:
@@ -107,18 +105,12 @@ def load_returns(path: Path, expected_sha256: str) -> pd.DataFrame:
             frame[column],
             errors="raise",
         ).to_numpy()
-    values = validated[["turnover", "nav", "strategy_return"]].to_numpy(
-        dtype=float
-    )
+    values = validated[["turnover", "nav", "strategy_return"]].to_numpy(dtype=float)
     if len(validated) != EXPECTED_OBSERVATIONS:
         raise ValueError(f"expected {EXPECTED_OBSERVATIONS} OOS observations")
     if not np.isfinite(values).all() or np.any(validated["turnover"] < 0.0):
-        raise ValueError(
-            "returns must contain finite non-negative turnover and finite metrics"
-        )
-    if np.any(validated["nav"] <= 0.0) or np.any(
-        validated["strategy_return"] <= -1.0
-    ):
+        raise ValueError("returns must contain finite non-negative turnover and finite metrics")
+    if np.any(validated["nav"] <= 0.0) or np.any(validated["strategy_return"] <= -1.0):
         raise ValueError("NAV must be positive and returns greater than -100%")
     return validated
 
@@ -137,21 +129,13 @@ def capacity_frame(
     result = returns.join(lagged_liquidity, how="left")
     result["equity_multiple_before"] = result["nav"].shift(1).fillna(1.0)
     result["trade_notional_usd"] = (
-        result["turnover"].abs()
-        * result["equity_multiple_before"]
-        * INITIAL_CAPITAL_USD
+        result["turnover"].abs() * result["equity_multiple_before"] * INITIAL_CAPITAL_USD
     )
-    result["participation"] = (
-        result["trade_notional_usd"] / result["prior_median_quote_volume"]
-    )
+    result["participation"] = result["trade_notional_usd"] / result["prior_median_quote_volume"]
     adjustments = result["turnover"].abs() > ADJUSTMENT_THRESHOLD
     if result.loc[adjustments, "prior_median_quote_volume"].isna().any():
-        raise ValueError(
-            "every adjustment must have a complete prior liquidity window"
-        )
-    if not np.isfinite(
-        result.loc[adjustments, "participation"].to_numpy(dtype=float)
-    ).all():
+        raise ValueError("every adjustment must have a complete prior liquidity window")
+    if not np.isfinite(result.loc[adjustments, "participation"].to_numpy(dtype=float)).all():
         raise ValueError("capacity participation must be finite on adjustment days")
     result["capacity_initial_usd"] = np.where(
         adjustments,
@@ -164,9 +148,7 @@ def capacity_frame(
 
 
 def capacity_metrics(frame: pd.DataFrame) -> dict[str, Any]:
-    adjustments = frame.loc[
-        frame["turnover"].abs() > ADJUSTMENT_THRESHOLD
-    ].copy()
+    adjustments = frame.loc[frame["turnover"].abs() > ADJUSTMENT_THRESHOLD].copy()
     if adjustments.empty:
         raise ValueError("capacity analysis requires at least one adjustment")
     participation = adjustments["participation"]
@@ -182,13 +164,9 @@ def capacity_metrics(frame: pd.DataFrame) -> dict[str, Any]:
         "p99_participation": float(participation.quantile(0.99)),
         "maximum_participation": float(participation.max()),
         "maximum_participation_date": max_index.isoformat(),
-        "maximum_trade_notional_usd": float(
-            adjustments["trade_notional_usd"].max()
-        ),
+        "maximum_trade_notional_usd": float(adjustments["trade_notional_usd"].max()),
         "maximum_trade_notional_date": max_trade_index.isoformat(),
-        "minimum_supported_initial_capital_usd": float(
-            adjustments["capacity_initial_usd"].min()
-        ),
+        "minimum_supported_initial_capital_usd": float(adjustments["capacity_initial_usd"].min()),
         "passes": bool(not breaches.any()),
     }
 
@@ -240,9 +218,7 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
         market_results[market] = capacity_metrics(frame)
         baseline_metrics[market] = return_metrics(returns)
 
-    candidate_passes = all(
-        market_results[market]["passes"] for market in MARKETS
-    )
+    candidate_passes = all(market_results[market]["passes"] for market in MARKETS)
     return {
         "canonical_signature": CANONICAL_SIGNATURE,
         "hypothesis": (
@@ -261,12 +237,8 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
             "initial_capital_usd": INITIAL_CAPITAL_USD,
             "participation_limit": PARTICIPATION_LIMIT,
             "liquidity_lookback_sessions": LIQUIDITY_LOOKBACK,
-            "liquidity_estimator": (
-                "prior-session-shifted rolling median of daily quote volume"
-            ),
-            "trade_notional": (
-                "absolute turnover * prior NAV multiple * initial capital"
-            ),
+            "liquidity_estimator": ("prior-session-shifted rolling median of daily quote volume"),
+            "trade_notional": ("absolute turnover * prior NAV multiple * initial capital"),
             "adjustment_threshold": ADJUSTMENT_THRESHOLD,
             "baseline_exchange_fee_bps_one_way": 5.0,
             "all_in_cost_sensitivities_bps": [5.0, 7.5, 10.0, 15.0],
@@ -317,10 +289,7 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
                 "BTC-USDT and ETH-USDT are development markets; SOL-USDT is a "
                 "consumed holdout and was not used."
             ),
-            (
-                "Spread, slippage, market impact, and latency remain "
-                "separately unmeasured."
-            ),
+            ("Spread, slippage, market impact, and latency remain separately unmeasured."),
         ],
     }
 
