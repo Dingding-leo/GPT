@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import os
+import stat
 from pathlib import Path, PurePosixPath
 from typing import Final
 
@@ -10,12 +11,41 @@ _DEFAULT_OUTPUT_NAME: Final = "artifact-manifest.sha256"
 _CHUNK_SIZE: Final = 1024 * 1024
 
 
+def _required_private_regular_file(path: Path) -> os.stat_result:
+    try:
+        file_stat = path.stat(follow_symlinks=False)
+    except FileNotFoundError as exc:
+        raise ValueError(f"artifact file is missing: {path}") from exc
+    if not stat.S_ISREG(file_stat.st_mode):
+        raise ValueError(f"artifact file must be a regular file: {path}")
+    if file_stat.st_nlink != 1:
+        raise ValueError(f"artifact file must not be hard-linked: {path}")
+    return file_stat
+
+
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(_CHUNK_SIZE):
-            digest.update(chunk)
-    return digest.hexdigest()
+    expected_stat = _required_private_regular_file(path)
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError(f"artifact file could not be opened safely: {path}") from exc
+    try:
+        opened_stat = os.fstat(descriptor)
+        if not stat.S_ISREG(opened_stat.st_mode) or opened_stat.st_nlink != 1:
+            raise ValueError(f"artifact file must be one private regular file: {path}")
+        if (opened_stat.st_dev, opened_stat.st_ino) != (
+            expected_stat.st_dev,
+            expected_stat.st_ino,
+        ):
+            raise ValueError(f"artifact file changed during secure open: {path}")
+        digest = hashlib.sha256()
+        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+            while chunk := handle.read(_CHUNK_SIZE):
+                digest.update(chunk)
+        return digest.hexdigest()
+    finally:
+        os.close(descriptor)
 
 
 def _validated_output_name(output_name: str) -> str:
@@ -34,6 +64,7 @@ def _manifest_files(root: Path, output_name: str, temporary_name: str) -> list[P
             raise ValueError(f"artifact tree must not contain symlinks: {path}")
         if not path.is_file() or path in excluded_paths:
             continue
+        _required_private_regular_file(path)
         relative = path.relative_to(root).as_posix()
         if any(character in relative for character in ("\n", "\r", "\\")):
             raise ValueError(f"artifact path contains unsupported manifest characters: {relative}")
