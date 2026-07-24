@@ -57,6 +57,16 @@ def _directory_bytes(root: Path) -> dict[str, bytes]:
     }
 
 
+def _write_metadata(path: Path, **updates: object) -> Path:
+    metadata = json.loads((_FIXTURE_ROOT / "metadata.json").read_text(encoding="utf-8"))
+    metadata.update(updates)
+    path.write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return path
+
+
 def test_maker_replay_gate_is_deterministic_offline_and_fail_closed(tmp_path: Path) -> None:
     first_root = tmp_path / "first"
     second_root = tmp_path / "second"
@@ -111,18 +121,11 @@ def test_maker_replay_gate_is_deterministic_offline_and_fail_closed(tmp_path: Pa
 
 
 def test_documentation_fixture_cannot_self_assert_complete_interval(tmp_path: Path) -> None:
-    metadata = json.loads((_FIXTURE_ROOT / "metadata.json").read_text(encoding="utf-8"))
-    metadata.update(
-        {
-            "coverage_complete": True,
-            "coverage_start_utc": "2022-06-02T09:20:39Z",
-            "coverage_end_utc": "2022-06-02T09:20:51Z",
-        }
-    )
-    metadata_path = tmp_path / "metadata.json"
-    metadata_path.write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    metadata_path = _write_metadata(
+        tmp_path / "metadata.json",
+        coverage_complete=True,
+        coverage_start_utc="2022-06-02T09:20:39Z",
+        coverage_end_utc="2022-06-02T09:20:51Z",
     )
 
     gate = _build(tmp_path / "evidence", metadata_path=metadata_path)
@@ -133,6 +136,27 @@ def test_documentation_fixture_cannot_self_assert_complete_interval(tmp_path: Pa
     assert coverage["expiry_bracketed"] is True
     assert coverage["source_kind_is_complete_capture"] is False
     assert gate["maker_order_replay_passes"] is False
+    assert gate["blockers"] == [_COVERAGE_BLOCKER]
+
+
+def test_complete_capture_must_cover_the_exclusive_expiry(tmp_path: Path) -> None:
+    metadata_path = _write_metadata(
+        tmp_path / "metadata.json",
+        source_kind="complete_public_trade_capture",
+        coverage_complete=True,
+        coverage_start_utc="2022-06-02T09:20:39Z",
+        coverage_end_utc="2022-06-02T09:20:49Z",
+    )
+
+    gate = _build(tmp_path / "evidence", metadata_path=metadata_path)
+
+    coverage = gate["source"]["coverage"]
+    assert coverage["coverage_complete_declared"] is True
+    assert coverage["source_kind_is_complete_capture"] is True
+    assert coverage["submission_bracketed"] is True
+    assert coverage["expiry_bracketed"] is False
+    assert coverage["complete_submission_to_expiry"] is False
+    assert gate["observed_outcomes"] == []
     assert gate["blockers"] == [_COVERAGE_BLOCKER]
 
 
