@@ -188,6 +188,4 @@ def validate_okx_paper_execution_attempt_constraints(
         quote.ask_quantity if attempt.side == "buy" else quote.bid_quantity
     )
     if filled > visible_touch_quantity:
-        raise ValueError(
-            "filled_base_quantity exceeds the supplied same-side top-of-book quantity"
-        )
+        raise ValueError("filled_base_quantity exceeds the supplied same-side top-of-book quantity")
