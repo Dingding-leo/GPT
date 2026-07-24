@@ -27,10 +27,7 @@ def _load_real_okx_frame() -> pd.DataFrame:
     assert metadata["source_workflow_run_id"] == 30064074036
     assert metadata["source_artifact_id"] == 8585638085
     assert metadata["source_head_sha"] == "09baca05803bfcee8f0083b88c002925131d795e"
-    assert (
-        hashlib.sha256(_RETURNS_PATH.read_bytes()).hexdigest()
-        == metadata["fixture_sha256"]
-    )
+    assert hashlib.sha256(_RETURNS_PATH.read_bytes()).hexdigest() == metadata["fixture_sha256"]
 
     frame = pd.read_csv(_RETURNS_PATH)
     timestamps = pd.to_datetime(frame.pop("timestamp"), utc=True, errors="raise")
@@ -42,8 +39,7 @@ def _load_real_okx_frame() -> pd.DataFrame:
     return frame
 
 
-def test_real_okx_position_path_exposes_rebalances_episodes_and_holding_periods(
-) -> None:
+def test_real_okx_position_path_exposes_rebalances_episodes_and_holding_periods() -> None:
     metrics = performance_metrics(_load_real_okx_frame(), annualization=8760)
 
     assert metrics["target_position_turnover_sum"] == pytest.approx(0.9569747341067639)
@@ -148,9 +144,7 @@ def test_walk_forward_report_persists_activity_diagnostics_from_real_okx_prices(
         assert payload["aggregate_metrics"][key] == result.aggregate_metrics[key]
     assert "## Target-position activity diagnostics" in markdown
     assert "not submitted-order or fill counts" in markdown
-    assert (
-        "not broker order, queue, cancellation, partial-fill or fill counts" in markdown
-    )
+    assert "not broker order, queue, cancellation, partial-fill or fill counts" in markdown
 
     verification = verify_walk_forward_report(tmp_path, tolerance=1e-10)
     assert verification["status"] == "passed"
