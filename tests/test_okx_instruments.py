@@ -116,12 +116,72 @@ def test_real_okx_spot_constraints_are_exact_and_hash_bound(tmp_path: Path) -> N
     assert hashlib.sha256(paths["raw"].read_bytes()).hexdigest() == snapshot.raw_response_sha256
     assert hashlib.sha256(paths["metadata"].read_bytes()).hexdigest() == snapshot.metadata_sha256
     metadata = json.loads(paths["metadata"].read_bytes())
+    assert metadata["schema_version"] == 2
     assert metadata["minimum_order_size_base"] == "0.00001"
+    assert metadata["server_time_request_started_utc"] == "2026-07-24T00:00:00.126000Z"
     assert metadata["exchange_observed_at_utc"] == "2026-07-24T00:00:00.176000Z"
     assert metadata["server_round_trip_seconds"] == 0.1
     assert "minimum quote notional" in metadata["limitations"][0]
 
     assert write_okx_spot_instrument_snapshot(snapshot, tmp_path) == paths
+
+
+def test_snapshot_revalidates_complete_server_time_envelope() -> None:
+    snapshot, _ = _snapshot()
+    future_receipt = datetime(2027, 7, 24, 0, 0, tzinfo=UTC)
+    forged_round_trip = (future_receipt - snapshot.server_time_request_started_utc).total_seconds()
+
+    with pytest.raises(ValueError, match="clock skew does not match its timestamps"):
+        replace(
+            snapshot,
+            server_time_response_received_utc=future_receipt,
+            server_round_trip_seconds=forged_round_trip,
+            max_server_round_trip_seconds=forged_round_trip + 1.0,
+            midpoint_clock_skew_seconds=0.0,
+        )
+
+    with pytest.raises(ValueError, match="sampled after the instrument response"):
+        replace(
+            snapshot,
+            server_time_request_started_utc=(
+                snapshot.response_received_utc - timedelta(microseconds=1)
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("max_server_round_trip_seconds", float("inf")),
+        ("max_server_round_trip_seconds", float("nan")),
+        ("max_abs_midpoint_clock_skew_seconds", float("inf")),
+        ("max_abs_midpoint_clock_skew_seconds", float("nan")),
+    ],
+)
+def test_nonfinite_instrument_timing_policies_fail_before_io(
+    field: str,
+    value: float,
+) -> None:
+    called = False
+
+    def get_bytes(_url: str, _timeout: float) -> bytes:
+        nonlocal called
+        called = True
+        return _real_okx_response_bytes()
+
+    kwargs = {field: value}
+    started = datetime(2026, 7, 24, 0, 0, tzinfo=UTC)
+    received = started + timedelta(milliseconds=125)
+    with pytest.raises(ValueError, match="must be a finite number"):
+        fetch_okx_spot_instrument_snapshot(
+            inst_id="BTC-USDT",
+            server_time_sample=_server_time_sample(instrument_received=received),
+            get_bytes=get_bytes,
+            now=_clock(started, received),
+            **kwargs,
+        )
+
+    assert called is False
 
 
 def test_snapshot_fields_are_replayed_from_exact_provider_bytes() -> None:

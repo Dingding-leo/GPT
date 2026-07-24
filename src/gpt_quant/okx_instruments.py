@@ -7,6 +7,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
+from math import isfinite
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
@@ -18,7 +19,7 @@ RawBytesGetter = Callable[[str, float], bytes]
 Clock = Callable[[], datetime]
 _ENDPOINT = "/api/v5/public/instruments"
 _MAX_RESPONSE_BYTES = 1_000_000
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 _SUPPORTED_UPCOMING_FIELDS = frozenset({"tickSz", "minSz", "maxMktSz"})
 
 
@@ -59,6 +60,7 @@ class OKXSpotInstrumentSnapshot:
     base_url: str
     request_started_utc: datetime
     response_received_utc: datetime
+    server_time_request_started_utc: datetime
     exchange_observed_at_utc: datetime
     server_time_response_received_utc: datetime
     server_round_trip_seconds: float
@@ -82,11 +84,95 @@ class OKXSpotInstrumentSnapshot:
     def __post_init__(self) -> None:
         raw_response = _required_raw_response(self.raw_response_json)
         object.__setattr__(self, "raw_response_json", raw_response)
+
+        request_started = _required_utc_datetime(
+            self.request_started_utc,
+            field="request_started_utc",
+        )
+        response_received = _required_utc_datetime(
+            self.response_received_utc,
+            field="response_received_utc",
+        )
+        server_request_started = _required_utc_datetime(
+            self.server_time_request_started_utc,
+            field="server_time_request_started_utc",
+        )
         observed_at = _required_utc_datetime(
             self.exchange_observed_at_utc,
             field="exchange_observed_at_utc",
         )
-        object.__setattr__(self, "exchange_observed_at_utc", observed_at)
+        server_response_received = _required_utc_datetime(
+            self.server_time_response_received_utc,
+            field="server_time_response_received_utc",
+        )
+        for field_name, value in (
+            ("request_started_utc", request_started),
+            ("response_received_utc", response_received),
+            ("server_time_request_started_utc", server_request_started),
+            ("exchange_observed_at_utc", observed_at),
+            ("server_time_response_received_utc", server_response_received),
+        ):
+            object.__setattr__(self, field_name, value)
+
+        if response_received < request_started:
+            raise ValueError("local clock moved backward during OKX instrument request")
+        if server_request_started < response_received:
+            raise ValueError("OKX server time must be sampled after the instrument response")
+
+        max_round_trip = _required_finite_number(
+            self.max_server_round_trip_seconds,
+            field="max_server_round_trip_seconds",
+        )
+        if max_round_trip <= 0:
+            raise ValueError("max_server_round_trip_seconds must be positive")
+        max_clock_skew = _required_finite_number(
+            self.max_abs_midpoint_clock_skew_seconds,
+            field="max_abs_midpoint_clock_skew_seconds",
+        )
+        if max_clock_skew < 0:
+            raise ValueError("max_abs_midpoint_clock_skew_seconds cannot be negative")
+        object.__setattr__(self, "max_server_round_trip_seconds", max_round_trip)
+        object.__setattr__(self, "max_abs_midpoint_clock_skew_seconds", max_clock_skew)
+
+        sample = OKXServerTimeSample(
+            base_url=self.base_url,
+            endpoint="/api/v5/public/time",
+            local_request_started_utc=server_request_started,
+            local_response_received_utc=server_response_received,
+            server_time_utc=observed_at,
+            round_trip_seconds=self.server_round_trip_seconds,
+            midpoint_clock_skew_seconds=self.midpoint_clock_skew_seconds,
+        )
+        (
+            validated_server_started,
+            validated_server_received,
+            validated_observed_at,
+            validated_round_trip,
+            validated_clock_skew,
+        ) = _validated_server_time_sample(
+            sample,
+            max_round_trip_seconds=max_round_trip,
+            max_abs_clock_skew_seconds=max_clock_skew,
+        )
+        object.__setattr__(
+            self,
+            "server_time_request_started_utc",
+            validated_server_started,
+        )
+        object.__setattr__(
+            self,
+            "server_time_response_received_utc",
+            validated_server_received,
+        )
+        object.__setattr__(
+            self,
+            "exchange_observed_at_utc",
+            validated_observed_at,
+        )
+        object.__setattr__(self, "server_round_trip_seconds", validated_round_trip)
+        object.__setattr__(self, "midpoint_clock_skew_seconds", validated_clock_skew)
+        observed_at = validated_observed_at
+
         replayed = _parse_spot_instrument_response(
             raw_response,
             inst_id=self.instrument_id,
@@ -133,6 +219,7 @@ class OKXSpotInstrumentSnapshot:
             "base_url": self.base_url,
             "request_started_utc": _format_utc(self.request_started_utc),
             "response_received_utc": _format_utc(self.response_received_utc),
+            "server_time_request_started_utc": _format_utc(self.server_time_request_started_utc),
             "exchange_observed_at_utc": _format_utc(self.exchange_observed_at_utc),
             "server_time_response_received_utc": _format_utc(
                 self.server_time_response_received_utc
@@ -224,9 +311,18 @@ def _current_utc_datetime() -> datetime:
 
 
 def _required_utc_datetime(value: datetime, *, field: str) -> datetime:
-    if not isinstance(value, datetime) or value.tzinfo is None:
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f"{field} must be a timezone-aware datetime")
     return value.astimezone(UTC)
+
+
+def _required_finite_number(value: object, *, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{field} must be a finite number")
+    number = float(value)
+    if not isfinite(number):
+        raise ValueError(f"{field} must be a finite number")
+    return number
 
 
 def _format_utc(value: datetime) -> str:
@@ -417,11 +513,20 @@ def fetch_okx_spot_instrument_snapshot(
         or any(character.isspace() for character in base_url)
     ):
         raise ValueError("base_url must be a non-empty URL without whitespace")
-    if timeout <= 0:
+    timeout_seconds = _required_finite_number(timeout, field="timeout")
+    if timeout_seconds <= 0:
         raise ValueError("timeout must be positive")
-    if max_server_round_trip_seconds <= 0:
+    max_round_trip = _required_finite_number(
+        max_server_round_trip_seconds,
+        field="max_server_round_trip_seconds",
+    )
+    if max_round_trip <= 0:
         raise ValueError("max_server_round_trip_seconds must be positive")
-    if max_abs_midpoint_clock_skew_seconds < 0:
+    max_clock_skew = _required_finite_number(
+        max_abs_midpoint_clock_skew_seconds,
+        field="max_abs_midpoint_clock_skew_seconds",
+    )
+    if max_clock_skew < 0:
         raise ValueError("max_abs_midpoint_clock_skew_seconds cannot be negative")
 
     normalized_base_url = base_url.rstrip("/")
@@ -431,7 +536,7 @@ def fetch_okx_spot_instrument_snapshot(
     clock = now or _current_utc_datetime
 
     request_started = _required_utc_datetime(clock(), field="request start")
-    raw_response = _required_raw_response(getter(f"{endpoint}?{query}", timeout))
+    raw_response = _required_raw_response(getter(f"{endpoint}?{query}", timeout_seconds))
     response_received = _required_utc_datetime(clock(), field="response receipt")
     if response_received < request_started:
         raise ValueError("local clock moved backward during OKX instrument request")
@@ -444,15 +549,15 @@ def fetch_okx_spot_instrument_snapshot(
         midpoint_clock_skew_seconds,
     ) = _validated_server_time_sample(
         server_time_sample,
-        max_round_trip_seconds=max_server_round_trip_seconds,
-        max_abs_clock_skew_seconds=max_abs_midpoint_clock_skew_seconds,
+        max_round_trip_seconds=max_round_trip,
+        max_abs_clock_skew_seconds=max_clock_skew,
     )
     if server_time_sample.base_url != normalized_base_url:
         raise ValueError("OKX instrument and server-time observations must use the same base URL")
-    if server_request_started.to_pydatetime() < response_received:
+    if server_request_started < response_received:
         raise ValueError("OKX server time must be sampled after the instrument response")
-    exchange_observed = exchange_observed_at.to_pydatetime()
-    server_response_received_at = server_response_received.to_pydatetime()
+    exchange_observed = exchange_observed_at
+    server_response_received_at = server_response_received
 
     parsed = _parse_spot_instrument_response(
         raw_response,
@@ -464,12 +569,13 @@ def fetch_okx_spot_instrument_snapshot(
         base_url=normalized_base_url,
         request_started_utc=request_started,
         response_received_utc=response_received,
+        server_time_request_started_utc=server_request_started,
         exchange_observed_at_utc=exchange_observed,
         server_time_response_received_utc=server_response_received_at,
         server_round_trip_seconds=server_round_trip_seconds,
         midpoint_clock_skew_seconds=midpoint_clock_skew_seconds,
-        max_server_round_trip_seconds=max_server_round_trip_seconds,
-        max_abs_midpoint_clock_skew_seconds=max_abs_midpoint_clock_skew_seconds,
+        max_server_round_trip_seconds=max_round_trip,
+        max_abs_midpoint_clock_skew_seconds=max_clock_skew,
         instrument_id=parsed.instrument_id,
         base_currency=parsed.base_currency,
         quote_currency=parsed.quote_currency,
