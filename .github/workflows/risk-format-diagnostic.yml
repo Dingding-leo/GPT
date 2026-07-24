@@ -1,0 +1,38 @@
+name: Risk Format Diagnostic
+
+on:
+  push:
+    branches:
+      - auto/risk/20260724-10-paper-kill-switch
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.11"
+      - name: Show exact Ruff findings
+        shell: bash
+        run: |
+          set +e
+          python -m pip install --quiet "ruff>=0.9,<1"
+          ruff check \
+            src/gpt_quant/paper_risk_kill_switch.py \
+            src/gpt_quant/paper_risk_session_gate.py \
+            tests/test_paper_risk_kill_switch.py \
+            tests/test_paper_risk_session_gate.py
+          echo "--- FORMAT DIFF ---"
+          ruff format --diff \
+            src/gpt_quant/paper_risk_kill_switch.py \
+            src/gpt_quant/paper_risk_session_gate.py \
+            tests/test_paper_risk_kill_switch.py \
+            tests/test_paper_risk_session_gate.py
+          exit 0
