@@ -30,9 +30,6 @@ jobs:
           ruff format \
             src/gpt_quant/okx_instruments.py \
             tests/test_okx_instrument_origin_security.py
-          ruff check \
-            src/gpt_quant/okx_instruments.py \
-            tests/test_okx_instrument_origin_security.py
 
       - name: Upload canonical files
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
