@@ -133,10 +133,9 @@ def test_fresh_quote_survives_bounded_slow_local_clock() -> None:
 
     assert observation.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
     assert observation.midpoint_clock_skew_seconds == pytest.approx(0.1)
-    assert observation.quote.observed_at_utc == (
-        datetime(2021, 8, 26, 8, 27, 16, 396_000, tzinfo=UTC)
-        - timedelta(seconds=observation.midpoint_clock_skew_seconds)
-    )
+    assert observation.quote.observed_at_utc == datetime(
+        2021, 8, 26, 8, 27, 16, 396_000, tzinfo=UTC
+    ) - timedelta(seconds=observation.midpoint_clock_skew_seconds)
     assert observation.quote.received_at_utc == observation.response_received_utc
 
     evidence = ReconstructableOKXTopOfBookEvidence(observation=observation)
