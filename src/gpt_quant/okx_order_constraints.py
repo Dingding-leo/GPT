@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from math import isfinite
 
 from .okx_instruments import OKXSpotInstrumentSnapshot
 
@@ -19,6 +20,15 @@ def _maximum_age(value: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError("maximum_snapshot_age_ms must be a non-negative integer")
     return value
+
+
+def _positive_finite_seconds(value: int | float, *, field: str) -> float:
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise ValueError(f"{field} must be a positive finite number")
+    number = float(value)
+    if not isfinite(number) or number <= 0:
+        raise ValueError(f"{field} must be a positive finite number")
+    return number
 
 
 def _positive_canonical_decimal(value: str, *, field: str) -> tuple[str, Decimal]:
@@ -53,12 +63,13 @@ def validate_okx_spot_order_quantity(
     submitted_at_utc: datetime,
     maximum_snapshot_age_ms: int,
     base_quantity: str,
+    maximum_instrument_request_round_trip_seconds: float = 2.0,
 ) -> str:
     """Validate one proposed OKX spot base quantity before any execution adapter.
 
     This function performs no network or account operation. It requires an exact,
-    replay-validated public instrument snapshot and rejects unavailable, stale,
-    expired, below-minimum, or off-lot quantities. Snapshot age is measured only
+    replay-validated public instrument snapshot and rejects unavailable, slow-acquired,
+    stale, expired, below-minimum, or off-lot quantities. Snapshot age is measured only
     in the local clock domain. Exchange-effective constraint changes are compared
     against a conservative exchange-time upper bound derived from the validated
     public-time request envelope. Minimum quote notional still requires a separate
@@ -69,10 +80,21 @@ def validate_okx_spot_order_quantity(
         raise TypeError("snapshot must be an OKXSpotInstrumentSnapshot")
     submitted_at = _utc(submitted_at_utc, field="submitted_at_utc")
     maximum_age_ms = _maximum_age(maximum_snapshot_age_ms)
+    maximum_request_round_trip = _positive_finite_seconds(
+        maximum_instrument_request_round_trip_seconds,
+        field="maximum_instrument_request_round_trip_seconds",
+    )
+    instrument_started = _utc(
+        snapshot.request_started_utc,
+        field="snapshot.request_started_utc",
+    )
     instrument_received = _utc(
         snapshot.response_received_utc,
         field="snapshot.response_received_utc",
     )
+    instrument_request_round_trip = (instrument_received - instrument_started).total_seconds()
+    if instrument_request_round_trip > maximum_request_round_trip:
+        raise ValueError("OKX instrument request round trip exceeds the configured bound")
     evidence_available = _utc(
         snapshot.server_time_response_received_utc,
         field="snapshot.server_time_response_received_utc",
@@ -109,6 +131,7 @@ def validate_okx_spot_limit_order_constraints(
     maximum_snapshot_age_ms: int,
     base_quantity: str,
     limit_price: str,
+    maximum_instrument_request_round_trip_seconds: float = 2.0,
 ) -> tuple[str, str]:
     """Validate quantity and tick alignment for one offline OKX spot limit intent.
 
@@ -122,6 +145,7 @@ def validate_okx_spot_limit_order_constraints(
         submitted_at_utc=submitted_at_utc,
         maximum_snapshot_age_ms=maximum_snapshot_age_ms,
         base_quantity=base_quantity,
+        maximum_instrument_request_round_trip_seconds=maximum_instrument_request_round_trip_seconds,
     )
     canonical_price, price = _positive_canonical_decimal(limit_price, field="limit_price")
     if price % snapshot.tick_size_decimal != 0:
