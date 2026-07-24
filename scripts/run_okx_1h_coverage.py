@@ -16,6 +16,10 @@ from gpt_quant.okx_1h import (
     fetch_okx_one_hour_candles,
     replay_persisted_okx_one_hour_snapshot,
 )
+from gpt_quant.okx_1h_forward_registry import (
+    register_okx_one_hour_forward_snapshot,
+    replay_okx_one_hour_forward_registry,
+)
 from gpt_quant.okx_execution_quote import _required_base_url
 from gpt_quant.okx_live_response_evidence import sample_okx_server_time_with_response
 
@@ -82,6 +86,7 @@ def parse_args() -> argparse.Namespace:
         description="Acquire and replay immutable public OKX spot 1H coverage without research."
     )
     parser.add_argument("--output-dir", default="reports/okx/1h-coverage")
+    parser.add_argument("--forward-registry-dir")
     parser.add_argument("--start", default="2021-07-24T00:00:00Z")
     parser.add_argument("--base-url", default=os.environ.get("OKX_BASE_URL", "https://www.okx.com"))
     parser.add_argument("--instrument", action="append", dest="instruments")
@@ -101,6 +106,9 @@ def main() -> int:
     requested_start = _utc_timestamp(args.start, field="start")
     base_url = _required_base_url(args.base_url)
     output = Path(args.output_dir)
+    forward_registry = (
+        None if args.forward_registry_dir is None else Path(args.forward_registry_dir)
+    )
 
     server_observation = sample_okx_server_time_with_response(
         base_url=base_url,
@@ -132,6 +140,26 @@ def main() -> int:
         replayed = replay_persisted_okx_one_hour_snapshot(snapshot_dir, inst_id=inst_id)
         if not replayed.candles.equals(snapshot.candles):
             raise ValueError(f"persisted OKX 1H replay differs for {inst_id}")
+        registry_evidence: dict[str, Any] | None = None
+        if forward_registry is not None:
+            record = register_okx_one_hour_forward_snapshot(
+                snapshot_dir,
+                forward_registry,
+                inst_id=inst_id,
+            )
+            records = replay_okx_one_hour_forward_registry(
+                forward_registry,
+                inst_id=inst_id,
+            )
+            registry_evidence = {
+                "registry_dir": str(forward_registry / inst_id),
+                "records": len(records),
+                "record_id": record["record_id"],
+                "snapshot_id": record["snapshot_id"],
+                "previous_record_id": record["previous_record_id"],
+                "overlap_observations": record["overlap_observations"],
+                "appended_observations": record["appended_observations"],
+            }
         metadata_bytes = paths["metadata"].read_bytes()
         instrument_evidence[inst_id] = {
             "provider": "OKX",
@@ -157,6 +185,7 @@ def main() -> int:
             "raw_pages_sha256": snapshot.metadata["raw_pages_sha256"],
             "metadata_sha256": _sha256(metadata_bytes),
             "paths": {name: str(path) for name, path in sorted(paths.items())},
+            "forward_registry": registry_evidence,
         }
 
     starts = {item["effective_start"] for item in instrument_evidence.values()}
@@ -180,6 +209,7 @@ def main() -> int:
         "expected_step_seconds": 3_600,
         "coverage_complete": True,
         "offline_replay_verified": True,
+        "forward_registry_enabled": forward_registry is not None,
         "exchange_time_evidence": {
             "endpoint": server_observation.sample.endpoint,
             "server_time_utc": exchange_time.isoformat(),
@@ -224,6 +254,10 @@ def main() -> int:
         print(f"{inst_id}_pages={item['pages']}")
         print(f"{inst_id}_raw_pages_sha256={item['raw_pages_sha256']}")
         print(f"{inst_id}_normalized_csv_sha256={item['normalized_csv_sha256']}")
+        registry = item["forward_registry"]
+        if registry is not None:
+            print(f"{inst_id}_forward_record_id={registry['record_id']}")
+            print(f"{inst_id}_forward_snapshot_id={registry['snapshot_id']}")
     return 0
 
 
