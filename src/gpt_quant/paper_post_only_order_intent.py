@@ -313,8 +313,6 @@ def build_paper_post_only_order_intent(
         )
     if decision.market_observed_at_utc != quote.observed_at_utc:
         raise ValueError("paper order decision does not reproduce the quote observation time")
-    if quote.received_at_utc >= decision.decided_at_utc:
-        raise ValueError "execution quote must be received before the paper order decision")
     quote.assert_usable_for(
         target,
         decision_at_utc=decision.decided_at_utc,
