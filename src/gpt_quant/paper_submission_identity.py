@@ -143,8 +143,5 @@ class PaperSubmissionIdentity:
             or candidate.submission_key != self.submission_key
         ):
             raise ValueError(f"{_ERROR} belongs to a different paper decision")
-        if (
-            candidate.record_id != self.record_id
-            or candidate.record_sha256 != self.record_sha256
-        ):
+        if candidate.record_id != self.record_id or candidate.record_sha256 != self.record_sha256:
             raise ValueError(f"{_ERROR} conflicts with the initial request for this paper decision")
