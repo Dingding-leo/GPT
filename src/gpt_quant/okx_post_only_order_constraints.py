@@ -57,10 +57,7 @@ def validate_okx_paper_post_only_order_intent_constraints(
         raise ValueError(
             "post-only order intent does not reference the supplied OKX instrument snapshot"
         )
-    if (
-        snapshot.instrument_id != quote.instrument_id
-        or quote.instrument_id != intent.instrument_id
-    ):
+    if snapshot.instrument_id != quote.instrument_id or quote.instrument_id != intent.instrument_id:
         raise ValueError(
             "post-only order intent instrument does not match the supplied OKX evidence"
         )
