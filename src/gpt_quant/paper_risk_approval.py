@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from numbers import Real
 
+from .execution_intent import TargetPositionIntent
 from .paper_risk_kill_switch import (
     PaperRiskKillSwitchDecision,
     PaperRiskKillSwitchPolicy,
@@ -98,6 +99,21 @@ def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
             raise ValueError(f"{_ERROR} JSON contains duplicate field {key!r}")
         result[key] = value
     return result
+
+
+def _assert_target_proposal(
+    target: TargetPositionIntent,
+    proposed_exposures: tuple[ProposedInstrumentExposure, ...],
+) -> None:
+    matching = tuple(
+        proposal
+        for proposal in proposed_exposures
+        if proposal.instrument_id == target.instrument_id
+    )
+    if len(matching) != 1:
+        raise ValueError(f"{_ERROR} must contain exactly one proposal for the target instrument")
+    if matching[0].proposed_exposure != target.target_position:
+        raise ValueError(f"{_ERROR} target exposure does not match the target intent")
 
 
 @dataclass(frozen=True, slots=True)
@@ -219,15 +235,19 @@ class PaperRiskApproval:
 
 
 def create_paper_risk_approval(
-    target_intent_id: str,
+    target: TargetPositionIntent,
     proposed_exposures: tuple[ProposedInstrumentExposure, ...],
     *,
     snapshot: PaperRiskStateSnapshot,
     policy: PaperRiskKillSwitchPolicy,
     evaluated_at_utc: datetime | str,
 ) -> PaperRiskApproval:
-    """Mint an approval only after the exact fail-closed risk evaluation allows it."""
+    """Mint an approval only after exact target and risk replay both allow it."""
 
+    if not isinstance(target, TargetPositionIntent):
+        raise TypeError("target must be a TargetPositionIntent")
+    target.assert_active_at(evaluated_at_utc)
+    _assert_target_proposal(target, proposed_exposures)
     decision = evaluate_paper_risk_kill_switch(
         proposed_exposures,
         snapshot=snapshot,
@@ -236,7 +256,7 @@ def create_paper_risk_approval(
     )
     decision.assert_allowed()
     approval = PaperRiskApproval(
-        target_intent_id=target_intent_id,
+        target_intent_id=target.intent_id,
         evaluated_at_utc=decision.evaluated_at_utc,
         snapshot_id=decision.snapshot_id,
         policy_id=decision.policy_id,
@@ -246,26 +266,39 @@ def create_paper_risk_approval(
             for item in proposed_exposures
         ),
     )
-    verify_paper_risk_approval(approval, snapshot=snapshot, policy=policy)
+    verify_paper_risk_approval(
+        approval,
+        target=target,
+        snapshot=snapshot,
+        policy=policy,
+    )
     return approval
 
 
 def verify_paper_risk_approval(
     approval: PaperRiskApproval,
     *,
+    target: TargetPositionIntent,
     snapshot: PaperRiskStateSnapshot,
     policy: PaperRiskKillSwitchPolicy,
 ) -> PaperRiskKillSwitchDecision:
-    """Re-evaluate exact persisted inputs instead of trusting an approval-shaped object."""
+    """Replay the exact target and risk inputs instead of trusting approval-shaped data."""
 
     if not isinstance(approval, PaperRiskApproval):
         raise TypeError("approval must be a PaperRiskApproval")
+    if not isinstance(target, TargetPositionIntent):
+        raise TypeError("target must be a TargetPositionIntent")
+    if target.intent_id != approval.target_intent_id:
+        raise ValueError(f"{_ERROR} target does not match persisted approval")
+    target.assert_active_at(approval.evaluated_at_utc)
+    proposals = tuple(item.to_proposal() for item in approval.proposed_exposures)
+    _assert_target_proposal(target, proposals)
     if snapshot.snapshot_id != approval.snapshot_id:
         raise ValueError(f"{_ERROR} snapshot does not match persisted approval")
     if policy.policy_id != approval.policy_id:
         raise ValueError(f"{_ERROR} policy does not match persisted approval")
     decision = evaluate_paper_risk_kill_switch(
-        tuple(item.to_proposal() for item in approval.proposed_exposures),
+        proposals,
         snapshot=snapshot,
         policy=policy,
         evaluated_at_utc=approval.evaluated_at_utc,
