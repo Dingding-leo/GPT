@@ -15,6 +15,7 @@ _DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 _RESPONSE_FIELDS = {"code", "data", "msg"}
 _TRADE_FIELDS = {"instId", "px", "side", "source", "sz", "tradeId", "ts"}
 _EXCHANGE_FEE_ONE_WAY_BPS = Decimal("5")
+_MAX_DECIMAL_CHARACTERS = 128
 
 
 def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -35,7 +36,11 @@ def _text(value: object, name: str) -> str:
 
 
 def _decimal_text(value: object, name: str, *, positive: bool = False) -> str:
-    if not isinstance(value, str) or _DECIMAL.fullmatch(value) is None:
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a canonical non-negative decimal")
+    if len(value) > _MAX_DECIMAL_CHARACTERS:
+        raise ValueError(f"{name} exceeds the 128-character security limit")
+    if _DECIMAL.fullmatch(value) is None:
         raise ValueError(f"{name} must be a canonical non-negative decimal")
     parsed = Decimal(value)
     canonical = _format_decimal(parsed)
