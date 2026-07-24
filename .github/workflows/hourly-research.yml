@@ -86,19 +86,7 @@ jobs:
 
       - name: Lint and formatting
         id: lint_format
-        shell: bash
-        run: |
-          mkdir -p reports/live-readiness-gate
-          status=0
-          ruff check . > reports/live-readiness-gate/ruff-check.txt 2>&1 || status=$?
-          format_status=0
-          ruff format --check . > reports/live-readiness-gate/ruff-format.txt 2>&1 || format_status=$?
-          cat reports/live-readiness-gate/ruff-check.txt
-          cat reports/live-readiness-gate/ruff-format.txt
-          if [ "$status" -ne 0 ]; then
-            exit "$status"
-          fi
-          exit "$format_status"
+        run: ruff check . && ruff format --check .
 
       - name: Test against public OKX data
         id: tests
