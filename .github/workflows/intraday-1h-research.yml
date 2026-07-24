@@ -21,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: canonical-btc-eth-1h-${{ github.event_name }}-${{ inputs.target_sha || github.sha }}
+  group: canonical-btc-eth-1h-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
-      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.sha }}
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
       PIP_BOOTSTRAP_VERSION: "26.1.2"
       ARTIFACT_NAME: "canonical-${{ matrix.inst_id }}-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
       SOURCE_ROOT: "reports/okx/1h/source/${{ matrix.inst_id }}"
@@ -177,7 +177,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
-      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.sha }}
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
       PIP_BOOTSTRAP_VERSION: "26.1.2"
       UPSTREAM_RESEARCH_RESULT: ${{ needs.research.result }}
       DOWNLOADED_ARTIFACTS: reports/okx/1h/downloaded

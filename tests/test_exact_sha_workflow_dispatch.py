@@ -8,6 +8,8 @@ _WORKFLOW_CHECKOUT_COUNTS = {
     "intraday-1h-research.yml": 2,
     "okx-1h-coverage.yml": 1,
 }
+_RESOLVED_SHA = "inputs.target_sha || github.event.pull_request.head.sha || github.sha"
+_EXPECTED_SHA_BINDING = f"EXPECTED_TESTED_SHA: ${{{{ {_RESOLVED_SHA} }}}}"
 
 
 def test_g0_workflows_can_verify_one_explicit_immutable_sha() -> None:
@@ -17,7 +19,7 @@ def test_g0_workflows_can_verify_one_explicit_immutable_sha() -> None:
         assert "workflow_dispatch:" in workflow
         assert "target_sha:" in workflow
         assert "Full 40-character commit SHA to verify" in workflow
-        assert "EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.sha }}" in workflow
+        assert _EXPECTED_SHA_BINDING in workflow
         assert workflow.count("ref: ${{ env.EXPECTED_TESTED_SHA }}") == checkout_count
         assert workflow.count("persist-credentials: false") == checkout_count
         assert workflow.count("- name: Verify exact checked-out revision") == checkout_count
@@ -28,14 +30,20 @@ def test_g0_workflows_can_verify_one_explicit_immutable_sha() -> None:
         assert "secrets." not in workflow
 
 
-def test_hourly_release_evidence_binds_the_dispatched_target_sha() -> None:
-    workflow = (_WORKFLOW_ROOT / "hourly-research.yml").read_text(encoding="utf-8")
+def test_pull_request_runs_bind_to_the_head_commit_not_the_synthetic_merge_commit() -> None:
+    for workflow_name in _WORKFLOW_CHECKOUT_COUNTS:
+        workflow = (_WORKFLOW_ROOT / workflow_name).read_text(encoding="utf-8")
 
-    assert (
-        "LIVE_READINESS_HEAD_SHA: ${{ github.event.pull_request.head.sha || "
-        "inputs.target_sha || github.sha }}"
-    ) in workflow
-    assert "LIVE_READINESS_TESTED_SHA: ${{ inputs.target_sha || github.sha }}" in workflow
+        assert _RESOLVED_SHA in workflow
+        assert "EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.sha }}" not in workflow
+
+
+def test_hourly_release_evidence_binds_the_resolved_target_sha() -> None:
+    workflow = (_WORKFLOW_ROOT / "hourly-research.yml").read_text(encoding="utf-8")
+    binding = "${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}"
+
+    assert f"LIVE_READINESS_HEAD_SHA: {binding}" in workflow
+    assert f"LIVE_READINESS_TESTED_SHA: {binding}" in workflow
     assert '--tested-sha "$LIVE_READINESS_TESTED_SHA"' in workflow
 
 

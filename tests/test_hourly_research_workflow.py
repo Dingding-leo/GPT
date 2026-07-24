@@ -31,10 +31,16 @@ def test_hourly_workflow_scopes_concurrency_by_event_and_tested_sha() -> None:
     concurrency_block = workflow[concurrency_start:jobs_start]
 
     assert concurrency_block.count("github.event_name") == 1
-    assert concurrency_block.count("inputs.target_sha || github.sha") == 1
+    assert (
+        concurrency_block.count(
+            "inputs.target_sha || github.event.pull_request.head.sha || github.sha"
+        )
+        == 1
+    )
     assert (
         "group: hourly-quant-research-${{ github.event_name }}-"
-        "${{ inputs.target_sha || github.sha }}" in concurrency_block
+        "${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}"
+        in concurrency_block
     )
     assert "github.ref" not in concurrency_block
     assert "cancel-in-progress: true" in concurrency_block

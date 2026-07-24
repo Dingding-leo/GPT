@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: okx-1h-data-${{ github.event_name }}-${{ inputs.target_sha || github.sha }}
+  group: okx-1h-data-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.sha }}
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
       OKX_BASE_URL: https://www.okx.com
       ARTIFACT_NAME: okx-1h-coverage-${{ github.run_number }}-attempt-${{ github.run_attempt }}
 
