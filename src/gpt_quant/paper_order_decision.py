@@ -125,7 +125,7 @@ class PaperOrderDecision:
     market_observed_at_utc: datetime
     outcome: Literal["planned", "rejected"]
     reason_code: str
-    order_type: Literal["market", "none"]
+    order_type: Literal["market", "post_only_limit", "none"]
     side: Literal["buy", "sell", "none"]
     base_quantity: str
     instrument_snapshot_sha256: str
@@ -160,7 +160,11 @@ class PaperOrderDecision:
         object.__setattr__(self, "reason_code", _token(self.reason_code, "reason_code"))
         if outcome not in {"planned", "rejected"}:
             raise ValueError("outcome must be planned or rejected")
-        if order_type not in {"market", "none"} or side not in {"buy", "sell", "none"}:
+        if order_type not in {"market", "post_only_limit", "none"} or side not in {
+            "buy",
+            "sell",
+            "none",
+        }:
             raise ValueError("invalid paper order type or side")
         object.__setattr__(self, "outcome", outcome)
         object.__setattr__(self, "order_type", order_type)
@@ -168,8 +172,14 @@ class PaperOrderDecision:
 
         quantity = _decimal(self.base_quantity, "base_quantity")
         if outcome == "planned":
-            if order_type != "market" or side not in {"buy", "sell"} or Decimal(quantity) <= 0:
-                raise ValueError("planned decisions require a positive market buy/sell quantity")
+            if (
+                order_type not in {"market", "post_only_limit"}
+                or side not in {"buy", "sell"}
+                or Decimal(quantity) <= 0
+            ):
+                raise ValueError(
+                    "planned decisions require a positive market or post-only limit buy/sell quantity"
+                )
         elif (order_type, side, quantity) != ("none", "none", "0"):
             raise ValueError("rejected decisions require zero quantity and no order fields")
         object.__setattr__(self, "base_quantity", quantity)
