@@ -114,3 +114,26 @@ def test_binding_journal_rejects_writable_state_directory(tmp_path: Path) -> Non
             intent_journal=intent_journal,
             quote_store=quote_store,
         )
+
+
+def test_binding_journal_recovers_private_crash_stage_before_restart(
+    tmp_path: Path,
+) -> None:
+    state = tmp_path / "state"
+    state.mkdir(mode=0o700)
+    path = state / "bindings.jsonl"
+    stage = state / ".execution-quote-binding-journal-123-deadbeefdeadbeef.tmp"
+    stage.write_bytes(b"unpublished")
+    stage.chmod(0o600)
+
+    journal, intent_journal, quote_store = _record(tmp_path, path)
+
+    assert not stage.exists()
+    assert (
+        load_execution_quote_binding_journal(
+            path,
+            intent_journal=intent_journal,
+            quote_store=quote_store,
+        )
+        == journal
+    )
