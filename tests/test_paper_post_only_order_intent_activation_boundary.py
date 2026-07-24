@@ -71,7 +71,7 @@ def test_post_only_order_intent_accepts_quote_observed_at_target_activation() ->
         target,
         quote,
         created_at_utc=datetime(2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC),
-        expires_at_utc=datetime(2026, 7, 21, 0, 0, 2, tzinfo=UTC),
+        expires_at_utc=datetime(2026, 7, 21, 0, 0, 0, 500_000, tzinfo=UTC),
         maximum_quote_age_ms=250,
         limit_price=quote.bid_price,
     )
