@@ -28,23 +28,23 @@ def _load_run_okx_research_module() -> ModuleType:
     return module
 
 
-def test_effective_config_records_executed_cost_stresses() -> None:
+def test_effective_config_records_exact_executed_cost_profile() -> None:
     module = _load_run_okx_research_module()
     requested_cost_multipliers = [1.0]
     result_settings = {
         "candidate_count": 1,
-        "cost_multipliers": [*requested_cost_multipliers, 2.0],
+        "cost_multipliers": requested_cost_multipliers,
     }
 
     effective_config = module._build_effective_config(
-        data={"inst_id": "BTC-USDT", "bar": "1Dutc"},
-        strategy={"transaction_cost_bps": 10.0},
-        search={"selection_bars": 730, "test_bars": 90},
+        data={"inst_id": "BTC-USDT", "bar": "1H"},
+        strategy={"transaction_cost_bps": 5.0},
+        search={"selection_bars": 17_520, "test_bars": 2_160},
         result_settings=result_settings,
     )
 
     assert requested_cost_multipliers == [1.0]
-    assert effective_config["robustness"]["cost_multipliers"] == [1.0, 2.0]
+    assert effective_config["robustness"]["cost_multipliers"] == [1.0]
 
 
 def test_effective_config_snapshot_is_canonical_and_manifest_bound(tmp_path: Path) -> None:

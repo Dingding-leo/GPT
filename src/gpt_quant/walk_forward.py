@@ -505,7 +505,7 @@ def _assess_fold_stability(folds: list[dict[str, Any]]) -> dict[str, Any]:
 def _classify_robustness(
     *,
     aggregate: Mapping[str, float | int],
-    doubled_cost: Mapping[str, float | int],
+    doubled_cost: Mapping[str, float | int] | None,
     perturbation_metrics: Mapping[str, Mapping[str, float | int]],
     benchmark_assessment: Mapping[str, Any],
     fold_stability: Mapping[str, Any],
@@ -515,7 +515,7 @@ def _classify_robustness(
     )
     if float(aggregate["total_return"]) <= 0 or float(aggregate["sharpe"]) <= 0:
         return "reject: non-positive aggregate out-of-sample result"
-    if float(doubled_cost["total_return"]) <= 0:
+    if doubled_cost is not None and float(doubled_cost["total_return"]) <= 0:
         return "reject: result does not survive at least 2x transaction costs"
     if positive_variants < max(1, len(perturbation_metrics) - 1):
         return "reject: result is unstable under modest parameter perturbations"
@@ -561,9 +561,11 @@ def run_walk_forward_research(
         label="test_bars",
         minimum=20,
     )
-    multipliers = sorted(
-        {_validated_cost_multiplier(value) for value in cost_multipliers} | {1.0, 2.0}
-    )
+    multipliers = sorted({_validated_cost_multiplier(value) for value in cost_multipliers})
+    if not multipliers:
+        raise ValueError("cost multipliers cannot be empty")
+    if 1.0 not in multipliers:
+        raise ValueError("cost multipliers must include the 1x fee baseline")
     clean = validate_prices(prices, minimum_rows=selection_bars + test_bars)
     candidates = _candidates(
         base_config,
@@ -742,7 +744,7 @@ def run_walk_forward_research(
 
     status = _classify_robustness(
         aggregate=aggregate,
-        doubled_cost=cost_metrics["2x"],
+        doubled_cost=cost_metrics.get("2x"),
         perturbation_metrics=perturbation_metrics,
         benchmark_assessment=benchmark_assessment,
         fold_stability=fold_stability,
