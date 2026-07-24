@@ -49,7 +49,8 @@ jobs:
         run: |
           pytest -q \
             tests/test_intraday_research_profile.py \
-            tests/test_verify_intraday_1h_profile.py
+            tests/test_verify_intraday_1h_profile.py \
+            tests/test_artifact_manifest.py
 
       - name: Run canonical 1h full walk-forward research
         env:
@@ -79,22 +80,18 @@ jobs:
           set -euo pipefail
           report_dir="reports/okx/1h/${{ matrix.inst_id }}"
           manifest_path="$report_dir/artifact-manifest.sha256"
-          temporary_manifest="${manifest_path}.tmp"
 
           test -s "$report_dir/effective_config.json"
           test -s "$report_dir/walk_forward.json"
           test -s "$report_dir/walk_forward_returns.csv"
           test -s "$report_dir/experiment-manifest.jsonl"
 
-          find "$report_dir" -type f ! -name 'artifact-manifest.sha256*' -print0 \
-            | sort -z \
-            | xargs -0 sha256sum > "$temporary_manifest"
-          test -s "$temporary_manifest"
-          sha256sum --check "$temporary_manifest"
-          mv "$temporary_manifest" "$manifest_path"
-
-          manifest_sha256="$(sha256sum "$manifest_path" | awk '{print $1}')"
+          manifest_sha256="$(python -m gpt_quant.artifact_manifest --root "$report_dir")"
           [[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]
+          (
+            cd "$report_dir"
+            sha256sum --check artifact-manifest.sha256
+          )
           printf 'manifest_sha256=%s\n' "$manifest_sha256" >> "$GITHUB_OUTPUT"
 
       - name: Upload immutable canonical 1h evidence
