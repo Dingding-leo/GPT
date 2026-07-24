@@ -79,6 +79,8 @@ def publish_staged_paths_atomically(
                 )
             if any(path.is_symlink() or not path.is_file() for path in staged_paths.values()):
                 raise ValueError(f"{error_label} staged paths must be regular files")
+            if any(path.stat().st_nlink > 1 for path in staged_paths.values()):
+                raise ValueError(f"{error_label} staged paths must not be hard-linked files")
 
             replaced: list[str] = []
             try:
