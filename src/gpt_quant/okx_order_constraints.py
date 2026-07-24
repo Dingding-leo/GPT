@@ -208,9 +208,7 @@ def validate_okx_paper_execution_attempt_constraints(
     if average_fill_price % snapshot.tick_size_decimal != 0:
         raise ValueError("average_fill_price is not an exact multiple of the OKX tick size")
     if average_fill_price != reference_touch_price:
-        raise ValueError(
-            "average_fill_price must equal the supplied same-side top-of-book price"
-        )
+        raise ValueError("average_fill_price must equal the supplied same-side top-of-book price")
 
     visible_touch_quantity = Decimal(
         quote.ask_quantity if attempt.side == "buy" else quote.bid_quantity
