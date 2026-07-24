@@ -16,7 +16,9 @@ _SCRIPT_PATH = _SCRIPTS_DIR / "build_intraday_1h_promotion_gate.py"
 def _load_module() -> ModuleType:
     sys.path.insert(0, str(_SCRIPTS_DIR))
     try:
-        spec = importlib.util.spec_from_file_location("build_intraday_1h_promotion_gate", _SCRIPT_PATH)
+        spec = importlib.util.spec_from_file_location(
+            "build_intraday_1h_promotion_gate", _SCRIPT_PATH
+        )
         assert spec is not None
         assert spec.loader is not None
         module = importlib.util.module_from_spec(spec)
