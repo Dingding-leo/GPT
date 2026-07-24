@@ -114,7 +114,17 @@ def test_default_instrument_transport_rejects_cross_origin_redirect(
     assert exc_info.value.geturl() == url
 
 
-def test_trusted_origin_preserves_exact_real_instrument_response() -> None:
+@pytest.mark.parametrize(
+    ("base_url", "normalized_base_url"),
+    [
+        ("https://www.okx.com/", "https://www.okx.com"),
+        ("https://tr.okx.com/", "https://tr.okx.com"),
+    ],
+)
+def test_trusted_origin_preserves_exact_real_instrument_response(
+    base_url: str,
+    normalized_base_url: str,
+) -> None:
     started = datetime(2026, 7, 24, 0, 0, tzinfo=UTC)
     received = started + timedelta(milliseconds=125)
     requests: list[str] = []
@@ -122,18 +132,18 @@ def test_trusted_origin_preserves_exact_real_instrument_response() -> None:
 
     snapshot = fetch_okx_spot_instrument_snapshot(
         inst_id="BTC-USDT",
-        base_url="https://www.okx.com/",
+        base_url=base_url,
         server_time_sample=_server_time_sample(
             instrument_received=received,
-            base_url="https://www.okx.com",
+            base_url=normalized_base_url,
         ),
         get_bytes=lambda url, _timeout: requests.append(url) or response,
         now=_clock(started, received),
     )
 
     assert requests == [
-        "https://www.okx.com/api/v5/public/instruments?instType=SPOT&instId=BTC-USDT"
+        f"{normalized_base_url}/api/v5/public/instruments?instType=SPOT&instId=BTC-USDT"
     ]
-    assert snapshot.base_url == "https://www.okx.com"
+    assert snapshot.base_url == normalized_base_url
     assert snapshot.raw_response_json == response
     assert snapshot.raw_response_sha256 == _EXPECTED_RESPONSE_SHA256
