@@ -34,6 +34,7 @@ def test_canonical_1h_profile_preserves_daily_horizons_at_five_bps() -> None:
     assert isinstance(hourly_search, dict)
 
     assert hourly_data["bar"] == "1H"
+    assert hourly_data["start"] == "2021-07-24T00:00:00Z"
     page_capacity = int(hourly_data["limit"]) * int(hourly_data["max_pages"])
     minimum_five_year_bars = 5 * _DAILY_BARS_PER_YEAR * _HOURLY_BARS_PER_DAY
     assert page_capacity >= minimum_five_year_bars
@@ -64,8 +65,10 @@ def test_workflow_reselects_and_verifies_btc_and_eth_independently() -> None:
     assert workflow.count("inst_id: [BTC-USDT, ETH-USDT]") == 1
     assert workflow.count("--config config/okx_research_1h.json") == 1
     assert workflow.count('--inst-id "${{ matrix.inst_id }}"') == 1
-    assert workflow.count("reports/okx/1h/${{ matrix.inst_id }}") >= 7
+    assert 'REPORT_DIR: "reports/okx/1h/${{ matrix.inst_id }}"' in workflow
+    assert 'SOURCE_ROOT: "reports/okx/1h/source/${{ matrix.inst_id }}"' in workflow
     assert workflow.count("experiment-manifest.jsonl") >= 2
+    assert "Acquire replay-verifiable exact-byte 1h source" in workflow
     assert "Run canonical 1h full walk-forward research" in workflow
     assert "Verify persisted canonical 1h evidence" in workflow
     assert "Verify exact persisted 5 bps-only profile" in workflow
@@ -74,6 +77,31 @@ def test_workflow_reselects_and_verifies_btc_and_eth_independently() -> None:
     assert "fail-fast: false" in workflow
     assert "persist-credentials: false" in workflow
     assert "OKX_BASE_URL: https://www.okx.com" in workflow
+
+
+def test_workflow_replays_exact_byte_source_before_research() -> None:
+    path = _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
+    workflow = path.read_text(encoding="utf-8")
+
+    acquire = workflow.index("- name: Acquire replay-verifiable exact-byte 1h source")
+    research = workflow.index("- name: Run canonical 1h full walk-forward research")
+    bind = workflow.index("- name: Bind exchange-time source envelope")
+    timestamp_gate = workflow.index("- name: Verify exact persisted UTC-hour timestamp grid")
+    source_block = workflow[acquire:research]
+    research_block = workflow[research:bind]
+    bind_block = workflow[bind:timestamp_gate]
+
+    assert acquire < research < bind < timestamp_gate
+    assert source_block.count("python scripts/run_okx_1h_coverage.py") == 1
+    assert source_block.count('--start "2021-07-24T00:00:00Z"') == 1
+    assert source_block.count('--instrument "${{ matrix.inst_id }}"') == 1
+    assert research_block.count("python scripts/run_okx_research.py") == 1
+    assert research_block.count(
+        '--snapshot-dir "$SOURCE_ROOT/${{ matrix.inst_id }}/snapshot"'
+    ) == 1
+    assert "OKX_BASE_URL" not in research_block
+    assert 'cp "$SOURCE_ROOT/coverage-manifest.json"' in bind_block
+    assert 'cp "$SOURCE_ROOT/okx-public-time.canonical.json"' in bind_block
 
 
 def test_workflow_gates_persisted_fee_profile_before_artifact_hashing() -> None:
@@ -100,7 +128,7 @@ def test_workflow_gates_persisted_fee_profile_before_artifact_hashing() -> None:
         < upload
     )
     assert profile_block.count("python scripts/verify_intraday_1h_profile.py") == 1
-    assert profile_block.count('--output-dir "reports/okx/1h/${{ matrix.inst_id }}"') == 1
+    assert profile_block.count('--output-dir "$REPORT_DIR"') == 1
     assert summary_block.count("python scripts/build_intraday_1h_promotion_gate.py") == 1
     assert "--enforce-research-promotion" not in summary_block
     assert enforcement_block.count("python scripts/build_intraday_1h_promotion_gate.py") == 1
@@ -114,11 +142,13 @@ def test_workflow_gates_persisted_fee_profile_before_artifact_hashing() -> None:
         "walk_forward_returns.csv",
         "experiment-manifest.jsonl",
         "intraday-promotion-gate.json",
+        "source-coverage-manifest.json",
+        "source-public-time.canonical.json",
     ):
-        assert f'test -s "$report_dir/{required_file}"' in manifest_block
-    assert 'python -m gpt_quant.artifact_manifest --root "$report_dir"' in manifest_block
+        assert f'test -s "$REPORT_DIR/{required_file}"' in manifest_block
+    assert 'python -m gpt_quant.artifact_manifest --root "$REPORT_DIR"' in manifest_block
     assert '[[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]' in manifest_block
-    assert 'cd "$report_dir"' in manifest_block
+    assert 'cd "$REPORT_DIR"' in manifest_block
     assert "sha256sum --check artifact-manifest.sha256" in manifest_block
     assert 'sha256sum --check "$temporary_manifest"' not in manifest_block
     assert "manifest_sha256=%s" in manifest_block
