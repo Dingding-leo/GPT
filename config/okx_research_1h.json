@@ -6,7 +6,7 @@
     "limit": 100,
     "max_pages": 600,
     "pause_seconds": 0.12,
-    "start": "2021-07-01"
+    "start": "2021-07-24T00:00:00Z"
   },
   "strategy": {
     "momentum_lookback": 2160,
