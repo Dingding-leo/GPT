@@ -1,0 +1,90 @@
+{
+  "candidate_accounting": {
+    "candidate_count": 1,
+    "candidates_passed": 0,
+    "candidates_rejected": 1,
+    "searched_alternatives": []
+  },
+  "canonical_signature": "best-fold-exclusion-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|stress=remove-single-fold-with-highest-compounded-net-return-per-market|folds=26x90|metric=annualized-arithmetic-mean-net-return|annualization=365|resampling=remaining-folds-with-replacement-as-90bar-blocks|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260723,ETH-USDT:20260724|candidate_count=1",
+  "economic_rationale": "A credible adaptive process should not depend on one exceptional 90-session OOS fold. Removing the fold with the highest compounded net return directly stress-tests the profit-concentration failure reported by the canonical BTC research run.",
+  "failure_reasons": [
+    "BTC-USDT best-fold-excluded annualized mean lower confidence bound is not positive",
+    "ETH-USDT best-fold-excluded annualized mean lower confidence bound is not positive"
+  ],
+  "hypothesis": "Net rolling OOS strategy returns retain a positive annualized arithmetic mean in both BTC-USDT and ETH-USDT after removing each market's single best fold.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "The best fold is selected adversarially from the complete OOS path as a fixed stress, not as a deployable rule.",
+    "Fold-block resampling preserves each 90-session path but treats remaining folds as exchangeable and does not preserve dependence across fold boundaries.",
+    "Spread, market impact, liquidity, capacity, latency, and partial fills are not modeled beyond persisted transaction costs."
+  ],
+  "markets": {
+    "BTC-USDT": {
+      "confidence_interval": {
+        "lower": -0.11975559446448089,
+        "upper": 0.2393973731306715
+      },
+      "excluded_best_fold": 4,
+      "excluded_best_fold_total_return": 1.044396962807753,
+      "full_annualized_mean": 0.17168956582497064,
+      "full_fold_count": 26,
+      "full_observations": 2340,
+      "passes": false,
+      "probability_mean_positive": 0.73,
+      "remaining_annualized_mean": 0.057962629933481113,
+      "remaining_fold_count": 25,
+      "remaining_observations": 2250,
+      "seed": 20260723
+    },
+    "ETH-USDT": {
+      "confidence_interval": {
+        "lower": -0.11938419978257574,
+        "upper": 0.25140764067507826
+      },
+      "excluded_best_fold": 4,
+      "excluded_best_fold_total_return": 0.5212580441373669,
+      "full_annualized_mean": 0.13704095296450977,
+      "full_fold_count": 26,
+      "full_observations": 2340,
+      "passes": false,
+      "probability_mean_positive": 0.771,
+      "remaining_annualized_mean": 0.07102486261779752,
+      "remaining_fold_count": 25,
+      "remaining_observations": 2250,
+      "seed": 20260724
+    }
+  },
+  "source": {
+    "development_markets": true,
+    "evaluation_end": "2026-06-07T00:00:00+00:00",
+    "evaluation_start": "2020-01-11T00:00:00+00:00",
+    "market_type": "spot",
+    "provider": "OKX",
+    "report_file_sha256": {
+      "BTC-USDT": "e003da1dbedb57b87f8a596fd480f175c5d316fc7e9059ce8edfbe2c954fa88c",
+      "ETH-USDT": "bb30925eb8351218db08f28a63d32ab32a702fac7008297e90f8f7c3cf329f05"
+    },
+    "return_file_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "source_artifact_id": 8530429665,
+    "source_artifact_name": "quant-research-source-1027-attempt-1",
+    "source_artifact_sha256": "da7ab1b69654f50d0da42e2898a69780269e797bcc808dfdaf1f4e04ae9b64df",
+    "source_code_commit": "a065d4f6c04e21e806e123abdb00a9315055645c",
+    "source_workflow_run_id": 29922259536,
+    "timeframe": "1Dutc"
+  },
+  "specification": {
+    "annualization": 365,
+    "confidence": 0.95,
+    "excluded_folds_per_market": 1,
+    "exclusion_rule": "highest compounded net strategy return; earliest fold wins exact ties",
+    "fold_count": 26,
+    "pass_rule": "both market lower confidence bounds must be strictly positive",
+    "resamples": 2000,
+    "resampling": "remaining 90-session folds sampled with replacement as complete blocks",
+    "test_bars_per_fold": 90
+  },
+  "verdict": "rejected"
+}
