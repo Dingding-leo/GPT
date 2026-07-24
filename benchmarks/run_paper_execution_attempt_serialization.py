@@ -19,6 +19,7 @@ from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.execution_quote import ExecutionQuoteSnapshot
 from gpt_quant.execution_quote_binding import bind_execution_quote
 
+_BASELINE_COMMIT_SHA = "1efa0dc0719a157f354b4794220ce1764c70b0b2"
 _EXPECTED_BASELINE_SHA256 = "a03579f4a1a399cc805bc4637ff90a6d796280704b2701b3a7e796f1d1244903"
 _EXPECTED_RESPONSE_SHA256 = "7d12a351f8f51320d1c8beee0063557e1c90388d66ac63412bf66ca544aeb3e3"
 _REAL_DAILY_SOURCE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
@@ -102,7 +103,7 @@ def main() -> None:
         instrument_id="BTC-USDT",
         bar="1Dutc",
         strategy_id="canonical-five-bps",
-        strategy_revision="49a4eefa9e6d349237832d75f9c1c96070c6799c",
+        strategy_revision=_BASELINE_COMMIT_SHA,
         source_data_sha256=_REAL_DAILY_SOURCE_SHA256,
         config_sha256=_CONFIG_SHA256,
         signal_bar_open_utc=signal_open,
@@ -166,6 +167,7 @@ def main() -> None:
     baseline_peak = _peak_bytes(lambda: _workload(baseline, binding, quote, values, args.events))
     optimized_peak = _peak_bytes(lambda: _workload(optimized, binding, quote, values, args.events))
     output = {
+        "baseline_commit_sha": _BASELINE_COMMIT_SHA,
         "baseline_source_sha256": _EXPECTED_BASELINE_SHA256,
         "okx_response_sha256": _EXPECTED_RESPONSE_SHA256,
         "samples": args.samples,
