@@ -50,7 +50,9 @@ def _required_canonical_bar_window(
 
     bar_duration = signal_bar_close - signal_bar_open
     if bar_duration != expected_duration:
-        raise ValueError(f"{bar} signal cutoff must cover exactly {expected_duration}")
+        if bar == "1Dutc":
+            raise ValueError("1Dutc signal cutoff must cover exactly one UTC day")
+        raise ValueError("1H signal cutoff must cover exactly one hour")
 
     if bar == "1Dutc":
         aligned_open = signal_bar_open.replace(hour=0, minute=0, second=0, microsecond=0)
