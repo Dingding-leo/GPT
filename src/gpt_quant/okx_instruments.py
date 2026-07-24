@@ -219,9 +219,7 @@ class OKXSpotInstrumentSnapshot:
             "base_url": self.base_url,
             "request_started_utc": _format_utc(self.request_started_utc),
             "response_received_utc": _format_utc(self.response_received_utc),
-            "server_time_request_started_utc": _format_utc(
-                self.server_time_request_started_utc
-            ),
+            "server_time_request_started_utc": _format_utc(self.server_time_request_started_utc),
             "exchange_observed_at_utc": _format_utc(self.exchange_observed_at_utc),
             "server_time_response_received_utc": _format_utc(
                 self.server_time_response_received_utc
@@ -313,11 +311,7 @@ def _current_utc_datetime() -> datetime:
 
 
 def _required_utc_datetime(value: datetime, *, field: str) -> datetime:
-    if (
-        not isinstance(value, datetime)
-        or value.tzinfo is None
-        or value.utcoffset() is None
-    ):
+    if not isinstance(value, datetime) or value.tzinfo is None or value.utcoffset() is None:
         raise ValueError(f"{field} must be a timezone-aware datetime")
     return value.astimezone(UTC)
 
