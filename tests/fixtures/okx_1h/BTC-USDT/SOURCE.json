@@ -1,0 +1,34 @@
+{
+  "bar": "1H",
+  "confirm": "1_only_after_filter",
+  "end": "2026-07-24T01:00:00+00:00",
+  "endpoint": "/api/v5/market/history-candles",
+  "expected_step_seconds": 3600,
+  "extract_rule": "first four rows of the first public response page; original values and ordering preserved; one confirm=0 row retained to test finality filtering",
+  "fixture_files": {
+    "candles": {
+      "path": "tests/fixtures/okx_1h/BTC-USDT/okx-BTC-USDT-1H.csv",
+      "sha256": "d2bf09898c738233380d9d91030bbd1eb27cfa5c73ff6d771ebde9d49b37c019"
+    },
+    "metadata": {
+      "path": "tests/fixtures/okx_1h/BTC-USDT/okx-BTC-USDT-1H.metadata.json",
+      "sha256": "af5849ecd9f5de746dc22cf7fd59dfb2a0c48a165e293787a8994713ba4100fa"
+    },
+    "raw": {
+      "path": "tests/fixtures/okx_1h/BTC-USDT/okx-BTC-USDT-1H.raw.json",
+      "sha256": "cf7f9a2e21b2eb80e949eb496f9ef8d3042d1569a981463240c9ba9ee8ecf14e"
+    }
+  },
+  "instrument_id": "BTC-USDT",
+  "market_type": "spot",
+  "observations": 3,
+  "provider": "OKX",
+  "raw_response_extract_sha256": "4429d72add1f56554b5305cb237a76861e49ffa0203ee7fe0b7233c656567d3e",
+  "raw_rows": 4,
+  "retrieved_at_utc": "2026-07-24T02:59:22.600051+00:00",
+  "source_artifact_id": 8585300607,
+  "source_artifact_sha256": "ae8acfbcd7f2252a6c2c8d859b1ed3fd68a69db1a5a4895c28a8824e49ba07bf",
+  "source_full_raw_pages_sha256": "2125a1dba90d812f4096bf8229d7142afe818eafea352c04d8706c1c715718fc",
+  "source_workflow_run_id": 30063000548,
+  "start": "2026-07-23T23:00:00+00:00"
+}
