@@ -95,9 +95,7 @@ def test_real_okx_open_episode_is_reported_without_claiming_a_completed_trade() 
 
 
 def test_real_okx_activity_metrics_reject_negative_fee_only_diagnostics() -> None:
-    frame = _load_real_okx_frame().drop(
-        columns=["asset_return", "gross_strategy_return"]
-    )
+    frame = _load_real_okx_frame().drop(columns=["asset_return", "gross_strategy_return"])
     positive_fees = frame["trading_cost"] > 0.0
     first_fee_timestamp = positive_fees[positive_fees].index[0]
     frame.loc[first_fee_timestamp, "trading_cost"] *= -1.0
