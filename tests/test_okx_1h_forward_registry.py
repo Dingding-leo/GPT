@@ -137,6 +137,29 @@ def test_forward_registry_rejects_truncated_journal_record(tmp_path: Path) -> No
         replay_okx_one_hour_forward_registry(registry, inst_id="BTC-USDT")
 
 
+@pytest.mark.parametrize("retained_records", [0, 1])
+def test_forward_registry_rejects_complete_record_truncation(
+    tmp_path: Path,
+    retained_records: int,
+) -> None:
+    raw = _fixture_response_bytes()
+    previous = tmp_path / "previous"
+    current = tmp_path / "current"
+    registry = tmp_path / "registry"
+    _write_snapshot(previous, end="2026-07-24T00:00:00Z", raw=raw)
+    _write_snapshot(current, end="2026-07-24T01:00:00Z", raw=raw)
+    register_okx_one_hour_forward_snapshot(previous, registry, inst_id="BTC-USDT")
+    register_okx_one_hour_forward_snapshot(current, registry, inst_id="BTC-USDT")
+
+    journal = registry / "BTC-USDT" / "okx-1h-forward-registry.jsonl"
+    lines = journal.read_bytes().splitlines(keepends=True)
+    assert len(lines) == 2
+    journal.write_bytes(b"".join(lines[:retained_records]))
+
+    with pytest.raises(ValueError, match="unreferenced immutable snapshot evidence"):
+        replay_okx_one_hour_forward_registry(registry, inst_id="BTC-USDT")
+
+
 def test_forward_registry_rejects_tampered_stored_source_artifact(tmp_path: Path) -> None:
     raw = _fixture_response_bytes()
     snapshot = tmp_path / "snapshot"
@@ -148,7 +171,11 @@ def test_forward_registry_rejects_tampered_stored_source_artifact(tmp_path: Path
         inst_id="BTC-USDT",
     )
     stored_raw = (
-        registry / "BTC-USDT" / "snapshots" / record["snapshot_id"] / "okx-BTC-USDT-1H.raw.json"
+        registry
+        / "BTC-USDT"
+        / "snapshots"
+        / record["snapshot_id"]
+        / "okx-BTC-USDT-1H.raw.json"
     )
     stored_raw.write_bytes(stored_raw.read_bytes() + b" ")
 
