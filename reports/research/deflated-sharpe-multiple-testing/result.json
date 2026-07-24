@@ -1,0 +1,79 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "deflated-sharpe-independent-null-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|observed-sharpe=mean/std-ddof0|annualization=365|selection-adjustment=expected-maximum-of-independent-zero-skill-normal-trials|effective-trials=27|trial-standard-error=1/sqrt(n-1)|non-normality=fisher-pearson-skew-and-raw-kurtosis|pass=dsr-probability-at-least-0.95-for-both-markets|candidate_count=1",
+  "failure_reason": "At least one market has a deflated Sharpe probability below 95%.",
+  "hypothesis": "BTC-USDT and ETH-USDT aggregate net rolling OOS Sharpe ratios exceed the expected maximum under 27 independent zero-skill trials with at least 95% probability after sample skewness and kurtosis are included.",
+  "markets": {
+    "BTC-USDT": {
+      "deflated_benchmark_annualized_sharpe": 0.8017554347500233,
+      "deflated_benchmark_daily_sharpe": 0.04196579746148794,
+      "deflated_sharpe_probability": 0.4233267285974288,
+      "deflated_sharpe_z": -0.19339011398347916,
+      "effective_trials": 27,
+      "expected_maximum_null_z": 2.0296006400859774,
+      "observations": 2340,
+      "observed_annualized_sharpe": 0.7259698467624875,
+      "observed_daily_sharpe": 0.03799899848746376,
+      "passes": false,
+      "probabilistic_sharpe_probability_vs_zero": 0.968025422298241,
+      "sample_raw_kurtosis": 19.320126749189058,
+      "sample_skewness": 0.5922995960008114
+    },
+    "ETH-USDT": {
+      "deflated_benchmark_annualized_sharpe": 0.8017554347500233,
+      "deflated_benchmark_daily_sharpe": 0.04196579746148794,
+      "deflated_sharpe_probability": 0.2513904440682677,
+      "deflated_sharpe_z": -0.6701206404164921,
+      "effective_trials": 27,
+      "expected_maximum_null_z": 2.0296006400859774,
+      "observations": 2340,
+      "observed_annualized_sharpe": 0.5379864336831103,
+      "observed_daily_sharpe": 0.028159496941873346,
+      "passes": false,
+      "probabilistic_sharpe_probability_vs_zero": 0.9141538250225361,
+      "sample_raw_kurtosis": 19.558643960930777,
+      "sample_skewness": 0.3849480117644665
+    }
+  },
+  "method": {
+    "annualization": 365,
+    "candidate_count": 1,
+    "development_markets": true,
+    "effective_trials": 27,
+    "observed_sharpe_standard_deviation_ddof": 0,
+    "pass_probability": 0.95,
+    "sample_kurtosis": "unbiased Fisher excess kurtosis plus three",
+    "sample_skewness": "Fisher-Pearson adjusted sample skewness",
+    "selection_benchmark": "Bailey-Lopez de Prado expected maximum under independent zero-skill normal trials, scaled by 1/sqrt(n-1)"
+  },
+  "provenance": {
+    "market_type": "spot",
+    "markets": {
+      "BTC-USDT": {
+        "report_sha256": "663ec9d7aa70b5e41cffc9f3b68f049d255e4a65a236019d85d33ae9381b13df",
+        "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73"
+      },
+      "ETH-USDT": {
+        "report_sha256": "f536fa4d9d01d8ffca83b5eff90da76662c5031424f0dadee501b4bb2d7e3fc7",
+        "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+      }
+    },
+    "oos_end": "2026-06-07T00:00:00+00:00",
+    "oos_observations_per_market": 2340,
+    "oos_start": "2020-01-11T00:00:00+00:00",
+    "provider": "OKX",
+    "source_artifact_id": 8526644006,
+    "source_artifact_name": "quant-research-source-904-attempt-1",
+    "source_artifact_sha256": "e547d220d6f1f1649038387471c3cf9fef6da6d9f71d793f80ee2b0d114bcca4",
+    "source_persistent_head": "205864d115a9043cb15a6215f8e3d058edb4dd69",
+    "source_tested_base": "4f745926277fbf64ce06294e8c43322a1f9800e6",
+    "source_tested_commit": "5528e1677fab9dd6e8b1b60ae00f2205f4116ead",
+    "source_workflow_run_id": 29912901356,
+    "timeframe": "1Dutc"
+  },
+  "verdict": "rejected"
+}
