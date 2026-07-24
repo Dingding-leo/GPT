@@ -179,7 +179,7 @@ class ReconstructableOKXTopOfBookEvidence:
         return _canonical_json_bytes({**self._payload(), "evidence_id": self.evidence_id}) + b"\n"
 
     @classmethod
-    def from_json_bytes(cls, value: bytes) -> "ReconstructableOKXTopOfBookEvidence":
+    def from_json_bytes(cls, value: bytes) -> ReconstructableOKXTopOfBookEvidence:
         try:
             serialized = value.decode("utf-8")
             payload = json.loads(
