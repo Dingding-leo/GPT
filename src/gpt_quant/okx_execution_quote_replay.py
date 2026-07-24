@@ -206,16 +206,12 @@ class ReconstructableOKXTopOfBookEvidence:
             not isinstance(server_time_response_sha256, str)
             or _SHA256_PATTERN.fullmatch(server_time_response_sha256) is None
         ):
-            raise ValueError(
-                "server_time_response_sha256 must be a lowercase SHA-256 digest"
-            )
+            raise ValueError("server_time_response_sha256 must be a lowercase SHA-256 digest")
         if (
             hashlib.sha256(raw_server_time_response.encode("utf-8")).hexdigest()
             != server_time_response_sha256
         ):
-            raise ValueError(
-                "OKX server-time response SHA-256 does not match its bytes"
-            )
+            raise ValueError("OKX server-time response SHA-256 does not match its bytes")
 
         observation = OKXTopOfBookObservation(
             base_url=payload["base_url"],
