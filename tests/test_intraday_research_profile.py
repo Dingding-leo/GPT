@@ -143,6 +143,7 @@ def test_workflow_aggregates_verified_markets_before_cross_market_promotion() ->
     workflow = path.read_text(encoding="utf-8")
 
     cross_market_job = workflow.index("  cross_market_gate:")
+    install = workflow.index("- name: Install cross-market verifier")
     download = workflow.index("- name: Download immutable canonical 1h evidence")
     build = workflow.index("- name: Build deterministic cross-market launch blockers")
     upload = workflow.index("- name: Upload cross-market launch-blocker evidence")
@@ -150,10 +151,13 @@ def test_workflow_aggregates_verified_markets_before_cross_market_promotion() ->
     promotion = workflow.index("- name: Enforce fail-closed cross-market research promotion")
     block = workflow[cross_market_job:]
 
-    assert cross_market_job < download < build < upload < integrity < promotion
+    assert cross_market_job < install < download < build < upload < integrity < promotion
     assert "if: ${{ always() }}" in block
     assert "needs: research" in block
     assert "UPSTREAM_RESEARCH_RESULT: ${{ needs.research.result }}" in block
+    assert block.count('python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"') == 1
+    assert block.count("python -m pip install -e .") == 1
+    assert block.count("python -m pip check") == 1
     assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in block
     assert (
         "pattern: canonical-*-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
@@ -162,6 +166,7 @@ def test_workflow_aggregates_verified_markets_before_cross_market_promotion() ->
     assert "merge-multiple: false" in block
     assert "continue-on-error: true" in block
     assert block.count("python scripts/build_intraday_1h_cross_market_gate.py") == 2
+    assert "PYTHONPATH=src" not in block
     assert "intraday-cross-market-gate.json" in block
     assert "CROSS_MARKET_GATE_OUTCOME: ${{ steps.cross_market_gate.outcome }}" in block
     assert 'test "$CROSS_MARKET_GATE_OUTCOME" = success' in block
