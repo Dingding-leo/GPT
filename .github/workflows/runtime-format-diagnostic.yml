@@ -1,6 +1,7 @@
 name: Runtime Format Diagnostic
 
 on:
+  pull_request:
   push:
     branches:
       - auto/reproducibility/20260724-08-quote-binding-journal
