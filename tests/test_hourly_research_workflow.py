@@ -39,6 +39,23 @@ def test_hourly_workflow_scopes_concurrency_by_event_and_ref() -> None:
     assert "cancel-in-progress: true" in concurrency_block
 
 
+def test_hourly_workflow_runs_independent_research_in_bounded_parallel_batch() -> None:
+    workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    research = workflow.index("- name: Run OKX rolling out-of-sample research")
+    verification = workflow.index("- name: Verify persisted walk-forward evidence")
+    research_block = workflow[research:verification]
+
+    assert research_block.count("python scripts/run_okx_research_batch.py") == 1
+    assert research_block.count("--inst-id BTC-USDT") == 1
+    assert research_block.count("--inst-id ETH-USDT") == 1
+    assert research_block.count("--max-workers 2") == 1
+    assert research_block.count("--output-root reports/okx") == 1
+    assert research_block.count("--manifest-path reports/okx/experiment-manifest.jsonl") == 1
+    assert "python scripts/run_okx_research.py" not in research_block
+    assert "for instrument in" not in research_block
+
+
 def test_hourly_workflow_publishes_portfolio_from_source_artifact_evidence() -> None:
     workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
 
