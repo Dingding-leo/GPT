@@ -167,6 +167,20 @@ def _fill_fee(base_quantity: Decimal, fill_price: Decimal) -> str:
     return _canonical_decimal(fee)
 
 
+def _assert_fill_price_respects_intent(
+    fill_price: str | None,
+    intent: PaperPostOnlyOrderIntent,
+) -> None:
+    if fill_price is None:
+        return
+    price = Decimal(fill_price)
+    limit_price = Decimal(intent.limit_price)
+    if intent.side == "buy" and price > limit_price:
+        raise ValueError("post-only buy fill cannot exceed the maker limit price")
+    if intent.side == "sell" and price < limit_price:
+        raise ValueError("post-only sell fill cannot be below the maker limit price")
+
+
 @dataclass(frozen=True, slots=True)
 class PaperOrderStateTransitionRequest:
     """Immutable provider-neutral request to advance one paper maker order.
@@ -338,6 +352,7 @@ class PaperOrderStateTransitionRequest:
             or self.requested_base_quantity != intent.base_quantity
         ):
             raise ValueError(f"{_ERROR} does not bind the exact maker submission evidence")
+        _assert_fill_price_respects_intent(self.fill_price, intent)
 
     def assert_reconstructs(
         self,
@@ -474,6 +489,7 @@ def advance_paper_order_transition(
     fee = "0"
     if delta > 0:
         canonical_price = _positive_decimal(fill_price, "fill_price")
+        _assert_fill_price_respects_intent(canonical_price, intent)
         fee = _fill_fee(delta, Decimal(canonical_price))
     elif fill_price is not None:
         raise ValueError("zero-fill lifecycle events must not carry a fill price")
