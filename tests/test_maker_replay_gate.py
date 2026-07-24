@@ -5,9 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-_FIXTURE_ROOT = (
-    Path(__file__).parent / "fixtures" / "okx" / "trades-btc-usdt-docs-20220602"
-)
+_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "okx" / "trades-btc-usdt-docs-20220602"
 _SCRIPT = Path(__file__).parents[1] / "scripts" / "build_maker_replay_gate.py"
 
 
