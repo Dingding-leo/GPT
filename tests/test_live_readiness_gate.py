@@ -285,10 +285,10 @@ def test_hourly_workflow_publishes_and_optionally_enforces_live_readiness() -> N
     assert "default: false" in workflow
     assert "LIVE_READINESS_ARTIFACT_NAME" in workflow
     assert (
-        "LIVE_READINESS_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}"
-        in workflow
+        "LIVE_READINESS_HEAD_SHA: ${{ github.event.pull_request.head.sha || "
+        "inputs.target_sha || github.sha }}" in workflow
     )
-    assert "LIVE_READINESS_TESTED_SHA: ${{ github.sha }}" in workflow
+    assert "LIVE_READINESS_TESTED_SHA: ${{ inputs.target_sha || github.sha }}" in workflow
     assert "Write live-readiness blocker summary" in workflow
     assert "Build verified 5 bps launch evidence" in workflow
     assert "Upload live-readiness blocker summary" in workflow
