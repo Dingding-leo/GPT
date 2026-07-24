@@ -1,0 +1,47 @@
+name: Format Performance Candidate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Format focused files
+        run: |
+          python -m pip install "ruff==0.16.0"
+          ruff check --fix \
+            src/gpt_quant/walk_forward.py \
+            tests/test_walk_forward_selection_score.py \
+            benchmarks/run_walk_forward_selection_score.py
+          ruff format \
+            src/gpt_quant/walk_forward.py \
+            tests/test_walk_forward_selection_score.py \
+            benchmarks/run_walk_forward_selection_score.py
+          mkdir -p /tmp/formatted/src/gpt_quant /tmp/formatted/tests /tmp/formatted/benchmarks
+          cp src/gpt_quant/walk_forward.py /tmp/formatted/src/gpt_quant/
+          cp tests/test_walk_forward_selection_score.py /tmp/formatted/tests/
+          cp benchmarks/run_walk_forward_selection_score.py /tmp/formatted/benchmarks/
+
+      - name: Upload formatted files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
+        with:
+          name: formatted-performance-candidate
+          path: /tmp/formatted
+          if-no-files-found: error
+          retention-days: 1
