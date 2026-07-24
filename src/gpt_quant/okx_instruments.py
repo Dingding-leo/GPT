@@ -10,8 +10,8 @@ from decimal import Decimal, InvalidOperation
 from math import isfinite
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlencode
-from urllib.request import Request, urlopen
+from urllib.parse import urlencode, urlsplit
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from .okx_live import OKXServerTimeSample, _validated_server_time_sample
 
@@ -262,6 +262,19 @@ class OKXSpotInstrumentSnapshot:
         return hashlib.sha256(self.metadata_bytes()).hexdigest()
 
 
+class _RejectRedirects(HTTPRedirectHandler):
+    def redirect_request(
+        self,
+        request: Request,
+        file_pointer: object,
+        code: int,
+        msg: str,
+        headers: object,
+        newurl: str,
+    ) -> None:
+        return None
+
+
 def _default_raw_bytes_getter(url: str, timeout: float) -> bytes:
     request = Request(
         url,
@@ -270,11 +283,56 @@ def _default_raw_bytes_getter(url: str, timeout: float) -> bytes:
             "User-Agent": "gpt-quant-lab/0.2 (+https://github.com/Dingding-leo/GPT)",
         },
     )
-    with urlopen(request, timeout=timeout) as response:  # noqa: S310
+    opener = build_opener(_RejectRedirects())
+    with opener.open(request, timeout=timeout) as response:  # noqa: S310
         payload = response.read(_MAX_RESPONSE_BYTES + 1)
     if len(payload) > _MAX_RESPONSE_BYTES:
         raise RuntimeError("OKX instrument response exceeds the configured safety limit")
     return payload
+
+
+def _required_base_url(value: object) -> str:
+    error = "base_url must be a trusted public OKX HTTPS origin"
+    if not isinstance(value, str) or not value or any(character.isspace() for character in value):
+        raise ValueError(error)
+
+    try:
+        parsed = urlsplit(value)
+        port = parsed.port
+    except ValueError as exc:
+        raise ValueError(error) from exc
+
+    hostname = parsed.hostname
+    labels = hostname.split(".") if hostname is not None else []
+    trusted_hostname = hostname == "okx.com" or (
+        len(hostname or "") <= 253
+        and len(labels) >= 3
+        and labels[-2:] == ["okx", "com"]
+        and all(
+            label
+            and len(label) <= 63
+            and label.isascii()
+            and label[0].isalnum()
+            and label[-1].isalnum()
+            and all(character.isalnum() or character == "-" for character in label)
+            for label in labels[:-2]
+        )
+    )
+    if (
+        parsed.scheme.lower() != "https"
+        or hostname is None
+        or parsed.netloc.lower() != hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or port is not None
+        or parsed.path not in {"", "/"}
+        or parsed.query
+        or parsed.fragment
+        or not trusted_hostname
+    ):
+        raise ValueError(error)
+
+    return f"https://{hostname}"
 
 
 def _required_raw_response(value: object) -> bytes:
@@ -507,12 +565,7 @@ def fetch_okx_spot_instrument_snapshot(
     """Fetch fail-closed spot sizing constraints from OKX's public endpoint."""
 
     _validate_instrument_id(inst_id)
-    if (
-        not isinstance(base_url, str)
-        or not base_url
-        or any(character.isspace() for character in base_url)
-    ):
-        raise ValueError("base_url must be a non-empty URL without whitespace")
+    normalized_base_url = _required_base_url(base_url)
     timeout_seconds = _required_finite_number(timeout, field="timeout")
     if timeout_seconds <= 0:
         raise ValueError("timeout must be positive")
@@ -529,7 +582,6 @@ def fetch_okx_spot_instrument_snapshot(
     if max_clock_skew < 0:
         raise ValueError("max_abs_midpoint_clock_skew_seconds cannot be negative")
 
-    normalized_base_url = base_url.rstrip("/")
     endpoint = f"{normalized_base_url}{_ENDPOINT}"
     query = urlencode({"instType": "SPOT", "instId": inst_id})
     getter = get_bytes or _default_raw_bytes_getter
