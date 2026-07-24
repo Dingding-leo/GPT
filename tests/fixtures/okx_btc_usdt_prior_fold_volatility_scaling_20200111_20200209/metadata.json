@@ -1,0 +1,28 @@
+{
+  "end": "2020-02-09 00:00:00+00:00",
+  "instrument": "BTC-USDT",
+  "market_type": "spot",
+  "observations": 30,
+  "provider": "OKX",
+  "purpose": "Immutable real-return and close-price extracts with structural 10-row fold labels for reconstruction and fail-closed logic tests only; not performance evidence.",
+  "returns_fixture_sha256": "0e2fb51e97b7a7779955cb6b881398269c80a12507398781f1b18892f09c949f",
+  "snapshot_fixture_end": "2020-02-09 00:00:00+00:00",
+  "snapshot_fixture_observations": 61,
+  "snapshot_fixture_sha256": "9c9f8a2bece7aa6e0912f2ad260d3fee5ce5122fc46dac0771ae4ffdad7c4002",
+  "snapshot_fixture_start": "2019-12-11 00:00:00+00:00",
+  "source_artifact_id": 8558445273,
+  "source_artifact_name": "quant-research-source-1826-attempt-1",
+  "source_artifact_sha256": "8c89b8ecc4904cba018ac95079305c46e25d92199242b95d3aeffaad1bc0799c",
+  "source_head_sha": "348cfd30df9a0665b5b129fba32edaafc8a2428e",
+  "source_return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+  "source_snapshot_file_sha256": "407aeba3d1ad4c8e8682a6a689c1c6327139f42bc7587aaae75c77fce047dec1",
+  "source_workflow_run_id": 29994613190,
+  "start": "2020-01-11 00:00:00+00:00",
+  "structural_fold_labels": [
+    1,
+    2,
+    3
+  ],
+  "structural_rows_per_fold": 10,
+  "timeframe": "1Dutc"
+}
