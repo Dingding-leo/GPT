@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import math
-from pathlib import Path
-from typing import Any
+from pathlib import Path, PurePosixPath
+from typing import Any, Collection
 
 import numpy as np
 import pandas as pd
@@ -77,6 +78,67 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def verify_manifested_artifact_bytes(
+    root: Path,
+    manifest_bytes: bytes,
+    required_paths: Collection[str],
+) -> dict[str, bytes]:
+    """Verify required artifact files against one pinned manifest byte string."""
+
+    try:
+        manifest_text = manifest_bytes.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("artifact manifest must be UTF-8") from exc
+
+    entries: dict[str, str] = {}
+    for line_number, raw_line in enumerate(manifest_text.splitlines(), start=1):
+        if not raw_line:
+            raise ValueError(f"empty artifact manifest line {line_number}")
+        try:
+            digest, relative = raw_line.split("  ", maxsplit=1)
+        except ValueError as exc:
+            raise ValueError(f"malformed artifact manifest line {line_number}") from exc
+        if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
+            raise ValueError(f"invalid artifact digest on line {line_number}")
+        path = PurePosixPath(relative)
+        if (
+            not relative
+            or "\\" in relative
+            or path.is_absolute()
+            or path.as_posix() != relative
+            or any(part in {"", ".", ".."} for part in path.parts)
+        ):
+            raise ValueError(f"unsafe artifact path on line {line_number}")
+        if relative in entries:
+            raise ValueError(f"duplicate artifact path on line {line_number}")
+        entries[relative] = digest
+
+    required = set(required_paths)
+    missing = sorted(required.difference(entries))
+    if missing:
+        raise ValueError(f"required artifact missing from manifest: {missing[0]}")
+
+    root = root.resolve(strict=True)
+    verified: dict[str, bytes] = {}
+    for relative, expected_digest in entries.items():
+        candidate = root.joinpath(*PurePosixPath(relative).parts)
+        if candidate.is_symlink() or not candidate.is_file():
+            raise ValueError(f"manifested artifact is not a regular file: {relative}")
+        resolved = candidate.resolve(strict=True)
+        if root not in resolved.parents:
+            raise ValueError(f"manifested artifact escapes root: {relative}")
+        value = candidate.read_bytes()
+        if _sha256_bytes(value) != expected_digest:
+            raise ValueError(f"artifact manifest hash mismatch: {relative}")
+        if relative in required:
+            verified[relative] = value
+    return verified
+
+
 def hourly_index(values: pd.Series) -> pd.DatetimeIndex:
     raw = values.astype("string")
     if not raw.str.contains(r"(?:Z|[+-]\d{2}:?\d{2})$", regex=True, na=False).all():
@@ -95,13 +157,21 @@ def load_artifact(
 ) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
     spec = MARKETS[market]
     manifest = root / "artifact-manifest.sha256"
-    if sha256(manifest) != spec["manifest_sha256"]:
+    manifest_bytes = manifest.read_bytes()
+    if _sha256_bytes(manifest_bytes) != spec["manifest_sha256"]:
         raise ValueError("manifest hash mismatch")
-    snapshot = root / "snapshot" / str(spec["snapshot"])
-    if sha256(snapshot) != spec["snapshot_sha256"]:
+    snapshot_relative = f"snapshot/{spec['snapshot']}"
+    required = {
+        "effective_config.json",
+        "walk_forward.json",
+        "walk_forward_returns.csv",
+        snapshot_relative,
+    }
+    verified = verify_manifested_artifact_bytes(root, manifest_bytes, required)
+    if _sha256_bytes(verified[snapshot_relative]) != spec["snapshot_sha256"]:
         raise ValueError("snapshot hash mismatch")
-    effective = json.loads((root / "effective_config.json").read_text())
-    report = json.loads((root / "walk_forward.json").read_text())
+    effective = json.loads(verified["effective_config.json"])
+    report = json.loads(verified["walk_forward.json"])
     if effective["data"]["bar"] != "1H":
         raise ValueError("artifact must be 1H")
     if effective["strategy"]["transaction_cost_bps"] != 5.0:
@@ -110,13 +180,13 @@ def load_artifact(
         raise ValueError("artifact must contain only 1x cost")
     if report["settings"]["cost_multipliers"] != [1.0]:
         raise ValueError("report must contain only 1x cost")
-    candles = pd.read_csv(snapshot)
+    candles = pd.read_csv(io.BytesIO(verified[snapshot_relative]))
     candles.index = hourly_index(candles.pop("timestamp"))
     columns = ["open", "high", "low", "close", "volume_quote"]
     candles[columns] = candles[columns].apply(pd.to_numeric, errors="raise")
     if not np.isfinite(candles[columns].to_numpy()).all():
         raise ValueError("non-finite candle")
-    returns = pd.read_csv(root / "walk_forward_returns.csv")
+    returns = pd.read_csv(io.BytesIO(verified["walk_forward_returns.csv"]))
     returns.index = hourly_index(returns.pop("timestamp"))
     for column in BENCHMARKS.values():
         returns[column] = pd.to_numeric(returns[column], errors="raise")
