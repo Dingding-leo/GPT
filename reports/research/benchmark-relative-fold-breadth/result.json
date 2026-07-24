@@ -1,0 +1,81 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "benchmark-relative-fold-breadth-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=volatility-targeted-long|complete-folds=26x90|trailing-incomplete-fold=excluded|fold-metric=compounded-strategy-return-minus-compounded-benchmark-return|success=delta>0|claim=outperformance-share>0.5-in-both-markets|resampling=noncircular-moving-block-bootstrap-over-consecutive-complete-folds|block-length=3-folds|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072310,ETH-USDT:2026072311|candidate_count=1",
+  "design": {
+    "benchmark": "volatility-targeted long",
+    "block_length_folds": 3,
+    "confidence": 0.95,
+    "expected_complete_folds": 26,
+    "expected_fold_observations": 90,
+    "fold_metric": "compounded net strategy return minus compounded net volatility-targeted-long return",
+    "fold_success_rule": "relative fold return delta > 0",
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072310,
+      "ETH-USDT": 2026072311
+    },
+    "trailing_incomplete_fold_policy": "exclude one trailing fold shorter than 90 observations"
+  },
+  "hypothesis": "BTC-USDT and ETH-USDT each outperform volatility-targeted long in more than half of their complete 90-session rolling OOS folds, with a 95% moving-block-bootstrap lower bound above 0.5.",
+  "markets": {
+    "BTC-USDT": {
+      "complete_fold_end": "2026-06-07T00:00:00+00:00",
+      "complete_fold_start": "2020-01-11T00:00:00+00:00",
+      "complete_folds": 26,
+      "confidence_lower": 0.3076923076923077,
+      "confidence_upper": 0.6538461538461539,
+      "mean_relative_fold_return": -0.06901807632726402,
+      "median_relative_fold_return": -0.016288359456701818,
+      "outperformance_share": 0.46153846153846156,
+      "outperforming_folds": 12,
+      "probability_share_above_half": 0.2635,
+      "source_end": "2026-07-22T00:00:00+00:00",
+      "source_observations": 2385,
+      "source_start": "2020-01-11T00:00:00+00:00",
+      "trailing_incomplete_observations": 45
+    },
+    "ETH-USDT": {
+      "complete_fold_end": "2026-06-07T00:00:00+00:00",
+      "complete_fold_start": "2020-01-11T00:00:00+00:00",
+      "complete_folds": 26,
+      "confidence_lower": 0.15384615384615385,
+      "confidence_upper": 0.5384615384615384,
+      "mean_relative_fold_return": -0.10872172526618439,
+      "median_relative_fold_return": -0.07347365704774522,
+      "outperformance_share": 0.34615384615384615,
+      "outperforming_folds": 9,
+      "probability_share_above_half": 0.0255,
+      "source_end": "2026-07-22T00:00:00+00:00",
+      "source_observations": 2385,
+      "source_start": "2020-01-11T00:00:00+00:00",
+      "trailing_incomplete_observations": 45
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "market_type": "spot",
+    "provider": "OKX",
+    "return_file_sha256": {
+      "BTC-USDT": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "ETH-USDT": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047"
+    },
+    "source_artifact_id": 8548502306,
+    "source_artifact_name": "quant-research-source-1473-attempt-1",
+    "source_artifact_sha256": "79cd3100c2f41d42d4fc61c1e63e765c5ec4c6b9645457c9d24469121c88b1be",
+    "source_head_sha": "b6a15182dd4a688208b1c737f97a24dd295bf34c",
+    "source_workflow_run_id": 29967772412,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reasons": [
+    "BTC-USDT outperformance-share 95% lower bound 0.307692 is not above 0.5",
+    "ETH-USDT outperformance-share 95% lower bound 0.153846 is not above 0.5"
+  ],
+  "verdict": "reject"
+}

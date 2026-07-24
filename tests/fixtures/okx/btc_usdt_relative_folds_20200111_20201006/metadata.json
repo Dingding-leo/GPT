@@ -1,0 +1,24 @@
+{
+  "end": "2020-10-06 00:00:00+00:00",
+  "extraction": "first three complete 90-session rolling OOS folds with persisted net strategy and volatility-targeted-long returns",
+  "fixture_path": "tests/fixtures/okx/btc_usdt_relative_folds_20200111_20201006/btc_usdt_relative_folds.csv",
+  "fixture_sha256": "50d602d00e7dd45d0741f4d812abe42755e33d368879f04827e73c6c4db6e615",
+  "fold_observations": 90,
+  "folds": [
+    1,
+    2,
+    3
+  ],
+  "instrument": "BTC-USDT",
+  "market_type": "spot",
+  "observations": 270,
+  "provider": "OKX",
+  "source_artifact_id": 8548502306,
+  "source_artifact_name": "quant-research-source-1473-attempt-1",
+  "source_artifact_sha256": "79cd3100c2f41d42d4fc61c1e63e765c5ec4c6b9645457c9d24469121c88b1be",
+  "source_head_sha": "b6a15182dd4a688208b1c737f97a24dd295bf34c",
+  "source_return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+  "source_workflow_run_id": 29967772412,
+  "start": "2020-01-11 00:00:00+00:00",
+  "timeframe": "1Dutc"
+}
