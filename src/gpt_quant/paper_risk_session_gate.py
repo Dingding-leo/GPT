@@ -179,10 +179,7 @@ def advance_paper_risk_session_high_watermarks(
         raise TypeError("snapshot must be a PaperRiskStateSnapshot")
     tolerance = 1e-12
     if previous is None:
-        if (
-            snapshot.daily_loss_fraction > tolerance
-            or snapshot.drawdown_fraction > tolerance
-        ):
+        if snapshot.daily_loss_fraction > tolerance or snapshot.drawdown_fraction > tolerance:
             raise ValueError(
                 "initial session high-watermarks require a zero-loss, zero-drawdown snapshot"
             )
@@ -196,11 +193,10 @@ def advance_paper_risk_session_high_watermarks(
             raise ValueError("cannot advance session high-watermarks across sessions")
         if snapshot.observed_at_utc < previous.observed_at_utc:
             raise ValueError("cannot advance session high-watermarks to an older snapshot")
-        if snapshot.observed_at_utc == previous.observed_at_utc:
-            if snapshot.snapshot_id != previous.snapshot_id:
-                raise ValueError(
-                    "conflicting portfolio snapshots share one session observation time"
-                )
+        same_observation = snapshot.observed_at_utc == previous.observed_at_utc
+        if same_observation and snapshot.snapshot_id != previous.snapshot_id:
+            raise ValueError("conflicting portfolio snapshots share one session observation time")
+        if same_observation:
             previous.assert_compatible(snapshot)
             return previous
         maximum_daily_loss = max(
