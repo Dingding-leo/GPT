@@ -1,0 +1,80 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "jensen-alpha-vs-buy-and-hold-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=buy-and-hold|regression=strategy-return=alpha+beta*benchmark-return|metric=annualized-ols-intercept|annualization=365|claim=alpha>0-in-both-markets|resampling=paired-noncircular-moving-block-bootstrap|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260723,ETH-USDT:20260724|candidate_count=1",
+  "failure_reasons": [
+    "BTC-USDT annualized Jensen alpha lower confidence bound -0.100304549876 is not strictly positive",
+    "ETH-USDT annualized Jensen alpha lower confidence bound -0.156395195471 is not strictly positive"
+  ],
+  "hypothesis": "BTC-USDT and ETH-USDT net rolling OOS strategy returns each have positive annualized Jensen alpha versus persisted net buy-and-hold.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "A linear one-factor regression is descriptive and does not prove causal alpha.",
+    "Moving-block concatenation creates artificial joins between observed blocks.",
+    "The analysis does not model nonlinear impact, capacity, latency, or partial fills."
+  ],
+  "markets": {
+    "BTC-USDT": {
+      "alpha_confidence_interval": {
+        "lower": -0.10030454987590592,
+        "upper": 0.200836344350654
+      },
+      "annualized_jensen_alpha": 0.04724445814313401,
+      "beta": 0.24427929344339266,
+      "beta_confidence_interval": {
+        "lower": 0.19014877023430404,
+        "upper": 0.3081581249286734
+      },
+      "end": "2026-06-07T00:00:00+00:00",
+      "observations": 2340,
+      "passes": false,
+      "probability_alpha_positive": 0.732,
+      "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "start": "2020-01-11T00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "alpha_confidence_interval": {
+        "lower": -0.15639519547056388,
+        "upper": 0.12962307256732136
+      },
+      "annualized_jensen_alpha": -0.01370537896997214,
+      "beta": 0.20806877607808902,
+      "beta_confidence_interval": {
+        "lower": 0.16921903634815774,
+        "upper": 0.2528151656813652
+      },
+      "end": "2026-06-07T00:00:00+00:00",
+      "observations": 2340,
+      "passes": false,
+      "probability_alpha_positive": 0.423,
+      "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "start": "2020-01-11T00:00:00+00:00"
+    }
+  },
+  "method": {
+    "annualization": 365,
+    "benchmark": "persisted net buy-and-hold",
+    "block_length": 20,
+    "confidence": 0.95,
+    "metric": "annualized OLS intercept",
+    "noncircular_blocks": true,
+    "paired_rows": true,
+    "regression": "strategy_return = alpha + beta * benchmark_return",
+    "resamples": 2000
+  },
+  "source": {
+    "artifact_id": 8547282774,
+    "artifact_name": "quant-research-source-193",
+    "artifact_sha256": "e5654461e56bd76f7b61133a4eb9b00b7e98974fc8a09449185614250d462344",
+    "market_type": "spot",
+    "merged_main_sha": "2a8b0ada66a5b2271ebaf1a92f520caa211bf619",
+    "provider": "OKX",
+    "source_head_sha": "e09b3588c9491d2139a52edd5bd2a21c619e9b51",
+    "timeframe": "1Dutc",
+    "workflow_run_id": 29964427149
+  },
+  "verdict": "rejected"
+}
