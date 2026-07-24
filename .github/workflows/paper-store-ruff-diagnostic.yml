@@ -1,9 +1,9 @@
 name: Paper Store Ruff Diagnostic
 
 on:
-  push:
+  pull_request:
     branches:
-      - auto/live/20260724-11-paper-store-genesis-format
+      - auto/architecture/20260724-10-paper-decision-domain
 
 permissions:
   contents: read
@@ -18,21 +18,38 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.11"
-      - name: Run exact Ruff gates
+      - name: Capture exact Ruff diagnostics
         run: |
           python -m pip install 'ruff>=0.9,<1'
-          ruff --version
+          ruff --version > ruff-version.txt
+          set +e
           ruff check \
             src/gpt_quant/_paper_decision_store_core.py \
             src/gpt_quant/paper_decision_store.py \
             tests/test_paper_decision_store.py \
             tests/test_paper_decision_directory_fsync.py \
             tests/test_paper_decision_directory_security.py \
-            tests/test_paper_decision_missing_store_security.py
-          ruff format --check \
+            tests/test_paper_decision_missing_store_security.py \
+            > ruff-check.txt 2>&1
+          echo $? > ruff-check-status.txt
+          ruff format --diff \
             src/gpt_quant/_paper_decision_store_core.py \
             src/gpt_quant/paper_decision_store.py \
             tests/test_paper_decision_store.py \
             tests/test_paper_decision_directory_fsync.py \
             tests/test_paper_decision_directory_security.py \
-            tests/test_paper_decision_missing_store_security.py
+            tests/test_paper_decision_missing_store_security.py \
+            > ruff-format.txt 2>&1
+          echo $? > ruff-format-status.txt
+          set -e
+          cat ruff-version.txt ruff-check-status.txt ruff-check.txt ruff-format-status.txt ruff-format.txt
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: paper-store-ruff-diagnostic
+          path: |
+            ruff-version.txt
+            ruff-check-status.txt
+            ruff-check.txt
+            ruff-format-status.txt
+            ruff-format.txt
+          if-no-files-found: error
