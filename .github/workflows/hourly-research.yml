@@ -5,6 +5,10 @@ on:
     - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify; defaults to the dispatched ref
+        required: false
+        type: string
       enforce_live_readiness:
         description: Fail unless every paper/live launch gate has current-head evidence
         required: false
@@ -19,7 +23,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: hourly-quant-research-${{ github.event_name }}-${{ github.ref }}
+  group: hourly-quant-research-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -35,14 +39,35 @@ jobs:
       SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
       PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
       LIVE_READINESS_ARTIFACT_NAME: "live-readiness-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      REQUESTED_TARGET_SHA: ${{ inputs.target_sha || '' }}
+      DISPATCH_REF_SHA: ${{ github.sha }}
       LIVE_READINESS_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      LIVE_READINESS_TESTED_SHA: ${{ github.sha }}
+      LIVE_READINESS_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EXPECTED_TESTED_SHA"
+          if [[ -n "$REQUESTED_TARGET_SHA" ]]; then
+            test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+            test "$GITHUB_REF" = "refs/heads/main"
+            test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"
+            [[ "$DISPATCH_REF_SHA" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "${DISPATCH_REF_SHA}^{commit}"
+            git merge-base --is-ancestor "$EXPECTED_TESTED_SHA" "$DISPATCH_REF_SHA"
+          fi
 
       - name: Set up Python
         id: python_setup
@@ -173,7 +198,7 @@ jobs:
             --source-artifact-id "$SOURCE_ARTIFACT_ID" \
             --source-artifact-name "$SOURCE_ARTIFACT_NAME" \
             --source-artifact-sha256 "$source_artifact_digest" \
-            --source-head-sha "$GITHUB_SHA" \
+            --source-head-sha "$LIVE_READINESS_TESTED_SHA" \
             --max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION" \
             --max-pairwise-correlation "$MAX_PAIRWISE_CORRELATION" \
             --fail-on-reject \

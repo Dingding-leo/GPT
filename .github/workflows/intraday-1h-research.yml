@@ -3,6 +3,10 @@ name: Canonical BTC ETH 1h Research
 on:
   workflow_dispatch:
     inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify; defaults to the dispatched ref
+        required: false
+        type: string
       enforce_intraday_research_promotion:
         description: Fail unless each canonical 1h candidate clears the research promotion gate
         required: false
@@ -17,7 +21,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: canonical-btc-eth-1h-${{ github.event_name }}-${{ github.ref }}
+  group: canonical-btc-eth-1h-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -29,6 +33,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      REQUESTED_TARGET_SHA: ${{ inputs.target_sha || '' }}
+      DISPATCH_REF_SHA: ${{ github.sha }}
       PIP_BOOTSTRAP_VERSION: "26.1.2"
       ARTIFACT_NAME: "canonical-${{ matrix.inst_id }}-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
       SOURCE_ROOT: "reports/okx/1h/source/${{ matrix.inst_id }}"
@@ -38,7 +45,25 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EXPECTED_TESTED_SHA"
+          if [[ -n "$REQUESTED_TARGET_SHA" ]]; then
+            test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+            test "$GITHUB_REF" = "refs/heads/main"
+            test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"
+            [[ "$DISPATCH_REF_SHA" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "${DISPATCH_REF_SHA}^{commit}"
+            git merge-base --is-ancestor "$EXPECTED_TESTED_SHA" "$DISPATCH_REF_SHA"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -163,6 +188,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      REQUESTED_TARGET_SHA: ${{ inputs.target_sha || '' }}
+      DISPATCH_REF_SHA: ${{ github.sha }}
       PIP_BOOTSTRAP_VERSION: "26.1.2"
       UPSTREAM_RESEARCH_RESULT: ${{ needs.research.result }}
       DOWNLOADED_ARTIFACTS: reports/okx/1h/downloaded
@@ -172,7 +200,25 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EXPECTED_TESTED_SHA"
+          if [[ -n "$REQUESTED_TARGET_SHA" ]]; then
+            test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+            test "$GITHUB_REF" = "refs/heads/main"
+            test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"
+            [[ "$DISPATCH_REF_SHA" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "${DISPATCH_REF_SHA}^{commit}"
+            git merge-base --is-ancestor "$EXPECTED_TESTED_SHA" "$DISPATCH_REF_SHA"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0

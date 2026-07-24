@@ -23,7 +23,7 @@ def test_hourly_workflow_pins_and_validates_install_before_quality_gates() -> No
     assert workflow.index(dependency_check) < workflow.index(lint_step)
 
 
-def test_hourly_workflow_scopes_concurrency_by_event_and_ref() -> None:
+def test_hourly_workflow_scopes_concurrency_by_event_and_tested_sha() -> None:
     workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
 
     concurrency_start = workflow.index("concurrency:")
@@ -31,11 +31,18 @@ def test_hourly_workflow_scopes_concurrency_by_event_and_ref() -> None:
     concurrency_block = workflow[concurrency_start:jobs_start]
 
     assert concurrency_block.count("github.event_name") == 1
-    assert concurrency_block.count("github.ref") == 1
     assert (
-        "group: hourly-quant-research-${{ github.event_name }}-${{ github.ref }}"
+        concurrency_block.count(
+            "inputs.target_sha || github.event.pull_request.head.sha || github.sha"
+        )
+        == 1
+    )
+    assert (
+        "group: hourly-quant-research-${{ github.event_name }}-"
+        "${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}"
         in concurrency_block
     )
+    assert "github.ref" not in concurrency_block
     assert "cancel-in-progress: true" in concurrency_block
 
 
@@ -78,7 +85,8 @@ def test_hourly_workflow_publishes_portfolio_from_source_artifact_evidence() -> 
     assert '--source-artifact-id "$SOURCE_ARTIFACT_ID"' in workflow
     assert '--source-artifact-name "$SOURCE_ARTIFACT_NAME"' in workflow
     assert '--source-artifact-sha256 "$source_artifact_digest"' in workflow
-    assert '--source-head-sha "$GITHUB_SHA"' in workflow
+    assert '--source-head-sha "$LIVE_READINESS_TESTED_SHA"' in workflow
+    assert '--source-head-sha "$GITHUB_SHA"' not in workflow
     assert '--max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION"' in workflow
     assert "path: reports/okx/" in workflow
     assert "path: reports/portfolio/" in workflow

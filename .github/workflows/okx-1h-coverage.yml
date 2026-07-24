@@ -2,6 +2,11 @@ name: OKX 1H Data Coverage
 
 on:
   workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify; defaults to the dispatched ref
+        required: false
+        type: string
   push:
     branches: [main]
   pull_request:
@@ -11,7 +16,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: okx-1h-data-${{ github.event_name }}-${{ github.ref }}
+  group: okx-1h-data-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -19,6 +24,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      REQUESTED_TARGET_SHA: ${{ inputs.target_sha || '' }}
+      DISPATCH_REF_SHA: ${{ github.sha }}
       OKX_BASE_URL: https://www.okx.com
       ARTIFACT_NAME: okx-1h-coverage-${{ github.run_number }}-attempt-${{ github.run_attempt }}
 
@@ -26,7 +34,25 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
           persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EXPECTED_TESTED_SHA"
+          if [[ -n "$REQUESTED_TARGET_SHA" ]]; then
+            test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+            test "$GITHUB_REF" = "refs/heads/main"
+            test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"
+            [[ "$DISPATCH_REF_SHA" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "${DISPATCH_REF_SHA}^{commit}"
+            git merge-base --is-ancestor "$EXPECTED_TESTED_SHA" "$DISPATCH_REF_SHA"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -53,6 +79,11 @@ jobs:
           python scripts/run_okx_1h_coverage.py \
             --start 2021-07-24T00:00:00Z \
             --output-dir reports/okx/1h-coverage
+          printf '%s\n' "$EXPECTED_TESTED_SHA" \
+            > reports/okx/1h-coverage/tested-sha.txt
+          test "$(wc -l < reports/okx/1h-coverage/tested-sha.txt)" -eq 1
+          grep -Eq '^[0-9a-f]{40}$' reports/okx/1h-coverage/tested-sha.txt
+          test "$(cat reports/okx/1h-coverage/tested-sha.txt)" = "$EXPECTED_TESTED_SHA"
           test -s reports/okx/1h-coverage/coverage-manifest.json
           test -s reports/okx/1h-coverage/BTC-USDT/snapshot/okx-BTC-USDT-1H.raw.json
           test -s reports/okx/1h-coverage/ETH-USDT/snapshot/okx-ETH-USDT-1H.raw.json
