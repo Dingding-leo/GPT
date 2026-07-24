@@ -143,8 +143,9 @@ def validate_okx_paper_execution_attempt_constraints(
     This offline gate performs no network or account operation. It proves that the
     attempt references the supplied quote and immutable instrument response, that the
     requested quantity was valid when submitted, and that any claimed fill is aligned
-    to the exchange lot and no larger than the visible same-side top-of-book quantity.
-    It does not infer deeper liquidity, minimum quote notional, slippage or impact.
+    to the exchange lot and tick size and no larger than the visible same-side
+    top-of-book quantity. It does not infer deeper liquidity, minimum quote notional,
+    slippage or impact.
     """
 
     if not isinstance(snapshot, OKXSpotInstrumentSnapshot):
@@ -183,6 +184,10 @@ def validate_okx_paper_execution_attempt_constraints(
         raise ValueError("filled_base_quantity is not an exact multiple of the OKX lot size")
     if filled == 0:
         return
+
+    average_fill_price = Decimal(attempt.average_fill_price)
+    if average_fill_price % snapshot.tick_size_decimal != 0:
+        raise ValueError("average_fill_price is not an exact multiple of the OKX tick size")
 
     visible_touch_quantity = Decimal(
         quote.ask_quantity if attempt.side == "buy" else quote.bid_quantity
