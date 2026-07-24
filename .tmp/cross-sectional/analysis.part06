@@ -1,0 +1,94 @@
+            "evaluation_start": EVALUATION_START.isoformat(),
+            "evaluation_end": EVALUATION_END.isoformat(),
+            "evaluation_observations": int(len(strategy)),
+        },
+        "architecture": {
+            "momentum_lookback_hours": MOMENTUM_LOOKBACK,
+            "market_regime_lookback_hours": REGIME_LOOKBACK,
+            "volatility_lookback_hours": VOLATILITY_LOOKBACK,
+            "decision_cadence_hours": DECISION_CADENCE_HOURS,
+            "target_volatility": TARGET_VOLATILITY,
+            "maximum_gross_position": 1.0,
+            "transaction_cost_bps_one_way": TRANSACTION_COST_BPS,
+            "additional_costs_in_pnl": [],
+            "execution_delay_bars": 1,
+        },
+        "strategy_metrics": strategy_metrics,
+        "benchmark_metrics": benchmark_metrics,
+        "benchmark_inference": benchmark_inference,
+        "fold_stability": folds,
+        "calendar_stability": calendar,
+        "activity": activity,
+        "neighbourhoods": neighbourhoods,
+        "tail_risk": tail,
+        "capacity": capacity,
+        "gates": {
+            "net_5bps_viability": net_viability_pass,
+            "benchmark_relative_risk_adjusted": benchmark_pass,
+            "fold_stability": fold_pass,
+            "month_stability": month_pass,
+            "year_stability": year_pass,
+            "turnover_holding_trade_sufficiency": activity_pass,
+            "parameter_neighbourhood_stability": neighbourhood_pass,
+            "tail_risk": bool(tail["passes"]),
+            "capacity_usd100k": capacity_pass,
+            "maker_fill_quality": "blocked_no_prospective_order_lifecycle_evidence",
+            "no_fill_partial_fill_timeout": "blocked_no_prospective_order_lifecycle_evidence",
+            "adverse_selection": "blocked_no_prospective_order_lifecycle_evidence",
+            "latency": "blocked_no_prospective_order_lifecycle_evidence",
+            "prospective_paper_performance": "blocked_retrospective_architecture_failed",
+            "retrospective_architecture_freeze": retrospective_pass,
+            "paper_testable": False,
+            "live_eligible": False,
+        },
+        "verdict": "supported" if retrospective_pass else "rejected",
+        "rejection_reasons": [
+            name
+            for name, passed in (
+                ("benchmark_relative_risk_adjusted", benchmark_pass),
+                ("fold_stability", fold_pass),
+                ("month_stability", month_pass),
+                ("year_stability", year_pass),
+                ("turnover_holding_trade_sufficiency", activity_pass),
+                ("parameter_neighbourhood_stability", neighbourhood_pass),
+                ("tail_risk", bool(tail["passes"])),
+                ("capacity_usd100k", capacity_pass),
+            )
+            if not passed
+        ],
+        "limitations": [
+            (
+                "BTC-USDT and ETH-USDT are development markets and this fixed result "
+                "must not be used for nearby threshold tuning."
+            ),
+            "Close-to-close one-bar-delayed accounting does not prove post-only maker fills.",
+            "The hourly quote-volume capacity proxy is not queue position or executable depth.",
+            (
+                "Maker fill quality, no-fill, partial fill, timeout, adverse selection, "
+                "latency, and prospective paper performance remain separate blocked "
+                "diagnostics."
+            ),
+            (
+                "Moving-block concatenation creates artificial joins while preserving "
+                "dependence within 168-hour blocks."
+            ),
+        ],
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--artifact-dir", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    result = make_result(args.artifact_dir)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(
+        json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
