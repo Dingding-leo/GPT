@@ -107,11 +107,7 @@ def _position_activity_metrics(
             "exchange_fee_per_rebalance": 0.0,
         }
 
-    position = (
-        pd.to_numeric(frame["position"], errors="coerce")
-        .fillna(0.0)
-        .astype(float)
-    )
+    position = pd.to_numeric(frame["position"], errors="coerce").fillna(0.0).astype(float)
     active = position.abs() > _POSITION_EPSILON
     previous_active = active.shift(1, fill_value=False)
     entries = active & ~previous_active
@@ -133,9 +129,7 @@ def _position_activity_metrics(
     ):
         if is_entry:
             if in_episode:
-                raise RuntimeError(
-                    "position episode tracking entered an invalid nested state"
-                )
+                raise RuntimeError("position episode tracking entered an invalid nested state")
             in_episode = True
             episode_growth = 1.0
             episode_holding_bars = 0
@@ -158,9 +152,7 @@ def _position_activity_metrics(
     gross_episode_profit = sum(value for value in completed_returns if value > 0.0)
     gross_episode_loss = -sum(value for value in completed_returns if value < 0.0)
     profit_factor_defined = int(gross_episode_loss > 0.0)
-    profit_factor = (
-        gross_episode_profit / gross_episode_loss if profit_factor_defined else 0.0
-    )
+    profit_factor = gross_episode_profit / gross_episode_loss if profit_factor_defined else 0.0
 
     rebalance_count = int(rebalances.sum())
     total_turnover = float(turnover.sum())
@@ -169,15 +161,11 @@ def _position_activity_metrics(
     return {
         "target_position_turnover_sum": total_turnover,
         "target_position_rebalance_count": rebalance_count,
-        "annualized_target_position_rebalance_count": (
-            rebalance_count / len(frame) * annualization
-        ),
+        "annualized_target_position_rebalance_count": rebalance_count / len(frame) * annualization,
         "position_entry_count": int(entries.sum()),
         "position_exit_count": int(exits.sum()),
         "position_episode_count": int(entries.sum()),
-        "annualized_position_episode_count": (
-            int(entries.sum()) / len(frame) * annualization
-        ),
+        "annualized_position_episode_count": int(entries.sum()) / len(frame) * annualization,
         "completed_position_episode_count": completed_count,
         "open_position_episode_count": int(in_episode),
         "active_bar_count": active_bar_count,
@@ -188,16 +176,12 @@ def _position_activity_metrics(
         "median_completed_holding_bars": (
             float(np.median(completed_holding_bars)) if completed_holding_bars else 0.0
         ),
-        "max_completed_holding_bars": (
-            max(completed_holding_bars) if completed_holding_bars else 0
-        ),
+        "max_completed_holding_bars": max(completed_holding_bars) if completed_holding_bars else 0,
         "current_holding_bars": episode_holding_bars if in_episode else 0,
         "completed_episode_win_count": win_count,
         "completed_episode_loss_count": loss_count,
         "completed_episode_flat_count": flat_count,
-        "completed_episode_hit_rate": (
-            win_count / completed_count if completed_count else 0.0
-        ),
+        "completed_episode_hit_rate": win_count / completed_count if completed_count else 0.0,
         "completed_episode_profit_factor": profit_factor,
         "completed_episode_profit_factor_defined": profit_factor_defined,
         "average_turnover_per_rebalance": (
@@ -267,9 +251,7 @@ def performance_metrics(
     hit_rate = float((nonzero_returns > 0.0).mean()) if len(nonzero_returns) else 0.0
     active_mask = position_series.abs() > _POSITION_EPSILON
     active_bar_returns = returns[active_mask]
-    bar_hit_rate = (
-        float((active_bar_returns > 0.0).mean()) if len(active_bar_returns) else 0.0
-    )
+    bar_hit_rate = float((active_bar_returns > 0.0).mean()) if len(active_bar_returns) else 0.0
     activity = _position_activity_metrics(
         frame,
         returns,
@@ -332,9 +314,7 @@ def performance_metrics(
             rtol=0.0,
             atol=1e-12,
         ):
-            raise ValueError(
-                "strategy_return must equal gross_strategy_return minus trading_cost"
-            )
+            raise ValueError("strategy_return must equal gross_strategy_return minus trading_cost")
 
         gross_growth, gross_total_return = _compounded_return(gross_returns)
         gross_cagr = gross_growth ** (1.0 / years) - 1.0 if gross_growth > 0 else -1.0
