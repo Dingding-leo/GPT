@@ -1,0 +1,43 @@
+name: Coordination Ruff Repair
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out canonical quote branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: auto/live/20260724-06-okx-top-of-book
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Commit exact canonical formatting and self-remove
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "ruff==0.16.0"
+          ruff check . --fix
+          ruff format .
+          git rm .github/workflows/coordination-ruff-repair.yml
+          changed="$(git diff --name-only --cached; git diff --name-only)"
+          printf '%s\n' "$changed"
+          test "$(printf '%s\n' "$changed" | sort -u)" = ".github/workflows/coordination-ruff-repair.yml
+src/gpt_quant/okx_execution_quote.py
+tests/test_okx_execution_quote_clock_domains.py"
+          git config user.name "GPT Live Readiness Coordinator"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/gpt_quant/okx_execution_quote.py tests/test_okx_execution_quote_clock_domains.py
+          git commit -m "style(coordination): restore PR 358 Ruff gate"
+          git push origin HEAD:auto/live/20260724-06-okx-top-of-book
