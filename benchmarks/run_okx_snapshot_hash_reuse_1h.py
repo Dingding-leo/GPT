@@ -153,8 +153,13 @@ def main() -> None:
                 return fixed_fetched_at.astimezone(tz)
 
         okx_module.datetime = FixedDateTime
-        baseline = lambda: _fetch(payloads, metadata, discard_precomputed_bytes=True)
-        optimized = lambda: _fetch(payloads, metadata, discard_precomputed_bytes=False)
+
+        def baseline():
+            return _fetch(payloads, metadata, discard_precomputed_bytes=True)
+
+        def optimized():
+            return _fetch(payloads, metadata, discard_precomputed_bytes=False)
+
         baseline_snapshot = baseline()
         optimized_snapshot = optimized()
         if not baseline_snapshot.candles.equals(optimized_snapshot.candles):
