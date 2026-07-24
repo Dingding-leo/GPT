@@ -4,33 +4,191 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import stat
 import sys
+import tempfile
 from collections.abc import Mapping, Sequence
-from pathlib import Path
-from typing import Any
+from pathlib import Path, PurePosixPath
+from typing import Any, Final
 
 from gpt_quant.artifact_manifest import verify_manifest
 from gpt_quant.intraday_1h_source_provenance import verify_intraday_1h_source_provenance
 
 _OUTPUT_NAME = "intraday-cross-market-gate.json"
+_MANIFEST_NAME: Final = "artifact-manifest.sha256"
+_CHUNK_SIZE: Final = 1024 * 1024
 _EXPECTED_INSTRUMENTS = ("BTC-USDT", "ETH-USDT")
 _SEPARATE_DIAGNOSTIC = "separate_not_modeled"
 
 
+def _stable_identity(value: os.stat_result) -> tuple[int, int, int, int, int, int]:
+    return (
+        value.st_dev,
+        value.st_ino,
+        value.st_nlink,
+        value.st_size,
+        value.st_mtime_ns,
+        value.st_ctime_ns,
+    )
+
+
+def _open_private_regular_file(path: Path) -> tuple[int, os.stat_result]:
+    try:
+        expected = path.stat(follow_symlinks=False)
+    except FileNotFoundError as exc:
+        raise ValueError(f"required persisted artifact is missing: {path.name}") from exc
+    if not stat.S_ISREG(expected.st_mode) or expected.st_nlink != 1:
+        raise ValueError(f"persisted artifact must be one private regular file: {path.name}")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    try:
+        descriptor = os.open(path, flags)
+    except OSError as exc:
+        raise ValueError(f"persisted artifact could not be opened safely: {path.name}") from exc
+    opened = os.fstat(descriptor)
+    if (
+        not stat.S_ISREG(opened.st_mode)
+        or opened.st_nlink != 1
+        or (opened.st_dev, opened.st_ino) != (expected.st_dev, expected.st_ino)
+    ):
+        os.close(descriptor)
+        raise ValueError(f"persisted artifact changed during secure open: {path.name}")
+    return descriptor, opened
+
+
+def _read_private_regular_file(path: Path) -> bytes:
+    descriptor, opened = _open_private_regular_file(path)
+    try:
+        with os.fdopen(descriptor, "rb", closefd=False) as handle:
+            payload = handle.read()
+        if _stable_identity(os.fstat(descriptor)) != _stable_identity(opened):
+            raise ValueError(f"persisted artifact changed during secure read: {path.name}")
+        return payload
+    finally:
+        os.close(descriptor)
+
+
 def _sha256_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(1024 * 1024):
-            digest.update(chunk)
-    return digest.hexdigest()
+    return hashlib.sha256(_read_private_regular_file(path)).hexdigest()
+
+
+def _copy_private_regular_file(source: Path, destination: Path, expected_sha256: str) -> None:
+    source_descriptor, opened = _open_private_regular_file(source)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination_descriptor: int | None = None
+    try:
+        destination_descriptor = os.open(
+            destination,
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+            0o600,
+        )
+        digest = hashlib.sha256()
+        with (
+            os.fdopen(source_descriptor, "rb", closefd=False) as source_handle,
+            os.fdopen(destination_descriptor, "wb", closefd=False) as destination_handle,
+        ):
+            while chunk := source_handle.read(_CHUNK_SIZE):
+                digest.update(chunk)
+                destination_handle.write(chunk)
+            destination_handle.flush()
+            os.fsync(destination_descriptor)
+        if _stable_identity(os.fstat(source_descriptor)) != _stable_identity(opened):
+            raise ValueError(f"persisted artifact changed during secure copy: {source.name}")
+        if digest.hexdigest() != expected_sha256:
+            raise ValueError(f"artifact manifest digest mismatch during secure copy: {source.name}")
+    except Exception:
+        destination.unlink(missing_ok=True)
+        raise
+    finally:
+        if destination_descriptor is not None:
+            os.close(destination_descriptor)
+        os.close(source_descriptor)
+
+
+def _parse_manifest_bytes(value: bytes) -> list[tuple[str, PurePosixPath]]:
+    try:
+        lines = value.decode("utf-8").splitlines()
+    except UnicodeDecodeError as exc:
+        raise ValueError("artifact manifest must be UTF-8") from exc
+    if not lines:
+        raise ValueError("artifact manifest must contain at least one file")
+
+    entries: list[tuple[str, PurePosixPath]] = []
+    seen: set[str] = set()
+    previous_relative: str | None = None
+    for line in lines:
+        expected, separator, relative = line.partition("  ")
+        if separator != "  " or len(expected) != 64:
+            raise ValueError("artifact manifest contains a malformed entry")
+        try:
+            int(expected, 16)
+        except ValueError as exc:
+            raise ValueError("artifact manifest contains a non-hexadecimal digest") from exc
+        pure_relative = PurePosixPath(relative)
+        if pure_relative.is_absolute() or not relative or ".." in pure_relative.parts:
+            raise ValueError("artifact manifest paths must remain relative to the artifact root")
+        if any(character in relative for character in ("\n", "\r", "\\")):
+            raise ValueError("artifact manifest path contains unsupported characters")
+        if relative in seen:
+            raise ValueError("artifact manifest contains duplicate paths")
+        if previous_relative is not None and relative <= previous_relative:
+            raise ValueError("artifact manifest paths must be strictly sorted")
+        seen.add(relative)
+        previous_relative = relative
+        entries.append((expected, pure_relative))
+    return entries
+
+
+def _materialize_verified_artifact(artifact_dir: Path, destination: Path) -> str:
+    root = artifact_dir.resolve(strict=True)
+    if not root.is_dir():
+        raise ValueError("downloaded market artifact must be a directory")
+    manifest_path = root / _MANIFEST_NAME
+    pinned_manifest = _read_private_regular_file(manifest_path)
+    pinned_manifest_sha256 = hashlib.sha256(pinned_manifest).hexdigest()
+
+    verify_manifest(root)
+    if _read_private_regular_file(manifest_path) != pinned_manifest:
+        raise ValueError("artifact manifest changed after verification")
+
+    entries = _parse_manifest_bytes(pinned_manifest)
+    destination.mkdir(mode=0o700)
+    for expected_sha256, relative in entries:
+        source = root.joinpath(*relative.parts)
+        if source.is_symlink() or not source.resolve().is_relative_to(root):
+            raise ValueError(f"artifact path changed or escaped during materialization: {relative}")
+        _copy_private_regular_file(
+            source,
+            destination.joinpath(*relative.parts),
+            expected_sha256,
+        )
+
+    manifest_destination = destination / _MANIFEST_NAME
+    manifest_descriptor = os.open(
+        manifest_destination,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+        0o600,
+    )
+    try:
+        with os.fdopen(manifest_descriptor, "wb", closefd=False) as handle:
+            handle.write(pinned_manifest)
+            handle.flush()
+            os.fsync(manifest_descriptor)
+    finally:
+        os.close(manifest_descriptor)
+
+    verify_manifest(destination)
+    if _sha256_file(manifest_destination) != pinned_manifest_sha256:
+        raise ValueError("materialized artifact manifest digest mismatch")
+    return pinned_manifest_sha256
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:
     try:
-        value = json.loads(path.read_text(encoding="utf-8"))
+        value = json.loads(_read_private_regular_file(path))
     except FileNotFoundError as exc:
         raise ValueError(f"required persisted artifact is missing: {path.name}") from exc
-    except json.JSONDecodeError as exc:
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ValueError(f"persisted artifact is not valid JSON: {path.name}") from exc
     if not isinstance(value, dict):
         raise ValueError(f"persisted artifact must contain a JSON object: {path.name}")
@@ -105,7 +263,9 @@ def _failure_payload(upstream_result: str, blocker: str) -> dict[str, Any]:
 def _artifact_directory(artifacts_root: Path, instrument_id: str) -> Path:
     prefix = f"canonical-{instrument_id}-1h-"
     matches = sorted(
-        path for path in artifacts_root.iterdir() if path.is_dir() and path.name.startswith(prefix)
+        path
+        for path in artifacts_root.iterdir()
+        if path.is_dir() and not path.is_symlink() and path.name.startswith(prefix)
     )
     if len(matches) != 1:
         raise ValueError(f"expected exactly one downloaded artifact for {instrument_id}")
@@ -136,9 +296,12 @@ def _expected_source_binding(
     return provenance, binding
 
 
-def _validate_market_artifact(artifact_dir: Path, instrument_id: str) -> dict[str, Any]:
-    verify_manifest(artifact_dir)
-    manifest_path = artifact_dir / "artifact-manifest.sha256"
+def _validate_materialized_market_artifact(
+    artifact_dir: Path,
+    instrument_id: str,
+    *,
+    pinned_manifest_sha256: str,
+) -> dict[str, Any]:
     gate_path = artifact_dir / "intraday-promotion-gate.json"
     gate = _load_json_object(gate_path)
     provenance, expected_source_binding = _expected_source_binding(
@@ -199,7 +362,7 @@ def _validate_market_artifact(artifact_dir: Path, instrument_id: str) -> dict[st
         raise ValueError(f"{instrument_id} paper and capital promotion must remain blocked")
 
     return {
-        "artifact_manifest_sha256": _sha256_file(manifest_path),
+        "artifact_manifest_sha256": pinned_manifest_sha256,
         "promotion_gate_sha256": _sha256_file(gate_path),
         "source_provenance_sha256": expected_source_binding["source_provenance_sha256"],
         "source_response_inventory_sha256": provenance["source_response_inventory_sha256"],
@@ -212,6 +375,26 @@ def _validate_market_artifact(artifact_dir: Path, instrument_id: str) -> dict[st
         "research_blockers": research_blockers,
         "paper_blockers": paper_blockers,
     }
+
+
+def _validate_market_artifact(artifact_dir: Path, instrument_id: str) -> dict[str, Any]:
+    source_manifest_path = artifact_dir / _MANIFEST_NAME
+    with tempfile.TemporaryDirectory(prefix="gpt-verified-1h-artifact-") as temporary:
+        verified_dir = Path(temporary) / "artifact"
+        pinned_manifest_sha256 = _materialize_verified_artifact(
+            artifact_dir,
+            verified_dir,
+        )
+        market = _validate_materialized_market_artifact(
+            verified_dir,
+            instrument_id,
+            pinned_manifest_sha256=pinned_manifest_sha256,
+        )
+
+    verify_manifest(artifact_dir)
+    if _sha256_file(source_manifest_path) != pinned_manifest_sha256:
+        raise ValueError("source artifact manifest changed during semantic reconstruction")
+    return market
 
 
 def build_intraday_1h_cross_market_gate(
