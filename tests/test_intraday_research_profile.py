@@ -106,9 +106,7 @@ def test_workflow_replays_exact_byte_source_before_research() -> None:
     assert source_block.count('--start "2021-07-24T00:00:00Z"') == 1
     assert source_block.count('--instrument "${{ matrix.inst_id }}"') == 1
     assert research_block.count("python scripts/run_okx_research.py") == 1
-    assert research_block.count(
-        '--snapshot-dir "$SOURCE_ROOT/${{ matrix.inst_id }}/snapshot"'
-    ) == 1
+    assert research_block.count('--snapshot-dir "$SOURCE_ROOT/${{ matrix.inst_id }}/snapshot"') == 1
     assert "OKX_BASE_URL" not in research_block
     assert 'cp "$SOURCE_ROOT/coverage-manifest.json"' in bind_block
     assert 'cp "$SOURCE_ROOT/okx-public-time.canonical.json"' in bind_block
