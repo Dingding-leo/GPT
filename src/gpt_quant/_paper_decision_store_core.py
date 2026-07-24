@@ -144,6 +144,14 @@ def _decision_lock(directory_descriptor: int, decision_name: str) -> Iterator[No
         os.close(descriptor)
 
 
+@contextmanager
+def _store_lock(directory_descriptor: int) -> Iterator[None]:
+    """Serialize store-wide replay and publication into one coherent snapshot."""
+
+    with _decision_lock(directory_descriptor, "paper-decision-store"):
+        yield
+
+
 def _validate_decision_target(
     target: TargetPositionIntent,
     decision: PaperOrderDecision,
@@ -226,8 +234,21 @@ def record_paper_order_decision(
     directory_descriptor: int,
     decision: PaperOrderDecision,
 ) -> PaperOrderDecision:
-    """Atomically consume one target intent into one durable paper decision file."""
+    """Atomically consume one target without overlapping a store replay."""
 
+    with _store_lock(directory_descriptor):
+        return _record_paper_order_decision_unlocked(
+            target_journal_path,
+            directory_descriptor,
+            decision,
+        )
+
+
+def _record_paper_order_decision_unlocked(
+    target_journal_path: str | Path,
+    directory_descriptor: int,
+    decision: PaperOrderDecision,
+) -> PaperOrderDecision:
     if not isinstance(decision, PaperOrderDecision):
         raise TypeError("decision must be a PaperOrderDecision")
     decision_name = f"{decision.target_intent_id}.json"
@@ -280,8 +301,19 @@ def replay_paper_order_decision_store(
     target_journal_path: str | Path,
     directory_descriptor: int,
 ) -> PaperDecisionStoreReplay:
-    """Replay every durable decision in target-journal order and hash the result."""
+    """Replay one coherent store snapshot without overlapping publication."""
 
+    with _store_lock(directory_descriptor):
+        return _replay_paper_order_decision_store_unlocked(
+            target_journal_path,
+            directory_descriptor,
+        )
+
+
+def _replay_paper_order_decision_store_unlocked(
+    target_journal_path: str | Path,
+    directory_descriptor: int,
+) -> PaperDecisionStoreReplay:
     targets = load_target_position_intent_journal(target_journal_path).intents
     target_by_id = {target.intent_id: target for target in targets}
     decisions_by_target: dict[str, PaperOrderDecision] = {}
