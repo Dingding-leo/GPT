@@ -68,6 +68,11 @@ jobs:
           python scripts/run_okx_1h_coverage.py \
             --start 2021-07-24T00:00:00Z \
             --output-dir reports/okx/1h-coverage
+          printf '%s\n' "$EXPECTED_TESTED_SHA" \
+            > reports/okx/1h-coverage/tested-sha.txt
+          test "$(wc -l < reports/okx/1h-coverage/tested-sha.txt)" -eq 1
+          grep -Eq '^[0-9a-f]{40}$' reports/okx/1h-coverage/tested-sha.txt
+          test "$(cat reports/okx/1h-coverage/tested-sha.txt)" = "$EXPECTED_TESTED_SHA"
           test -s reports/okx/1h-coverage/coverage-manifest.json
           test -s reports/okx/1h-coverage/BTC-USDT/snapshot/okx-BTC-USDT-1H.raw.json
           test -s reports/okx/1h-coverage/ETH-USDT/snapshot/okx-ETH-USDT-1H.raw.json
