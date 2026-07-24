@@ -70,6 +70,40 @@ def test_forward_registry_accepts_real_overlap_and_one_completed_append(
     assert len(journal.read_text(encoding="utf-8").splitlines()) == 2
 
 
+def test_forward_registry_treats_same_window_reacquisition_as_idempotent(
+    tmp_path: Path,
+) -> None:
+    raw = _fixture_response_bytes()
+    original = tmp_path / "original"
+    reacquired = tmp_path / "reacquired"
+    registry = tmp_path / "registry"
+    _write_snapshot(original, end="2026-07-24T00:00:00Z", raw=raw)
+    _write_snapshot(reacquired, end="2026-07-24T00:00:00Z", raw=raw)
+
+    metadata_path = reacquired / "okx-BTC-USDT-1H.metadata.json"
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    metadata["fetched_at_utc"] = "2026-07-24T05:00:00+00:00"
+    metadata_path.write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    first = register_okx_one_hour_forward_snapshot(
+        original,
+        registry,
+        inst_id="BTC-USDT",
+    )
+    retry = register_okx_one_hour_forward_snapshot(
+        reacquired,
+        registry,
+        inst_id="BTC-USDT",
+    )
+
+    assert retry == first
+    journal = registry / "BTC-USDT" / "okx-1h-forward-registry.jsonl"
+    assert len(journal.read_text(encoding="utf-8").splitlines()) == 1
+
+
 def test_forward_registry_rejects_changed_completed_overlap_bar(tmp_path: Path) -> None:
     raw = _fixture_response_bytes()
     previous = tmp_path / "previous"
