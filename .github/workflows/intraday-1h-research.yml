@@ -31,6 +31,8 @@ jobs:
     env:
       PIP_BOOTSTRAP_VERSION: "26.1.2"
       ARTIFACT_NAME: "canonical-${{ matrix.inst_id }}-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+      SOURCE_ROOT: "reports/okx/1h/source/${{ matrix.inst_id }}"
+      REPORT_DIR: "reports/okx/1h/${{ matrix.inst_id }}"
 
     steps:
       - name: Check out repository
@@ -55,48 +57,63 @@ jobs:
         run: |
           pytest -q \
             tests/test_intraday_research_profile.py \
+            tests/test_run_okx_research_snapshot.py \
             tests/test_verify_intraday_1h_profile.py \
             tests/test_intraday_1h_promotion_gate.py \
             tests/test_intraday_1h_cross_market_gate.py \
             tests/test_verify_intraday_1h_timestamp_grid.py \
             tests/test_artifact_manifest.py
 
-      - name: Run canonical 1h full walk-forward research
+      - name: Acquire replay-verifiable exact-byte 1h source
         env:
           OKX_BASE_URL: https://www.okx.com
+        run: |
+          python scripts/run_okx_1h_coverage.py \
+            --output-dir "$SOURCE_ROOT" \
+            --start "2021-07-24T00:00:00Z" \
+            --instrument "${{ matrix.inst_id }}"
+
+      - name: Run canonical 1h full walk-forward research
         run: |
           python scripts/run_okx_research.py \
             --config config/okx_research_1h.json \
             --inst-id "${{ matrix.inst_id }}" \
-            --output-dir "reports/okx/1h/${{ matrix.inst_id }}" \
-            --manifest-path "reports/okx/1h/${{ matrix.inst_id }}/experiment-manifest.jsonl"
+            --snapshot-dir "$SOURCE_ROOT/${{ matrix.inst_id }}/snapshot" \
+            --output-dir "$REPORT_DIR" \
+            --manifest-path "$REPORT_DIR/experiment-manifest.jsonl"
+
+      - name: Bind exchange-time source envelope
+        run: |
+          set -euo pipefail
+          cp "$SOURCE_ROOT/coverage-manifest.json" "$REPORT_DIR/source-coverage-manifest.json"
+          cp "$SOURCE_ROOT/okx-public-time.canonical.json" "$REPORT_DIR/source-public-time.canonical.json"
 
       - name: Verify exact persisted UTC-hour timestamp grid
         run: |
           python scripts/verify_intraday_1h_timestamp_grid.py \
-            --output-dir "reports/okx/1h/${{ matrix.inst_id }}"
+            --output-dir "$REPORT_DIR"
 
       - name: Verify persisted canonical 1h evidence
         run: |
           python scripts/verify_walk_forward_report.py \
-            --output-dir "reports/okx/1h/${{ matrix.inst_id }}" \
-            --manifest-path "reports/okx/1h/${{ matrix.inst_id }}/experiment-manifest.jsonl"
+            --output-dir "$REPORT_DIR" \
+            --manifest-path "$REPORT_DIR/experiment-manifest.jsonl"
 
       - name: Verify exact persisted 5 bps-only profile
         run: |
           python scripts/verify_intraday_1h_profile.py \
-            --output-dir "reports/okx/1h/${{ matrix.inst_id }}"
+            --output-dir "$REPORT_DIR"
 
       - name: Write explicit 1h promotion blockers
         run: |
           python scripts/build_intraday_1h_promotion_gate.py \
-            --output-dir "reports/okx/1h/${{ matrix.inst_id }}"
+            --output-dir "$REPORT_DIR"
 
       - name: Enforce fail-closed 1h research promotion
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.enforce_intraday_research_promotion }}
         run: |
           python scripts/build_intraday_1h_promotion_gate.py \
-            --output-dir "reports/okx/1h/${{ matrix.inst_id }}" \
+            --output-dir "$REPORT_DIR" \
             --enforce-research-promotion
 
       - name: Build and verify immutable canonical 1h manifest
@@ -104,19 +121,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          report_dir="reports/okx/1h/${{ matrix.inst_id }}"
-          manifest_path="$report_dir/artifact-manifest.sha256"
+          manifest_path="$REPORT_DIR/artifact-manifest.sha256"
 
-          test -s "$report_dir/effective_config.json"
-          test -s "$report_dir/walk_forward.json"
-          test -s "$report_dir/walk_forward_returns.csv"
-          test -s "$report_dir/experiment-manifest.jsonl"
-          test -s "$report_dir/intraday-promotion-gate.json"
+          test -s "$REPORT_DIR/effective_config.json"
+          test -s "$REPORT_DIR/walk_forward.json"
+          test -s "$REPORT_DIR/walk_forward_returns.csv"
+          test -s "$REPORT_DIR/experiment-manifest.jsonl"
+          test -s "$REPORT_DIR/intraday-promotion-gate.json"
+          test -s "$REPORT_DIR/source-coverage-manifest.json"
+          test -s "$REPORT_DIR/source-public-time.canonical.json"
 
-          manifest_sha256="$(python -m gpt_quant.artifact_manifest --root "$report_dir")"
+          manifest_sha256="$(python -m gpt_quant.artifact_manifest --root "$REPORT_DIR")"
           [[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]
           (
-            cd "$report_dir"
+            cd "$REPORT_DIR"
             sha256sum --check artifact-manifest.sha256
           )
           printf 'manifest_sha256=%s\n' "$manifest_sha256" >> "$GITHUB_OUTPUT"
@@ -125,7 +143,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: reports/okx/1h/${{ matrix.inst_id }}/
+          path: ${{ env.REPORT_DIR }}/
           if-no-files-found: error
           retention-days: 14
 
