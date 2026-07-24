@@ -1,0 +1,182 @@
+{
+  "candidate_count": 4,
+  "canonical_signature": "underwater-time-v1|markets=BTC-USDT,ETH-USDT|benchmark=volatility-targeted-long|metric=underwater-fraction-reduction|definition=nav-below-prior-running-peak|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260722,ETH-USDT:20260723|candidate_count=4",
+  "claim_boundary": "This is an exploratory diagnostic on development markets after a four-metric screen, not untouched confirmatory evidence. It does not change the strategy, fees, execution delay, candidate grid, or sealed-market verdict.",
+  "hypothesis": "For both BTC-USDT and ETH-USDT, the strategy spends a smaller fraction of out-of-sample days below its own prior running equity peak than the volatility-targeted-long benchmark, with a positive 95% paired moving-block-bootstrap lower bound for the reduction.",
+  "joint_supported": false,
+  "markets": {
+    "BTC-USDT": {
+      "end": "2026-06-07 00:00:00+00:00",
+      "metrics": {
+        "maximum_underwater_duration": {
+          "bootstrap": {
+            "ci_lower": -869.0,
+            "ci_upper": 1166.0999999999995,
+            "lower_bound_positive": false,
+            "median": 26.0,
+            "probability_positive": 0.537
+          },
+          "point": {
+            "benchmark": 841.0,
+            "reduction": 2.0,
+            "strategy": 839.0
+          }
+        },
+        "mean_drawdown_depth": {
+          "bootstrap": {
+            "ci_lower": 0.00031557800706383704,
+            "ci_upper": 0.393899802111741,
+            "lower_bound_positive": true,
+            "median": 0.12097816130633768,
+            "probability_positive": 0.9755
+          },
+          "point": {
+            "benchmark": 0.2777400054606634,
+            "reduction": 0.15738972238447843,
+            "strategy": 0.12035028307618498
+          }
+        },
+        "ulcer_index": {
+          "bootstrap": {
+            "ci_lower": 0.010624485258661994,
+            "ci_upper": 0.4117147181253525,
+            "lower_bound_positive": true,
+            "median": 0.14818723395485894,
+            "probability_positive": 0.9805
+          },
+          "point": {
+            "benchmark": 0.3519362542804162,
+            "reduction": 0.2139174979461772,
+            "strategy": 0.138018756334239
+          }
+        },
+        "underwater_fraction": {
+          "bootstrap": {
+            "ci_lower": -0.04401709401709397,
+            "ci_upper": 0.04957264957264951,
+            "lower_bound_positive": false,
+            "median": -0.002991452991452981,
+            "probability_positive": 0.432
+          },
+          "point": {
+            "benchmark": 0.9538461538461539,
+            "reduction": -0.02051282051282044,
+            "strategy": 0.9743589743589743
+          }
+        }
+      },
+      "observations": 2340,
+      "sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "start": "2020-01-11 00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "end": "2026-06-07 00:00:00+00:00",
+      "metrics": {
+        "maximum_underwater_duration": {
+          "bootstrap": {
+            "ci_lower": -1307.0,
+            "ci_upper": 821.0249999999999,
+            "lower_bound_positive": false,
+            "median": -107.5,
+            "probability_positive": 0.342
+          },
+          "point": {
+            "benchmark": 841.0,
+            "reduction": 49.0,
+            "strategy": 792.0
+          }
+        },
+        "mean_drawdown_depth": {
+          "bootstrap": {
+            "ci_lower": -0.07187239125277453,
+            "ci_upper": 0.32780371495964705,
+            "lower_bound_positive": false,
+            "median": 0.0871711622202932,
+            "probability_positive": 0.896
+          },
+          "point": {
+            "benchmark": 0.27185334685972806,
+            "reduction": 0.13268161406805695,
+            "strategy": 0.1391717327916711
+          }
+        },
+        "ulcer_index": {
+          "bootstrap": {
+            "ci_lower": -0.07191798176028391,
+            "ci_upper": 0.3363318464574876,
+            "lower_bound_positive": false,
+            "median": 0.10625235337055192,
+            "probability_positive": 0.908
+          },
+          "point": {
+            "benchmark": 0.3321527957292128,
+            "reduction": 0.17448498096879705,
+            "strategy": 0.15766781476041575
+          }
+        },
+        "underwater_fraction": {
+          "bootstrap": {
+            "ci_lower": -0.05555555555555547,
+            "ci_upper": 0.03803418803418801,
+            "lower_bound_positive": false,
+            "median": -0.01132478632478634,
+            "probability_positive": 0.2925
+          },
+          "point": {
+            "benchmark": 0.9478632478632478,
+            "reduction": -0.011538461538461608,
+            "strategy": 0.9594017094017094
+          }
+        }
+      },
+      "observations": 2340,
+      "sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "start": "2020-01-11 00:00:00+00:00"
+    }
+  },
+  "metric_screen": {
+    "maximum_underwater_duration": {
+      "disposition": "not primary",
+      "reason": "The longest-run statistic is discontinuous and highly unstable when moving blocks are concatenated into new paths."
+    },
+    "mean_drawdown_depth": {
+      "disposition": "not primary",
+      "reason": "It mainly repeats the existing drawdown-depth evidence and does not measure how frequently capital remains impaired."
+    },
+    "ulcer_index": {
+      "disposition": "not primary",
+      "reason": "It combines depth and time but remains dominated by the already-tested drawdown-depth mechanism."
+    },
+    "underwater_fraction": {
+      "disposition": "primary",
+      "reason": "It is bounded, uses every OOS observation, and directly measures the fraction of time capital remains below its previous peak."
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8507019983,
+    "source_artifact_name": "quant-research-246",
+    "source_artifact_sha256": "a3915a12b355c7eaed58c83c459c1d4e74f42c23815963cdab75d88fad17205a",
+    "source_tested_commit": "196d925f9b3dedd3e6a6382304405952eb16a073",
+    "source_workflow_run_id": 29860303180
+  },
+  "settings": {
+    "benchmark_column": "benchmark_volatility_targeted_long_return",
+    "block_length": 20,
+    "confidence": 0.95,
+    "development_market_screen": true,
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "primary_metric": "underwater_fraction",
+    "primary_metric_definition": "fraction of OOS observations whose compounded NAV is below the running maximum including initial capital",
+    "resamples": 2000,
+    "resampling": "paired moving block bootstrap without circular wrapping",
+    "seed_rule": "base seed 20260722 for BTC-USDT and 20260723 for ETH-USDT; each screened metric uses a deterministic 10000-step seed offset",
+    "strategy_column": "strategy_return"
+  },
+  "verdict": "rejected"
+}
