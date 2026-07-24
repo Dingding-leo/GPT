@@ -6,12 +6,17 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify; defaults to the dispatched ref
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: python-package-${{ github.event_name }}-${{ github.ref }}
+  group: python-package-${{ github.event_name }}-${{ inputs.target_sha || github.sha }}
   cancel-in-progress: true
 
 jobs:
@@ -23,6 +28,7 @@ jobs:
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
     env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.sha }}
       PIP_BOOTSTRAP_VERSION: "26.1.2"
       BUILD_FRONTEND_VERSION: "1.5.0"
       BUILD_BACKEND_VERSION: "83.0.0"
@@ -31,7 +37,16 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
           persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          actual_sha="$(git rev-parse HEAD)"
+          test "$actual_sha" = "$EXPECTED_TESTED_SHA"
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
