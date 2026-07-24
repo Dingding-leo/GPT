@@ -68,14 +68,16 @@ def test_manual_dispatch_without_target_rejects_non_main_ref(
     _git(repo, "commit", "-m", "main")
     head_sha = _git(repo, "rev-parse", "HEAD")
 
-    def run(script: str, github_ref: str) -> subprocess.CompletedProcess[str]:
+    def run(
+        script: str, github_ref: str, *, event_name: str = "workflow_dispatch"
+    ) -> subprocess.CompletedProcess[str]:
         env = os.environ.copy()
         env.update(
             {
                 "EXPECTED_TESTED_SHA": head_sha,
                 "REQUESTED_TARGET_SHA": "",
                 "DISPATCH_REF_SHA": head_sha,
-                "GITHUB_EVENT_NAME": "workflow_dispatch",
+                "GITHUB_EVENT_NAME": event_name,
                 "GITHUB_REF": github_ref,
             }
         )
@@ -91,6 +93,11 @@ def test_manual_dispatch_without_target_rejects_non_main_ref(
     for script in scripts:
         exact_main = run(script, "refs/heads/main")
         assert exact_main.returncode == 0, exact_main.stderr
+
+        pull_request = run(
+            script, "refs/pull/531/merge", event_name="pull_request"
+        )
+        assert pull_request.returncode == 0, pull_request.stderr
 
         lookalike = run(script, "refs/heads/main-shadow")
         assert lookalike.returncode != 0, (
