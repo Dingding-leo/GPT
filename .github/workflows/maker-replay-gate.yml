@@ -2,9 +2,7 @@ name: Maker Replay Gate
 
 on:
   pull_request:
-    branches:
-      - main
-      - auto/backtest/20260724-14-trade-through-maker-replay
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
