@@ -36,13 +36,17 @@ def test_g0_workflows_can_verify_one_explicit_immutable_sha() -> None:
         assert workflow.count('if [[ -n "$REQUESTED_TARGET_SHA" ]]; then') == checkout_count
         assert workflow.count('test "$GITHUB_EVENT_NAME" = "workflow_dispatch"') == checkout_count
         assert workflow.count('test "$GITHUB_REF" = "refs/heads/main"') == checkout_count
-        assert workflow.count(
-            'test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"'
-        ) == checkout_count
+        assert (
+            workflow.count('test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"')
+            == checkout_count
+        )
         assert workflow.count('git cat-file -e "${DISPATCH_REF_SHA}^{commit}"') == checkout_count
-        assert workflow.count(
-            'git merge-base --is-ancestor "$EXPECTED_TESTED_SHA" "$DISPATCH_REF_SHA"'
-        ) == checkout_count
+        assert (
+            workflow.count(
+                'git merge-base --is-ancestor "$EXPECTED_TESTED_SHA" "$DISPATCH_REF_SHA"'
+            )
+            == checkout_count
+        )
         assert "permissions:\n  contents: read" in workflow
         assert "secrets." not in workflow
 
