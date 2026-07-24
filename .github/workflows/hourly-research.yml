@@ -86,19 +86,7 @@ jobs:
 
       - name: Lint and formatting
         id: lint_format
-        shell: bash
-        run: |
-          set +e
-          mkdir -p reports/ruff-diagnostics
-          ruff check . > reports/ruff-diagnostics/check.txt 2>&1
-          check_status=$?
-          ruff format --check . > reports/ruff-diagnostics/format.txt 2>&1
-          format_status=$?
-          cat reports/ruff-diagnostics/check.txt
-          cat reports/ruff-diagnostics/format.txt
-          if (( check_status != 0 || format_status != 0 )); then
-            exit 1
-          fi
+        run: ruff check . && ruff format --check .
 
       - name: Test against public OKX data
         id: tests
@@ -222,7 +210,6 @@ jobs:
           path: |
             reports/live-readiness-gate/
             reports/live_readiness/five_bps_walk_forward.json
-            reports/ruff-diagnostics/
           if-no-files-found: error
           retention-days: 30
 
