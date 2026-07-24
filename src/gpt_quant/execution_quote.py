@@ -13,6 +13,7 @@ _SCHEMA_VERSION = 1
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 _TOKEN_PATTERN = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 _DECIMAL_PATTERN = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
+_MAX_DECIMAL_CHARACTERS = 128
 _PAYLOAD_KEYS = {
     "schema_version",
     "provider",
@@ -76,17 +77,21 @@ def _required_utc_datetime(value: object, *, field_name: str) -> datetime:
 
 
 def _required_positive_decimal(value: object, *, field_name: str) -> str:
-    if not isinstance(value, str) or _DECIMAL_PATTERN.fullmatch(value) is None:
-        raise ValueError(f"{field_name} must be a canonical positive ASCII decimal string")
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be a positive ASCII decimal string")
+    if len(value) > _MAX_DECIMAL_CHARACTERS:
+        raise ValueError(
+            f"{field_name} exceeds the {_MAX_DECIMAL_CHARACTERS}-character safety limit"
+        )
+    if _DECIMAL_PATTERN.fullmatch(value) is None:
+        raise ValueError(f"{field_name} must be a positive ASCII decimal string")
     parsed = Decimal(value)
     if parsed <= 0:
         raise ValueError(f"{field_name} must be positive")
     canonical = format(parsed, "f")
     if "." in canonical:
         canonical = canonical.rstrip("0").rstrip(".")
-    if canonical != value:
-        raise ValueError(f"{field_name} must use canonical decimal encoding")
-    return value
+    return canonical
 
 
 def _format_utc(value: datetime) -> str:
