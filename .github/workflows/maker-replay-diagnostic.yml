@@ -1,8 +1,8 @@
 name: Maker Replay Diagnostic
 
 on:
-  push:
-    branches: [auto/ci/20260724-15-maker-replay-artifact]
+  pull_request:
+    branches: [auto/backtest/20260724-14-trade-through-maker-replay]
 
 permissions:
   contents: read
@@ -26,13 +26,21 @@ jobs:
         run: |
           set -euo pipefail
           python -m pip install -e ".[dev]"
-          mkdir -p diagnostic
+          mkdir -p diagnostic/formatted/scripts diagnostic/formatted/tests
           ruff check \
             scripts/build_maker_replay_gate.py \
             tests/test_maker_fill_replay.py \
             tests/test_maker_replay_gate.py \
             tests/test_maker_replay_workflow.py \
             > diagnostic/ruff-check.txt 2>&1 || true
+          ruff format \
+            scripts/build_maker_replay_gate.py \
+            tests/test_maker_fill_replay.py \
+            tests/test_maker_replay_gate.py \
+            tests/test_maker_replay_workflow.py
+          cp scripts/build_maker_replay_gate.py diagnostic/formatted/scripts/
+          cp tests/test_maker_replay_gate.py diagnostic/formatted/tests/
+          cp tests/test_maker_replay_workflow.py diagnostic/formatted/tests/
           ruff format --check \
             scripts/build_maker_replay_gate.py \
             tests/test_maker_fill_replay.py \
