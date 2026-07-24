@@ -301,9 +301,7 @@ def performance_metrics(
             rtol=0.0,
             atol=1e-12,
         ):
-            raise ValueError(
-                "gross_strategy_return must equal position multiplied by asset_return"
-            )
+            raise ValueError("gross_strategy_return must equal position multiplied by asset_return")
         if "trading_cost" not in frame:
             raise ValueError("gross_strategy_return requires trading_cost")
         expected_net = gross_returns - trading_cost_series
