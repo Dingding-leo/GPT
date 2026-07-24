@@ -94,7 +94,7 @@ jobs:
         run: |
           python -m gpt_quant.intraday_1h_source_provenance \
             --output-dir "$REPORT_DIR" \
-            --inst-id="${{ matrix.inst_id }}"
+            --inst-id "${{ matrix.inst_id }}"
 
       - name: Verify exact persisted UTC-hour timestamp grid
         run: |
