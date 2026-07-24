@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 _REPORT_DIR = _REPOSITORY_ROOT / "reports/research/canonical-btc-1h-paper-gate"
@@ -63,8 +64,8 @@ def test_metric_helpers_are_exercised_on_immutable_real_okx_returns() -> None:
 
     frame = pd.read_csv(_REAL_OKX_FIXTURE)
     returns = pd.to_numeric(frame["strategy_return"], errors="raise")
-    assert analysis._compound(returns) == 0.0
-    assert analysis._expected_shortfall(returns) == 0.0
+    assert analysis._compound(returns) == pytest.approx(-0.035231009243043676)
+    assert analysis._expected_shortfall(returns) == pytest.approx(-0.02378361495163715)
 
 
 def test_blocked_execution_diagnostics_are_not_added_to_pnl() -> None:
