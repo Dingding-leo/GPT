@@ -144,6 +144,10 @@ def _replay_evidence_page(value: object) -> tuple[dict[str, Any], bytes]:
     return parsed, raw
 
 
+def _is_exact_hour_index(index: pd.DatetimeIndex) -> bool:
+    return index.equals(index.floor("h"))
+
+
 def derive_okx_one_hour_page_budget(
     *,
     start: pd.Timestamp | str,
@@ -230,7 +234,7 @@ def fetch_okx_one_hour_candles(
     expected_observations = int((end_timestamp - start_timestamp) / _ONE_HOUR) + 1
     if len(snapshot.candles) != expected_observations:
         raise ValueError("OKX 1H snapshot observation count does not match its boundaries")
-    if any(timestamp != timestamp.floor("h") for timestamp in snapshot.candles.index):
+    if not _is_exact_hour_index(snapshot.candles.index):
         raise ValueError("OKX 1H snapshot contains a candle not aligned to an exact UTC hour")
 
     if not raw_responses:
