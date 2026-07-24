@@ -1,0 +1,66 @@
+name: OKX 1H Data Coverage
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: okx-1h-data-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      OKX_BASE_URL: https://www.okx.com
+      ARTIFACT_NAME: okx-1h-coverage-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install and verify project
+        run: |
+          set -euo pipefail
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Run repository gates
+        run: |
+          set -euo pipefail
+          ruff check .
+          ruff format --check .
+          pytest
+
+      - name: Acquire and replay public OKX 1H coverage
+        run: |
+          set -euo pipefail
+          python scripts/run_okx_1h_coverage.py \
+            --start 2021-07-24T00:00:00Z \
+            --output-dir reports/okx/1h-coverage
+          test -s reports/okx/1h-coverage/coverage-manifest.json
+          test -s reports/okx/1h-coverage/BTC-USDT/snapshot/okx-BTC-USDT-1H.raw.json
+          test -s reports/okx/1h-coverage/ETH-USDT/snapshot/okx-ETH-USDT-1H.raw.json
+
+      - name: Upload immutable OKX 1H source evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: reports/okx/1h-coverage/
+          if-no-files-found: error
+          retention-days: 14

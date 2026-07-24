@@ -1,0 +1,17 @@
+{
+  "provider": "OKX",
+  "endpoint": "/api/v5/market/books",
+  "instrument_id": "BTC-USDT",
+  "depth": 1,
+  "source_kind": "official_documentation_response_example",
+  "source_url": "https://app.okx.com/docs-v5/en/#order-book-trading-market-data-get-order-book",
+  "exchange_timestamp_utc": "2021-08-26T08:27:16.396000Z",
+  "captured_from_documentation_utc": "2026-07-23T20:58:00Z",
+  "response_sha256": "7d12a351f8f51320d1c8beee0063557e1c90388d66ac63412bf66ca544aeb3e3",
+  "instrument_snapshot_sha256": "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb",
+  "limitations": [
+    "This is the official OKX public API response example, not a contemporaneous live quote.",
+    "It is used only as immutable parser and timing-boundary test evidence.",
+    "No performance, fill, slippage, impact, latency or live-trading claim is derived from it."
+  ]
+}
