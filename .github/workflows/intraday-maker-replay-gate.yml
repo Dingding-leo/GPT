@@ -1,0 +1,91 @@
+name: Intraday Maker Replay Release Gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PIP_BOOTSTRAP_VERSION: "26.1.2"
+  ARTIFACT_NAME: intraday-maker-replay-gate-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+jobs:
+  maker_replay_gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install and verify project
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Compile maker replay gate
+        run: |
+          python -m py_compile \
+            scripts/build_intraday_maker_replay_gate.py \
+            tests/test_intraday_maker_replay_gate.py
+
+      - name: Lint maker replay gate
+        run: |
+          ruff check \
+            scripts/build_intraday_maker_replay_gate.py \
+            tests/test_intraday_maker_replay_gate.py
+
+      - name: Check maker replay formatting
+        run: |
+          ruff format --check \
+            scripts/build_intraday_maker_replay_gate.py \
+            tests/test_intraday_maker_replay_gate.py
+
+      - name: Test deterministic maker replay gate
+        run: pytest -q tests/test_intraday_maker_replay_gate.py
+
+      - name: Build and verify explicit launch blockers
+        run: |
+          set -euo pipefail
+          rm -rf reports/intraday-maker-replay-gate
+          python scripts/build_intraday_maker_replay_gate.py \
+            --output-dir reports/intraday-maker-replay-gate
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("reports/intraday-maker-replay-gate/intraday-maker-replay-gate.json")
+          gate = json.loads(path.read_text(encoding="utf-8"))
+          assert gate["modeled_economics"]["one_way_exchange_fee_bps"] == 5.0
+          assert gate["modeled_economics"]["cost_multipliers"] == [1.0]
+          assert gate["maker_replay"]["maker_order_replay_passes"] is False
+          assert gate["maker_replay"]["account_connectivity"] == "disabled"
+          assert gate["maker_replay"]["order_submission"] == "not_performed"
+          assert gate["promotion"]["allow_paper_promotion"] is False
+          assert gate["promotion"]["allow_limited_capital"] is False
+          PY
+          (
+            cd reports/intraday-maker-replay-gate
+            sha256sum intraday-maker-replay-gate.json > artifact-manifest.sha256
+            sha256sum --check artifact-manifest.sha256
+          )
+
+      - name: Upload immutable maker replay blockers
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: reports/intraday-maker-replay-gate/
+          if-no-files-found: error
+          retention-days: 30
