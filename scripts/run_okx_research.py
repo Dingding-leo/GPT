@@ -248,7 +248,7 @@ def main() -> int:
         max_pages=max_pages,
         pause_seconds=pause_seconds,
         timeout=timeout,
-        snapshot_dir=args.snapshot_dir,
+        snapshot_dir=getattr(args, "snapshot_dir", None),
     )
     _validate_okx_raw_page_schema(snapshot.raw_pages)
     _validate_requested_end_coverage(snapshot, requested_end=end)
