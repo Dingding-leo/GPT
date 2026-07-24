@@ -28,9 +28,9 @@ _SOURCE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c54
 _CONFIGS = {
     "exchange_fee": b'{"component":"exchange_fee","one_way_bps":"5","version":1}\n',
     "spread": b'{"component":"spread","source":"observed_top_of_book","version":1}\n',
-    "slippage": b'{"component":"slippage","status":"not_modelled","version":1}\n',
-    "market_impact": b'{"component":"market_impact","status":"not_modelled","version":1}\n',
-    "latency": b'{"component":"latency","status":"timestamp_only_unpriced","version":1}\n',
+    "slippage": b'{"component":"slippage","status":"observed_only","version":1}\n',
+    "market_impact": b'{"component":"market_impact","status":"observed_only","version":1}\n',
+    "latency": b'{"component":"latency","status":"observed_unpriced","version":1}\n',
 }
 _COST_HASHES = {name: hashlib.sha256(value).hexdigest() for name, value in _CONFIGS.items()}
 
@@ -127,17 +127,15 @@ def _reconcile(chain, **overrides):
     )
 
 
-def test_reconciliation_replays_exact_persisted_chain_and_cost_versions(tmp_path) -> None:
+def test_reconciliation_replays_exact_chain_under_five_bps_only_economics(tmp_path) -> None:
     chain = _persisted_chain(tmp_path)
     evidence = _reconcile(chain)
 
+    assert evidence.schema_version == 2
     assert evidence.exchange_fee_one_way_bps == "5"
-    assert evidence.all_in_stress_bps == ("7.5", "10", "15")
+    assert "all_in_stress_bps" not in evidence.to_dict()
     assert evidence.intent_count == evidence.quote_count == 1
     assert evidence.binding_count == evidence.attempt_count == 1
-    assert evidence.reconciliation_id == (
-        "ce9fc583d2dcbb34f55b6c119c98fbcb8fa8aa01bfc7b56e0dee83b1c679274f"
-    )
     assert (
         PaperExecutionReconciliationEvidence.from_json_bytes(evidence.to_json_bytes()) == evidence
     )
@@ -154,20 +152,30 @@ def test_reconciliation_replays_exact_persisted_chain_and_cost_versions(tmp_path
     )
 
 
-def test_cost_components_are_independently_content_addressed(tmp_path) -> None:
+def test_non_five_bps_fee_config_cannot_enter_reconciliation(tmp_path) -> None:
+    chain = _persisted_chain(tmp_path)
+    seven_point_five_bps = hashlib.sha256(
+        b'{"component":"exchange_fee","one_way_bps":"7.5","version":1}\n'
+    ).hexdigest()
+
+    with pytest.raises(ValueError, match="exact-5-bps-only"):
+        _reconcile(chain, exchange_fee_config_sha256=seven_point_five_bps)
+
+
+def test_observed_diagnostics_are_independently_content_addressed(tmp_path) -> None:
     chain = _persisted_chain(tmp_path)
     baseline = _reconcile(chain)
-    changed_slippage = _reconcile(
+    changed_observation = _reconcile(
         chain,
         slippage_config_sha256=hashlib.sha256(
-            b'{"component":"slippage","status":"modelled","version":2}\n'
+            b'{"component":"slippage","status":"observed_only","version":2}\n'
         ).hexdigest(),
     )
 
-    assert changed_slippage.exchange_fee_config_sha256 == baseline.exchange_fee_config_sha256
-    assert changed_slippage.exchange_fee_one_way_bps == "5"
-    assert changed_slippage.slippage_config_sha256 != baseline.slippage_config_sha256
-    assert changed_slippage.reconciliation_id != baseline.reconciliation_id
+    assert changed_observation.exchange_fee_config_sha256 == baseline.exchange_fee_config_sha256
+    assert changed_observation.exchange_fee_one_way_bps == "5"
+    assert changed_observation.slippage_config_sha256 != baseline.slippage_config_sha256
+    assert changed_observation.reconciliation_id != baseline.reconciliation_id
 
 
 def test_reconciliation_rejects_tampered_roots_and_noncanonical_json(tmp_path) -> None:
@@ -192,8 +200,8 @@ def test_reconciliation_rejects_tampered_roots_and_noncanonical_json(tmp_path) -
     evidence = _reconcile(chain)
     payload = json.loads(evidence.to_json_bytes())
     duplicate = evidence.to_json_bytes().replace(
-        b'{"all_in_stress_bps"',
-        b'{"schema_version":1,"all_in_stress_bps"',
+        b'{"attempt_count"',
+        b'{"schema_version":2,"attempt_count"',
         1,
     )
     with pytest.raises(ValueError, match="unreadable"):
