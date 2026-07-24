@@ -2,7 +2,7 @@ name: Coordination Ruff Diagnostic
 
 on:
   pull_request:
-    branches: [main]
+    branches: [auto/live/20260724-06-okx-top-of-book]
 
 permissions:
   contents: read
