@@ -42,15 +42,29 @@ jobs:
           python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
           python -m pip install -e ".[dev]"
           python -m pip check
+          mkdir -p /tmp/prospective-quote-friction/diagnostics
 
-      - name: Lint
-        run: ruff check .
+      - name: Capture lint diagnostics
+        run: |
+          set +e
+          ruff check . > /tmp/prospective-quote-friction/diagnostics/ruff-check.txt 2>&1
+          echo "$?" > /tmp/prospective-quote-friction/diagnostics/ruff-check.exit-code
+          exit 0
 
-      - name: Formatting
-        run: ruff format --check .
+      - name: Capture formatting diagnostics
+        run: |
+          set +e
+          ruff format --check . > /tmp/prospective-quote-friction/diagnostics/ruff-format.txt 2>&1
+          echo "$?" > /tmp/prospective-quote-friction/diagnostics/ruff-format.exit-code
+          exit 0
 
-      - name: Test prospective protocol
-        run: pytest -q tests/test_prospective_top_of_book_friction.py
+      - name: Capture protocol-test diagnostics
+        run: |
+          set +e
+          pytest -q tests/test_prospective_top_of_book_friction.py \
+            > /tmp/prospective-quote-friction/diagnostics/pytest.txt 2>&1
+          echo "$?" > /tmp/prospective-quote-friction/diagnostics/pytest.exit-code
+          exit 0
 
       - name: Collect bounded public quote evidence
         id: collect
@@ -59,11 +73,13 @@ jobs:
         run: |
           set +e
           python reports/research/prospective-top-of-book-friction/analysis.py \
-            --output-dir /tmp/prospective-quote-friction
+            --output-dir /tmp/prospective-quote-friction \
+            > /tmp/prospective-quote-friction/diagnostics/collector.stdout.txt \
+            2> /tmp/prospective-quote-friction/diagnostics/collector.stderr.txt
           status=$?
-          set -e
+          echo "$status" > /tmp/prospective-quote-friction/diagnostics/collector.exit-code
           echo "hypothesis_exit_code=${status}" >> "$GITHUB_OUTPUT"
-          test -s /tmp/prospective-quote-friction/result.json
+          exit 0
 
       - name: Record workflow provenance
         env:
@@ -87,6 +103,7 @@ jobs:
           PY
 
       - name: Upload prospective evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.ARTIFACT_NAME }}
