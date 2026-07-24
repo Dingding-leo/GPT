@@ -145,9 +145,7 @@ def validate_okx_spot_limit_order_constraints(
         submitted_at_utc=submitted_at_utc,
         maximum_snapshot_age_ms=maximum_snapshot_age_ms,
         base_quantity=base_quantity,
-        maximum_instrument_request_round_trip_seconds=(
-            maximum_instrument_request_round_trip_seconds
-        ),
+        maximum_instrument_request_round_trip_seconds=maximum_instrument_request_round_trip_seconds,
     )
     canonical_price, price = _positive_canonical_decimal(limit_price, field="limit_price")
     if price % snapshot.tick_size_decimal != 0:
