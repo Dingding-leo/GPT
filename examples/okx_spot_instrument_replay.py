@@ -93,10 +93,7 @@ def _instrument_snapshot(raw: bytes):
     )
 
     def get_bytes(url: str, timeout: float) -> bytes:
-        expected = (
-            "https://www.okx.com/api/v5/public/instruments?"
-            "instType=SPOT&instId=BTC-USDT"
-        )
+        expected = "https://www.okx.com/api/v5/public/instruments?instType=SPOT&instId=BTC-USDT"
         if url != expected or timeout != 20.0:
             raise ValueError("unexpected public OKX instrument request")
         return raw
@@ -240,9 +237,7 @@ def main() -> int:
             "state": snapshot.state,
             "tick_size": snapshot.tick_size,
         },
-        "minimum_buy_quote_equivalent_at_observed_ask": _canonical_decimal(
-            minimum_base * touch
-        ),
+        "minimum_buy_quote_equivalent_at_observed_ask": _canonical_decimal(minimum_base * touch),
         "minimum_quote_notional_constraint": "not_reported_by_public_instrument_endpoint",
         "order_submission": "not_performed",
         "paper_attempt_probe": {
