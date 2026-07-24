@@ -317,4 +317,116 @@ def _publish_private_journal(
         os.replace(
             temporary_name,
             journal_name,
-            src_dir_fd=directory_descriptor<(MÄ
+            src_dir_fd=directory_descriptor,
+            dst_dir_fd=directory_descriptor,
+        )
+        published = True
+        os.fsync(directory_descriptor)
+    finally:
+        os.close(descriptor)
+        if not published:
+            with suppress(FileNotFoundError):
+                os.unlink(temporary_name, dir_fd=directory_descriptor)
+
+    if _read_private_journal(directory_descriptor, journal_name) != payload:
+        raise RuntimeError(f"{_ERROR_LABEL} replay differed after publication")
+
+
+def load_execution_quote_binding_journal(
+    path: str | Path,
+    *,
+    intent_journal: TargetPositionIntentJournal,
+    quote_store: ExecutionQuoteEvidenceStore,
+) -> ExecutionQuoteBindingJournal:
+    """Load every binding and reconstruct it from persisted target and quote evidence."""
+
+    journal_path = Path(path)
+    if not journal_path.name or journal_path.name in {".", ".."}:
+        raise ValueError(f"{_ERROR_LABEL} path must name one file")
+    directory_descriptor, directory_stat, _ = _open_output_directory(
+        journal_path.parent,
+        create=False,
+    )
+    try:
+        journal = _parse_journal_bytes(
+            _read_private_journal(directory_descriptor, journal_path.name)
+        )
+        _verify_reconstruction(
+            journal,
+            intent_journal=intent_journal,
+            quote_store=quote_store,
+        )
+        return journal
+    finally:
+        try:
+            _verify_directory_path(journal_path.parent, directory_stat)
+        finally:
+            os.close(directory_descriptor)
+
+
+def record_execution_quote_binding(
+    path: str | Path,
+    binding: ExecutionQuoteBinding,
+    *,
+    intent_journal: TargetPositionIntentJournal,
+    quote_store: ExecutionQuoteEvidenceStore,
+) -> ExecutionQuoteBindingJournal:
+    """Persist one binding only after exact durable source reconstruction succeeds."""
+
+    if not isinstance(binding, ExecutionQuoteBinding):
+        raise TypeError("binding must be an ExecutionQuoteBinding")
+    candidate = _journal_from_bindings((binding,))
+    _verify_reconstruction(
+        candidate,
+        intent_journal=intent_journal,
+        quote_store=quote_store,
+    )
+
+    journal_path = Path(path)
+    with _exclusive_writer_lock(journal_path) as (directory_descriptor, _):
+        try:
+            journal_payload = _read_private_journal(directory_descriptor, journal_path.name)
+        except FileNotFoundError:
+            journal = None
+        except ValueError as exc:
+            if isinstance(exc.__cause__, FileNotFoundError):
+                journal = None
+            else:
+                raise
+        else:
+            journal = _parse_journal_bytes(journal_payload)
+            _verify_reconstruction(
+                journal,
+                intent_journal=intent_journal,
+                quote_store=quote_store,
+            )
+
+        if journal is not None:
+            matching = next(
+                (
+                    existing
+                    for existing in journal.bindings
+                    if existing.binding_id == binding.binding_id
+                ),
+                None,
+            )
+            if matching is not None and matching.to_json_bytes() != binding.to_json_bytes():
+                raise ValueError(f"{_ERROR_LABEL} binding ID maps to conflicting bytes")
+            if matching is not None:
+                return journal
+            bindings = (*journal.bindings, binding)
+        else:
+            bindings = (binding,)
+
+        updated = _journal_from_bindings(tuple(bindings))
+        _verify_reconstruction(
+            updated,
+            intent_journal=intent_journal,
+            quote_store=quote_store,
+        )
+        _publish_private_journal(
+            directory_descriptor,
+            journal_path.name,
+            updated.to_bytes(),
+        )
+        return updated
