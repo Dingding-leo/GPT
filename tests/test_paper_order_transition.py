@@ -238,7 +238,7 @@ def test_transition_rejects_changed_intent_and_duplicate_serialized_fields() -> 
         b'{"decision_id":"' + (b"3" * 64) + b'","decision_id":',
         1,
     )
-    with pytest.raises(ValueError, match="duplicate field"):
+    with pytest.raises(ValueError, match="JSON is unreadable"):
         PaperOrderStateTransitionRequest.from_json_bytes(duplicate)
 
 
