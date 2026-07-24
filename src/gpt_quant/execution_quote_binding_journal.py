@@ -95,9 +95,7 @@ def _parse_journal_bytes(value: bytes) -> ExecutionQuoteBindingJournal:
         previous_sort_key = sort_key
 
         if binding.binding_id in seen_ids:
-            raise ValueError(
-                f"{_ERROR_LABEL} contains duplicate binding ID {binding.binding_id}"
-            )
+            raise ValueError(f"{_ERROR_LABEL} contains duplicate binding ID {binding.binding_id}")
         seen_ids.add(binding.binding_id)
 
         decision = _decision_key(binding)
