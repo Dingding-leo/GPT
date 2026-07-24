@@ -49,10 +49,7 @@ _CONFIG_SHA256 = "6b06037376bce5df483311704f7b701c5e03a2a2735b2dd3361036fccd94da
 
 def _sources(tmp_path: Path):
     assert hashlib.sha256(_REAL_OKX_BOOK_BYTES).hexdigest() == _REAL_OKX_BOOK_SHA256
-    assert (
-        hashlib.sha256(_REAL_OKX_INSTRUMENT_BYTES).hexdigest()
-        == _REAL_OKX_INSTRUMENT_SHA256
-    )
+    assert hashlib.sha256(_REAL_OKX_INSTRUMENT_BYTES).hexdigest() == _REAL_OKX_INSTRUMENT_SHA256
     intent = TargetPositionIntent(
         instrument_id="BTC-USDT",
         bar="1Dutc",
