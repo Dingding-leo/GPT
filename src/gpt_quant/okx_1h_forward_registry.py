@@ -18,6 +18,7 @@ from .okx_1h import replay_persisted_okx_one_hour_snapshot
 _SCHEMA_VERSION = 1
 _JOURNAL_NAME = "okx-1h-forward-registry.jsonl"
 _DESCRIPTOR_NAME = "snapshot-descriptor.json"
+_SNAPSHOTS_DIRECTORY_NAME = "snapshots"
 _ONE_HOUR = pd.Timedelta(hours=1)
 _SAFE_INSTRUMENT = re.compile(r"^[A-Z0-9-]+$")
 _VOLATILE_REACQUISITION_METADATA_FIELDS = frozenset({"fetched_at_utc"})
@@ -253,7 +254,45 @@ def _registry_instrument_dir(registry_dir: str | Path, inst_id: str) -> Path:
 
 
 def _stored_snapshot_dir(instrument_dir: Path, snapshot_id: str) -> Path:
-    return instrument_dir / "snapshots" / snapshot_id
+    return instrument_dir / _SNAPSHOTS_DIRECTORY_NAME / snapshot_id
+
+
+def _stored_snapshot_ids(instrument_dir: Path) -> set[str]:
+    snapshots_dir = instrument_dir / _SNAPSHOTS_DIRECTORY_NAME
+    if not snapshots_dir.exists():
+        return set()
+    if snapshots_dir.is_symlink() or not snapshots_dir.is_dir():
+        raise ValueError("forward registry snapshots path must be a directory")
+
+    snapshot_ids: set[str] = set()
+    for entry in snapshots_dir.iterdir():
+        if entry.is_symlink() or not entry.is_dir():
+            raise ValueError("forward registry snapshot evidence must be immutable directories")
+        snapshot_ids.add(_required_sha256(entry.name, field="stored snapshot directory"))
+    return snapshot_ids
+
+
+def _verify_snapshot_inventory(
+    instrument_dir: Path,
+    records: list[dict[str, Any]],
+) -> None:
+    record_snapshot_ids = [
+        _required_sha256(record["snapshot_id"], field="snapshot_id") for record in records
+    ]
+    referenced = set(record_snapshot_ids)
+    if len(referenced) != len(record_snapshot_ids):
+        raise ValueError("forward registry journal contains duplicate snapshot IDs")
+
+    stored = _stored_snapshot_ids(instrument_dir)
+    missing = referenced - stored
+    if missing:
+        raise ValueError("forward registry is missing immutable snapshot evidence")
+    unreferenced = stored - referenced
+    if unreferenced:
+        raise ValueError(
+            "forward registry contains unreferenced immutable snapshot evidence; "
+            "journal may have been truncated"
+        )
 
 
 def _persist_snapshot(
@@ -353,6 +392,7 @@ def replay_okx_one_hour_forward_registry(
 
     instrument_dir = _registry_instrument_dir(registry_dir, inst_id)
     records = _read_records(instrument_dir / _JOURNAL_NAME)
+    _verify_snapshot_inventory(instrument_dir, records)
     previous_snapshot: Any | None = None
     previous_record: Mapping[str, Any] | None = None
     for record in records:
