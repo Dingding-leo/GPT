@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
@@ -78,3 +79,20 @@ def test_nested_manifest_named_file_is_bound_by_root_manifest(tmp_path: Path) ->
     manifest = (artifact / "artifact-manifest.sha256").read_text(encoding="utf-8")
     assert "nested/artifact-manifest.sha256" in manifest
     verify_manifest(artifact)
+
+
+def test_manifest_rejects_hard_linked_external_evidence(tmp_path: Path) -> None:
+    outside = tmp_path / "outside-walk-forward.json"
+    outside.write_text('{"value":0.1}\n', encoding="utf-8")
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    linked = artifact / "walk_forward.json"
+    try:
+        os.link(outside, linked)
+    except OSError as exc:
+        pytest.skip(f"filesystem does not support hard-link regression: {exc}")
+
+    assert linked.stat().st_ino == outside.stat().st_ino
+    assert linked.stat().st_nlink == 2
+    with pytest.raises(ValueError, match="must not be hard-linked"):
+        build_manifest(artifact)
