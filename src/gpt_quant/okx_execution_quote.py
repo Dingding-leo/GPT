@@ -20,6 +20,8 @@ _MAX_RESPONSE_BYTES = 1_000_000
 _EXPECTED_TOP_LEVEL_KEYS = {"code", "msg", "data"}
 _EXPECTED_BOOK_KEYS = {"asks", "bids", "ts", "seqId"}
 _EXPECTED_SERVER_TIME_KEYS = {"ts"}
+_MAX_API_CODE_CHARACTERS = 32
+_MAX_API_MESSAGE_UTF8_BYTES = 512
 
 
 @dataclass(frozen=True, slots=True)
@@ -360,6 +362,31 @@ def _reject_duplicate_fields(pairs: list[tuple[str, object]]) -> dict[str, objec
     return result
 
 
+def _required_api_code(value: object, *, response_name: str) -> str:
+    if (
+        not isinstance(value, str)
+        or not value
+        or len(value) > _MAX_API_CODE_CHARACTERS
+        or not value.isascii()
+        or not value.isdecimal()
+    ):
+        raise ValueError(
+            f"OKX {response_name} response code must be 1-{_MAX_API_CODE_CHARACTERS} ASCII digits"
+        )
+    return value
+
+
+def _required_api_message(value: object, *, response_name: str) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"OKX {response_name} response message must be a string")
+    if len(value.encode("utf-8")) > _MAX_API_MESSAGE_UTF8_BYTES:
+        raise ValueError(
+            f"OKX {response_name} response message exceeds the "
+            f"{_MAX_API_MESSAGE_UTF8_BYTES}-byte safety limit"
+        )
+    return value
+
+
 def _parse_json_object(value: bytes, *, response_name: str) -> Mapping[str, object]:
     try:
         payload = json.loads(value.decode("utf-8"), object_pairs_hook=_reject_duplicate_fields)
@@ -371,6 +398,8 @@ def _parse_json_object(value: bytes, *, response_name: str) -> Mapping[str, obje
         raise ValueError(
             f"OKX {response_name} response fields do not match the public endpoint schema"
         )
+    _required_api_code(payload["code"], response_name=response_name)
+    _required_api_message(payload["msg"], response_name=response_name)
     return payload
 
 
