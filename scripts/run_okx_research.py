@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -20,13 +21,14 @@ from gpt_quant import (
     write_okx_snapshot,
     write_walk_forward_report,
 )
+from gpt_quant.okx_1h import replay_persisted_okx_one_hour_snapshot
 
 _OKX_CANDLE_FIELD_COUNT = 9
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Fetch public OKX candles and run rolling out-of-sample research."
+        description="Fetch or replay public OKX candles and run rolling out-of-sample research."
     )
     parser.add_argument("--config", default="config/okx_research.json")
     parser.add_argument("--inst-id")
@@ -35,6 +37,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--start")
     parser.add_argument("--end")
     parser.add_argument("--max-pages", type=int)
+    parser.add_argument(
+        "--snapshot-dir",
+        help=(
+            "Replay a persisted exact-byte OKX 1H snapshot instead of making a second "
+            "history-candles request."
+        ),
+    )
     parser.add_argument("--output-dir", default="reports/okx")
     parser.add_argument(
         "--manifest-path",
@@ -53,7 +62,17 @@ def _validate_okx_raw_page_schema(raw_pages: tuple[dict[str, Any], ...]) -> None
 
     seen_rows_by_timestamp: dict[str, tuple[Any, ...]] = {}
     for page_index, page in enumerate(raw_pages):
-        rows = page.get("data")
+        if not isinstance(page, Mapping):
+            raise ValueError(f"OKX raw page {page_index} must be a mapping")
+        payload: Mapping[str, Any] = page
+        if "payload" in page:
+            embedded = page.get("payload")
+            if not isinstance(embedded, Mapping):
+                raise ValueError(
+                    f"OKX exact-byte page {page_index} is missing a mapping-valued payload"
+                )
+            payload = embedded
+        rows = payload.get("data")
         if not isinstance(rows, list):
             raise ValueError(f"OKX raw page {page_index} is missing a list-valued data field")
         for row_index, row in enumerate(rows):
@@ -73,6 +92,18 @@ def _validate_okx_raw_page_schema(raw_pages: tuple[dict[str, Any], ...]) -> None
             seen_rows_by_timestamp.setdefault(timestamp, normalized_row)
 
 
+def _utc_timestamp(value: Any, *, field: str) -> pd.Timestamp:
+    try:
+        timestamp = pd.Timestamp(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{field} must be a valid timestamp") from exc
+    if pd.isna(timestamp):
+        raise ValueError(f"{field} must be a valid timestamp")
+    if timestamp.tzinfo is None:
+        return timestamp.tz_localize("UTC")
+    return timestamp.tz_convert("UTC")
+
+
 def _validate_requested_end_coverage(
     snapshot: OKXCandleSnapshot,
     *,
@@ -82,16 +113,7 @@ def _validate_requested_end_coverage(
 
     if requested_end is None:
         return
-    try:
-        end_timestamp = pd.Timestamp(requested_end)
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise ValueError("requested end must be a valid timestamp") from exc
-    if pd.isna(end_timestamp):
-        raise ValueError("requested end must be a valid timestamp")
-    if end_timestamp.tzinfo is None:
-        end_timestamp = end_timestamp.tz_localize("UTC")
-    else:
-        end_timestamp = end_timestamp.tz_convert("UTC")
+    end_timestamp = _utc_timestamp(requested_end, field="requested end")
 
     expected_step_seconds = snapshot.metadata.get("expected_step_seconds")
     if (
@@ -107,6 +129,49 @@ def _validate_requested_end_coverage(
         raise ValueError("OKX snapshot contains a completed candle after the requested end")
     if gap >= pd.Timedelta(seconds=expected_step_seconds):
         raise ValueError("OKX download does not cover the requested end boundary")
+
+
+def _load_market_snapshot(
+    *,
+    inst_id: str,
+    bar: str,
+    base_url: str,
+    start: Any,
+    end: Any,
+    limit: int,
+    max_pages: int,
+    pause_seconds: float,
+    timeout: float,
+    snapshot_dir: str | Path | None,
+) -> tuple[OKXCandleSnapshot, str]:
+    if snapshot_dir is None:
+        snapshot = fetch_okx_history_candles(
+            inst_id=inst_id,
+            bar=bar,
+            start=start,
+            end=end,
+            base_url=base_url,
+            limit=limit,
+            max_pages=max_pages,
+            pause_seconds=pause_seconds,
+            timeout=timeout,
+        )
+        return snapshot, "public_network_fetch"
+
+    if bar != "1H":
+        raise ValueError("--snapshot-dir is supported only for the canonical 1H path")
+    snapshot = replay_persisted_okx_one_hour_snapshot(snapshot_dir, inst_id=inst_id)
+    metadata = snapshot.metadata
+    persisted_base_url = metadata.get("base_url")
+    if not isinstance(persisted_base_url, str) or persisted_base_url.rstrip("/") != base_url.rstrip(
+        "/"
+    ):
+        raise ValueError("persisted OKX 1H snapshot base URL does not match executed config")
+    if start is not None and snapshot.candles.index[0] != _utc_timestamp(start, field="start"):
+        raise ValueError("persisted OKX 1H snapshot start does not match executed config")
+    if end is not None and snapshot.candles.index[-1] != _utc_timestamp(end, field="end"):
+        raise ValueError("persisted OKX 1H snapshot end does not match executed config")
+    return snapshot, "persisted_exact_bytes"
 
 
 def _json_array(mapping: dict[str, Any], key: str, default: list[Any]) -> list[Any]:
@@ -173,16 +238,17 @@ def main() -> int:
     pause_seconds = float(data.get("pause_seconds", 0.12))
     timeout = float(data.get("timeout", 20.0))
 
-    snapshot = fetch_okx_history_candles(
+    snapshot, source_mode = _load_market_snapshot(
         inst_id=inst_id,
         bar=bar,
+        base_url=base_url,
         start=start,
         end=end,
-        base_url=base_url,
         limit=limit,
         max_pages=max_pages,
         pause_seconds=pause_seconds,
         timeout=timeout,
+        snapshot_dir=getattr(args, "snapshot_dir", None),
     )
     _validate_okx_raw_page_schema(snapshot.raw_pages)
     _validate_requested_end_coverage(snapshot, requested_end=end)
@@ -215,17 +281,21 @@ def main() -> int:
     )
     report_paths = write_walk_forward_report(result, output)
 
+    metadata = snapshot.metadata
     effective_config = _build_effective_config(
         data={
             "inst_id": inst_id,
             "bar": bar,
-            "base_url": base_url.rstrip("/"),
-            "start": start,
-            "end": end,
-            "limit": limit,
-            "max_pages": max_pages,
+            "base_url": str(metadata.get("base_url", base_url)).rstrip("/"),
+            "start": metadata.get("requested_start", start),
+            "end": metadata.get("requested_end", end),
+            "limit": metadata.get("limit", limit),
+            "max_pages": metadata.get("max_pages", max_pages),
             "pause_seconds": pause_seconds,
             "timeout": timeout,
+            "source_mode": source_mode,
+            "source_transport": metadata.get("source_transport"),
+            "source_response_count": metadata.get("source_response_count"),
         },
         strategy=base_config.to_dict(),
         search={
@@ -269,6 +339,7 @@ def main() -> int:
     print(f"okx_base_url={base_url}")
     print(f"instrument_id={inst_id}")
     print(f"bar={bar}")
+    print(f"source_mode={source_mode}")
     print(f"observations={len(snapshot.candles)}")
     print(f"data_sha256={snapshot.metadata['normalized_csv_sha256']}")
     print(f"walk_forward_folds={len(result.folds)}")

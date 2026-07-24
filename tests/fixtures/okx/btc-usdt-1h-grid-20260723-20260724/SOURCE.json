@@ -1,0 +1,13 @@
+{
+  "bar": "1H",
+  "endpoint": "/api/v5/market/history-candles",
+  "fixture_csv_sha256": "d2bf09898c738233380d9d91030bbd1eb27cfa5c73ff6d771ebde9d49b37c019",
+  "instrument_id": "BTC-USDT",
+  "note": "Exact confirmed-row CSV extract from immutable public OKX 1H evidence; no performance claim.",
+  "provider": "OKX",
+  "source_artifact_id": 8586228402,
+  "source_artifact_sha256": "2a3896fe14a0d7fd3322fd3adb512693d25ff3d867dd04c00f7d43a6a56af72c",
+  "source_pull_request": 462,
+  "source_response_sha256": "4429d72add1f56554b5305cb237a76861e49ffa0203ee7fe0b7233c656567d3e",
+  "source_workflow_run_id": 30065614210
+}

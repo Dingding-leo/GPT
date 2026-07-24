@@ -1,0 +1,228 @@
+name: Canonical BTC ETH 1h Research
+
+on:
+  workflow_dispatch:
+    inputs:
+      enforce_intraday_research_promotion:
+        description: Fail unless each canonical 1h candidate clears the research promotion gate
+        required: false
+        default: false
+        type: boolean
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canonical-btc-eth-1h-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  research:
+    strategy:
+      fail-fast: false
+      matrix:
+        inst_id: [BTC-USDT, ETH-USDT]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+      ARTIFACT_NAME: "canonical-${{ matrix.inst_id }}-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+      SOURCE_ROOT: "reports/okx/1h/source/${{ matrix.inst_id }}"
+      REPORT_DIR: "reports/okx/1h/${{ matrix.inst_id }}"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Verify canonical 1h profile contract
+        run: |
+          pytest -q \
+            tests/test_intraday_research_profile.py \
+            tests/test_run_okx_research_snapshot.py \
+            tests/test_verify_intraday_1h_profile.py \
+            tests/test_intraday_1h_promotion_gate.py \
+            tests/test_intraday_1h_cross_market_gate.py \
+            tests/test_verify_intraday_1h_timestamp_grid.py \
+            tests/test_intraday_1h_source_provenance.py \
+            tests/test_exact_okx_1h_research_workflow.py \
+            tests/test_artifact_manifest.py
+
+      - name: Acquire replay-verifiable exact-byte 1h source
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: |
+          python scripts/run_okx_1h_coverage.py \
+            --output-dir "$SOURCE_ROOT" \
+            --start "2021-07-24T00:00:00Z" \
+            --instrument "${{ matrix.inst_id }}"
+
+      - name: Run canonical 1h full walk-forward research
+        run: |
+          python scripts/run_okx_research.py \
+            --config config/okx_research_1h.json \
+            --inst-id "${{ matrix.inst_id }}" \
+            --snapshot-dir "$SOURCE_ROOT/${{ matrix.inst_id }}/snapshot" \
+            --output-dir "$REPORT_DIR" \
+            --manifest-path "$REPORT_DIR/experiment-manifest.jsonl"
+
+      - name: Bind exchange-time source envelope
+        run: |
+          set -euo pipefail
+          cp "$SOURCE_ROOT/coverage-manifest.json" "$REPORT_DIR/source-coverage-manifest.json"
+          cp "$SOURCE_ROOT/okx-public-time.canonical.json" "$REPORT_DIR/source-public-time.canonical.json"
+
+      - name: Verify replay-bound exact-byte 1h source provenance
+        run: |
+          python -m gpt_quant.intraday_1h_source_provenance \
+            --output-dir "$REPORT_DIR" \
+            --inst-id="${{ matrix.inst_id }}"
+
+      - name: Verify exact persisted UTC-hour timestamp grid
+        run: |
+          python scripts/verify_intraday_1h_timestamp_grid.py \
+            --output-dir "$REPORT_DIR"
+
+      - name: Verify persisted canonical 1h evidence
+        run: |
+          python scripts/verify_walk_forward_report.py \
+            --output-dir "$REPORT_DIR" \
+            --manifest-path "$REPORT_DIR/experiment-manifest.jsonl"
+
+      - name: Verify exact persisted 5 bps-only profile
+        run: |
+          python scripts/verify_intraday_1h_profile.py \
+            --output-dir "$REPORT_DIR"
+
+      - name: Write explicit 1h promotion blockers
+        run: |
+          python scripts/build_intraday_1h_promotion_gate.py \
+            --output-dir "$REPORT_DIR"
+
+      - name: Enforce fail-closed 1h research promotion
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.enforce_intraday_research_promotion }}
+        run: |
+          python scripts/build_intraday_1h_promotion_gate.py \
+            --output-dir "$REPORT_DIR" \
+            --enforce-research-promotion
+
+      - name: Build and verify immutable canonical 1h manifest
+        id: artifact_manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          manifest_path="$REPORT_DIR/artifact-manifest.sha256"
+
+          test -s "$REPORT_DIR/effective_config.json"
+          test -s "$REPORT_DIR/walk_forward.json"
+          test -s "$REPORT_DIR/walk_forward_returns.csv"
+          test -s "$REPORT_DIR/experiment-manifest.jsonl"
+          test -s "$REPORT_DIR/intraday-1h-source-provenance.json"
+          test -s "$REPORT_DIR/intraday-promotion-gate.json"
+          test -s "$REPORT_DIR/source-coverage-manifest.json"
+          test -s "$REPORT_DIR/source-public-time.canonical.json"
+
+          manifest_sha256="$(python -m gpt_quant.artifact_manifest --root "$REPORT_DIR")"
+          [[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]
+          (
+            cd "$REPORT_DIR"
+            sha256sum --check artifact-manifest.sha256
+          )
+          printf 'manifest_sha256=%s\n' "$manifest_sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload immutable canonical 1h evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.REPORT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
+
+  cross_market_gate:
+    name: Cross-market 1h launch blockers
+    if: ${{ always() }}
+    needs: research
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+      UPSTREAM_RESEARCH_RESULT: ${{ needs.research.result }}
+      DOWNLOADED_ARTIFACTS: reports/okx/1h/downloaded
+      CROSS_MARKET_OUTPUT: reports/okx/1h/cross-market
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install cross-market verifier
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e .
+          python -m pip check
+
+      - name: Download immutable canonical 1h evidence
+        if: ${{ needs.research.result == 'success' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: canonical-*-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: ${{ env.DOWNLOADED_ARTIFACTS }}
+          merge-multiple: false
+
+      - name: Build deterministic cross-market launch blockers
+        id: cross_market_gate
+        continue-on-error: true
+        run: |
+          python scripts/build_intraday_1h_cross_market_gate.py \
+            --artifacts-root "$DOWNLOADED_ARTIFACTS" \
+            --output-dir "$CROSS_MARKET_OUTPUT" \
+            --upstream-result "$UPSTREAM_RESEARCH_RESULT"
+
+      - name: Upload cross-market launch-blocker evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: canonical-cross-market-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: reports/okx/1h/cross-market/intraday-cross-market-gate.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce cross-market evidence integrity
+        if: ${{ always() }}
+        env:
+          CROSS_MARKET_GATE_OUTCOME: ${{ steps.cross_market_gate.outcome }}
+        run: test "$CROSS_MARKET_GATE_OUTCOME" = success
+
+      - name: Enforce fail-closed cross-market research promotion
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.enforce_intraday_research_promotion }}
+        run: |
+          python scripts/build_intraday_1h_cross_market_gate.py \
+            --artifacts-root "$DOWNLOADED_ARTIFACTS" \
+            --output-dir "$CROSS_MARKET_OUTPUT" \
+            --upstream-result "$UPSTREAM_RESEARCH_RESULT" \
+            --enforce-research-promotion
