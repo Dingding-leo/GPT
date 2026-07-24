@@ -11,13 +11,7 @@ _ROOT = Path(__file__).parents[1]
 _ARCHITECTURE_PATH = (
     _ROOT / "reports" / "research" / "channel-breakout-trend-1h" / "architecture.py"
 )
-_FIXTURE_PATH = (
-    Path(__file__).parent
-    / "fixtures"
-    / "okx_1h"
-    / "BTC-USDT"
-    / "okx-BTC-USDT-1H.csv"
-)
+_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "okx_1h" / "BTC-USDT" / "okx-BTC-USDT-1H.csv"
 
 
 def _load_architecture():
@@ -68,13 +62,7 @@ def test_exact_five_bps_accounting_starts_from_cash() -> None:
 
 def test_persisted_result_records_single_rejected_candidate() -> None:
     result = json.loads(
-        (
-            _ROOT
-            / "reports"
-            / "research"
-            / "channel-breakout-trend-1h"
-            / "result.json"
-        ).read_text()
+        (_ROOT / "reports" / "research" / "channel-breakout-trend-1h" / "result.json").read_text()
     )
     accounting = result["candidate_accounting"]
     assert accounting["architecture_candidates_searched"] == 1
