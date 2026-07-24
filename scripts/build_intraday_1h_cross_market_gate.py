@@ -10,9 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from gpt_quant.artifact_manifest import verify_manifest
-from gpt_quant.intraday_1h_source_provenance import (
-    verify_intraday_1h_source_provenance,
-)
+from gpt_quant.intraday_1h_source_provenance import verify_intraday_1h_source_provenance
 
 _OUTPUT_NAME = "intraday-cross-market-gate.json"
 _EXPECTED_INSTRUMENTS = ("BTC-USDT", "ETH-USDT")
