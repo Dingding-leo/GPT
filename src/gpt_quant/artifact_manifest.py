@@ -96,9 +96,7 @@ def build_manifest(root: str | Path, output_name: str = _DEFAULT_OUTPUT_NAME) ->
     files = _manifest_files(root_path, output_name, temporary_name)
     if not files:
         raise ValueError("artifact root must contain at least one file")
-    lines = [
-        f"{_sha256_file(path)}  {path.relative_to(root_path).as_posix()}\n" for path in files
-    ]
+    lines = [f"{_sha256_file(path)}  {path.relative_to(root_path).as_posix()}\n" for path in files]
     try:
         temporary_path.write_text("".join(lines), encoding="utf-8", newline="\n")
         os.replace(temporary_path, manifest_path)
