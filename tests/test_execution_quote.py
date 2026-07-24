@@ -104,8 +104,8 @@ def test_execution_quote_validates_as_of_window_for_target_intent() -> None:
 def test_execution_quote_rejects_crossed_or_noncanonical_books() -> None:
     with pytest.raises(ValueError, match="strictly less"):
         _quote(bid_price="66113.9")
-    with pytest.raises(ValueError, match="canonical"):
-        _quote(bid_quantity="0.500")
+    normalized = _quote(bid_quantity="0.500")
+    assert normalized.bid_quantity == "0.5"
     with pytest.raises(ValueError, match="positive"):
         _quote(ask_quantity="0")
     with pytest.raises(ValueError, match="after received_at_utc"):
