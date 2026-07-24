@@ -196,9 +196,7 @@ def test_cross_market_gate_rejects_tampered_manifested_evidence(tmp_path: Path) 
     failure = json.loads((output / "intraday-cross-market-gate.json").read_text())
     assert failure["evidence_integrity_passes"] is False
     assert failure["promotion"]["allow_15m_evaluation"] is False
-    assert failure["research_gate"]["blockers"] == [
-        "cross_market_evidence_validation_failed"
-    ]
+    assert failure["research_gate"]["blockers"] == ["cross_market_evidence_validation_failed"]
 
 
 def test_cross_market_gate_records_failed_upstream_research_without_artifacts(
