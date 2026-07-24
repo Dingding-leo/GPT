@@ -27,7 +27,7 @@ jobs:
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.11"
-      - name: Print exact Ruff findings
+      - name: Capture exact Ruff findings
         shell: bash
         run: |
           set +e
@@ -36,14 +36,26 @@ jobs:
             src/gpt_quant/paper_risk_kill_switch.py \
             src/gpt_quant/paper_risk_session_gate.py \
             tests/test_paper_risk_kill_switch.py \
-            tests/test_paper_risk_session_gate.py
-          echo "--- FORMAT DIFF ---"
+            tests/test_paper_risk_session_gate.py \
+            > ruff-check.txt 2>&1
+          printf 'ruff_check_status=%s\n' "$?" >> ruff-check.txt
           ruff format --diff \
             src/gpt_quant/paper_risk_kill_switch.py \
             src/gpt_quant/paper_risk_session_gate.py \
             tests/test_paper_risk_kill_switch.py \
-            tests/test_paper_risk_session_gate.py
+            tests/test_paper_risk_session_gate.py \
+            > ruff-format.txt 2>&1
+          printf 'ruff_format_status=%s\n' "$?" >> ruff-format.txt
           exit 0
+      - name: Upload Ruff findings
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: risk-format-diagnostic-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: |
+            ruff-check.txt
+            ruff-format.txt
+          if-no-files-found: error
+          retention-days: 1
 
   distribution:
     runs-on: ubuntu-24.04
