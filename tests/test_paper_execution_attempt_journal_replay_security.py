@@ -176,7 +176,7 @@ def test_replay_blocks_concurrent_paper_attempt_publication(
         pause_after_replay_read,
     )
     replay_result: dict[str, object] = {}
-    replay_errors: list[BaseException] = []
+    replay_errors: list[Exception] = []
 
     def replay() -> None:
         try:
@@ -186,7 +186,7 @@ def test_replay_blocks_concurrent_paper_attempt_publication(
                 quote_store=quote_store,
                 binding_journal=binding_journal,
             )
-        except BaseException as exc:  # pragma: no cover - surfaced below
+        except Exception as exc:  # pragma: no cover - surfaced below
             replay_errors.append(exc)
 
     replay_thread = threading.Thread(target=replay, name="attempt-journal-replay")
