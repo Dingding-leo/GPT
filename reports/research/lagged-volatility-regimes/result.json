@@ -1,0 +1,107 @@
+{
+  "candidate_count": 1,
+  "canonical_signature": "lagged-volatility-regime-consistency-v1|markets=BTC-USDT,ETH-USDT|regime=median-of-prior-20d-realized-vol-recomputed-per-resample|prior-volatility=asset-return-shift1-rolling-std-ddof1|metric=annualized-arithmetic-mean-net-return|lookback=20|annualization=365|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260722,ETH-USDT:20260723|candidate_count=1",
+  "claim_boundary": "This is one predeclared regime diagnostic on BTC-USDT and ETH-USDT development markets. Regime labels use only the prior 20 observed asset returns. Arithmetic means on non-contiguous regime subsets are descriptive OOS evidence, not a tradable signal, causal claim, or untouched-holdout result.",
+  "failure_reasons": [
+    "BTC-USDT low-vol lower confidence bound is not positive",
+    "ETH-USDT low-vol lower confidence bound is not positive",
+    "ETH-USDT high-vol lower confidence bound is not positive"
+  ],
+  "hypothesis": "For both BTC-USDT and ETH-USDT, strategy net returns have a positive annualized arithmetic mean in both low- and high-volatility regimes, with every 95% paired moving-block-bootstrap lower bound above zero.",
+  "joint_supported": false,
+  "markets": {
+    "BTC-USDT": {
+      "bootstrap": {
+        "high_vol": {
+          "ci_lower": 0.022181288167818013,
+          "ci_upper": 0.6352767997303487,
+          "lower_bound_positive": true,
+          "median": 0.2971542716899005,
+          "probability_positive": 0.981
+        },
+        "low_vol": {
+          "ci_lower": -0.1864794226565611,
+          "ci_upper": 0.35280766429271526,
+          "lower_bound_positive": false,
+          "median": 0.05663042416905373,
+          "probability_positive": 0.673
+        }
+      },
+      "eligible_observations": 2320,
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "high_vol_annualized_mean": 0.303918013200238,
+        "high_vol_observations": 1160,
+        "low_vol_annualized_mean": 0.04587523849915484,
+        "low_vol_observations": 1160,
+        "prior_volatility_median": 0.026467354035899292
+      },
+      "report_sha256": "c5262c4c8c0945b43907f006ca5bf986229c350e5e908d8baa4837cc2de32921",
+      "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "start": "2020-01-11 00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "bootstrap": {
+        "high_vol": {
+          "ci_lower": -0.030591381070234385,
+          "ci_upper": 0.5277107274979684,
+          "lower_bound_positive": false,
+          "median": 0.23532871553170792,
+          "probability_positive": 0.9565
+        },
+        "low_vol": {
+          "ci_lower": -0.2690532663693516,
+          "ci_upper": 0.3159434456037318,
+          "lower_bound_positive": false,
+          "median": 0.03648833999609154,
+          "probability_positive": 0.5925
+        }
+      },
+      "eligible_observations": 2320,
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "high_vol_annualized_mean": 0.24905623597633608,
+        "high_vol_observations": 1160,
+        "low_vol_annualized_mean": 0.02738844500379562,
+        "low_vol_observations": 1160,
+        "prior_volatility_median": 0.03624394513221167
+      },
+      "report_sha256": "383d8273cdb12d8b3bfe271b4044eaa664c06018f7f6174f7a52f1ac1fdcdf24",
+      "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "start": "2020-01-11 00:00:00+00:00"
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8513672060,
+    "source_artifact_name": "quant-research-378",
+    "source_artifact_sha256": "7902fd0e653a446151188dc426386bfb8406d404a348aaf8be13a7671deb10ec",
+    "source_base_commit": "a2f1ab460409113057198ebdd00e3ce4f6c7bf82",
+    "source_persistent_head": "e1f49e3ad33fa2cd820de5ca0a6f70231f214a20",
+    "source_tested_commit": "fd8d2191e30bb0aeb80da0021f2923f3bc9a8377",
+    "source_workflow_run_id": 29877892427
+  },
+  "settings": {
+    "annualization": 365,
+    "block_length": 20,
+    "candidate_count": 1,
+    "confidence": 0.95,
+    "development_market_screen": true,
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "primary_metric": "annualized_arithmetic_mean_net_return_by_regime",
+    "prior_volatility": "asset_return.shift(1).rolling(20).std(ddof=1)",
+    "regime_threshold": "median recomputed within every resample",
+    "resamples": 2000,
+    "resampling": "paired moving block bootstrap without circular wrapping",
+    "seed_rule": "20260722 for BTC-USDT and 20260723 for ETH-USDT",
+    "volatility_lookback": 20
+  },
+  "verdict": "rejected"
+}
