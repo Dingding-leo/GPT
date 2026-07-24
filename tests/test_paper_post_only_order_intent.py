@@ -22,7 +22,13 @@ _SOURCE_DATA_SHA256 = "429abcbe5deb56ad6c7e1790cea101644a9fedd622f40de64eec5fd1a
 _CONFIG_SHA256 = "6b06037376bce5df483311704f7b701c5e03a2a2735b2dd3361036fccd94da1a"
 
 
-def _target(*, config_sha256: str = _CONFIG_SHA256) -> TargetPositionIntent:
+def _target(
+    *,
+    config_sha256: str = _CONFIG_SHA256,
+    decision_not_before_utc: datetime = datetime(
+        2026, 7, 21, 0, 0, 0, 200_000, tzinfo=UTC
+    ),
+) -> TargetPositionIntent:
     return TargetPositionIntent(
         instrument_id="BTC-USDT",
         bar="1H",
@@ -32,7 +38,7 @@ def _target(*, config_sha256: str = _CONFIG_SHA256) -> TargetPositionIntent:
         config_sha256=config_sha256,
         signal_bar_open_utc=datetime(2026, 7, 20, 23, tzinfo=UTC),
         signal_bar_close_utc=datetime(2026, 7, 21, tzinfo=UTC),
-        decision_not_before_utc=datetime(2026, 7, 21, 0, 0, 0, 200_000, tzinfo=UTC),
+        decision_not_before_utc=decision_not_before_utc,
         expires_at_utc=datetime(2026, 7, 21, 1, tzinfo=UTC),
         target_position=0.25,
         minimum_position=0.0,
@@ -159,6 +165,15 @@ def test_post_only_order_intent_rejects_taker_or_stale_requests() -> None:
             created_at_utc=datetime(2026, 7, 21, 0, 0, 0, 600_000, tzinfo=UTC),
             maximum_quote_age_ms=250,
         )
+
+
+def test_post_only_order_intent_rejects_pre_activation_quote() -> None:
+    target = _target(
+        decision_not_before_utc=datetime(2026, 7, 21, 0, 0, 0, 350_000, tzinfo=UTC)
+    )
+
+    with pytest.raises(ValueError, match="predates target-intent activation"):
+        _intent(target=target, decision=_decision(target=target))
 
 
 def test_post_only_order_intent_requires_exact_decision_quote_target_and_fee() -> None:
