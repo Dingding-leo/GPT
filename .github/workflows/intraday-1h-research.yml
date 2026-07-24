@@ -2,6 +2,12 @@ name: Canonical BTC ETH 1h Research
 
 on:
   workflow_dispatch:
+    inputs:
+      enforce_intraday_research_promotion:
+        description: Fail unless each canonical 1h candidate clears the research promotion gate
+        required: false
+        default: false
+        type: boolean
   push:
     branches: [main]
   pull_request:
@@ -50,6 +56,7 @@ jobs:
           pytest -q \
             tests/test_intraday_research_profile.py \
             tests/test_verify_intraday_1h_profile.py \
+            tests/test_intraday_1h_promotion_gate.py \
             tests/test_artifact_manifest.py
 
       - name: Run canonical 1h full walk-forward research
@@ -73,6 +80,18 @@ jobs:
           python scripts/verify_intraday_1h_profile.py \
             --output-dir "reports/okx/1h/${{ matrix.inst_id }}"
 
+      - name: Write explicit 1h promotion blockers
+        run: |
+          python scripts/build_intraday_1h_promotion_gate.py \
+            --output-dir "reports/okx/1h/${{ matrix.inst_id }}"
+
+      - name: Enforce fail-closed 1h research promotion
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.enforce_intraday_research_promotion }}
+        run: |
+          python scripts/build_intraday_1h_promotion_gate.py \
+            --output-dir "reports/okx/1h/${{ matrix.inst_id }}" \
+            --enforce-research-promotion
+
       - name: Build and verify immutable canonical 1h manifest
         id: artifact_manifest
         shell: bash
@@ -85,6 +104,7 @@ jobs:
           test -s "$report_dir/walk_forward.json"
           test -s "$report_dir/walk_forward_returns.csv"
           test -s "$report_dir/experiment-manifest.jsonl"
+          test -s "$report_dir/intraday-promotion-gate.json"
 
           manifest_sha256="$(python -m gpt_quant.artifact_manifest --root "$report_dir")"
           [[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]

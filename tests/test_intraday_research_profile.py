@@ -64,11 +64,13 @@ def test_workflow_reselects_and_verifies_btc_and_eth_independently() -> None:
     assert workflow.count("inst_id: [BTC-USDT, ETH-USDT]") == 1
     assert workflow.count("--config config/okx_research_1h.json") == 1
     assert workflow.count('--inst-id "${{ matrix.inst_id }}"') == 1
-    assert workflow.count("reports/okx/1h/${{ matrix.inst_id }}") >= 6
+    assert workflow.count("reports/okx/1h/${{ matrix.inst_id }}") >= 10
     assert workflow.count("experiment-manifest.jsonl") >= 2
     assert "Run canonical 1h full walk-forward research" in workflow
     assert "Verify persisted canonical 1h evidence" in workflow
     assert "Verify exact persisted 5 bps-only profile" in workflow
+    assert "Write explicit 1h promotion blockers" in workflow
+    assert "Enforce fail-closed 1h research promotion" in workflow
     assert "fail-fast: false" in workflow
     assert "persist-credentials: false" in workflow
     assert "OKX_BASE_URL: https://www.okx.com" in workflow
@@ -80,14 +82,23 @@ def test_workflow_gates_persisted_fee_profile_before_artifact_hashing() -> None:
 
     report_verification = workflow.index("- name: Verify persisted canonical 1h evidence")
     profile_verification = workflow.index("- name: Verify exact persisted 5 bps-only profile")
+    blocker_summary = workflow.index("- name: Write explicit 1h promotion blockers")
+    enforcement = workflow.index("- name: Enforce fail-closed 1h research promotion")
     manifest = workflow.index("- name: Build and verify immutable canonical 1h manifest")
     upload = workflow.index("- name: Upload immutable canonical 1h evidence")
-    profile_block = workflow[profile_verification:manifest]
+    profile_block = workflow[profile_verification:blocker_summary]
+    summary_block = workflow[blocker_summary:enforcement]
+    enforcement_block = workflow[enforcement:manifest]
     manifest_block = workflow[manifest:upload]
 
-    assert report_verification < profile_verification < manifest < upload
+    assert report_verification < profile_verification < blocker_summary < enforcement < manifest < upload
     assert profile_block.count("python scripts/verify_intraday_1h_profile.py") == 1
     assert profile_block.count('--output-dir "reports/okx/1h/${{ matrix.inst_id }}"') == 1
+    assert summary_block.count("python scripts/build_intraday_1h_promotion_gate.py") == 1
+    assert "--enforce-research-promotion" not in summary_block
+    assert enforcement_block.count("python scripts/build_intraday_1h_promotion_gate.py") == 1
+    assert enforcement_block.count("--enforce-research-promotion") == 1
+    assert "inputs.enforce_intraday_research_promotion" in enforcement_block
     assert "id: artifact_manifest" in manifest_block
     assert "set -euo pipefail" in manifest_block
     for required_file in (
@@ -95,6 +106,7 @@ def test_workflow_gates_persisted_fee_profile_before_artifact_hashing() -> None:
         "walk_forward.json",
         "walk_forward_returns.csv",
         "experiment-manifest.jsonl",
+        "intraday-promotion-gate.json",
     ):
         assert f'test -s "$report_dir/{required_file}"' in manifest_block
     assert 'python -m gpt_quant.artifact_manifest --root "$report_dir"' in manifest_block
@@ -103,3 +115,17 @@ def test_workflow_gates_persisted_fee_profile_before_artifact_hashing() -> None:
     assert "sha256sum --check artifact-manifest.sha256" in manifest_block
     assert 'sha256sum --check "$temporary_manifest"' not in manifest_block
     assert "manifest_sha256=%s" in manifest_block
+
+
+def test_workflow_exposes_explicit_manual_research_promotion_enforcement() -> None:
+    path = _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
+    workflow = path.read_text(encoding="utf-8")
+
+    dispatch = workflow.index("workflow_dispatch:")
+    push = workflow.index("  push:")
+    dispatch_block = workflow[dispatch:push]
+
+    assert dispatch_block.count("enforce_intraday_research_promotion:") == 1
+    assert "required: false" in dispatch_block
+    assert "default: false" in dispatch_block
+    assert "type: boolean" in dispatch_block
