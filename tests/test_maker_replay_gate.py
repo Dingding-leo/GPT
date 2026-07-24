@@ -1,23 +1,45 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
-
-import pytest
-
-from scripts.build_maker_replay_gate import build_evidence, verify_evidence
 
 _FIXTURE_ROOT = (
     Path(__file__).parent / "fixtures" / "okx" / "trades-btc-usdt-docs-20220602"
 )
+_SCRIPT = Path(__file__).parents[1] / "scripts" / "build_maker_replay_gate.py"
+
+
+def _run(*arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        [sys.executable, str(_SCRIPT), *arguments],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if check and result.returncode != 0:
+        raise AssertionError(result.stderr)
+    return result
 
 
 def _build(output_dir: Path) -> dict[str, object]:
-    return build_evidence(
-        source_response=_FIXTURE_ROOT / "response.json",
-        source_metadata=_FIXTURE_ROOT / "metadata.json",
-        output_dir=output_dir,
+    result = _run(
+        "--source-response",
+        str(_FIXTURE_ROOT / "response.json"),
+        "--source-metadata",
+        str(_FIXTURE_ROOT / "metadata.json"),
+        "--output-dir",
+        str(output_dir),
     )
+    summary = json.loads(result.stdout)
+    assert summary["maker_order_replay_passes"] is True
+    assert summary["replay_equivalent"] is True
+    return json.loads((output_dir / "maker-order-replay-gate.json").read_text())
+
+
+def _verify(output_dir: Path, *, check: bool = True) -> subprocess.CompletedProcess[str]:
+    return _run("--output-dir", str(output_dir), "--verify-only", check=check)
 
 
 def _directory_bytes(root: Path) -> dict[str, bytes]:
@@ -37,7 +59,9 @@ def test_maker_replay_gate_is_deterministic_and_offline(tmp_path: Path) -> None:
 
     assert first == second
     assert _directory_bytes(first_root) == _directory_bytes(second_root)
-    assert verify_evidence(first_root) == first
+    verification = json.loads(_verify(first_root).stdout)
+    assert verification["maker_order_replay_passes"] is True
+    assert verification["observed_outcomes"] == ["cancelled_no_fill", "cancelled_partial"]
     assert first["canonical_timeframe"] == "1H"
     assert first["benchmark_timeframe"] == "1Dutc"
     assert first["optional_next_timeframe"] == "15m"
@@ -48,8 +72,7 @@ def test_maker_replay_gate_is_deterministic_and_offline(tmp_path: Path) -> None:
     assert first["order_submission"] == "not_performed"
     assert first["blockers"] == []
 
-    economics = first["modeled_economics"]
-    assert economics == {
+    assert first["modeled_economics"] == {
         "exchange_fee_one_way_bps": "5",
         "fee_only_modeled_pnl": True,
         "impact": "separate_not_modeled",
@@ -74,8 +97,9 @@ def test_maker_replay_gate_rejects_tampered_replay_bytes(tmp_path: Path) -> None
     replay_path = output_dir / "cancelled-partial.json"
     replay_path.write_bytes(replay_path.read_bytes().replace(b'"0.00001"', b'"0.00002"', 1))
 
-    with pytest.raises(ValueError, match="artifact digest mismatch"):
-        verify_evidence(output_dir)
+    result = _verify(output_dir, check=False)
+    assert result.returncode != 0
+    assert "artifact digest mismatch" in result.stderr
 
 
 def test_maker_replay_gate_rejects_manifest_inventory_drift(tmp_path: Path) -> None:
@@ -87,5 +111,6 @@ def test_maker_replay_gate_rejects_manifest_inventory_drift(tmp_path: Path) -> N
         encoding="utf-8",
     )
 
-    with pytest.raises(ValueError, match="inventory is incomplete or unexpected"):
-        verify_evidence(output_dir)
+    result = _verify(output_dir, check=False)
+    assert result.returncode != 0
+    assert "inventory is incomplete or unexpected" in result.stderr
