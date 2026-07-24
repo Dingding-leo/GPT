@@ -88,6 +88,13 @@ jobs:
         id: lint_format
         run: ruff check . && ruff format --check .
 
+      - name: Capture Ruff diagnostics
+        if: ${{ failure() }}
+        run: |
+          mkdir -p reports/live-readiness-gate
+          ruff check . > reports/live-readiness-gate/ruff-check.txt 2>&1 || true
+          ruff format --check . > reports/live-readiness-gate/ruff-format.txt 2>&1 || true
+
       - name: Test against public OKX data
         id: tests
         env:
