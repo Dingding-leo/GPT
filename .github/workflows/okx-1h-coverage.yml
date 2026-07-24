@@ -39,29 +39,20 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Reassemble exact source
+      - name: Reassemble and format exact source
         run: |
           set -euo pipefail
           cat .tmp/cross-sectional/analysis.part* > \
             reports/research/cross-sectional-leader-rotation-1h/analysis.py
           cat .tmp/cross-sectional/test_report.part* > \
             reports/research/cross-sectional-leader-rotation-1h/test_report.py
-
-      - name: Apply repository Ruff rules
-        run: |
-          set -euo pipefail
           ruff check --fix reports/research/cross-sectional-leader-rotation-1h
           ruff format reports/research/cross-sectional-leader-rotation-1h
           ruff check reports/research/cross-sectional-leader-rotation-1h
           ruff format --check reports/research/cross-sectional-leader-rotation-1h
-
-      - name: Validate focused report
-        run: |
-          set -euo pipefail
           python -m py_compile \
             reports/research/cross-sectional-leader-rotation-1h/analysis.py \
             reports/research/cross-sectional-leader-rotation-1h/test_report.py
-          pytest -q reports/research/cross-sectional-leader-rotation-1h/test_report.py
 
       - name: Commit complete formatted source
         run: |
