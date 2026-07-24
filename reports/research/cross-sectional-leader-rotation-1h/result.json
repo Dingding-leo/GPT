@@ -1,0 +1,481 @@
+{
+  "activity": {
+    "annualized_completed_episodes": 45.625,
+    "annualized_position_adjustments": 396.0925925925926,
+    "completed_episode_hit_rate": 0.34814814814814815,
+    "completed_episode_profit_factor": 1.4050829568557546,
+    "completed_exposure_episodes": 135,
+    "leader_state_changes": 228,
+    "maximum_holding_hours": 1044,
+    "mean_holding_hours": 78.62962962962963,
+    "median_holding_hours": 18.0,
+    "position_adjustment_observations": 1172
+  },
+  "architecture": {
+    "additional_costs_in_pnl": [],
+    "decision_cadence_hours": 6,
+    "execution_delay_bars": 1,
+    "market_regime_lookback_hours": 720,
+    "maximum_gross_position": 1.0,
+    "momentum_lookback_hours": 168,
+    "target_volatility": 0.5,
+    "transaction_cost_bps_one_way": 5.0,
+    "volatility_lookback_hours": 168
+  },
+  "benchmark_inference": {
+    "equal_weight_buy_and_hold": {
+      "block_length": 168,
+      "calmar": {
+        "lower": -1.4018031918073575,
+        "point_delta": 0.1260940177466475,
+        "probability_positive": 0.663,
+        "upper": 1.883494933590157
+      },
+      "confidence": 0.95,
+      "resamples": 2000,
+      "seed": 20260724151,
+      "sharpe": {
+        "lower": -0.9391585242602936,
+        "point_delta": 0.11910212959688038,
+        "probability_positive": 0.6255,
+        "upper": 1.2657925888160118
+      }
+    },
+    "equal_weight_simple_trend_long_cash": {
+      "block_length": 168,
+      "calmar": {
+        "lower": -1.8730563688618247,
+        "point_delta": -0.41625068996633985,
+        "probability_positive": 0.2515,
+        "upper": 0.723894465267774
+      },
+      "confidence": 0.95,
+      "resamples": 2000,
+      "seed": 20260724153,
+      "sharpe": {
+        "lower": -1.0323947005985086,
+        "point_delta": -0.29066344844318803,
+        "probability_positive": 0.2305,
+        "upper": 0.4900390945935757
+      }
+    },
+    "equal_weight_volatility_targeted_long": {
+      "block_length": 168,
+      "calmar": {
+        "lower": -1.104690882000627,
+        "point_delta": 0.17552819256804808,
+        "probability_positive": 0.6845,
+        "upper": 1.9097785081310403
+      },
+      "confidence": 0.95,
+      "resamples": 2000,
+      "seed": 20260724152,
+      "sharpe": {
+        "lower": -0.846496419192215,
+        "point_delta": 0.19204216577783695,
+        "probability_positive": 0.6615,
+        "upper": 1.310792865391409
+      }
+    }
+  },
+  "benchmark_metrics": {
+    "equal_weight_buy_and_hold": {
+      "annualized_arithmetic_mean": 0.2651918023842568,
+      "annualized_turnover": 0.0,
+      "cagr": 0.13653879675164182,
+      "calmar": 0.22599287481844346,
+      "maximum_drawdown": -0.6041730159029721,
+      "sharpe": 0.5065042592728501,
+      "sortino": 0.705115129813808,
+      "total_return": 0.4603888589624541
+    },
+    "equal_weight_simple_trend_long_cash": {
+      "annualized_arithmetic_mean": 0.3040199502207922,
+      "annualized_turnover": 141.94444444444446,
+      "cagr": 0.28269343146649994,
+      "calmar": 0.7683375825314308,
+      "maximum_drawdown": -0.3679286786091004,
+      "sharpe": 0.9162698373129186,
+      "sortino": 1.2983712739812499,
+      "total_return": 1.0889363473745122
+    },
+    "equal_weight_volatility_targeted_long": {
+      "annualized_arithmetic_mean": 0.18896526681007664,
+      "annualized_turnover": 14.102441771777073,
+      "cagr": 0.09844188937544596,
+      "calmar": 0.17655869999704288,
+      "maximum_drawdown": -0.5575589839361907,
+      "sharpe": 0.4335642230918936,
+      "sortino": 0.6016416809992852,
+      "total_return": 0.3202479103279081
+    }
+  },
+  "calendar_stability": {
+    "complete_months": 35,
+    "complete_years": 2,
+    "months": [
+      {
+        "complete": true,
+        "period": "2023-07",
+        "return": -0.12168549277485996
+      },
+      {
+        "complete": true,
+        "period": "2023-08",
+        "return": -0.019122404977183427
+      },
+      {
+        "complete": true,
+        "period": "2023-09",
+        "return": 0.005644227288214454
+      },
+      {
+        "complete": true,
+        "period": "2023-10",
+        "return": 0.18341623617790193
+      },
+      {
+        "complete": true,
+        "period": "2023-11",
+        "return": -0.016750617849194627
+      },
+      {
+        "complete": true,
+        "period": "2023-12",
+        "return": 0.0914260910325766
+      },
+      {
+        "complete": true,
+        "period": "2024-01",
+        "return": -0.01705331345706529
+      },
+      {
+        "complete": true,
+        "period": "2024-02",
+        "return": 0.32705430870849006
+      },
+      {
+        "complete": true,
+        "period": "2024-03",
+        "return": 0.043188486442158114
+      },
+      {
+        "complete": true,
+        "period": "2024-04",
+        "return": -0.03396388420058072
+      },
+      {
+        "complete": true,
+        "period": "2024-05",
+        "return": 0.03349513453469233
+      },
+      {
+        "complete": true,
+        "period": "2024-06",
+        "return": -0.004319896034787107
+      },
+      {
+        "complete": true,
+        "period": "2024-07",
+        "return": -0.07827108082302658
+      },
+      {
+        "complete": true,
+        "period": "2024-08",
+        "return": 0.0
+      },
+      {
+        "complete": true,
+        "period": "2024-09",
+        "return": -0.03827502295470109
+      },
+      {
+        "complete": true,
+        "period": "2024-10",
+        "return": -0.03104014472345873
+      },
+      {
+        "complete": true,
+        "period": "2024-11",
+        "return": 0.17079408595751477
+      },
+      {
+        "complete": true,
+        "period": "2024-12",
+        "return": -0.011377272402306682
+      },
+      {
+        "complete": true,
+        "period": "2025-01",
+        "return": -0.08699091139030468
+      },
+      {
+        "complete": true,
+        "period": "2025-02",
+        "return": -0.013270765654640027
+      },
+      {
+        "complete": true,
+        "period": "2025-03",
+        "return": 0.0
+      },
+      {
+        "complete": true,
+        "period": "2025-04",
+        "return": -0.024642274829582478
+      },
+      {
+        "complete": true,
+        "period": "2025-05",
+        "return": 0.1696492611811493
+      },
+      {
+        "complete": true,
+        "period": "2025-06",
+        "return": -0.027876526419937653
+      },
+      {
+        "complete": true,
+        "period": "2025-07",
+        "return": 0.35909330794240524
+      },
+      {
+        "complete": true,
+        "period": "2025-08",
+        "return": -0.009999052983716394
+      },
+      {
+        "complete": true,
+        "period": "2025-09",
+        "return": -0.07650533491598899
+      },
+      {
+        "complete": true,
+        "period": "2025-10",
+        "return": -0.05688124912127657
+      },
+      {
+        "complete": true,
+        "period": "2025-11",
+        "return": 0.0
+      },
+      {
+        "complete": true,
+        "period": "2025-12",
+        "return": -0.0956459710866111
+      },
+      {
+        "complete": true,
+        "period": "2026-01",
+        "return": -0.07459499148426119
+      },
+      {
+        "complete": true,
+        "period": "2026-02",
+        "return": 0.0
+      },
+      {
+        "complete": true,
+        "period": "2026-03",
+        "return": -0.05011622144735095
+      },
+      {
+        "complete": true,
+        "period": "2026-04",
+        "return": 0.11727297714552787
+      },
+      {
+        "complete": true,
+        "period": "2026-05",
+        "return": -0.017268807699864164
+      },
+      {
+        "complete": true,
+        "period": "2026-06",
+        "return": 0.0
+      }
+    ],
+    "profitable_complete_months": 10,
+    "profitable_complete_years": 2,
+    "years": [
+      {
+        "complete": false,
+        "return": 0.10028393713995887,
+        "year": 2023
+      },
+      {
+        "complete": true,
+        "return": 0.3448507100182294,
+        "year": 2024
+      },
+      {
+        "complete": true,
+        "return": 0.05885925610526033,
+        "year": 2025
+      },
+      {
+        "complete": false,
+        "return": -0.034846582829635375,
+        "year": 2026
+      }
+    ]
+  },
+  "candidate_accounting": {
+    "architecture_candidates_searched": 1,
+    "neighbourhood_paths": 4,
+    "passed": 0,
+    "rejected": 1
+  },
+  "canonical_signature": "cross-sectional-leader-rotation-1h-v1|markets=BTC-USDT,ETH-USDT|provider=OKX-spot|bar=1H|source=immutable-common-1h-coverage-artifact-8587664816|architecture=equal-weight-720h-market-regime-plus-168h-relative-strength-leader|decision-cadence=6h-UTC|position-size=50pct-annual-vol-target-from-prior-168h|max-gross=1|fee=5bps-one-way|execution=one-complete-bar-delay|evaluation=2023-07-01T00:00Z..2026-06-14T23:00Z|fold=2160h|benchmarks=equal-weight-buy-hold,equal-weight-vol-target,equal-weight-720h-trend|bootstrap=paired-noncircular-168h-blocks-2000-resamples-95pct|neighbourhood=momentum120,momentum240,cadence3,cadence12|capacity=USD100000-at-0.10pct-prior-720h-median-hourly-quote-volume|architecture-candidate-count=1",
+  "capacity": {
+    "adjustment_components": 1272,
+    "breach_components": 488,
+    "breach_share": 0.3836477987421384,
+    "initial_capital_usd": 100000.0,
+    "maximum_participation": 0.03622221664276988,
+    "maximum_supported_initial_capital_usd": 2760.736621566214,
+    "median_participation": 0.0001808253385935942,
+    "p95_participation": 0.015750718108110216,
+    "participation_limit": 0.001
+  },
+  "fold_stability": {
+    "best_fold_return": 0.3199647479436092,
+    "fold_count": 12,
+    "fold_returns": [
+      -0.13000019638684723,
+      0.3199647479436092,
+      0.28342815535044097,
+      0.009845178066071103,
+      -0.08661753344434509,
+      0.09752620128434275,
+      -0.10653708229025016,
+      0.12299858782319317,
+      0.2581399977893257,
+      -0.08014688373076351,
+      -0.09699392597393852,
+      -0.0334058580071569
+    ],
+    "largest_positive_fold_contribution": 0.2930340758737749,
+    "profitable_folds": 6,
+    "worst_fold_return": -0.13000019638684723
+  },
+  "gates": {
+    "adverse_selection": "blocked_no_prospective_order_lifecycle_evidence",
+    "benchmark_relative_risk_adjusted": false,
+    "capacity_usd100k": false,
+    "fold_stability": false,
+    "latency": "blocked_no_prospective_order_lifecycle_evidence",
+    "live_eligible": false,
+    "maker_fill_quality": "blocked_no_prospective_order_lifecycle_evidence",
+    "month_stability": false,
+    "net_5bps_viability": true,
+    "no_fill_partial_fill_timeout": "blocked_no_prospective_order_lifecycle_evidence",
+    "paper_testable": false,
+    "parameter_neighbourhood_stability": false,
+    "prospective_paper_performance": "blocked_retrospective_architecture_failed",
+    "retrospective_architecture_freeze": false,
+    "tail_risk": true,
+    "turnover_holding_trade_sufficiency": false,
+    "year_stability": true
+  },
+  "hypothesis": "A fixed cross-sectional 1H leader-rotation architecture clears every retrospective BTC/ETH architecture-freeze gate at exactly 5 bps one-way and is eligible for prospective post-only paper evaluation.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets and this fixed result must not be used for nearby threshold tuning.",
+    "Close-to-close one-bar-delayed accounting does not prove post-only maker fills.",
+    "The hourly quote-volume capacity proxy is not queue position or executable depth.",
+    "Maker fill quality, no-fill, partial fill, timeout, adverse selection, latency, and prospective paper performance remain separate blocked diagnostics.",
+    "Moving-block concatenation creates artificial joins while preserving dependence within 168-hour blocks."
+  ],
+  "neighbourhoods": {
+    "decision_cadence_12h": {
+      "annualized_arithmetic_mean": 0.14565138352902468,
+      "annualized_turnover": 112.51235881203746,
+      "cagr": 0.1088196264613095,
+      "calmar": 0.25036868599177786,
+      "maximum_drawdown": -0.43463752677474665,
+      "sharpe": 0.500367040284636,
+      "sortino": 0.7091686111041859,
+      "total_return": 0.35749773815478303
+    },
+    "decision_cadence_3h": {
+      "annualized_arithmetic_mean": 0.08193805321905655,
+      "annualized_turnover": 219.21242921179882,
+      "cagr": 0.04069382809666,
+      "calmar": 0.09791147712519595,
+      "maximum_drawdown": -0.4156185698702741,
+      "sharpe": 0.2824796857344649,
+      "sortino": 0.4016882283855491,
+      "total_return": 0.12527075919729236
+    },
+    "momentum_120h": {
+      "annualized_arithmetic_mean": 0.2608915065848293,
+      "annualized_turnover": 186.0996836167634,
+      "cagr": 0.24276697941495584,
+      "calmar": 0.893736800708862,
+      "maximum_drawdown": -0.2716314011266031,
+      "sharpe": 0.8831112760312236,
+      "sortino": 1.284806576092901,
+      "total_return": 0.9023485307746242
+    },
+    "momentum_240h": {
+      "annualized_arithmetic_mean": 0.05981060721638305,
+      "annualized_turnover": 147.16933511757472,
+      "cagr": 0.013736175095121261,
+      "calmar": 0.03524021249523339,
+      "maximum_drawdown": -0.3897869542352852,
+      "sharpe": 0.1968106054034036,
+      "sortino": 0.2786849850507568,
+      "total_return": 0.04119324711353767
+    }
+  },
+  "rejection_reasons": [
+    "benchmark_relative_risk_adjusted",
+    "fold_stability",
+    "month_stability",
+    "turnover_holding_trade_sufficiency",
+    "parameter_neighbourhood_stability",
+    "capacity_usd100k"
+  ],
+  "schema_version": 1,
+  "source": {
+    "artifact_id": 8587664816,
+    "artifact_name": "okx-1h-coverage-488",
+    "artifact_sha256": "319123eb2861e6625c9d53953082bcd2fc084f8bb9c1d483d7b4747b6f9d6010",
+    "bar": "1H",
+    "coverage_manifest_sha256": "bce56c5ab8581c14f7971075cfa2c5a2dc6dd84a9ea0120a49cbdbad4994a2fc",
+    "csv_sha256": {
+      "BTC-USDT": "942983ac51f8870c94487ea89ecfabab6cf4a1399c457f3c94cfc89b210d830c",
+      "ETH-USDT": "05cfcafd730f0eb5bcb6433a2a725b9b10ebfbd1913c09ca08b84dd5d391ccd9"
+    },
+    "evaluation_end": "2026-06-14T23:00:00+00:00",
+    "evaluation_observations": 25920,
+    "evaluation_start": "2023-07-01T00:00:00+00:00",
+    "market_type": "spot",
+    "observations_per_market": 43829,
+    "provider": "OKX",
+    "source_end": "2026-07-24T04:00:00+00:00",
+    "source_head_sha": "a3a4bbf6939873c61ae0eb3bb31bb7b32b258a5e",
+    "source_main_sha": "390d98361ccd62b58c18c3999cbcc62287208fdf",
+    "source_start": "2021-07-24T00:00:00+00:00",
+    "workflow_run_id": 30069656422
+  },
+  "strategy_metrics": {
+    "annualized_arithmetic_mean": 0.1821343821036216,
+    "annualized_turnover": 150.93333623775078,
+    "average_gross_exposure": 0.3665875873906246,
+    "cagr": 0.1500128422946141,
+    "calmar": 0.35208689256509096,
+    "exchange_fee_sum": 0.22329863443393264,
+    "gross_total_return": 0.8907188544308677,
+    "maximum_drawdown": -0.426067670970969,
+    "sharpe": 0.6256063888697305,
+    "sortino": 0.8919222213301352,
+    "total_return": 0.5122146442808071
+  },
+  "tail_risk": {
+    "passes": true,
+    "strategy_expected_shortfall_5pct": -0.008014731666347315,
+    "volatility_targeted_expected_shortfall_5pct": -0.011413161786601803
+  },
+  "verdict": "rejected"
+}

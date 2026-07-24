@@ -1,0 +1,20 @@
+{
+  "bar": "1H",
+  "btc_source_csv_sha256": "942983ac51f8870c94487ea89ecfabab6cf4a1399c457f3c94cfc89b210d830c",
+  "end": "2021-08-01T07:00:00.000000Z",
+  "eth_source_csv_sha256": "05cfcafd730f0eb5bcb6433a2a725b9b10ebfbd1913c09ca08b84dd5d391ccd9",
+  "fixture_sha256": "2643bd058fc7a75afc2b816fe25f9f82abb3741d44ac70098937681c4a5a4c00",
+  "instruments": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "market_type": "spot",
+  "observations": 200,
+  "provider": "OKX",
+  "purpose": "Immutable real-OKX extract for causal leader-rotation mechanics and fee-accounting tests; not standalone performance evidence.",
+  "source_artifact_id": 8587664816,
+  "source_artifact_sha256": "319123eb2861e6625c9d53953082bcd2fc084f8bb9c1d483d7b4747b6f9d6010",
+  "source_head_sha": "a3a4bbf6939873c61ae0eb3bb31bb7b32b258a5e",
+  "source_workflow_run_id": 30069656422,
+  "start": "2021-07-24T00:00:00.000000Z"
+}
