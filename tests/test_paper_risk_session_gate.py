@@ -18,7 +18,9 @@ from gpt_quant.paper_risk_session_gate import (
     evaluate_paper_risk_session_gate,
 )
 
-_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
+_FIXTURE_DIR = (
+    Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
+)
 _ROWS_PATH = _FIXTURE_DIR / "rows.json"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
 _EXPECTED_FIXTURE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
@@ -116,17 +118,24 @@ def _policy() -> PaperRiskKillSwitchPolicy:
 
 def test_recovered_equity_cannot_clear_append_only_session_stops() -> None:
     initial, breached, recovered, evaluated_at = _session_path()
-    initial_watermarks = advance_paper_risk_session_high_watermarks(initial)
+    policy = _policy()
+    initial_watermarks = advance_paper_risk_session_high_watermarks(
+        initial,
+        policy=policy,
+    )
     breached_watermarks = advance_paper_risk_session_high_watermarks(
         breached,
+        policy=policy,
         previous=initial_watermarks,
     )
     recovered_watermarks = advance_paper_risk_session_high_watermarks(
         recovered,
+        policy=policy,
         previous=breached_watermarks,
     )
 
     assert initial_watermarks.previous_high_watermark_id is None
+    assert initial_watermarks.policy_id == policy.policy_id
     assert breached_watermarks.previous_high_watermark_id == initial_watermarks.high_watermark_id
     assert recovered_watermarks.previous_high_watermark_id == breached_watermarks.high_watermark_id
     assert recovered_watermarks.maximum_daily_loss_fraction == pytest.approx(0.12)
@@ -136,7 +145,7 @@ def test_recovered_equity_cannot_clear_append_only_session_stops() -> None:
     blocked = evaluate_paper_risk_session_gate(
         (ProposedInstrumentExposure("BTC-USDT", 0.60),),
         snapshot=recovered,
-        policy=_policy(),
+        policy=policy,
         high_watermarks=recovered_watermarks,
         evaluated_at_utc=evaluated_at,
     )
@@ -152,7 +161,7 @@ def test_recovered_equity_cannot_clear_append_only_session_stops() -> None:
     reduction = evaluate_paper_risk_session_gate(
         (ProposedInstrumentExposure("BTC-USDT", 0.20),),
         snapshot=recovered,
-        policy=_policy(),
+        policy=policy,
         high_watermarks=recovered_watermarks,
         evaluated_at_utc=evaluated_at,
     )
@@ -162,20 +171,25 @@ def test_recovered_equity_cannot_clear_append_only_session_stops() -> None:
 
 def test_session_watermark_transition_fails_closed_on_restart_and_ordering() -> None:
     initial, breached, recovered, evaluated_at = _session_path()
-    initial_watermarks = advance_paper_risk_session_high_watermarks(initial)
+    policy = _policy()
+    initial_watermarks = advance_paper_risk_session_high_watermarks(
+        initial,
+        policy=policy,
+    )
     breached_watermarks = advance_paper_risk_session_high_watermarks(
         breached,
+        policy=policy,
         previous=initial_watermarks,
     )
 
     with pytest.raises(ValueError, match="zero-loss, zero-drawdown"):
-        advance_paper_risk_session_high_watermarks(recovered)
+        advance_paper_risk_session_high_watermarks(recovered, policy=policy)
 
     with pytest.raises(ValueError, match="exact portfolio snapshot"):
         evaluate_paper_risk_session_gate(
             (ProposedInstrumentExposure("BTC-USDT", 0.20),),
             snapshot=recovered,
-            policy=_policy(),
+            policy=policy,
             high_watermarks=breached_watermarks,
             evaluated_at_utc=evaluated_at,
         )
@@ -183,11 +197,13 @@ def test_session_watermark_transition_fails_closed_on_restart_and_ordering() -> 
     with pytest.raises(ValueError, match="older snapshot"):
         advance_paper_risk_session_high_watermarks(
             initial,
+            policy=policy,
             previous=breached_watermarks,
         )
 
     replayed = advance_paper_risk_session_high_watermarks(
         breached,
+        policy=policy,
         previous=breached_watermarks,
     )
     assert replayed is breached_watermarks
@@ -196,6 +212,7 @@ def test_session_watermark_transition_fails_closed_on_restart_and_ordering() -> 
 def test_daily_turnover_cannot_reset_or_clear_session_stop() -> None:
     market_observed_at, real_mark, _ = _real_okx_anchor()
     session_start_equity = real_mark * 0.2
+    policy = _policy()
     initial = _snapshot(
         observed_at=market_observed_at,
         session_start=market_observed_at,
@@ -233,20 +250,26 @@ def test_daily_turnover_cannot_reset_or_clear_session_stop() -> None:
         state_name="turnover-continued",
     )
 
-    initial_watermarks = advance_paper_risk_session_high_watermarks(initial)
+    initial_watermarks = advance_paper_risk_session_high_watermarks(
+        initial,
+        policy=policy,
+    )
     triggered_watermarks = advance_paper_risk_session_high_watermarks(
         triggered,
+        policy=policy,
         previous=initial_watermarks,
     )
 
     with pytest.raises(ValueError, match="cannot decrease within one session"):
         advance_paper_risk_session_high_watermarks(
             reset,
+            policy=policy,
             previous=triggered_watermarks,
         )
 
     continued_watermarks = advance_paper_risk_session_high_watermarks(
         continued,
+        policy=policy,
         previous=triggered_watermarks,
     )
     assert continued_watermarks.maximum_daily_underlying_turnover == pytest.approx(1.25)
@@ -254,7 +277,7 @@ def test_daily_turnover_cannot_reset_or_clear_session_stop() -> None:
     blocked = evaluate_paper_risk_session_gate(
         (ProposedInstrumentExposure("BTC-USDT", 0.60),),
         snapshot=continued,
-        policy=_policy(),
+        policy=policy,
         high_watermarks=continued_watermarks,
         evaluated_at_utc=market_observed_at + timedelta(seconds=3),
     )
@@ -262,3 +285,45 @@ def test_daily_turnover_cannot_reset_or_clear_session_stop() -> None:
     assert blocked.maximum_daily_underlying_turnover == pytest.approx(1.25)
     assert blocked.allowed is False
     assert blocked.blockers == ("kill_switch_exposure_increase:BTC-USDT",)
+
+
+def test_session_policy_cannot_be_relaxed_after_a_breach() -> None:
+    initial, breached, recovered, evaluated_at = _session_path()
+    policy = _policy()
+    initial_watermarks = advance_paper_risk_session_high_watermarks(
+        initial,
+        policy=policy,
+    )
+    breached_watermarks = advance_paper_risk_session_high_watermarks(
+        breached,
+        policy=policy,
+        previous=initial_watermarks,
+    )
+    recovered_watermarks = advance_paper_risk_session_high_watermarks(
+        recovered,
+        policy=policy,
+        previous=breached_watermarks,
+    )
+    relaxed_policy = PaperRiskKillSwitchPolicy(
+        daily_loss_trigger_fraction=0.20,
+        drawdown_trigger_fraction=0.20,
+        daily_underlying_turnover_trigger=2.0,
+        maximum_state_age_seconds=5.0,
+        maximum_market_data_age_seconds=5.0,
+    )
+
+    with pytest.raises(ValueError, match="immutable risk policy"):
+        evaluate_paper_risk_session_gate(
+            (ProposedInstrumentExposure("BTC-USDT", 0.60),),
+            snapshot=recovered,
+            policy=relaxed_policy,
+            high_watermarks=recovered_watermarks,
+            evaluated_at_utc=evaluated_at,
+        )
+
+    with pytest.raises(ValueError, match="immutable risk policy"):
+        advance_paper_risk_session_high_watermarks(
+            recovered,
+            policy=relaxed_policy,
+            previous=recovered_watermarks,
+        )
