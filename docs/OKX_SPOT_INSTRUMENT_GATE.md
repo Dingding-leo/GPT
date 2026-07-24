@@ -97,7 +97,7 @@ pytest -q tests/test_okx_spot_instrument_replay_example.py \
 Expected result:
 
 ```text
-3 passed, 3 deselected
+3 passed, 4 deselected
 ```
 
 These regressions remain offline. They structurally substitute an off-tick `41006.85`
