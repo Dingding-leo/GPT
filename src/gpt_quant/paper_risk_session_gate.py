@@ -17,7 +17,7 @@ from .paper_risk_kill_switch import (
     evaluate_paper_risk_kill_switch,
 )
 
-_SCHEMA_VERSION = 2
+_SCHEMA_VERSION = 3
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 _TRIGGER_ORDER = (
     "stale_portfolio_state",
@@ -73,12 +73,13 @@ def _format_utc(value: datetime) -> str:
 
 @dataclass(frozen=True, slots=True, init=False)
 class PaperRiskSessionHighWatermarks:
-    """Append-only session maxima bound to one exact portfolio-state snapshot."""
+    """Append-only session maxima bound to one snapshot and immutable policy."""
 
     observed_at_utc: datetime
     session_start_utc: datetime
     snapshot_id: str
     portfolio_state_sha256: str
+    policy_id: str
     maximum_daily_loss_fraction: float
     maximum_drawdown_fraction: float
     maximum_daily_underlying_turnover: float
@@ -91,6 +92,7 @@ class PaperRiskSessionHighWatermarks:
         cls,
         *,
         snapshot: PaperRiskStateSnapshot,
+        policy: PaperRiskKillSwitchPolicy,
         maximum_daily_loss_fraction: float,
         maximum_drawdown_fraction: float,
         maximum_daily_underlying_turnover: float,
@@ -110,6 +112,7 @@ class PaperRiskSessionHighWatermarks:
             snapshot.portfolio_state_sha256,
             field_name="portfolio_state_sha256",
         )
+        policy_id = _required_hash(policy.policy_id, field_name="policy_id")
         maximum_daily_loss = _nonnegative_fraction(
             maximum_daily_loss_fraction,
             field_name="maximum_daily_loss_fraction",
@@ -135,6 +138,7 @@ class PaperRiskSessionHighWatermarks:
         object.__setattr__(instance, "session_start_utc", session_start)
         object.__setattr__(instance, "snapshot_id", snapshot_id)
         object.__setattr__(instance, "portfolio_state_sha256", state_hash)
+        object.__setattr__(instance, "policy_id", policy_id)
         object.__setattr__(
             instance,
             "maximum_daily_loss_fraction",
@@ -159,6 +163,7 @@ class PaperRiskSessionHighWatermarks:
             "session_start_utc": _format_utc(session_start),
             "snapshot_id": snapshot_id,
             "portfolio_state_sha256": state_hash,
+            "policy_id": policy_id,
             "maximum_daily_loss_fraction": maximum_daily_loss,
             "maximum_drawdown_fraction": maximum_drawdown,
             "maximum_daily_underlying_turnover": maximum_daily_turnover,
@@ -170,6 +175,12 @@ class PaperRiskSessionHighWatermarks:
             hashlib.sha256(_canonical_json_bytes(payload)).hexdigest(),
         )
         return instance
+
+    def assert_policy(self, policy: PaperRiskKillSwitchPolicy) -> None:
+        if not isinstance(policy, PaperRiskKillSwitchPolicy):
+            raise TypeError("policy must be a PaperRiskKillSwitchPolicy")
+        if self.policy_id != policy.policy_id:
+            raise ValueError("session high-watermarks do not match the immutable risk policy")
 
     def assert_compatible(self, snapshot: PaperRiskStateSnapshot) -> None:
         if self.snapshot_id != snapshot.snapshot_id:
@@ -192,12 +203,15 @@ class PaperRiskSessionHighWatermarks:
 def advance_paper_risk_session_high_watermarks(
     snapshot: PaperRiskStateSnapshot,
     *,
+    policy: PaperRiskKillSwitchPolicy,
     previous: PaperRiskSessionHighWatermarks | None = None,
 ) -> PaperRiskSessionHighWatermarks:
-    """Advance append-only session maxima to one exact source-bound snapshot."""
+    """Advance append-only session maxima under one immutable risk policy."""
 
     if not isinstance(snapshot, PaperRiskStateSnapshot):
         raise TypeError("snapshot must be a PaperRiskStateSnapshot")
+    if not isinstance(policy, PaperRiskKillSwitchPolicy):
+        raise TypeError("policy must be a PaperRiskKillSwitchPolicy")
     tolerance = 1e-12
     if previous is None:
         if (
@@ -216,6 +230,7 @@ def advance_paper_risk_session_high_watermarks(
     else:
         if not isinstance(previous, PaperRiskSessionHighWatermarks):
             raise TypeError("previous must be a PaperRiskSessionHighWatermarks")
+        previous.assert_policy(policy)
         if previous.session_start_utc != snapshot.session_start_utc:
             raise ValueError("cannot advance session high-watermarks across sessions")
         if snapshot.observed_at_utc < previous.observed_at_utc:
@@ -247,6 +262,7 @@ def advance_paper_risk_session_high_watermarks(
 
     return PaperRiskSessionHighWatermarks._create(
         snapshot=snapshot,
+        policy=policy,
         maximum_daily_loss_fraction=maximum_daily_loss,
         maximum_drawdown_fraction=maximum_drawdown,
         maximum_daily_underlying_turnover=maximum_daily_turnover,
@@ -287,6 +303,7 @@ def evaluate_paper_risk_session_gate(
 
     if not isinstance(high_watermarks, PaperRiskSessionHighWatermarks):
         raise TypeError("high_watermarks must be a PaperRiskSessionHighWatermarks")
+    high_watermarks.assert_policy(policy)
     high_watermarks.assert_compatible(snapshot)
     base_decision = evaluate_paper_risk_kill_switch(
         proposed_exposures,
