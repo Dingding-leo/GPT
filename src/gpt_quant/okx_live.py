@@ -103,8 +103,7 @@ def _expected_midpoint_clock_skew_seconds(
         sample.server_time_utc,
     )
     plain_datetimes = all(
-        isinstance(value, datetime) and not isinstance(value, pd.Timestamp)
-        for value in raw_values
+        isinstance(value, datetime) and not isinstance(value, pd.Timestamp) for value in raw_values
     )
     if plain_datetimes:
         python_started = sample.local_request_started_utc.astimezone(UTC)
