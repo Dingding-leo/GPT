@@ -57,10 +57,20 @@ def _explicit_utc_timestamp(value: object, label: str) -> pd.Timestamp:
 
 
 def _timestamp_index(values: pd.Series, label: str) -> pd.DatetimeIndex:
-    index = pd.DatetimeIndex(
-        [_explicit_utc_timestamp(value, f"{label} row {row}") for row, value in enumerate(values)],
-        name="timestamp",
-    )
+    try:
+        parsed = pd.to_datetime(values, errors="raise", format="mixed")
+        index = pd.DatetimeIndex(parsed, name="timestamp")
+        if index.tz is None or not np.array_equal(index.asi8, index.tz_localize(None).asi8):
+            raise ValueError
+        index = index.tz_convert("UTC")
+    except (TypeError, ValueError, OverflowError):
+        index = pd.DatetimeIndex(
+            [
+                _explicit_utc_timestamp(value, f"{label} row {row}")
+                for row, value in enumerate(values)
+            ],
+            name="timestamp",
+        )
     if index.has_duplicates or not index.is_monotonic_increasing:
         raise ValueError(f"{label}s must be unique and increasing")
     return index
