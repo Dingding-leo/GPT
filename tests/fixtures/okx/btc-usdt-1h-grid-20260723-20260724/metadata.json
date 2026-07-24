@@ -1,0 +1,10 @@
+{
+  "bar": "1H",
+  "end": "2026-07-24T01:00:00+00:00",
+  "expected_step_seconds": 3600,
+  "instrument_id": "BTC-USDT",
+  "normalized_csv_sha256": "d2bf09898c738233380d9d91030bbd1eb27cfa5c73ff6d771ebde9d49b37c019",
+  "observations": 3,
+  "provider": "OKX",
+  "start": "2026-07-23T23:00:00+00:00"
+}
