@@ -90,7 +90,7 @@ negative checks that prove the current boundary rejects off-tick prices, off-lot
 fills, and a request below the explicitly declared paper quote-notional floor:
 
 ```bash
-pytest -q tests/test_okx_spot_instrument_replay_example.py \
+pytest tests/test_okx_spot_instrument_replay_example.py \
   -k 'rejects_off_tick_limit_price or rejects_off_lot_partial_fill or rejects_requested_notional_below_declared_paper_floor'
 ```
 
