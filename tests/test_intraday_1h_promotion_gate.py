@@ -10,9 +10,7 @@ from types import ModuleType
 
 import pytest
 
-from gpt_quant.intraday_1h_source_provenance import (
-    write_intraday_1h_source_provenance,
-)
+from gpt_quant.intraday_1h_source_provenance import write_intraday_1h_source_provenance
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 _SCRIPTS_DIR = _REPOSITORY_ROOT / "scripts"
