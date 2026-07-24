@@ -157,21 +157,21 @@ class OKXSpotInstrumentSnapshot:
         object.__setattr__(
             self,
             "server_time_request_started_utc",
-            validated_server_started.to_pydatetime(),
+            validated_server_started,
         )
         object.__setattr__(
             self,
             "server_time_response_received_utc",
-            validated_server_received.to_pydatetime(),
+            validated_server_received,
         )
         object.__setattr__(
             self,
             "exchange_observed_at_utc",
-            validated_observed_at.to_pydatetime(),
+            validated_observed_at,
         )
         object.__setattr__(self, "server_round_trip_seconds", validated_round_trip)
         object.__setattr__(self, "midpoint_clock_skew_seconds", validated_clock_skew)
-        observed_at = validated_observed_at.to_pydatetime()
+        observed_at = validated_observed_at
 
         replayed = _parse_spot_instrument_response(
             raw_response,
@@ -554,10 +554,10 @@ def fetch_okx_spot_instrument_snapshot(
     )
     if server_time_sample.base_url != normalized_base_url:
         raise ValueError("OKX instrument and server-time observations must use the same base URL")
-    if server_request_started.to_pydatetime() < response_received:
+    if server_request_started < response_received:
         raise ValueError("OKX server time must be sampled after the instrument response")
-    exchange_observed = exchange_observed_at.to_pydatetime()
-    server_response_received_at = server_response_received.to_pydatetime()
+    exchange_observed = exchange_observed_at
+    server_response_received_at = server_response_received
 
     parsed = _parse_spot_instrument_response(
         raw_response,
@@ -569,7 +569,7 @@ def fetch_okx_spot_instrument_snapshot(
         base_url=normalized_base_url,
         request_started_utc=request_started,
         response_received_utc=response_received,
-        server_time_request_started_utc=server_request_started.to_pydatetime(),
+        server_time_request_started_utc=server_request_started,
         exchange_observed_at_utc=exchange_observed,
         server_time_response_received_utc=server_response_received_at,
         server_round_trip_seconds=server_round_trip_seconds,
