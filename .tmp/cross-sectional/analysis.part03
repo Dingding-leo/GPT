@@ -1,0 +1,110 @@
+    values = np.sort(np.asarray(returns, dtype=float))
+    tail_count = max(1, math.ceil(values.size * fraction))
+    return float(values[:tail_count].mean())
+
+
+def fold_statistics(frame: pd.DataFrame) -> dict[str, Any]:
+    if len(frame) % TEST_BARS != 0:
+        raise ValueError("evaluation window must contain complete 2160-hour folds")
+    fold_returns: list[float] = []
+    for start in range(0, len(frame), TEST_BARS):
+        values = frame["net_return"].iloc[start : start + TEST_BARS].to_numpy(dtype=float)
+        fold_returns.append(float(np.prod(1.0 + values) - 1.0))
+    positive = [value for value in fold_returns if value > 0.0]
+    positive_sum = sum(positive)
+    concentration = max(positive) / positive_sum if positive_sum > 0.0 else 1.0
+    return {
+        "fold_count": len(fold_returns),
+        "profitable_folds": len(positive),
+        "best_fold_return": max(fold_returns),
+        "worst_fold_return": min(fold_returns),
+        "largest_positive_fold_contribution": concentration,
+        "fold_returns": fold_returns,
+    }
+
+
+def _complete_month(index: pd.DatetimeIndex) -> bool:
+    start = index[0].normalize().replace(day=1)
+    end = (start + pd.offsets.MonthEnd(1)).replace(hour=23)
+    expected = int((end - start) / pd.Timedelta(hours=1)) + 1
+    return index[0] == start and index[-1] == end and len(index) == expected
+
+
+def _complete_year(index: pd.DatetimeIndex) -> bool:
+    year = int(index[0].year)
+    start = pd.Timestamp(year=year, month=1, day=1, tz="UTC")
+    end = pd.Timestamp(year=year, month=12, day=31, hour=23, tz="UTC")
+    expected = int((end - start) / pd.Timedelta(hours=1)) + 1
+    return index[0] == start and index[-1] == end and len(index) == expected
+
+
+def calendar_statistics(frame: pd.DataFrame) -> dict[str, Any]:
+    series = frame["net_return"]
+    months: list[dict[str, Any]] = []
+    month_keys = pd.MultiIndex.from_arrays([series.index.year, series.index.month])
+    for (year, month), group in series.groupby(month_keys):
+        complete = _complete_month(pd.DatetimeIndex(group.index))
+        months.append(
+            {
+                "period": f"{int(year):04d}-{int(month):02d}",
+                "complete": complete,
+                "return": float(np.prod(1.0 + group.to_numpy(dtype=float)) - 1.0),
+            }
+        )
+    years: list[dict[str, Any]] = []
+    for year, group in series.groupby(series.index.year):
+        complete = _complete_year(pd.DatetimeIndex(group.index))
+        years.append(
+            {
+                "year": int(year),
+                "complete": complete,
+                "return": float(np.prod(1.0 + group.to_numpy(dtype=float)) - 1.0),
+            }
+        )
+    complete_months = [item for item in months if item["complete"]]
+    complete_years = [item for item in years if item["complete"]]
+    return {
+        "months": months,
+        "complete_months": len(complete_months),
+        "profitable_complete_months": sum(item["return"] > 0.0 for item in complete_months),
+        "years": years,
+        "complete_years": len(complete_years),
+        "profitable_complete_years": sum(item["return"] > 0.0 for item in complete_years),
+    }
+
+
+def activity_statistics(frame: pd.DataFrame) -> dict[str, Any]:
+    active = (frame[["btc_position", "eth_position"]].abs().sum(axis=1) > POSITION_EPSILON)
+    starts = active & ~active.shift(1, fill_value=False)
+    exits = ~active & active.shift(1, fill_value=False)
+    start_positions = list(np.flatnonzero(starts.to_numpy()))
+    exit_positions = list(np.flatnonzero(exits.to_numpy()))
+    completed_returns: list[float] = []
+    holding_hours: list[int] = []
+    exit_cursor = 0
+    for start in start_positions:
+        while exit_cursor < len(exit_positions) and exit_positions[exit_cursor] <= start:
+            exit_cursor += 1
+        if exit_cursor >= len(exit_positions):
+            continue
+        exit_row = exit_positions[exit_cursor]
+        values = frame["net_return"].iloc[start : exit_row + 1].to_numpy(dtype=float)
+        completed_returns.append(float(np.prod(1.0 + values) - 1.0))
+        holding_hours.append(int(exit_row - start))
+        exit_cursor += 1
+    years = len(frame) / ANNUALIZATION
+    positives = sum(value > 0.0 for value in completed_returns)
+    gains = sum(value for value in completed_returns if value > 0.0)
+    losses = -sum(value for value in completed_returns if value < 0.0)
+    profit_factor = gains / losses if losses > 0.0 else math.inf
+    adjustments = int((frame["turnover"] > POSITION_EPSILON).sum())
+    leader_switches = int(
+        (
+            frame[["btc_position", "eth_position"]].idxmax(axis=1)
+            != frame[["btc_position", "eth_position"]].idxmax(axis=1).shift(1)
+        ).sum()
+    )
+    return {
+        "position_adjustment_observations": adjustments,
+        "annualized_position_adjustments": adjustments / years,
+        "completed_exposure_episodes": len(completed_returns),
