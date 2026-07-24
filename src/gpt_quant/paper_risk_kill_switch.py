@@ -160,8 +160,6 @@ class PaperRiskStateSnapshot:
         )
         if session_start > observed_at:
             raise ValueError("session_start_utc cannot be after the portfolio observation")
-        if market_observed_at > observed_at:
-            raise ValueError("market data cannot be observed after the portfolio state")
 
         session_start_equity = _required_positive_real(
             self.session_start_equity,
