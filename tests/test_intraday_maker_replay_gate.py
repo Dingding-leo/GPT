@@ -32,6 +32,10 @@ def _economics() -> dict[str, object]:
     }
 
 
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _write_manifest(root: Path) -> None:
     lines = []
     for path in sorted(root.rglob("*")):
@@ -88,17 +92,30 @@ def test_missing_replay_evidence_is_deterministic_and_fail_closed(tmp_path: Path
     assert module.main(["--output-dir", str(output), "--enforce-maker-replay"]) == 1
 
 
-def test_verified_no_fill_and_partial_fill_replay_moves_only_the_maker_gate(tmp_path: Path) -> None:
+def test_verified_replay_requires_a_trusted_external_manifest_digest(tmp_path: Path) -> None:
     module = _load_module()
     evidence = _write_evidence(tmp_path / "evidence")
 
-    payload = module.build_gate(tmp_path / "output", evidence_root=evidence)
+    with pytest.raises(ValueError, match="lowercase SHA-256"):
+        module.build_gate(tmp_path / "output", evidence_root=evidence)
+
+
+def test_verified_no_fill_and_partial_fill_replay_moves_only_the_maker_gate(tmp_path: Path) -> None:
+    module = _load_module()
+    evidence = _write_evidence(tmp_path / "evidence")
+    manifest_sha256 = _sha256(evidence / "artifact-manifest.sha256")
+
+    payload = module.build_gate(
+        tmp_path / "output",
+        evidence_root=evidence,
+        expected_manifest_sha256=manifest_sha256,
+    )
 
     assert payload["maker_replay"]["evidence_integrity_passes"] is True
     assert payload["maker_replay"]["maker_order_replay_passes"] is True
     assert payload["maker_replay"]["replay_equivalent"] is True
     assert payload["maker_replay"]["observed_outcomes"] == ["no_fill", "partial_fill"]
-    assert payload["maker_replay"]["artifact_manifest_sha256"]
+    assert payload["maker_replay"]["artifact_manifest_sha256"] == manifest_sha256
     assert payload["maker_replay"]["replay_gate_sha256"]
     assert payload["promotion"] == {
         "allow_paper_promotion": False,
@@ -110,7 +127,30 @@ def test_verified_no_fill_and_partial_fill_replay_moves_only_the_maker_gate(tmp_
 def test_tampered_replay_evidence_is_rejected(tmp_path: Path) -> None:
     module = _load_module()
     evidence = _write_evidence(tmp_path / "evidence")
+    manifest_sha256 = _sha256(evidence / "artifact-manifest.sha256")
     (evidence / "paper-events.jsonl").write_text("tampered\n", encoding="utf-8")
 
     with pytest.raises(ValueError, match="digest mismatch"):
-        module.build_gate(tmp_path / "output", evidence_root=evidence)
+        module.build_gate(
+            tmp_path / "output",
+            evidence_root=evidence,
+            expected_manifest_sha256=manifest_sha256,
+        )
+
+
+def test_rewritten_evidence_and_manifest_cannot_clear_the_gate(tmp_path: Path) -> None:
+    module = _load_module()
+    evidence = _write_evidence(tmp_path / "evidence")
+    trusted_manifest_sha256 = _sha256(evidence / "artifact-manifest.sha256")
+    (evidence / "paper-events.jsonl").write_text(
+        '{"outcome":"no_fill"}\n{"outcome":"partial_fill","forged":true}\n',
+        encoding="utf-8",
+    )
+    _write_manifest(evidence)
+
+    with pytest.raises(ValueError, match="trusted SHA-256"):
+        module.build_gate(
+            tmp_path / "output",
+            evidence_root=evidence,
+            expected_manifest_sha256=trusted_manifest_sha256,
+        )
