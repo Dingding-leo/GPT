@@ -1,0 +1,131 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_5bps_metrics": {
+    "BTC-USDT": {
+      "annualized_arithmetic_mean": 0.1613052226649442,
+      "annualized_turnover": 16.42531928667807,
+      "cagr": 0.14489118250139654,
+      "calmar": 0.5100604649374113,
+      "fold_count": 27,
+      "max_drawdown": -0.28406667926943896,
+      "profitable_folds": 12,
+      "sharpe": 0.7067199135624018,
+      "sortino": 1.086816700425676,
+      "total_return": 1.4209166759944099
+    },
+    "ETH-USDT": {
+      "annualized_arithmetic_mean": 0.14545920575609564,
+      "annualized_turnover": 17.301474510838435,
+      "cagr": 0.12070883291787071,
+      "calmar": 0.41366169610346726,
+      "fold_count": 27,
+      "max_drawdown": -0.29180568095838,
+      "profitable_folds": 17,
+      "sharpe": 0.5794669646974043,
+      "sortino": 0.8518351446613286,
+      "total_return": 1.1057078943260912
+    }
+  },
+  "canonical_signature": "canonical-5bps-prior-volume-capacity-gate-v1|markets=BTC-USDT,ETH-USDT|source=verified-OKX-1Dutc-snapshots-and-canonical-5bps-returns|candidate=initial-capital-usd-1000000|trade-notional=abs-turnover*prior-nav*initial-capital|liquidity-proxy=prior-30-session-median-daily-quote-volume|participation-limit=0.10pct|claim=every-adjustment-at-or-below-limit-in-both-markets|candidate_count=1",
+  "capacity_candidate": {
+    "label": "initial-capital-usd-1000000",
+    "markets": {
+      "BTC-USDT": {
+        "adjustment_days": 1316,
+        "breach_days": 133,
+        "breach_share": 0.10106382978723404,
+        "maximum_participation": 0.007773581895252848,
+        "maximum_participation_date": "2023-01-19T00:00:00+00:00",
+        "maximum_trade_notional_date": "2024-06-18T00:00:00+00:00",
+        "maximum_trade_notional_usd": 1871040.662054958,
+        "median_participation": 0.00020114864463863734,
+        "minimum_supported_initial_capital_usd": 128640.82651662518,
+        "p95_participation": 0.001678801601317881,
+        "p99_participation": 0.003838981301603152,
+        "passes": false
+      },
+      "ETH-USDT": {
+        "adjustment_days": 1416,
+        "breach_days": 307,
+        "breach_share": 0.21680790960451976,
+        "maximum_participation": 0.008893630850965593,
+        "maximum_participation_date": "2023-08-28T00:00:00+00:00",
+        "maximum_trade_notional_date": "2024-05-21T00:00:00+00:00",
+        "maximum_trade_notional_usd": 1439196.0904867216,
+        "median_participation": 0.0003607211142081071,
+        "minimum_supported_initial_capital_usd": 112440.01654188613,
+        "p95_participation": 0.0024588270948895435,
+        "p99_participation": 0.004293470238017661,
+        "passes": false
+      }
+    },
+    "passes": false
+  },
+  "hypothesis": "A USD 1,000,000 canonical 5 bps account can execute every BTC-USDT and ETH-USDT OOS position adjustment at no more than 0.10% of the strictly lagged 30-session median daily quote volume.",
+  "limitations": [
+    "Daily quote volume is a retrospective capacity proxy, not executable top-of-book depth.",
+    "The 0.10% limit is applied to a strictly lagged 30-session median, but it does not model intraday concentration or partial fills.",
+    "BTC-USDT and ETH-USDT are development markets; SOL-USDT is a consumed holdout and was not used.",
+    "Spread, slippage, market impact, and latency remain separately unmeasured."
+  ],
+  "live_eligible": false,
+  "live_gates": {
+    "benchmark_relative_risk_adjusted": "fail",
+    "capacity": "fail",
+    "corrected_5bps_full_walk_forward": "pass",
+    "execution_delay_robustness": "fail",
+    "fold_stability": "fail",
+    "overall_live_eligibility": "false",
+    "parameter_neighbourhood_stability": "pass",
+    "prospective_forward_validation": "blocked",
+    "separate_spread_slippage_impact_latency": "blocked",
+    "tail_risk": "pass",
+    "turnover_and_5_7.5_10_15bps_viability": "pass",
+    "untouched_market_validation": "fail",
+    "year_stability": "fail"
+  },
+  "method": {
+    "adjustment_threshold": 1e-12,
+    "all_in_cost_sensitivities_bps": [
+      5.0,
+      7.5,
+      10.0,
+      15.0
+    ],
+    "baseline_exchange_fee_bps_one_way": 5.0,
+    "initial_capital_usd": 1000000.0,
+    "liquidity_estimator": "prior-session-shifted rolling median of daily quote volume",
+    "liquidity_lookback_sessions": 30,
+    "participation_limit": 0.001,
+    "sealed_market_data_used": false,
+    "trade_notional": "absolute turnover * prior NAV multiple * initial capital"
+  },
+  "source": {
+    "artifact_id": 8581531945,
+    "artifact_name": "quant-research-source-392-attempt-1",
+    "artifact_sha256": "1ccdf6ad90250df0f4cc4cd2d8261f47ff29949b36fe78ab037db94910874cf0",
+    "file_sha256": {
+      "BTC-USDT": {
+        "returns": "04a0a5257d1e20f1eb88c70b8a0b010d21f0dc35ccb657ba39f14189e9f20790",
+        "snapshot": "407aeba3d1ad4c8e8682a6a689c1c6327139f42bc7587aaae75c77fce047dec1"
+      },
+      "ETH-USDT": {
+        "returns": "4b69db4a44644a5f830e1518aca93356c0eeacf502dc00ba990bd992b9bd387f",
+        "snapshot": "842b4bbbb0ad7afbe2a1c9ee375443671d818a799266d5dc25cc6a548571ad7f"
+      }
+    },
+    "market_type": "spot",
+    "observations_per_market": 2385,
+    "period_end": "2026-07-22T00:00:00+00:00",
+    "period_start": "2020-01-11T00:00:00+00:00",
+    "provider": "OKX",
+    "source_head_sha": "d51694df876ddeb0059598fe24b6022c8ae7cbd5",
+    "timeframe": "1Dutc",
+    "workflow_run_id": 30052415258
+  },
+  "verdict": "rejected"
+}
