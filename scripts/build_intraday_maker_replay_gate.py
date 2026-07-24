@@ -35,6 +35,16 @@ def _sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _require_sha256(value: Any, *, label: str) -> str:
+    if not isinstance(value, str) or len(value) != 64 or value != value.lower():
+        raise ValueError(f"{label} must be a lowercase SHA-256 digest")
+    try:
+        int(value, 16)
+    except ValueError as exc:
+        raise ValueError(f"{label} must be a lowercase SHA-256 digest") from exc
+    return value
+
+
 def _verify_manifest(root: Path) -> Path:
     manifest_path = root / _MANIFEST_NAME
     try:
@@ -131,11 +141,25 @@ def _missing_evidence() -> dict[str, Any]:
     }
 
 
-def _validate_evidence(root_value: str | Path) -> dict[str, Any]:
+def _validate_evidence(
+    root_value: str | Path,
+    *,
+    expected_manifest_sha256: str | None,
+) -> dict[str, Any]:
+    trusted_manifest_sha256 = _require_sha256(
+        expected_manifest_sha256,
+        label="expected maker replay artifact manifest SHA-256",
+    )
     root = Path(root_value).resolve(strict=True)
     if not root.is_dir():
         raise ValueError("maker replay evidence root must be a directory")
-    manifest_path = _verify_manifest(root)
+    manifest_path = root / _MANIFEST_NAME
+    if manifest_path.is_symlink() or not manifest_path.is_file():
+        raise ValueError("maker replay artifact manifest is missing or unsafe")
+    manifest_sha256 = _sha256_file(manifest_path)
+    if manifest_sha256 != trusted_manifest_sha256:
+        raise ValueError("maker replay artifact manifest does not match the trusted SHA-256")
+    _verify_manifest(root)
     gate_path = root / _EVIDENCE_NAME
     gate = _load_object(gate_path)
 
@@ -167,7 +191,7 @@ def _validate_evidence(root_value: str | Path) -> dict[str, Any]:
         "evidence_integrity_passes": True,
         "maker_order_replay_passes": True,
         "replay_equivalent": True,
-        "artifact_manifest_sha256": _sha256_file(manifest_path),
+        "artifact_manifest_sha256": manifest_sha256,
         "replay_gate_sha256": _sha256_file(gate_path),
         "required_outcomes": list(_REQUIRED_OUTCOMES),
         "observed_outcomes": outcomes,
@@ -181,8 +205,17 @@ def build_gate(
     output_dir: str | Path,
     *,
     evidence_root: str | Path | None = None,
+    expected_manifest_sha256: str | None = None,
 ) -> dict[str, Any]:
-    replay = _missing_evidence() if evidence_root is None else _validate_evidence(evidence_root)
+    if evidence_root is None:
+        if expected_manifest_sha256 is not None:
+            raise ValueError("expected manifest SHA-256 requires a maker replay evidence root")
+        replay = _missing_evidence()
+    else:
+        replay = _validate_evidence(
+            evidence_root,
+            expected_manifest_sha256=expected_manifest_sha256,
+        )
     blockers = list(replay["blockers"])
     if replay["maker_order_replay_passes"]:
         blockers.append("state_recovery_reconciliation_missing")
@@ -215,6 +248,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--evidence-root")
+    parser.add_argument("--expected-manifest-sha256")
     parser.add_argument("--enforce-maker-replay", action="store_true")
     return parser.parse_args(argv)
 
@@ -222,7 +256,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def main(argv: Sequence[str] | None = None) -> int:
     arguments = parse_args(argv)
     try:
-        payload = build_gate(arguments.output_dir, evidence_root=arguments.evidence_root)
+        payload = build_gate(
+            arguments.output_dir,
+            evidence_root=arguments.evidence_root,
+            expected_manifest_sha256=arguments.expected_manifest_sha256,
+        )
     except (OSError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2
