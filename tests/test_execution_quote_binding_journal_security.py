@@ -48,11 +48,14 @@ def test_binding_journal_uses_mode_0600_under_permissive_umask(tmp_path: Path) -
         journal, intent_journal, quote_store = _record(tmp_path, path)
 
     assert stat.S_IMODE(path.stat().st_mode) == 0o600
-    assert load_execution_quote_binding_journal(
-        path,
-        intent_journal=intent_journal,
-        quote_store=quote_store,
-    ) == journal
+    assert (
+        load_execution_quote_binding_journal(
+            path,
+            intent_journal=intent_journal,
+            quote_store=quote_store,
+        )
+        == journal
+    )
 
 
 @pytest.mark.parametrize("kind", ["symlink", "hardlink", "fifo"])
@@ -64,7 +67,7 @@ def test_binding_journal_rejects_aliased_or_blocking_replay_paths(
     _, intent_journal, quote_store = _record(tmp_path, path)
     alias = tmp_path / f"bindings-{kind}.jsonl"
     if kind == "symlink":
-        alias.symlink.to(path.name)
+        alias.symlink_to(path.name)
     elif kind == "hardlink":
         os.link(path, alias)
     else:

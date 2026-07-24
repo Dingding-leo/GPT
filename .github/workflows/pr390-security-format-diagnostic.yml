@@ -25,17 +25,22 @@ jobs:
           mkdir -p /tmp/pr390-security-format
           python -m pip install -e ".[dev]" \
             > /tmp/pr390-security-format/install.txt 2>&1 || true
+          python -m ruff check --fix \
+            src/gpt_quant/execution_quote_binding_journal.py \
+            tests/test_execution_quote_binding_journal.py \
+            tests/test_execution_quote_binding_journal_security.py \
+            > /tmp/pr390-security-format/lint-fix.txt 2>&1 || true
+          python -m ruff format \
+            src/gpt_quant/execution_quote_binding_journal.py \
+            tests/test_execution_quote_binding_journal.py \
+            tests/test_execution_quote_binding_journal_security.py \
+            > /tmp/pr390-security-format/format.txt 2>&1 || true
           python -m ruff check \
             src/gpt_quant/execution_quote_binding_journal.py \
             tests/test_execution_quote_binding_journal.py \
             tests/test_execution_quote_binding_journal_security.py \
             --output-format=concise \
             > /tmp/pr390-security-format/lint.txt 2>&1 || true
-          python -m ruff format \
-            src/gpt_quant/execution_quote_binding_journal.py \
-            tests/test_execution_quote_binding_journal.py \
-            tests/test_execution_quote_binding_journal_security.py \
-            > /tmp/pr390-security-format/format.txt 2>&1 || true
           cp src/gpt_quant/execution_quote_binding_journal.py \
             /tmp/pr390-security-format/module.py || true
           cp tests/test_execution_quote_binding_journal.py \
