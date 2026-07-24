@@ -25,6 +25,8 @@ jobs:
     timeout-minutes: 15
     env:
       EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      REQUESTED_TARGET_SHA: ${{ inputs.target_sha || '' }}
+      DISPATCH_REF_SHA: ${{ github.sha }}
       OKX_BASE_URL: https://www.okx.com
       ARTIFACT_NAME: okx-1h-coverage-${{ github.run_number }}-attempt-${{ github.run_attempt }}
 
@@ -33,6 +35,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Verify exact checked-out revision
@@ -42,6 +45,14 @@ jobs:
           [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           actual_sha="$(git rev-parse HEAD)"
           test "$actual_sha" = "$EXPECTED_TESTED_SHA"
+          if [[ -n "$REQUESTED_TARGET_SHA" ]]; then
+            test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
+            test "$GITHUB_REF" = "refs/heads/main"
+            test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"
+            [[ "$DISPATCH_REF_SHA" =~ ^[0-9a-f]{40}$ ]]
+            git cat-file -e "${DISPATCH_REF_SHA}^{commit}"
+            git merge-base --is-ancestor "$EXPECTED_TESTED_SHA" "$DISPATCH_REF_SHA"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
