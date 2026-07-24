@@ -233,10 +233,13 @@ class PaperOrderStateTransitionRequest:
                 _nonnegative_decimal(getattr(self, name), name),
             )
 
-        if self.sequence == 0:
-            if self.previous_event_id is not None or self.event_type not in _INITIAL_EVENT_TYPES:
-                raise ValueError("sequence zero requires an initial acknowledgement or rejection")
-        elif self.previous_event_id is None or self.event_type in _INITIAL_EVENT_TYPES:
+        if self.sequence == 0 and (
+            self.previous_event_id is not None or self.event_type not in _INITIAL_EVENT_TYPES
+        ):
+            raise ValueError("sequence zero requires an initial acknowledgement or rejection")
+        if self.sequence > 0 and (
+            self.previous_event_id is None or self.event_type in _INITIAL_EVENT_TYPES
+        ):
             raise ValueError("non-initial lifecycle events require the exact previous event ID")
 
         requested = Decimal(self.requested_base_quantity)
@@ -443,10 +446,12 @@ def advance_paper_order_transition(
     occurred_at = _utc(occurred_at_utc, "occurred_at_utc")
     if occurred_at <= previous.occurred_at_utc:
         raise ValueError("lifecycle event time must be strictly after the previous event")
-    if event_type in {"no_fill", "partial_fill", "filled", "cancelled"}:
-        if occurred_at >= intent.expires_at_utc:
-            raise ValueError(f"{event_type} must occur before the exclusive intent expiry")
-    elif event_type == "timed_out" and occurred_at < intent.expires_at_utc:
+    if (
+        event_type in {"no_fill", "partial_fill", "filled", "cancelled"}
+        and occurred_at >= intent.expires_at_utc
+    ):
+        raise ValueError(f"{event_type} must occur before the exclusive intent expiry")
+    if event_type == "timed_out" and occurred_at < intent.expires_at_utc:
         raise ValueError("timed_out cannot occur before the exclusive intent expiry")
 
     canonical_delta = _nonnegative_decimal(
