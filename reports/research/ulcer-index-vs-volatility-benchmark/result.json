@@ -1,0 +1,66 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "ulcer-index-vs-volatility-benchmark-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=volatility-targeted-long|metric=ulcer-index|nav-start=1|drawdown=nav/running-peak-minus-1|ulcer-index=sqrt(mean(drawdown-squared))|claim=benchmark-minus-strategy-ulcer-index>0-in-both-markets|resampling=paired-noncircular-moving-block-bootstrap|block-length=20-sessions|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072309,ETH-USDT:2026072310|candidate_count=1",
+  "claim_scope": "Development-market diagnostic only; no deployable strategy improvement is claimed.",
+  "hypothesis": "The strategy has a lower Ulcer Index than the volatility-targeted-long benchmark in both BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "benchmark_ulcer_index": 0.351861078320084,
+      "ci_lower": 0.00370776281169141,
+      "ci_upper": 0.4164414958020811,
+      "observations": 2340,
+      "observed_reduction": 0.21387180372415726,
+      "passed": true,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_reduction_positive": 0.9775,
+      "return_file_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "strategy_ulcer_index": 0.13798927459592675
+    },
+    "ETH-USDT": {
+      "benchmark_ulcer_index": 0.33208184564921306,
+      "ci_lower": -0.06547832315443415,
+      "ci_upper": 0.34619987475210356,
+      "observations": 2340,
+      "observed_reduction": 0.1744477097986679,
+      "passed": false,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_reduction_positive": 0.917,
+      "return_file_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "strategy_ulcer_index": 0.15763413585054517
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "market_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8542699045,
+    "source_artifact_name": "quant-research-source-1321-attempt-1",
+    "source_artifact_sha256": "edf630f5372209f12ccc770751872f82523624ccafdfd7c849bae1971ab4aefc",
+    "source_head_sha": "0945532759010d0d94638c69ea0e5a175c4ae964",
+    "source_workflow_run": 29952479109,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reason": "The 95% paired moving-block-bootstrap lower bound for the benchmark-minus-strategy Ulcer Index reduction was non-positive in: ETH-USDT",
+  "settings": {
+    "benchmark": "volatility-targeted-long",
+    "block_length_sessions": 20,
+    "confidence": 0.95,
+    "reduction_definition": "benchmark_ulcer_index - strategy_ulcer_index",
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072309,
+      "ETH-USDT": 2026072310
+    },
+    "ulcer_index_definition": "sqrt(mean((nav / running_peak - 1)^2)), with nav starting at 1"
+  },
+  "verdict": "rejected"
+}
