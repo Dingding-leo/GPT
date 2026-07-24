@@ -11,10 +11,13 @@ from .execution_quote_evidence import ExecutionQuoteEvidenceStore
 from .paper_execution_attempt_journal import PaperExecutionAttemptJournal
 from .target_intent_journal import TargetPositionIntentJournal
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _EXCHANGE_FEE_ONE_WAY_BPS = "5"
-_ALL_IN_STRESS_BPS = ("7.5", "10", "15")
+_EXCHANGE_FEE_CONFIG_BYTES = (
+    b'{"component":"exchange_fee","one_way_bps":"5","version":1}\n'
+)
+_EXCHANGE_FEE_CONFIG_SHA256 = hashlib.sha256(_EXCHANGE_FEE_CONFIG_BYTES).hexdigest()
 _FIELDS = {
     "schema_version",
     "intent_journal_sha256",
@@ -31,7 +34,6 @@ _FIELDS = {
     "slippage_config_sha256",
     "market_impact_config_sha256",
     "latency_config_sha256",
-    "all_in_stress_bps",
 }
 _SERIALIZED_FIELDS = _FIELDS | {"reconciliation_id"}
 
@@ -146,11 +148,11 @@ def _verify_chain(
 
 @dataclass(frozen=True, slots=True)
 class PaperExecutionReconciliationEvidence:
-    """Content-addressed root for one complete replayable paper-decision chain.
+    """Content-addressed root for one replayable paper-decision chain.
 
-    Every cost component has an independent immutable configuration hash. A component
-    that is deliberately not modelled must still use its own explicit configuration
-    artifact rather than being hidden inside the 5 bps exchange-fee declaration.
+    The only modeled PnL cost is the canonical 5 bps one-way exchange-fee
+    configuration. Spread, slippage, market impact, and latency remain independent
+    observed-diagnostic configurations and are not added to paper PnL.
     """
 
     intent_journal_sha256: str
@@ -168,7 +170,6 @@ class PaperExecutionReconciliationEvidence:
     latency_config_sha256: str
     schema_version: int = field(default=_SCHEMA_VERSION, init=False)
     exchange_fee_one_way_bps: str = field(default=_EXCHANGE_FEE_ONE_WAY_BPS, init=False)
-    all_in_stress_bps: tuple[str, str, str] = field(default=_ALL_IN_STRESS_BPS, init=False)
     reconciliation_id: str = field(init=False)
 
     def __post_init__(self) -> None:
@@ -186,6 +187,10 @@ class PaperExecutionReconciliationEvidence:
             object.__setattr__(self, name, _hash(getattr(self, name), name))
         for name in ("intent_count", "quote_count", "binding_count", "attempt_count"):
             object.__setattr__(self, name, _count(getattr(self, name), name))
+        if self.exchange_fee_config_sha256 != _EXCHANGE_FEE_CONFIG_SHA256:
+            raise ValueError(
+                "exchange_fee_config_sha256 must identify the canonical exact-5-bps-only config"
+            )
         object.__setattr__(
             self,
             "reconciliation_id",
@@ -209,7 +214,6 @@ class PaperExecutionReconciliationEvidence:
             "slippage_config_sha256": self.slippage_config_sha256,
             "market_impact_config_sha256": self.market_impact_config_sha256,
             "latency_config_sha256": self.latency_config_sha256,
-            "all_in_stress_bps": list(self.all_in_stress_bps),
         }
 
     def to_dict(self) -> dict[str, object]:
@@ -268,11 +272,6 @@ class PaperExecutionReconciliationEvidence:
             )
         if value["exchange_fee_one_way_bps"] != _EXCHANGE_FEE_ONE_WAY_BPS:
             raise ValueError("paper execution reconciliation must declare the 5 bps one-way fee")
-        stress = value["all_in_stress_bps"]
-        if not isinstance(stress, list) or tuple(stress) != _ALL_IN_STRESS_BPS:
-            raise ValueError(
-                "paper execution reconciliation must declare separate 7.5/10/15 bps stresses"
-            )
         evidence = cls(
             intent_journal_sha256=value["intent_journal_sha256"],
             quote_store_sha256=value["quote_store_sha256"],
@@ -325,7 +324,7 @@ def reconcile_paper_execution_evidence(
     market_impact_config_sha256: str,
     latency_config_sha256: str,
 ) -> PaperExecutionReconciliationEvidence:
-    """Replay the full durable chain and bind it to separately versioned cost models."""
+    """Replay the chain and bind exact fee-only economics plus separate diagnostics."""
 
     _verify_chain(
         intent_journal=intent_journal,
