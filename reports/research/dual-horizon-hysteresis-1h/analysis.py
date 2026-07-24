@@ -45,30 +45,22 @@ CANONICAL_SIGNATURE = (
 MARKETS: dict[str, dict[str, Any]] = {
     "BTC-USDT": {
         "artifact_id": 8_586_473_477,
-        "artifact_zip_sha256": (
-            "44ef21be41117768f34422bff2458ef3daf1709b6335387c8ddc9d23077ebed7"
-        ),
+        "artifact_zip_sha256": ("44ef21be41117768f34422bff2458ef3daf1709b6335387c8ddc9d23077ebed7"),
         "artifact_manifest_sha256": (
             "16548b4abd0f2508a4c6646c30a04117fec7686e92b9a95028d142a2f0532216"
         ),
         "snapshot_filename": "okx-BTC-USDT-1H.csv",
-        "snapshot_sha256": (
-            "bbba1e9b36e17b03ff6aed237a4de949b4a39b1d17eaf1b4979627794acb909c"
-        ),
+        "snapshot_sha256": ("bbba1e9b36e17b03ff6aed237a4de949b4a39b1d17eaf1b4979627794acb909c"),
         "bootstrap_seed": 20_260_724_14,
     },
     "ETH-USDT": {
         "artifact_id": 8_586_463_176,
-        "artifact_zip_sha256": (
-            "fa13b5333b4bdfae02fc653351ea25f203e953315dd70d318cb47a82341c528d"
-        ),
+        "artifact_zip_sha256": ("fa13b5333b4bdfae02fc653351ea25f203e953315dd70d318cb47a82341c528d"),
         "artifact_manifest_sha256": (
             "95d9535f9e4badd736844f3a31e8d43e067032e32b44e406affa0932dc190aa8"
         ),
         "snapshot_filename": "okx-ETH-USDT-1H.csv",
-        "snapshot_sha256": (
-            "37f33ce7a55786a10f4c8e0f7ff1c870f331792b6ba1712229008480498ea236"
-        ),
+        "snapshot_sha256": ("37f33ce7a55786a10f4c8e0f7ff1c870f331792b6ba1712229008480498ea236"),
         "bootstrap_seed": 20_260_724_15,
     },
 }
@@ -117,9 +109,7 @@ def verify_artifact_manifest(root: str | Path, expected_sha256: str) -> dict[str
             digest, relative_path = raw_line.split("  ", maxsplit=1)
         except ValueError as exc:
             raise ValueError(f"artifact manifest line {line_number} is malformed") from exc
-        if len(digest) != 64 or any(
-            character not in "0123456789abcdef" for character in digest
-        ):
+        if len(digest) != 64 or any(character not in "0123456789abcdef" for character in digest):
             raise ValueError(f"artifact manifest line {line_number} has an invalid digest")
         parsed_path = PurePosixPath(relative_path)
         if (
@@ -221,9 +211,7 @@ def load_market_artifact(
         pd.to_numeric,
         errors="coerce",
     )
-    if numeric_snapshot.isna().any().any() or not np.isfinite(
-        numeric_snapshot.to_numpy()
-    ).all():
+    if numeric_snapshot.isna().any().any() or not np.isfinite(numeric_snapshot.to_numpy()).all():
         raise ValueError("snapshot numeric columns must be finite")
     if (numeric_snapshot[["open", "high", "low", "close"]] <= 0.0).any().any():
         raise ValueError("snapshot prices must be positive")
@@ -250,16 +238,20 @@ def load_market_artifact(
     if len(returns) != 25_920:
         raise ValueError("walk-forward benchmark must contain exactly 25,920 OOS observations")
 
-    return snapshot, returns, {
-        "artifact_id": int(details["artifact_id"]),
-        "artifact_zip_sha256": str(details["artifact_zip_sha256"]),
-        "artifact_manifest_sha256": str(details["artifact_manifest_sha256"]),
-        "snapshot_sha256": str(details["snapshot_sha256"]),
-        "manifest_entries": len(manifest_records),
-        "source_start": snapshot.index[0].isoformat(),
-        "source_end": snapshot.index[-1].isoformat(),
-        "source_observations": len(snapshot),
-    }
+    return (
+        snapshot,
+        returns,
+        {
+            "artifact_id": int(details["artifact_id"]),
+            "artifact_zip_sha256": str(details["artifact_zip_sha256"]),
+            "artifact_manifest_sha256": str(details["artifact_manifest_sha256"]),
+            "snapshot_sha256": str(details["snapshot_sha256"]),
+            "manifest_entries": len(manifest_records),
+            "source_start": snapshot.index[0].isoformat(),
+            "source_end": snapshot.index[-1].isoformat(),
+            "source_observations": len(snapshot),
+        },
+    )
 
 
 def build_dual_horizon_frame(
@@ -415,26 +407,18 @@ def calendar_stability(frame: pd.DataFrame, frequency: str) -> dict[str, Any]:
         start = period.start_time.tz_localize("UTC")
         end = period.end_time.floor("h").tz_localize("UTC")
         expected = int((end - start) / pd.Timedelta(hours=1)) + 1
-        complete = (
-            len(subset) == expected
-            and subset.index[0] == start
-            and subset.index[-1] == end
-        )
+        complete = len(subset) == expected and subset.index[0] == start and subset.index[-1] == end
         records.append(
             {
                 "period": str(period),
                 "observations": len(subset),
                 "expected_observations": expected,
                 "complete": complete,
-                "total_return": float(
-                    np.prod(1.0 + subset["strategy_return"].to_numpy()) - 1.0
-                ),
+                "total_return": float(np.prod(1.0 + subset["strategy_return"].to_numpy()) - 1.0),
             }
         )
     complete_records = [record for record in records if bool(record["complete"])]
-    profitable = [
-        record for record in complete_records if float(record["total_return"]) > 0.0
-    ]
+    profitable = [record for record in complete_records if float(record["total_return"]) > 0.0]
     minimum_profitable = math.ceil(len(complete_records) / 2)
     return {
         "records": records,
@@ -523,9 +507,7 @@ def capacity_metrics(snapshot: pd.DataFrame, frame: pd.DataFrame) -> dict[str, A
         "breach_observations": int(breach.sum()),
         "breach_share": float(breach.sum() / max(1, adjustment.sum())),
         "maximum_participation": float(np.nanmax(participation[adjustment])),
-        "maximum_supported_initial_capital_usd": float(
-            np.nanmin(supported_capital[adjustment])
-        ),
+        "maximum_supported_initial_capital_usd": float(np.nanmin(supported_capital[adjustment])),
         "passes": int(breach.sum()) == 0,
     }
 
@@ -547,9 +529,7 @@ def paired_bootstrap(
     observed_deltas: dict[str, dict[str, float]] = {}
     distributions: dict[str, dict[str, list[float]]] = {}
     for benchmark, column in BENCHMARK_COLUMNS.items():
-        benchmark_metrics = metrics_from_returns(
-            benchmark_returns[column].to_numpy(dtype=float)
-        )
+        benchmark_metrics = metrics_from_returns(benchmark_returns[column].to_numpy(dtype=float))
         observed_deltas[benchmark] = {
             metric: observed_candidate[metric] - benchmark_metrics[metric]
             for metric in ("sharpe", "calmar")
@@ -683,9 +663,7 @@ def build_result(btc_root: str | Path, eth_root: str | Path) -> dict[str, Any]:
         "BTC-USDT": evaluate_market(btc_root, "BTC-USDT"),
         "ETH-USDT": evaluate_market(eth_root, "ETH-USDT"),
     }
-    joint_retrospective = all(
-        bool(details["retrospective_passes"]) for details in markets.values()
-    )
+    joint_retrospective = all(bool(details["retrospective_passes"]) for details in markets.values())
     prospective_diagnostics = {
         "maker_fill_quality": "blocked_no_prospective_attempts",
         "no_fill_rate": "blocked_no_prospective_attempts",
