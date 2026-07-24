@@ -43,9 +43,7 @@ def _write_evidence(output: Path) -> None:
         "aggregate_metrics": aggregate,
         "cost_stress_metrics": {"1x": aggregate.copy()},
     }
-    (output / "effective_config.json").write_text(
-        json.dumps(effective), encoding="utf-8"
-    )
+    (output / "effective_config.json").write_text(json.dumps(effective), encoding="utf-8")
     (output / "walk_forward.json").write_text(json.dumps(report), encoding="utf-8")
 
 
