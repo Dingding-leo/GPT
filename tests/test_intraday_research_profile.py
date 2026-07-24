@@ -91,7 +91,14 @@ def test_workflow_gates_persisted_fee_profile_before_artifact_hashing() -> None:
     enforcement_block = workflow[enforcement:manifest]
     manifest_block = workflow[manifest:upload]
 
-    assert report_verification < profile_verification < blocker_summary < enforcement < manifest < upload
+    assert (
+        report_verification
+        < profile_verification
+        < blocker_summary
+        < enforcement
+        < manifest
+        < upload
+    )
     assert profile_block.count("python scripts/verify_intraday_1h_profile.py") == 1
     assert profile_block.count('--output-dir "reports/okx/1h/${{ matrix.inst_id }}"') == 1
     assert summary_block.count("python scripts/build_intraday_1h_promotion_gate.py") == 1
