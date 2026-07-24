@@ -198,7 +198,7 @@ def build_architecture(source: pd.DataFrame, spec: ArchitectureSpec) -> pd.DataF
         leader = str(row_momentum.idxmax())
         if float(row_momentum[leader]) <= 0.0:
             continue
-        realized_volatility = float(row_volatilityleader])
+        realized_volatility = float(row_volatility[leader])
         if not math.isfinite(realized_volatility) or realized_volatility <= 0.0:
             continue
         size = min(1.0, spec.target_volatility / realized_volatility)
@@ -280,8 +280,8 @@ def build_benchmarks(source: pd.DataFrame) -> dict[str, pd.DataFrame]:
     eth_vol_target = (0.5 * (TARGET_VOLATILITY / eth_vol).clip(upper=1.0)).fillna(0.0)
     volatility_targeted = _build_position_path(source, btc_vol_target, eth_vol_target)
 
-    btc_trend = (source["btc_close"].divide(source["btc_close"].shift(REGIME_LOOKBACK)) - 1.0)
-    eth_trend = (source["eth_close"].divide(source["eth_close"].shift(REGIME_LOOKBACK)) - 1.0)
+    btc_trend = source["btc_close"].divide(source["btc_close"].shift(REGIME_LOOKBACK)) - 1.0
+    eth_trend = source["eth_close"].divide(source["eth_close"].shift(REGIME_LOOKBACK)) - 1.0
     simple_trend = _build_position_path(
         source,
         0.5 * (btc_trend > 0.0).astype(float),
@@ -298,7 +298,9 @@ def evaluation_slice(frame: pd.DataFrame) -> pd.DataFrame:
     evaluated = frame.loc[EVALUATION_START:EVALUATION_END].copy()
     expected = int((EVALUATION_END - EVALUATION_START) / pd.Timedelta(hours=1)) + 1
     if len(evaluated) != expected:
-        raise ValueError(f"evaluation window must contain {expected} rows, observed {len(evaluated)}")
+        raise ValueError(
+            f"evaluation window must contain {expected} rows, observed {len(evaluated)}"
+        )
     return evaluated
 
 
@@ -311,7 +313,10 @@ def maximum_drawdown(returns: np.ndarray) -> float:
     return float(drawdowns.min())
 
 
-def performance_metrics(returns: pd.Series | np.ndarray, turnover: pd.Series | np.ndarray | None = None) -> dict[str, float]:
+def performance_metrics(
+    returns: pd.Series | np.ndarray,
+    turnover: pd.Series | np.ndarray | None = None,
+) -> dict[str, float]:
     values = np.asarray(returns, dtype=float)
     if values.ndim != 1 or values.size == 0 or not np.isfinite(values).all():
         raise ValueError("returns must be a non-empty finite vector")
@@ -324,7 +329,7 @@ def performance_metrics(returns: pd.Series | np.ndarray, turnover: pd.Series | n
     std = float(values.std(ddof=0))
     sharpe = float(math.sqrt(ANNUALIZATION) * mean / std) if std > 0 else 0.0
     downside = np.minimum(values, 0.0)
-    downside_deviation = float(math.sqrt(np.mean(downside ** 2)))
+    downside_deviation = float(math.sqrt(np.mean(downside**2)))
     sortino = (
         float(math.sqrt(ANNUALIZATION) * mean / downside_deviation)
         if downside_deviation > 0
@@ -394,11 +399,11 @@ def calendar_statistics(frame: pd.DataFrame) -> dict[str, Any]:
     series = frame["net_return"]
     months: list[dict[str, Any]] = []
     month_keys = pd.MultiIndex.from_arrays([series.index.year, series.index.month])
-    for (year, month), group in series.groupby(_month_keys):
+    for (year, month), group in series.groupby(month_keys):
         complete = _complete_month(pd.DatetimeIndex(group.index))
         months.append(
             {
-                "period": f"{int(year)}{0int(month)}:02d}",
+                "period": f"{int(year):04d}-{int(month):02d}",
                 "complete": complete,
                 "return": float(np.prod(1.0 + group.to_numpy(dtype=float)) - 1.0),
             }
@@ -426,7 +431,7 @@ def calendar_statistics(frame: pd.DataFrame) -> dict[str, Any]:
 
 
 def activity_statistics(frame: pd.DataFrame) -> dict[str, Any]:
-    active = (frame[["btc_position", "eth_position"]].abs().sum(axis=1) > POSITION_EPSILON)
+    active = frame[["btc_position", "eth_position"]].abs().sum(axis=1) > POSITION_EPSILON
     starts = active & ~active.shift(1, fill_value=False)
     exits = ~active & active.shift(1, fill_value=False)
     start_positions = list(np.flatnonzero(starts.to_numpy()))
@@ -464,7 +469,9 @@ def activity_statistics(frame: pd.DataFrame) -> dict[str, Any]:
         "median_holding_hours": float(np.median(holding_hours)) if holding_hours else 0.0,
         "mean_holding_hours": float(np.mean(holding_hours)) if holding_hours else 0.0,
         "maximum_holding_hours": max(holding_hours, default=0),
-        "completed_episode_hit_rate": positives / len(completed_returns) if completed_returns else 0.0,
+        "completed_episode_hit_rate": (
+            positives / len(completed_returns) if completed_returns else 0.0
+        ),
         "completed_episode_profit_factor": float(profit_factor),
         "leader_state_changes": leader_switches,
     }
@@ -519,4 +526,267 @@ def capacity_statistics(source: pd.DataFrame, frame: pd.DataFrame) -> dict[str, 
 def _bootstrap_indices(rng: np.random.Generator, length: int, block: int) -> np.ndarray:
     blocks = math.ceil(length / block)
     starts = rng.integers(0, length - block + 1, size=blocks)
-    return np.concatenate([nMÄ
+    return np.concatenate([np.arange(start, start + block) for start in starts])[:length]
+
+
+def paired_bootstrap(
+    strategy: pd.Series,
+    benchmark: pd.Series,
+    *,
+    seed: int,
+) -> dict[str, Any]:
+    strategy_values = strategy.to_numpy(dtype=float)
+    benchmark_values = benchmark.to_numpy(dtype=float)
+    if strategy_values.shape != benchmark_values.shape:
+        raise ValueError("strategy and benchmark returns must align")
+    point_strategy = performance_metrics(strategy_values)
+    point_benchmark = performance_metrics(benchmark_values)
+    point = {
+        "sharpe": point_strategy["sharpe"] - point_benchmark["sharpe"],
+        "calmar": point_strategy["calmar"] - point_benchmark["calmar"],
+    }
+    rng = np.random.default_rng(seed)
+    sharpe_deltas = np.empty(RESAMPLES, dtype=float)
+    calmar_deltas = np.empty(RESAMPLES, dtype=float)
+    for index in range(RESAMPLES):
+        sample = _bootstrap_indices(rng, len(strategy_values), BLOCK_LENGTH)
+        strategy_metrics = performance_metrics(strategy_values[sample])
+        benchmark_metrics = performance_metrics(benchmark_values[sample])
+        sharpe_deltas[index] = strategy_metrics["sharpe"] - benchmark_metrics["sharpe"]
+        calmar_deltas[index] = strategy_metrics["calmar"] - benchmark_metrics["calmar"]
+    alpha = (1.0 - CONFIDENCE) / 2.0
+    return {
+        "seed": seed,
+        "block_length": BLOCK_LENGTH,
+        "resamples": RESAMPLES,
+        "confidence": CONFIDENCE,
+        "sharpe": {
+            "point_delta": point["sharpe"],
+            "lower": float(np.quantile(sharpe_deltas, alpha)),
+            "upper": float(np.quantile(sharpe_deltas, 1.0 - alpha)),
+            "probability_positive": float(np.mean(sharpe_deltas > 0.0)),
+        },
+        "calmar": {
+            "point_delta": point["calmar"],
+            "lower": float(np.quantile(calmar_deltas, alpha)),
+            "upper": float(np.quantile(calmar_deltas, 1.0 - alpha)),
+            "probability_positive": float(np.mean(calmar_deltas > 0.0)),
+        },
+    }
+
+
+def make_result(artifact_dir: str | Path) -> dict[str, Any]:
+    source = load_source(artifact_dir)
+    full_strategy = build_architecture(source, ArchitectureSpec())
+    strategy = evaluation_slice(full_strategy)
+    benchmarks_full = build_benchmarks(source)
+    benchmarks = {name: evaluation_slice(frame) for name, frame in benchmarks_full.items()}
+
+    strategy_metrics = performance_metrics(strategy["net_return"], strategy["turnover"])
+    strategy_metrics.update(
+        {
+            "gross_total_return": float(np.prod(1.0 + strategy["gross_return"]) - 1.0),
+            "exchange_fee_sum": float(strategy["exchange_fee"].sum()),
+            "average_gross_exposure": float(
+                strategy[["btc_position", "eth_position"]].abs().sum(axis=1).mean()
+            ),
+        }
+    )
+    benchmark_metrics = {
+        name: performance_metrics(frame["net_return"], frame["turnover"])
+        for name, frame in benchmarks.items()
+    }
+    benchmark_inference = {
+        name: paired_bootstrap(
+            strategy["net_return"],
+            frame["net_return"],
+            seed=20260724150 + offset,
+        )
+        for offset, (name, frame) in enumerate(benchmarks.items(), start=1)
+    }
+
+    folds = fold_statistics(strategy)
+    calendar = calendar_statistics(strategy)
+    activity = activity_statistics(strategy)
+    # Capacity evaluates strict OOS adjustments while retaining pre-OOS data for
+    # the lagged liquidity window.
+    evaluated_full_strategy = full_strategy.loc[EVALUATION_START:EVALUATION_END]
+    capacity = capacity_statistics(source, evaluated_full_strategy)
+
+    neighbourhood_specs = {
+        "momentum_120h": ArchitectureSpec(momentum_lookback=120),
+        "momentum_240h": ArchitectureSpec(momentum_lookback=240),
+        "decision_cadence_3h": ArchitectureSpec(decision_cadence_hours=3),
+        "decision_cadence_12h": ArchitectureSpec(decision_cadence_hours=12),
+    }
+    neighbourhoods: dict[str, Any] = {}
+    for name, spec in neighbourhood_specs.items():
+        path = evaluation_slice(build_architecture(source, spec))
+        neighbourhoods[name] = performance_metrics(path["net_return"], path["turnover"])
+
+    tail = {
+        "strategy_expected_shortfall_5pct": expected_shortfall(strategy["net_return"]),
+        "volatility_targeted_expected_shortfall_5pct": expected_shortfall(
+            benchmarks["equal_weight_volatility_targeted_long"]["net_return"]
+        ),
+    }
+    tail["passes"] = (
+        tail["strategy_expected_shortfall_5pct"]
+        > tail["volatility_targeted_expected_shortfall_5pct"]
+    )
+
+    benchmark_pass = all(
+        inference[metric]["lower"] > 0.0
+        for inference in benchmark_inference.values()
+        for metric in ("sharpe", "calmar")
+    )
+    fold_pass = (
+        folds["profitable_folds"] >= 7 and folds["largest_positive_fold_contribution"] <= 0.50
+    )
+    month_pass = calendar["complete_months"] >= 35 and calendar["profitable_complete_months"] >= 18
+    year_pass = (
+        calendar["complete_years"] >= 2
+        and calendar["profitable_complete_years"] == calendar["complete_years"]
+    )
+    activity_pass = (
+        12.0 <= strategy_metrics["annualized_turnover"] <= 150.0
+        and activity["annualized_completed_episodes"] >= 24.0
+        and 4.0 <= activity["median_holding_hours"] <= 168.0
+        and activity["completed_episode_profit_factor"] > 1.0
+    )
+    neighbourhood_pass = all(
+        values["total_return"] > 0.0 and values["sharpe"] > 0.50
+        for values in neighbourhoods.values()
+    )
+    capacity_pass = capacity["breach_components"] == 0
+    net_viability_pass = strategy_metrics["total_return"] > 0.0 and strategy_metrics["sharpe"] > 0.0
+    retrospective_pass = all(
+        (
+            net_viability_pass,
+            benchmark_pass,
+            fold_pass,
+            month_pass,
+            year_pass,
+            activity_pass,
+            neighbourhood_pass,
+            tail["passes"],
+            capacity_pass,
+        )
+    )
+
+    return {
+        "schema_version": 1,
+        "canonical_signature": CANONICAL_SIGNATURE,
+        "hypothesis": (
+            "A fixed cross-sectional 1H leader-rotation architecture clears every "
+            "retrospective BTC/ETH architecture-freeze gate at exactly 5 bps one-way "
+            "and is eligible for prospective post-only paper evaluation."
+        ),
+        "candidate_accounting": {
+            "architecture_candidates_searched": 1,
+            "passed": int(retrospective_pass),
+            "rejected": int(not retrospective_pass),
+            "neighbourhood_paths": len(neighbourhoods),
+        },
+        "source": {
+            **SOURCE,
+            "provider": "OKX",
+            "market_type": "spot",
+            "bar": "1H",
+            "observations_per_market": int(len(source)),
+            "source_start": source.index[0].isoformat(),
+            "source_end": source.index[-1].isoformat(),
+            "evaluation_start": EVALUATION_START.isoformat(),
+            "evaluation_end": EVALUATION_END.isoformat(),
+            "evaluation_observations": int(len(strategy)),
+        },
+        "architecture": {
+            "momentum_lookback_hours": MOMENTUM_LOOKBACK,
+            "market_regime_lookback_hours": REGIME_LOOKBACK,
+            "volatility_lookback_hours": VOLATILITY_LOOKBACK,
+            "decision_cadence_hours": DECISION_CADENCE_HOURS,
+            "target_volatility": TARGET_VOLATILITY,
+            "maximum_gross_position": 1.0,
+            "transaction_cost_bps_one_way": TRANSACTION_COST_BPS,
+            "additional_costs_in_pnl": [],
+            "execution_delay_bars": 1,
+        },
+        "strategy_metrics": strategy_metrics,
+        "benchmark_metrics": benchmark_metrics,
+        "benchmark_inference": benchmark_inference,
+        "fold_stability": folds,
+        "calendar_stability": calendar,
+        "activity": activity,
+        "neighbourhoods": neighbourhoods,
+        "tail_risk": tail,
+        "capacity": capacity,
+        "gates": {
+            "net_5bps_viability": net_viability_pass,
+            "benchmark_relative_risk_adjusted": benchmark_pass,
+            "fold_stability": fold_pass,
+            "month_stability": month_pass,
+            "year_stability": year_pass,
+            "turnover_holding_trade_sufficiency": activity_pass,
+            "parameter_neighbourhood_stability": neighbourhood_pass,
+            "tail_risk": bool(tail["passes"]),
+            "capacity_usd100k": capacity_pass,
+            "maker_fill_quality": "blocked_no_prospective_order_lifecycle_evidence",
+            "no_fill_partial_fill_timeout": "blocked_no_prospective_order_lifecycle_evidence",
+            "adverse_selection": "blocked_no_prospective_order_lifecycle_evidence",
+            "latency": "blocked_no_prospective_order_lifecycle_evidence",
+            "prospective_paper_performance": "blocked_retrospective_architecture_failed",
+            "retrospective_architecture_freeze": retrospective_pass,
+            "paper_testable": False,
+            "live_eligible": False,
+        },
+        "verdict": "supported" if retrospective_pass else "rejected",
+        "rejection_reasons": [
+            name
+            for name, passed in (
+                ("benchmark_relative_risk_adjusted", benchmark_pass),
+                ("fold_stability", fold_pass),
+                ("month_stability", month_pass),
+                ("year_stability", year_pass),
+                ("turnover_holding_trade_sufficiency", activity_pass),
+                ("parameter_neighbourhood_stability", neighbourhood_pass),
+                ("tail_risk", bool(tail["passes"])),
+                ("capacity_usd100k", capacity_pass),
+            )
+            if not passed
+        ],
+        "limitations": [
+            (
+                "BTC-USDT and ETH-USDT are development markets and this fixed result "
+                "must not be used for nearby threshold tuning."
+            ),
+            "Close-to-close one-bar-delayed accounting does not prove post-only maker fills.",
+            "The hourly quote-volume capacity proxy is not queue position or executable depth.",
+            (
+                "Maker fill quality, no-fill, partial fill, timeout, adverse selection, "
+                "latency, and prospective paper performance remain separate blocked "
+                "diagnostics."
+            ),
+            (
+                "Moving-block concatenation creates artificial joins while preserving "
+                "dependence within 168-hour blocks."
+            ),
+        ],
+    }
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--artifact-dir", type=Path, required=True)
+    parser.add_argument("--output", type=Path, required=True)
+    args = parser.parse_args()
+    result = make_result(args.artifact_dir)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(
+        json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n",
+        encoding="utf-8",
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

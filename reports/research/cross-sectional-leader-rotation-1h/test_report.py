@@ -16,7 +16,9 @@ _FIXTURE_DIR = _ROOT / "fixture"
 
 
 def _load_analysis():
-    spec = importlib.util.spec_from_file_location("cross_sectional_leader_rotation_1h", _ANALYSIS_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "cross_sectional_leader_rotation_1h", _ANALYSIS_PATH
+    )
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
@@ -56,7 +58,12 @@ def test_persisted_rejection_uses_exact_five_bps_only() -> None:
 def test_real_okx_fixture_preserves_one_bar_delay_and_fee_identity() -> None:
     analysis = _load_analysis()
     source = _fixture_source()
-    spec = analysis.ArchitectureSpec(momentum_lookback=24, regime_lookback=48, volatility_lookback=24, decision_cadence_hours=6)
+    spec = analysis.ArchitectureSpec(
+        momentum_lookback=24,
+        regime_lookback=48,
+        volatility_lookback=24,
+        decision_cadence_hours=6,
+    )
     path = analysis.build_architecture(source, spec)
     np.testing.assert_allclose(
         path["btc_position"].iloc[1:].to_numpy(),
@@ -87,7 +94,12 @@ def test_real_okx_fixture_preserves_one_bar_delay_and_fee_identity() -> None:
 def test_future_price_change_cannot_change_earlier_targets() -> None:
     analysis = _load_analysis()
     source = _fixture_source()
-    spec = analysis.ArchitectureSpec(momentum_lookback=24, regime_lookback=48, volatility_lookback=24, decision_cadence_hours=6)
+    spec = analysis.ArchitectureSpec(
+        momentum_lookback=24,
+        regime_lookback=48,
+        volatility_lookback=24,
+        decision_cadence_hours=6,
+    )
     baseline = analysis.build_architecture(source, spec)
     changed = source.copy()
     changed.iloc[-1, changed.columns.get_loc("btc_close")] *= 1.25
