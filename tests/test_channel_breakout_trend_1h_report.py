@@ -68,6 +68,7 @@ def test_persisted_result_records_single_rejected_candidate() -> None:
     assert accounting["architecture_candidates_searched"] == 1
     assert accounting["architecture_candidates_passed"] == 0
     assert accounting["architecture_candidates_rejected"] == 1
+    assert set(result["markets"]) == {"BTC-USDT", "ETH-USDT"}
     assert result["verdict"] == "rejected"
     assert result["paper_testable"] is False
     assert result["live_eligible"] is False
