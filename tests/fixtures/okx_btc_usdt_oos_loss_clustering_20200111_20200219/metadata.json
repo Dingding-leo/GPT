@@ -1,0 +1,22 @@
+{
+  "bar": "1Dutc",
+  "columns": [
+    "timestamp",
+    "strategy_return",
+    "benchmark_volatility_targeted_long_return"
+  ],
+  "end": "2020-02-19 00:00:00+00:00",
+  "fixture_sha256": "20a7125cafcf4c4b88275193b6afcce9d7ea570ba7d60402b3cab301bebb6503",
+  "instrument_id": "BTC-USDT",
+  "market_type": "spot",
+  "note": "Unchanged first 40 aligned OOS rows from the immutable workflow artifact; no values generated or modified.",
+  "provider": "OKX",
+  "rows": 40,
+  "source_artifact_id": 8555542657,
+  "source_artifact_name": "quant-research-source-1737-attempt-1",
+  "source_artifact_sha256": "4dbb277373d818c84487f021a2c02f268e95714c8aaf6c70672f3cd068f3c7c3",
+  "source_code_commit": "f25d1cb2a8068dc49c0e5e6c83c522a445f3ef28",
+  "source_returns_csv_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+  "source_workflow_run_id": 29987295837,
+  "start": "2020-01-11 00:00:00+00:00"
+}
