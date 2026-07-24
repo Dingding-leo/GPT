@@ -429,7 +429,7 @@ class PaperExecutionAttempt:
             )
         if payload["schema_version"] != _LEGACY_SCHEMA_VERSION:
             raise ValueError(
-                f"unsupported legacy paper execution attempt schema "
+                "unsupported legacy paper execution attempt schema "
                 f"{payload['schema_version']!r}"
             )
         if payload["fill_price_convention"] != _FILL_PRICE_CONVENTION:
