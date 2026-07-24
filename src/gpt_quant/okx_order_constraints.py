@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import re
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, localcontext
 
 from .execution_quote import ExecutionQuoteSnapshot
 from .okx_instruments import OKXSpotInstrumentSnapshot
@@ -137,15 +137,17 @@ def validate_okx_paper_execution_attempt_constraints(
     attempt: PaperExecutionAttempt,
     *,
     maximum_snapshot_age_ms: int,
+    minimum_paper_quote_notional: str,
 ) -> None:
     """Bind one paper attempt to exact OKX instrument and touch-capacity evidence.
 
     This offline gate performs no network or account operation. It proves that the
     attempt references the supplied quote and immutable instrument response, that the
-    requested quantity was valid when submitted, and that any claimed fill is aligned
-    to the exchange lot and tick size and no larger than the visible same-side
-    top-of-book quantity. It does not infer deeper liquidity, minimum quote notional,
-    slippage or impact.
+    requested quantity was valid when submitted, meets one explicit paper-policy quote
+    notional floor at the conservative touch, and that any claimed fill is aligned to the
+    exchange lot and tick size and no larger than visible same-side top-of-book quantity.
+    The floor is a caller-declared paper constraint, not an inferred OKX exchange minimum.
+    This gate does not infer deeper liquidity, slippage or impact.
     """
 
     if not isinstance(snapshot, OKXSpotInstrumentSnapshot):
@@ -178,6 +180,22 @@ def validate_okx_paper_execution_attempt_constraints(
         maximum_snapshot_age_ms=maximum_snapshot_age_ms,
         base_quantity=attempt.requested_base_quantity,
     )
+
+    _, minimum_notional = _positive_canonical_decimal(
+        minimum_paper_quote_notional,
+        field="minimum_paper_quote_notional",
+    )
+    requested = Decimal(attempt.requested_base_quantity)
+    reference_touch_price = Decimal(quote.ask_price if attempt.side == "buy" else quote.bid_price)
+    with localcontext() as context:
+        context.prec = max(
+            len(requested.as_tuple().digits) + len(reference_touch_price.as_tuple().digits),
+            len(minimum_notional.as_tuple().digits),
+            28,
+        )
+        requested_quote_notional = requested * reference_touch_price
+    if requested_quote_notional < minimum_notional:
+        raise ValueError("requested quote notional is below the declared paper minimum")
 
     filled = Decimal(attempt.filled_base_quantity)
     if filled % snapshot.lot_size_decimal != 0:
