@@ -41,9 +41,7 @@ def _canonical_json(value: dict[str, Any]) -> str:
 def _source_binding(path: Path, provenance: dict[str, Any]) -> dict[str, Any]:
     return {
         "source_provenance_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-        "source_response_inventory_sha256": provenance[
-            "source_response_inventory_sha256"
-        ],
+        "source_response_inventory_sha256": provenance["source_response_inventory_sha256"],
         "source_response_count": provenance["source_response_count"],
         "source_response_total_bytes": provenance["source_response_total_bytes"],
         "normalized_csv_sha256": provenance["normalized_csv_sha256"],
