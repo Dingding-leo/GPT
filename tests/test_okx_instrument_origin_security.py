@@ -7,7 +7,8 @@ from email.message import Message
 from io import BytesIO
 from pathlib import Path
 from urllib.error import HTTPError
-from urllib.request import BaseHandler, Request, addinfourl, build_opener as std_build_opener
+from urllib.request import BaseHandler, Request, addinfourl
+from urllib.request import build_opener as std_build_opener
 
 import pandas as pd
 import pytest
