@@ -163,8 +163,9 @@ def _load_market_snapshot(
     snapshot = replay_persisted_okx_one_hour_snapshot(snapshot_dir, inst_id=inst_id)
     metadata = snapshot.metadata
     persisted_base_url = metadata.get("base_url")
-    if not isinstance(persisted_base_url, str) or persisted_base_url.rstrip("/") != base_url.rstrip(
-        "/"
+    if (
+        not isinstance(persisted_base_url, str)
+        or persisted_base_url.rstrip("/") != base_url.rstrip("/")
     ):
         raise ValueError("persisted OKX 1H snapshot base URL does not match executed config")
     if start is not None and snapshot.candles.index[0] != _utc_timestamp(start, field="start"):
