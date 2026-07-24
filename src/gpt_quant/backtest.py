@@ -6,7 +6,7 @@ import pandas as pd
 
 from .config import StrategyConfig
 from .data import validate_prices
-from .features import build_target_position
+from .features import _build_target_position_from_validated
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,7 +25,7 @@ def run_backtest(
     """Run a one-bar-delayed, transaction-cost-aware close-to-close backtest."""
 
     clean = validate_prices(prices)
-    target_position = build_target_position(clean, config)
+    target_position = _build_target_position_from_validated(clean, config)
 
     # A target calculated at close t can only earn return t -> t+1.
     position = target_position.shift(1).fillna(0.0).rename("position")

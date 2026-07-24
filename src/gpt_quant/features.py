@@ -7,23 +7,20 @@ from .config import StrategyConfig
 from .data import validate_prices
 
 
-def build_target_position(prices: pd.Series, config: StrategyConfig) -> pd.Series:
-    """Build the close-to-close target position using information through time t.
+def _build_target_position_from_validated(
+    clean: pd.Series,
+    config: StrategyConfig,
+) -> pd.Series:
+    """Build target positions from an already validated price series."""
 
-    The backtester must lag this target by one bar before applying it to returns.
-    """
-
-    clean = validate_prices(prices)
     log_returns = np.log(clean).diff()
 
-    trend_mean = log_returns.rolling(
+    trend_window = log_returns.rolling(
         config.momentum_lookback,
         min_periods=config.momentum_lookback,
-    ).mean()
-    trend_std = log_returns.rolling(
-        config.momentum_lookback,
-        min_periods=config.momentum_lookback,
-    ).std(ddof=0)
+    )
+    trend_mean = trend_window.mean()
+    trend_std = trend_window.std(ddof=0)
     trend_score = trend_mean / trend_std.replace(0.0, np.nan) * np.sqrt(config.momentum_lookback)
 
     recent_return = log_returns.rolling(
@@ -46,12 +43,10 @@ def build_target_position(prices: pd.Series, config: StrategyConfig) -> pd.Serie
         name="directional_signal",
     )
 
-    realized_volatility = log_returns.rolling(
-        config.volatility_lookback,
-        min_periods=config.volatility_lookback,
-    ).std(ddof=0) * np.sqrt(config.annualization)
+    realized_volatility = risk_scale * np.sqrt(config.annualization)
     volatility_scalar = (config.target_volatility / realized_volatility.replace(0.0, np.nan)).clip(
-        lower=0.0, upper=config.max_abs_position
+        lower=0.0,
+        upper=config.max_abs_position,
     )
 
     target = (directional_signal * volatility_scalar).clip(
@@ -59,3 +54,13 @@ def build_target_position(prices: pd.Series, config: StrategyConfig) -> pd.Serie
         config.max_abs_position,
     )
     return target.replace([np.inf, -np.inf], np.nan).fillna(0.0).rename("target_position")
+
+
+def build_target_position(prices: pd.Series, config: StrategyConfig) -> pd.Series:
+    """Build the close-to-close target position using information through time t.
+
+    The backtester must lag this target by one bar before applying it to returns.
+    """
+
+    clean = validate_prices(prices)
+    return _build_target_position_from_validated(clean, config)
