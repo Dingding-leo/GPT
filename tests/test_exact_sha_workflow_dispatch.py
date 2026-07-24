@@ -1,3 +1,5 @@
+import os
+import subprocess
 from pathlib import Path
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
@@ -59,6 +61,45 @@ def test_coverage_artifact_persists_validated_tested_sha() -> None:
     assert "grep -Eq '^[0-9a-f]{40}$' " + sidecar in workflow
     assert f'test "$(cat {sidecar})" = "$EXPECTED_TESTED_SHA"' in workflow
     assert workflow.index(write_marker) < workflow.index(upload_marker)
+
+
+def test_coverage_sha_sidecar_rejects_exact_boundary_corruption(tmp_path: Path) -> None:
+    output_dir = tmp_path / "coverage"
+    output_dir.mkdir()
+    validation_script = r"""
+set -euo pipefail
+printf '%s\n' "$EXPECTED_TESTED_SHA" > "$OUTPUT_DIR/tested-sha.txt"
+test "$(wc -l < "$OUTPUT_DIR/tested-sha.txt")" -eq 1
+grep -Eq '^[0-9a-f]{40}$' "$OUTPUT_DIR/tested-sha.txt"
+test "$(cat "$OUTPUT_DIR/tested-sha.txt")" = "$EXPECTED_TESTED_SHA"
+"""
+    env = os.environ.copy()
+    env["OUTPUT_DIR"] = str(output_dir)
+
+    def run_validation(candidate: str) -> subprocess.CompletedProcess[str]:
+        env["EXPECTED_TESTED_SHA"] = candidate
+        return subprocess.run(
+            ["bash", "-c", validation_script],
+            capture_output=True,
+            check=False,
+            env=env,
+            text=True,
+        )
+
+    valid_sha = "a" * 40
+    valid = run_validation(valid_sha)
+    assert valid.returncode == 0, valid.stderr
+    assert (output_dir / "tested-sha.txt").read_bytes() == f"{valid_sha}\n".encode()
+
+    corrupt_candidates = {
+        "one_character_short": "a" * 39,
+        "one_character_long": "a" * 41,
+        "uppercase": "A" * 40,
+        "embedded_newline": f"{'a' * 20}\n{'a' * 20}",
+    }
+    for boundary, candidate in corrupt_candidates.items():
+        result = run_validation(candidate)
+        assert result.returncode != 0, boundary
 
 
 def test_exact_sha_dispatch_preserves_public_read_only_boundaries() -> None:
