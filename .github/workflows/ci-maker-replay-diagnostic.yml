@@ -30,13 +30,15 @@ jobs:
           python -m pip install -e ".[dev]"
           ruff check --fix \
             scripts/build_intraday_1h_cross_market_gate.py \
-            tests/test_intraday_1h_cross_market_gate.py
+            tests/test_intraday_1h_cross_market_gate.py \
+            > /tmp/ruff-fix.txt 2>&1 || true
           ruff format \
             scripts/build_intraday_1h_cross_market_gate.py \
             tests/test_intraday_1h_cross_market_gate.py
           mkdir -p diagnostic/scripts diagnostic/tests
           cp scripts/build_intraday_1h_cross_market_gate.py diagnostic/scripts/
           cp tests/test_intraday_1h_cross_market_gate.py diagnostic/tests/
+          cp /tmp/ruff-fix.txt diagnostic/ruff-fix.txt
           ruff check \
             scripts/build_intraday_1h_cross_market_gate.py \
             tests/test_intraday_1h_cross_market_gate.py \
