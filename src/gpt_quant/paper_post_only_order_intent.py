@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Literal
 
+from .execution_intent import TargetPositionIntent
 from .execution_quote import ExecutionQuoteSnapshot
 from .paper_order_decision import PaperOrderDecision
 
@@ -234,10 +235,12 @@ class PaperPostOnlyOrderIntent:
     def assert_reconstructs(
         self,
         decision: PaperOrderDecision,
+        target: TargetPositionIntent,
         quote: ExecutionQuoteSnapshot,
     ) -> None:
         expected = build_paper_post_only_order_intent(
             decision,
+            target,
             quote,
             created_at_utc=self.created_at_utc,
             expires_at_utc=self.expires_at_utc,
@@ -245,14 +248,14 @@ class PaperPostOnlyOrderIntent:
             limit_price=self.limit_price,
         )
         if expected != self:
-            raise ValueError(f"{_ERROR} does not match its decision and quote evidence")
+            raise ValueError(f"{_ERROR} does not match its decision, target, and quote evidence")
 
     @classmethod
     def from_json_bytes(cls, value: bytes) -> PaperPostOnlyOrderIntent:
         try:
             text = value.decode("utf-8")
             payload = json.loads(text, object_pairs_hook=_reject_duplicates)
-        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        except (UnicodeDecodeError, ValueError) as exc:
             raise ValueError(f"{_ERROR} JSON is unreadable") from exc
         if not isinstance(payload, Mapping) or set(payload) != _SERIALIZED_FIELDS:
             raise ValueError(f"{_ERROR} fields do not match schema")
@@ -278,6 +281,7 @@ class PaperPostOnlyOrderIntent:
 
 def build_paper_post_only_order_intent(
     decision: PaperOrderDecision,
+    target: TargetPositionIntent,
     quote: ExecutionQuoteSnapshot,
     *,
     created_at_utc: datetime | str,
@@ -289,32 +293,45 @@ def build_paper_post_only_order_intent(
 
     if not isinstance(decision, PaperOrderDecision):
         raise TypeError("decision must be a PaperOrderDecision")
+    if not isinstance(target, TargetPositionIntent):
+        raise TypeError("target must be a TargetPositionIntent")
     if not isinstance(quote, ExecutionQuoteSnapshot):
         raise TypeError("quote must be an ExecutionQuoteSnapshot")
     if decision.outcome != "planned" or decision.order_type != "post_only_limit":
         raise ValueError("post-only order intent requires a planned post-only limit decision")
     if decision.exchange_fee_bps != _EXCHANGE_FEE_BPS:
         raise ValueError("paper order decision exchange fee must be exactly 5 bps one-way")
-    if decision.instrument_id != quote.instrument_id:
-        raise ValueError("paper order decision instrument does not match the execution quote")
+    if decision.target_intent_id != target.intent_id:
+        raise ValueError("paper order decision does not reference the exact target intent")
+    if decision.instrument_id != target.instrument_id or target.instrument_id != quote.instrument_id:
+        raise ValueError("paper order decision instrument does not match target and quote evidence")
     if decision.market_snapshot_sha256 != quote.snapshot_id:
         raise ValueError("paper order decision does not reference the exact execution quote")
     if decision.instrument_snapshot_sha256 != quote.instrument_snapshot_sha256:
-        raise ValueError("paper order decision instrument evidence does not match the execution quote")
+        raise ValueError(
+            "paper order decision instrument evidence does not match the execution quote"
+        )
     if decision.market_observed_at_utc != quote.observed_at_utc:
         raise ValueError("paper order decision does not reproduce the quote observation time")
     if quote.received_at_utc >= decision.decided_at_utc:
         raise ValueError("execution quote must be received before the paper order decision")
 
+    created_at = _utc(created_at_utc, "created_at_utc")
+    expires_at = _utc(expires_at_utc, "expires_at_utc")
+    target.assert_active_at(decision.decided_at_utc)
+    target.assert_active_at(created_at)
+    if expires_at > target.expires_at_utc:
+        raise ValueError("post-only order intent cannot outlive its target intent")
+
     return PaperPostOnlyOrderIntent(
         decision_id=decision.decision_id,
-        target_intent_id=decision.target_intent_id,
+        target_intent_id=target.intent_id,
         quote_snapshot_id=quote.snapshot_id,
         instrument_snapshot_sha256=quote.instrument_snapshot_sha256,
         instrument_id=quote.instrument_id,
         decision_at_utc=decision.decided_at_utc,
-        created_at_utc=created_at_utc,
-        expires_at_utc=expires_at_utc,
+        created_at_utc=created_at,
+        expires_at_utc=expires_at,
         quote_observed_at_utc=quote.observed_at_utc,
         quote_received_at_utc=quote.received_at_utc,
         maximum_quote_age_ms=maximum_quote_age_ms,
