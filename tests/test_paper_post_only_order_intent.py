@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 
+from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.execution_quote import ExecutionQuoteSnapshot
 from gpt_quant.paper_order_decision import PaperOrderDecision
 from gpt_quant.paper_post_only_order_intent import (
@@ -17,6 +18,26 @@ from gpt_quant.paper_post_only_order_intent import (
 _REAL_OKX_RESPONSE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
 _REAL_OKX_INSTRUMENT_SHA256 = "fa567055978b3974e728664af9e90f52dbedf1ee6864a1cdd4cb6f6a462de521"
 _SPREAD_BPS = "0.030250824713108741127054976336292368170687253361245"
+_SOURCE_DATA_SHA256 = "429abcbe5deb56ad6c7e1790cea101644a9fedd622f40de64eec5fd1ac3c4187"
+_CONFIG_SHA256 = "6b06037376bce5df483311704f7b701c5e03a2a2735b2dd3361036fccd94da1a"
+
+
+def _target(*, config_sha256: str = _CONFIG_SHA256) -> TargetPositionIntent:
+    return TargetPositionIntent(
+        instrument_id="BTC-USDT",
+        bar="1H",
+        strategy_id="canonical-one-hour-five-bps",
+        strategy_revision="e5e7ef22a23e6673c0183f47c0398f6af490d6d1",
+        source_data_sha256=_SOURCE_DATA_SHA256,
+        config_sha256=config_sha256,
+        signal_bar_open_utc=datetime(2026, 7, 20, 23, tzinfo=UTC),
+        signal_bar_close_utc=datetime(2026, 7, 21, tzinfo=UTC),
+        decision_not_before_utc=datetime(2026, 7, 21, 0, 0, 0, 200_000, tzinfo=UTC),
+        expires_at_utc=datetime(2026, 7, 21, 1, tzinfo=UTC),
+        target_position=0.25,
+        minimum_position=0.0,
+        maximum_position=1.0,
+    )
 
 
 def _quote() -> ExecutionQuoteSnapshot:
@@ -36,14 +57,16 @@ def _quote() -> ExecutionQuoteSnapshot:
 
 def _decision(
     *,
+    target: TargetPositionIntent | None = None,
     side: str = "buy",
     order_type: str = "post_only_limit",
     exchange_fee_bps: str = "5",
     market_snapshot_sha256: str | None = None,
 ) -> PaperOrderDecision:
     quote = _quote()
+    target = target or _target()
     return PaperOrderDecision(
-        target_intent_id="1" * 64,
+        target_intent_id=target.intent_id,
         instrument_id="BTC-USDT",
         decided_at_utc=datetime(2026, 7, 21, 0, 0, 0, 400_000, tzinfo=UTC),
         market_observed_at_utc=quote.observed_at_utc,
@@ -66,33 +89,39 @@ def _decision(
 
 def _intent(
     *,
+    target: TargetPositionIntent | None = None,
     decision: PaperOrderDecision | None = None,
     created_at_utc: datetime | str = datetime(2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC),
+    expires_at_utc: datetime | str = datetime(2026, 7, 21, 0, 0, 2, tzinfo=UTC),
     maximum_quote_age_ms: int = 250,
     limit_price: str = "66113.8",
 ) -> PaperPostOnlyOrderIntent:
+    target = target or _target()
     return build_paper_post_only_order_intent(
-        decision or _decision(),
+        decision or _decision(target=target),
+        target,
         _quote(),
         created_at_utc=created_at_utc,
-        expires_at_utc=datetime(2026, 7, 21, 0, 0, 2, tzinfo=UTC),
+        expires_at_utc=expires_at_utc,
         maximum_quote_age_ms=maximum_quote_age_ms,
         limit_price=limit_price,
     )
 
 
 def test_post_only_order_intent_is_canonical_idempotent_and_reconstructable() -> None:
-    decision = _decision()
+    target = _target()
+    decision = _decision(target=target)
     quote = _quote()
-    intent = _intent(decision=decision)
+    intent = _intent(target=target, decision=decision)
     replayed = PaperPostOnlyOrderIntent.from_json_bytes(intent.to_json_bytes())
 
     assert replayed == intent
     assert replayed.time_in_force == "post_only"
     assert replayed.exchange_fee_bps == "5"
     assert replayed.limit_price == quote.bid_price
+    assert replayed.target_intent_id == target.intent_id
     assert replayed.quote_snapshot_id == quote.snapshot_id
-    replayed.assert_reconstructs(decision, quote)
+    replayed.assert_reconstructs(decision, target, quote)
 
     payload = json.loads(replayed.to_json_bytes())
     assert "spread_bps" not in payload
@@ -123,21 +152,39 @@ def test_post_only_order_intent_rejects_taker_or_stale_requests() -> None:
         )
 
 
-def test_post_only_order_intent_requires_exact_decision_quote_and_five_bps_fee() -> None:
+def test_post_only_order_intent_requires_exact_decision_quote_target_and_fee() -> None:
+    target = _target()
     with pytest.raises(ValueError, match="planned post-only limit decision"):
-        _intent(decision=_decision(order_type="market"))
+        _intent(target=target, decision=_decision(target=target, order_type="market"))
 
     with pytest.raises(ValueError, match="exactly 5 bps"):
-        _intent(decision=_decision(exchange_fee_bps="6"))
+        _intent(target=target, decision=_decision(target=target, exchange_fee_bps="6"))
 
     with pytest.raises(ValueError, match="exact execution quote"):
-        _intent(decision=_decision(market_snapshot_sha256="9" * 64))
+        _intent(
+            target=target,
+            decision=_decision(target=target, market_snapshot_sha256="9" * 64),
+        )
+
+    other_target = _target(config_sha256="2" * 64)
+    with pytest.raises(ValueError, match="exact target intent"):
+        _intent(target=other_target, decision=_decision(target=target))
+
+
+def test_post_only_order_intent_cannot_outlive_or_postdate_target() -> None:
+    target = _target()
+    with pytest.raises(ValueError, match="expired"):
+        _intent(target=target, created_at_utc=target.expires_at_utc)
+
+    with pytest.raises(ValueError, match="cannot outlive"):
+        _intent(target=target, expires_at_utc=target.expires_at_utc + timedelta(microseconds=1))
 
 
 def test_post_only_sell_requires_limit_at_or_above_reference_ask() -> None:
-    decision = _decision(side="sell")
-    accepted = _intent(decision=decision, limit_price="66114")
+    target = _target()
+    decision = _decision(target=target, side="sell")
+    accepted = _intent(target=target, decision=decision, limit_price="66114")
     assert accepted.side == "sell"
 
     with pytest.raises(ValueError, match="at or above the reference ask"):
-        _intent(decision=decision, limit_price="66113.9")
+        _intent(target=target, decision=decision, limit_price="66113.9")
