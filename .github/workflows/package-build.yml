@@ -49,6 +49,30 @@ jobs:
           python -c 'import os, setuptools; assert setuptools.__version__ == os.environ["BUILD_BACKEND_VERSION"]'
           python -m build --no-isolation
 
+      - name: Generate repository-wide Ruff diagnostic
+        if: ${{ matrix.python-version == '3.11' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e ".[dev]"
+          mkdir -p /tmp/ruff-repository
+          ruff check . > /tmp/ruff-repository/check-before.txt 2>&1 || true
+          ruff format --check . > /tmp/ruff-repository/format-before.txt 2>&1 || true
+          ruff check --fix . || true
+          ruff format .
+          git diff -- . > /tmp/ruff-repository/canonical.patch
+          ruff check . > /tmp/ruff-repository/check-after.txt 2>&1 || true
+          ruff format --check . > /tmp/ruff-repository/format-after.txt 2>&1 || true
+
+      - name: Upload repository-wide Ruff diagnostic
+        if: ${{ matrix.python-version == '3.11' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ruff-repository-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: /tmp/ruff-repository/
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Verify distributions and wheel environment
         shell: bash
         run: |
