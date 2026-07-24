@@ -1,0 +1,83 @@
+{
+  "candidate_count": 1,
+  "canonical_signature": "worst-decile-exposure-timing-v1|markets=BTC-USDT,ETH-USDT|tail=asset-return-bottom-decile-recomputed-per-resample|metric=mean-position-nontail-minus-tail|position=persisted-executed-oos|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260722,ETH-USDT:20260723|candidate_count=1",
+  "claim_boundary": "This is one predeclared exploratory mechanism diagnostic on BTC-USDT and ETH-USDT development markets. Same-day tail labels are used only after returns occur to audit whether already-executed positions were lower before severe sessions; they are not a tradable signal or untouched-holdout result.",
+  "hypothesis": "For both BTC-USDT and ETH-USDT, the mean executed OOS position on the asset's worst-decile return days is lower than on all other days, with a positive 95% paired moving-block-bootstrap lower bound for non-tail minus tail exposure.",
+  "joint_supported": false,
+  "markets": {
+    "BTC-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.021677155291745916,
+        "ci_upper": 0.077883586014501,
+        "lower_bound_positive": false,
+        "median": 0.027809510366983495,
+        "probability_positive": 0.85
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "exposure_delta": 0.026719478978286137,
+        "non_tail_mean_position": 0.27648727210144236,
+        "non_tail_observations": 2106,
+        "tail_mean_position": 0.24976779312315622,
+        "tail_observations": 234,
+        "tail_return_threshold": -0.03117854808629404
+      },
+      "report_sha256": "4b326e6b7553ee4914dadaad48c909d93b2cde7a20b053d18e2db77f9241c203",
+      "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "start": "2020-01-11 00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.030631949993405048,
+        "ci_upper": 0.04631773340512261,
+        "lower_bound_positive": false,
+        "median": 0.009443452354926635,
+        "probability_positive": 0.6775
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "exposure_delta": 0.011924819114319002,
+        "non_tail_mean_position": 0.2182550731633837,
+        "non_tail_observations": 2106,
+        "tail_mean_position": 0.2063302540490647,
+        "tail_observations": 234,
+        "tail_return_threshold": -0.04211343949221684
+      },
+      "report_sha256": "e80e2c2087951dae66771110ba363a5e798da0638e84cf5af1d07736bb31baeb",
+      "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "start": "2020-01-11 00:00:00+00:00"
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8512566174,
+    "source_artifact_name": "quant-research-354",
+    "source_artifact_sha256": "288c19af640e03f8b69e20edd61002c04a7e007ee1973cab287224a0a687b15f",
+    "source_base_commit": "60251e9d945be29645aca86d4133e18ae9a90652",
+    "source_persistent_head": "df8dd830d10f225c27edae41cccda0ae3592939e",
+    "source_tested_commit": "5fdcffbd0b3ba38c0d25b5502807fb1814202b8d",
+    "source_workflow_run_id": 29874768418
+  },
+  "settings": {
+    "block_length": 20,
+    "candidate_count": 1,
+    "confidence": 0.95,
+    "development_market_screen": true,
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "position_definition": "persisted executed OOS position, already lagged by one bar",
+    "primary_metric": "mean_position_nontail_minus_tail",
+    "resamples": 2000,
+    "resampling": "paired moving block bootstrap without circular wrapping",
+    "seed_rule": "20260722 for BTC-USDT and 20260723 for ETH-USDT",
+    "tail_definition": "bottom 10% of asset returns, threshold recomputed per resample",
+    "tail_probability": 0.1
+  },
+  "verdict": "rejected"
+}
