@@ -1,0 +1,61 @@
+name: CI Maker Replay Diagnostic
+
+on:
+  push:
+    branches: [auto/ci/20260724-14-maker-replay-prerequisite]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Format, lint, and diagnose focused gate
+        run: |
+          set -euo pipefail
+          python -m pip install -e ".[dev]"
+          ruff check --fix \
+            scripts/build_intraday_1h_cross_market_gate.py \
+            tests/test_intraday_1h_cross_market_gate.py
+          ruff format \
+            scripts/build_intraday_1h_cross_market_gate.py \
+            tests/test_intraday_1h_cross_market_gate.py
+          mkdir -p diagnostic/scripts diagnostic/tests
+          cp scripts/build_intraday_1h_cross_market_gate.py diagnostic/scripts/
+          cp tests/test_intraday_1h_cross_market_gate.py diagnostic/tests/
+          ruff check \
+            scripts/build_intraday_1h_cross_market_gate.py \
+            tests/test_intraday_1h_cross_market_gate.py \
+            > diagnostic/ruff-check.txt 2>&1 || true
+          ruff format --check \
+            scripts/build_intraday_1h_cross_market_gate.py \
+            tests/test_intraday_1h_cross_market_gate.py \
+            > diagnostic/ruff-format.txt 2>&1 || true
+          pytest -q \
+            tests/test_intraday_research_profile.py \
+            tests/test_verify_intraday_1h_profile.py \
+            tests/test_intraday_1h_promotion_gate.py \
+            tests/test_intraday_1h_cross_market_gate.py \
+            tests/test_verify_intraday_1h_timestamp_grid.py \
+            tests/test_artifact_manifest.py \
+            > diagnostic/pytest.txt 2>&1 || true
+
+      - name: Upload diagnostic evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-maker-replay-diagostic
+          path: diagnostic/
+          if-no-files-found: error
+          retention-days: 1
