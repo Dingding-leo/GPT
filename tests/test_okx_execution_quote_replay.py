@@ -81,15 +81,9 @@ def test_top_of_book_replay_round_trips_complete_real_okx_evidence() -> None:
     assert replayed.observation.raw_response_json == _fixture_response()
     assert replayed.observation.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
     assert replayed.observation.raw_server_time_response_json == _SERVER_TIME_RESPONSE
-    assert (
-        replayed.observation.server_time_response_sha256
-        == _EXPECTED_SERVER_TIME_RESPONSE_SHA256
-    )
+    assert replayed.observation.server_time_response_sha256 == _EXPECTED_SERVER_TIME_RESPONSE_SHA256
     payload = _canonical_payload(replayed)
-    assert (
-        payload["server_time_response_sha256"]
-        == _EXPECTED_SERVER_TIME_RESPONSE_SHA256
-    )
+    assert payload["server_time_response_sha256"] == _EXPECTED_SERVER_TIME_RESPONSE_SHA256
     assert replayed.observation.quote.instrument_snapshot_sha256 == _INSTRUMENT_SNAPSHOT_SHA256
     assert replayed.observation.server_time_request_started_utc == datetime(
         2021, 8, 26, 8, 27, 16, 460_000, tzinfo=UTC
