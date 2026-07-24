@@ -12,7 +12,7 @@ from math import isfinite
 from .execution_quote import ExecutionQuoteSnapshot
 from .okx_execution_quote import OKXTopOfBookObservation
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 _SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
 _DECIMAL_PATTERN = re.compile(r"-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 _PAYLOAD_KEYS = {
@@ -34,6 +34,7 @@ _PAYLOAD_KEYS = {
     "maximum_quote_age_ms",
     "raw_response_json_utf8",
     "raw_server_time_response_json_utf8",
+    "server_time_response_sha256",
     "quote",
 }
 _SERIALIZED_KEYS = _PAYLOAD_KEYS | {"evidence_id"}
@@ -172,6 +173,7 @@ class ReconstructableOKXTopOfBookEvidence:
             "raw_server_time_response_json_utf8": (
                 observation.raw_server_time_response_json.decode("utf-8")
             ),
+            "server_time_response_sha256": observation.server_time_response_sha256,
             "quote": observation.quote.to_dict(),
         }
 
@@ -199,6 +201,21 @@ class ReconstructableOKXTopOfBookEvidence:
         raw_server_time_response = payload["raw_server_time_response_json_utf8"]
         if not isinstance(raw_server_time_response, str):
             raise ValueError("raw_server_time_response_json_utf8 must be UTF-8 text")
+        server_time_response_sha256 = payload["server_time_response_sha256"]
+        if (
+            not isinstance(server_time_response_sha256, str)
+            or _SHA256_PATTERN.fullmatch(server_time_response_sha256) is None
+        ):
+            raise ValueError(
+                "server_time_response_sha256 must be a lowercase SHA-256 digest"
+            )
+        if (
+            hashlib.sha256(raw_server_time_response.encode("utf-8")).hexdigest()
+            != server_time_response_sha256
+        ):
+            raise ValueError(
+                "OKX server-time response SHA-256 does not match its bytes"
+            )
 
         observation = OKXTopOfBookObservation(
             base_url=payload["base_url"],
