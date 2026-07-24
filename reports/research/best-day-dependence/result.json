@@ -1,0 +1,82 @@
+{
+  "candidate_count": 1,
+  "canonical_signature": "best-day-dependence-v1|markets=BTC-USDT,ETH-USDT|stress=remove-ceil-top-1pct-strategy-returns-per-sample|metric=annualized-arithmetic-mean-net-return|annualization=365|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260722,ETH-USDT:20260723|candidate_count=1",
+  "claim_boundary": "This is one predeclared outlier-dependence stress on BTC-USDT and ETH-USDT development markets. Removing best observations is an ex-post diagnostic, not a tradable rule, causal claim, untouched-holdout result, or execution model.",
+  "failure_reasons": [
+    "BTC-USDT stressed-mean lower confidence bound is not positive",
+    "ETH-USDT stressed-mean lower confidence bound is not positive"
+  ],
+  "hypothesis": "For both BTC-USDT and ETH-USDT, net OOS strategy returns retain a positive annualized arithmetic mean after removing exactly the largest 1% of strategy-return observations, with each 95% moving-block-bootstrap lower bound above zero.",
+  "joint_supported": false,
+  "markets": {
+    "BTC-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.21968928630008183,
+        "ci_upper": 0.15599320692383417,
+        "lower_bound_positive": false,
+        "median": -0.049557597601686904,
+        "probability_positive": 0.293
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "annualized_mean_after_stress": -0.05992316120241291,
+        "annualized_mean_before_stress": 0.17168956582497064,
+        "largest_removed_return": 0.1026277237315484,
+        "removed_observations": 24,
+        "retained_observations": 2316,
+        "smallest_removed_return": 0.0441377723798642,
+        "stress_delta": 0.23161272702738353
+      },
+      "report_sha256": "c5262c4c8c0945b43907f006ca5bf986229c350e5e908d8baa4837cc2de32921",
+      "returns_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "start": "2020-01-11 00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.27234567017914796,
+        "ci_upper": 0.08748419445214779,
+        "lower_bound_positive": false,
+        "median": -0.09538814741197707,
+        "probability_positive": 0.1635
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "annualized_mean_after_stress": -0.09840870224004471,
+        "annualized_mean_before_stress": 0.13704095296450977,
+        "largest_removed_return": 0.1440175242593519,
+        "removed_observations": 24,
+        "retained_observations": 2316,
+        "smallest_removed_return": 0.0447799578566848,
+        "stress_delta": 0.2354496552045545
+      },
+      "report_sha256": "383d8273cdb12d8b3bfe271b4044eaa664c06018f7f6174f7a52f1ac1fdcdf24",
+      "returns_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "start": "2020-01-11 00:00:00+00:00"
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8513672060,
+    "source_artifact_name": "quant-research-378",
+    "source_artifact_sha256": "7902fd0e653a446151188dc426386bfb8406d404a348aaf8be13a7671deb10ec",
+    "source_base_commit": "a2f1ab460409113057198ebdd00e3ce4f6c7bf82",
+    "source_persistent_head": "e1f49e3ad33fa2cd820de5ca0a6f70231f214a20",
+    "source_tested_merge_commit": "fd8d2191e30bb0aeb80da0021f2923f3bc9a8377",
+    "source_workflow_run_id": 29877892427
+  },
+  "settings": {
+    "annualization": 365,
+    "best_return_fraction": 0.01,
+    "block_length": 20,
+    "candidate_count": 1,
+    "confidence": 0.95,
+    "development_market_screen": true,
+    "removal_count_rule": "ceil(observations * best_return_fraction)",
+    "resamples": 2000
+  },
+  "verdict": "rejected"
+}
