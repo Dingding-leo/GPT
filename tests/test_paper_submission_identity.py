@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 from datetime import UTC, datetime
 
 import pytest
@@ -62,6 +63,60 @@ def test_exact_retry_reuses_one_submission_key_and_exact_intent() -> None:
     assert first.submission_key != first.record_id
     first.assert_reconstructs(intent)
     first.assert_idempotent_retry(retry)
+
+
+def test_identity_has_canonical_restart_round_trip_bound_to_exact_intent() -> None:
+    intent = _intent()
+    identity = PaperSubmissionIdentity.from_order_intent(intent)
+    serialized = identity.to_json_bytes()
+    replay = PaperSubmissionIdentity.from_json_bytes(serialized, intent=intent)
+
+    assert replay == identity
+    assert serialized.endswith(b"\n")
+    assert json.loads(serialized) == {
+        "action": "initial_post_only_submission",
+        "decision_id": identity.decision_id,
+        "record_id": identity.record_id,
+        "record_sha256": identity.record_sha256,
+        "schema_version": 1,
+        "submission_key": identity.submission_key,
+    }
+
+
+def test_identity_restart_rejects_changed_intent_and_noncanonical_bytes() -> None:
+    intent = _intent()
+    serialized = PaperSubmissionIdentity.from_order_intent(intent).to_json_bytes()
+
+    with pytest.raises(ValueError, match="exact order intent"):
+        PaperSubmissionIdentity.from_json_bytes(
+            serialized,
+            intent=_intent(created_microsecond=451_000),
+        )
+    with pytest.raises(ValueError, match="canonical encoding"):
+        PaperSubmissionIdentity.from_json_bytes(b" " + serialized, intent=intent)
+
+
+def test_identity_restart_rejects_duplicate_fields_and_unknown_schema_or_action() -> None:
+    intent = _intent()
+    serialized = PaperSubmissionIdentity.from_order_intent(intent).to_json_bytes()
+    duplicate = serialized.replace(
+        b'{"action":',
+        b'{"action":"initial_post_only_submission","action":',
+        1,
+    )
+    unsupported_schema = serialized.replace(b'"schema_version":1', b'"schema_version":2', 1)
+    unsupported_action = serialized.replace(
+        b"initial_post_only_submission",
+        b"requote_submission",
+        1,
+    )
+
+    with pytest.raises(ValueError, match="JSON is unreadable"):
+        PaperSubmissionIdentity.from_json_bytes(duplicate, intent=intent)
+    with pytest.raises(ValueError, match="unsupported paper submission identity schema"):
+        PaperSubmissionIdentity.from_json_bytes(unsupported_schema, intent=intent)
+    with pytest.raises(ValueError, match="unsupported paper submission identity action"):
+        PaperSubmissionIdentity.from_json_bytes(unsupported_action, intent=intent)
 
 
 def test_changed_intent_cannot_become_a_second_initial_order() -> None:
