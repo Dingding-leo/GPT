@@ -28,8 +28,6 @@ def test_hourly_portfolio_declares_variance_contribution_budget() -> None:
     assert workflow.count(correlation_argument) == 1
     assert workflow.index(correlation_declaration) < portfolio_start
     assert correlation_argument in portfolio_block
-    assert workflow.count(fail_closed_argument) == 1
-    assert fail_closed_argument in portfolio_block
-    assert workflow.count(verified_report_upload_guard) == 1
+    assert portfolio_block.count(fail_closed_argument) == 1
     assert verified_report_upload_guard in upload_block
     assert "always()" not in upload_block

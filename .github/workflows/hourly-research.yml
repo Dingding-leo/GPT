@@ -36,6 +36,9 @@ jobs:
       BUILD_BACKEND_VERSION: "83.0.0"
       MAX_VARIANCE_CONTRIBUTION: "0.75"
       MAX_PAIRWISE_CORRELATION: "0.90"
+      MAX_ANNUALIZED_NET_VOLATILITY: "0.50"
+      MAXIMUM_DRAWDOWN_FLOOR: "-0.40"
+      MAX_ANNUALIZED_WEIGHTED_UNDERLYING_TURNOVER: "25.0"
       SOURCE_ARTIFACT_NAME: "quant-research-source-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
       PORTFOLIO_ARTIFACT_NAME: "quant-portfolio-risk-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
       LIVE_READINESS_ARTIFACT_NAME: "live-readiness-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
@@ -169,6 +172,40 @@ jobs:
           path: reports/okx/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Generate verified underlying sleeve risk report
+        shell: bash
+        env:
+          BTC_RETURN_SHA256: ${{ steps.return-hashes.outputs.btc_sha256 }}
+          ETH_RETURN_SHA256: ${{ steps.return-hashes.outputs.eth_sha256 }}
+          SOURCE_ARTIFACT_ID: ${{ steps.source-artifact.outputs.artifact-id }}
+          SOURCE_ARTIFACT_DIGEST: ${{ steps.source-artifact.outputs.artifact-digest }}
+        run: |
+          set -euo pipefail
+          source_artifact_digest="${SOURCE_ARTIFACT_DIGEST#sha256:}"
+          source_artifact_digest="${source_artifact_digest,,}"
+          [[ "$SOURCE_ARTIFACT_ID" =~ ^[1-9][0-9]*$ ]]
+          [[ "$source_artifact_digest" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$BTC_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          [[ "$ETH_RETURN_SHA256" =~ ^[0-9a-f]{64}$ ]]
+          python scripts/run_portfolio_underlying_risk.py \
+            --btc-returns reports/okx/BTC-USDT/walk_forward_returns.csv \
+            --eth-returns reports/okx/ETH-USDT/walk_forward_returns.csv \
+            --btc-sha256 "$BTC_RETURN_SHA256" \
+            --eth-sha256 "$ETH_RETURN_SHA256" \
+            --provider OKX \
+            --market-type spot \
+            --timeframe 1Dutc \
+            --source-workflow-run "$GITHUB_RUN_ID" \
+            --source-artifact-id "$SOURCE_ARTIFACT_ID" \
+            --source-artifact-name "$SOURCE_ARTIFACT_NAME" \
+            --source-artifact-sha256 "$source_artifact_digest" \
+            --source-head-sha "$GITHUB_SHA" \
+            --max-annualized-net-volatility "$MAX_ANNUALIZED_NET_VOLATILITY" \
+            --maximum-drawdown-floor "$MAXIMUM_DRAWDOWN_FLOOR" \
+            --max-annualized-weighted-underlying-turnover "$MAX_ANNUALIZED_WEIGHTED_UNDERLYING_TURNOVER" \
+            --fail-on-reject \
+            --output-dir reports/portfolio
 
       - name: Generate verified portfolio risk report
         id: portfolio_risk
