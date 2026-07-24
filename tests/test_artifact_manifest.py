@@ -47,3 +47,34 @@ def test_manifest_fails_closed_after_downloaded_file_is_tampered(tmp_path: Path)
 
     with pytest.raises(ValueError, match="digest mismatch"):
         verify_manifest(artifact)
+
+
+def test_manifest_fails_closed_when_download_contains_unmanifested_file(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    (artifact / "walk_forward.json").write_text('{"value":0.1}\n', encoding="utf-8")
+    build_manifest(artifact)
+
+    unexpected = artifact / "nested" / "unmanifested-result.json"
+    unexpected.parent.mkdir()
+    unexpected.write_text('{"value":9.9}\n', encoding="utf-8")
+
+    with pytest.raises(
+        ValueError,
+        match=r"unmanifested files: nested/unmanifested-result\.json",
+    ):
+        verify_manifest(artifact)
+
+
+def test_nested_manifest_named_file_is_bound_by_root_manifest(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact"
+    nested = artifact / "nested"
+    nested.mkdir(parents=True)
+    (artifact / "walk_forward.json").write_text('{"value":0.1}\n', encoding="utf-8")
+    (nested / "artifact-manifest.sha256").write_text("provider evidence\n", encoding="utf-8")
+
+    build_manifest(artifact)
+
+    manifest = (artifact / "artifact-manifest.sha256").read_text(encoding="utf-8")
+    assert "nested/artifact-manifest.sha256" in manifest
+    verify_manifest(artifact)
