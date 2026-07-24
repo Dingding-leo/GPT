@@ -1,0 +1,124 @@
+{
+  "candidate_accounting": {
+    "candidates_passed": 0,
+    "candidates_rejected": 1,
+    "candidates_searched": 1,
+    "failure_reasons": [
+      "BTC-USDT above_prior_median lower confidence bound is not positive",
+      "BTC-USDT below_prior_median lower confidence bound is not positive",
+      "ETH-USDT above_prior_median lower confidence bound is not positive",
+      "ETH-USDT below_prior_median lower confidence bound is not positive"
+    ]
+  },
+  "canonical_signature": "lagged-cross-market-correlation-regime-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-asset-and-strategy-returns|regime-statistic=btc-eth-pearson-correlation-of-asset-return-shift1-rolling60|threshold=expanding-median-of-prior-correlation-values-min60-shift1|regimes=above-or-equal-prior-median,below-prior-median|metric=conditional-annualized-arithmetic-mean-net-return|annualization=365|resampling=paired-four-column-noncircular-moving-block-with-regimes-recomputed|block=20|resamples=2000|confidence=0.95|seed=20260722|candidate_count=1",
+  "claim_boundary": "Rejected development-market diagnostic; no trading rule, alpha, or strategy improvement is claimed.",
+  "data_summary": {
+    "eligible_observations": 2220,
+    "end": "2026-06-07T00:00:00+00:00",
+    "observations_per_market": 2340,
+    "regime_observations": {
+      "above_prior_median": 1248,
+      "below_prior_median": 972
+    },
+    "start": "2020-01-11T00:00:00+00:00",
+    "warmup_observations": 120
+  },
+  "hypothesis": "For both BTC-USDT and ETH-USDT, persisted net rolling OOS returns have a positive annualized arithmetic mean when prior 60-session cross-market correlation is above or below its prior expanding median.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "Moving-block concatenation creates artificial joins; correlation regimes are recomputed after resampling to prevent labels from crossing unchanged.",
+    "The experiment does not model spread, market impact, liquidity, capacity, latency, or partial fills."
+  ],
+  "method": {
+    "annualization": 365,
+    "confidence": 0.95,
+    "correlation_inputs": "asset returns shifted by one session",
+    "correlation_lookback_sessions": 60,
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "minimum_prior_correlation_observations": 60,
+    "moving_block_length": 20,
+    "regimes": [
+      "above_prior_median",
+      "below_prior_median"
+    ],
+    "resamples": 2000,
+    "seed": 20260722,
+    "threshold": "expanding median of earlier lagged rolling correlations",
+    "threshold_shift_sessions": 1
+  },
+  "provenance": {
+    "market_type": "spot",
+    "provider": "OKX",
+    "return_file_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "source_artifact_id": 8521103926,
+    "source_artifact_name": "quant-research-source-705-attempt-1",
+    "source_artifact_sha256": "d67057e47b8c466d2e3628283779785e662636cc4d631bb140be86cb5cf4c6ae",
+    "source_base_sha": "fc2100fa5ae4f815828960326405e7d171d59891",
+    "source_branch": "auto/research/20260722-16-lagged-market-trend-regimes",
+    "source_checkout_sha": "cadd23dde47d235d549056b5459c51ea4cdf8e9f",
+    "source_head_sha": "7945375b2f322390e0945a69c35d9f5217405f4e",
+    "source_workflow_run_id": 29898899644,
+    "timeframe": "1Dutc"
+  },
+  "results": {
+    "BTC-USDT": {
+      "above_prior_median": {
+        "annualized_mean": 0.022660475090300718,
+        "bootstrap_median": 0.13307593287649316,
+        "confidence_interval": {
+          "confidence": 0.95,
+          "lower": -0.11748140742409907,
+          "upper": 0.43604165350832735
+        },
+        "observations": 1248,
+        "passes": false,
+        "probability_positive": 0.8375
+      },
+      "below_prior_median": {
+        "annualized_mean": 0.48190649020960336,
+        "bootstrap_median": 0.21966166333903314,
+        "confidence_interval": {
+          "confidence": 0.95,
+          "lower": -0.08019756467548712,
+          "upper": 0.5782058604611069
+        },
+        "observations": 972,
+        "passes": false,
+        "probability_positive": 0.92
+      }
+    },
+    "ETH-USDT": {
+      "above_prior_median": {
+        "annualized_mean": 0.13476652097043754,
+        "bootstrap_median": 0.08957150438736985,
+        "confidence_interval": {
+          "confidence": 0.95,
+          "lower": -0.1662690791580667,
+          "upper": 0.3541485306348376
+        },
+        "observations": 1248,
+        "passes": false,
+        "probability_positive": 0.7445
+      },
+      "below_prior_median": {
+        "annualized_mean": 0.22199404298614459,
+        "bootstrap_median": 0.18125059170012478,
+        "confidence_interval": {
+          "confidence": 0.95,
+          "lower": -0.13846606705335662,
+          "upper": 0.5190337847855058
+        },
+        "observations": 972,
+        "passes": false,
+        "probability_positive": 0.863
+      }
+    }
+  },
+  "verdict": "rejected"
+}

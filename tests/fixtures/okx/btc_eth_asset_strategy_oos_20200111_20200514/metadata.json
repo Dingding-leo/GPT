@@ -1,0 +1,30 @@
+{
+  "end": "2020-05-14T00:00:00+00:00",
+  "extraction": "first 125 aligned rows, preserving exact timestamp, asset_return, and strategy_return values",
+  "fixture_path": "tests/fixtures/okx/btc_eth_asset_strategy_oos_20200111_20200514/returns.csv",
+  "fixture_sha256": "bf3418d52af7a9130088b7c2596892186615f884f3f36fd288a03d0e3a377384",
+  "instruments": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "market_type": "spot",
+  "observations": 125,
+  "provider": "OKX",
+  "source_artifact_id": 8521103926,
+  "source_artifact_name": "quant-research-source-705-attempt-1",
+  "source_artifact_sha256": "d67057e47b8c466d2e3628283779785e662636cc4d631bb140be86cb5cf4c6ae",
+  "source_base_sha": "fc2100fa5ae4f815828960326405e7d171d59891",
+  "source_branch": "auto/research/20260722-16-lagged-market-trend-regimes",
+  "source_checkout_sha": "cadd23dde47d235d549056b5459c51ea4cdf8e9f",
+  "source_head_sha": "7945375b2f322390e0945a69c35d9f5217405f4e",
+  "source_return_file_sha256": {
+    "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+    "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+  },
+  "source_row_end_exclusive": 125,
+  "source_row_start": 0,
+  "source_workflow_run_id": 29898899644,
+  "start": "2020-01-11T00:00:00+00:00",
+  "timeframe": "1Dutc",
+  "usage": "software regression tests and point-estimate verification only; structural mutations are rejection-only"
+}
