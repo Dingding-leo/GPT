@@ -62,9 +62,19 @@ def test_workflow_reselects_and_verifies_btc_and_eth_independently() -> None:
     path = _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
     workflow = path.read_text(encoding="utf-8")
 
+    research = workflow.index("- name: Run canonical 1h full walk-forward research")
+    bind = workflow.index("- name: Bind exchange-time source envelope")
+    provenance = workflow.index("- name: Verify replay-bound exact-byte 1h source provenance")
+    timestamp_gate = workflow.index("- name: Verify exact persisted UTC-hour timestamp grid")
+    research_block = workflow[research:bind]
+    provenance_block = workflow[provenance:timestamp_gate]
+
+    assert research < bind < provenance < timestamp_gate
     assert workflow.count("inst_id: [BTC-USDT, ETH-USDT]") == 1
-    assert workflow.count("--config config/okx_research_1h.json") == 1
-    assert workflow.count('--inst-id "${{ matrix.inst_id }}"') == 1
+    assert research_block.count("--config config/okx_research_1h.json") == 1
+    assert research_block.count('--inst-id "${{ matrix.inst_id }}"') == 1
+    assert provenance_block.count("python -m gpt_quant.intraday_1h_source_provenance") == 1
+    assert provenance_block.count('--inst-id "${{ matrix.inst_id }}"') == 1
     assert 'REPORT_DIR: "reports/okx/1h/${{ matrix.inst_id }}"' in workflow
     assert 'SOURCE_ROOT: "reports/okx/1h/source/${{ matrix.inst_id }}"' in workflow
     assert workflow.count("experiment-manifest.jsonl") >= 2
