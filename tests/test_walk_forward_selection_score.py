@@ -33,9 +33,7 @@ def _result_payload(result) -> dict[str, object]:
 
 
 def _legacy_selection_score(frame: pd.DataFrame, *, annualization: int) -> float:
-    return walk_forward_module._score(
-        performance_metrics(frame, annualization=annualization)
-    )
+    return walk_forward_module._score(performance_metrics(frame, annualization=annualization))
 
 
 def test_selection_score_fast_path_preserves_real_okx_walk_forward(
@@ -83,9 +81,7 @@ def test_selection_score_matches_full_metrics_and_rejects_corrupted_accounting(
     assert walk_forward_module._selection_score(
         frame,
         annualization=config.annualization,
-    ) == walk_forward_module._score(
-        performance_metrics(frame, annualization=config.annualization)
-    )
+    ) == walk_forward_module._score(performance_metrics(frame, annualization=config.annualization))
 
     corrupted = frame.copy()
     corrupted.loc[corrupted.index[-1], "gross_strategy_return"] += 0.01

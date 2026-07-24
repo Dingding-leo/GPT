@@ -342,9 +342,7 @@ def _selection_score(frame: pd.DataFrame, *, annualization: int) -> float:
             rtol=0.0,
             atol=1e-12,
         ):
-            raise ValueError(
-                "gross_strategy_return must equal position multiplied by asset_return"
-            )
+            raise ValueError("gross_strategy_return must equal position multiplied by asset_return")
         if "trading_cost" not in frame:
             raise ValueError("gross_strategy_return requires trading_cost")
         trading_cost = _validated_returns(frame["trading_cost"], label="trading_cost")
@@ -357,23 +355,18 @@ def _selection_score(frame: pd.DataFrame, *, annualization: int) -> float:
             rtol=0.0,
             atol=1e-12,
         ):
-            raise ValueError(
-                "strategy_return must equal gross_strategy_return minus trading_cost"
-            )
+            raise ValueError("strategy_return must equal gross_strategy_return minus trading_cost")
 
     total_growth, _ = _compounded_return(returns)
     years = len(returns) / annualization
     cagr = total_growth ** (1.0 / years) - 1.0 if total_growth > 0 else -1.0
     daily_mean = float(returns.mean())
     daily_std = float(returns.std(ddof=0))
-    sharpe = (
-        daily_mean / daily_std * math.sqrt(annualization) if daily_std > 0 else 0.0
-    )
+    sharpe = daily_mean / daily_std * math.sqrt(annualization) if daily_std > 0 else 0.0
     max_drawdown = max_drawdown_from_returns(returns)
     calmar = cagr / abs(max_drawdown) if max_drawdown < 0 else 0.0
     turnover = (
-        float(pd.to_numeric(frame["turnover"], errors="coerce").fillna(0.0).mean())
-        * annualization
+        float(pd.to_numeric(frame["turnover"], errors="coerce").fillna(0.0).mean()) * annualization
         if "turnover" in frame
         else 0.0
     )

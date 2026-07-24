@@ -54,17 +54,13 @@ def _worker(args: argparse.Namespace) -> int:
     from gpt_quant.walk_forward import run_walk_forward_research
 
     instrument_root = Path(args.source_root) / args.instrument
-    snapshot_path = (
-        instrument_root / "snapshot" / f"okx-{args.instrument}-1Dutc.csv"
-    )
+    snapshot_path = instrument_root / "snapshot" / f"okx-{args.instrument}-1Dutc.csv"
     snapshot_bytes = snapshot_path.read_bytes()
     expected_sha256 = _EXPECTED_SNAPSHOT_SHA256[args.instrument]
     if _sha256(snapshot_bytes) != expected_sha256:
         raise ValueError(f"immutable snapshot hash mismatch for {args.instrument}")
 
-    effective = json.loads(
-        (instrument_root / "effective_config.json").read_text(encoding="utf-8")
-    )
+    effective = json.loads((instrument_root / "effective_config.json").read_text(encoding="utf-8"))
     config = StrategyConfig(**effective["strategy"])
     if config.transaction_cost_bps != 5.0:
         raise ValueError("benchmark requires the canonical 5 bps one-way fee baseline")
@@ -107,12 +103,10 @@ def _worker(args: argparse.Namespace) -> int:
     payload.pop("generated_at_utc")
     payload["combined_frame_sha256"] = _frame_sha256(result.combined_frame)
     payload["benchmark_frame_sha256"] = {
-        name: _frame_sha256(value)
-        for name, value in sorted(result.benchmark_frames.items())
+        name: _frame_sha256(value) for name, value in sorted(result.benchmark_frames.items())
     }
     payload["perturbation_frame_sha256"] = {
-        name: _frame_sha256(value)
-        for name, value in sorted(result.perturbation_frames.items())
+        name: _frame_sha256(value) for name, value in sorted(result.perturbation_frames.items())
     }
     result_bytes = (
         json.dumps(
@@ -252,9 +246,7 @@ def main() -> int:
             if baseline_peak is not None and optimized_peak is not None
             else None
         ),
-        "result_sha256_by_instrument": dict(
-            zip(_INSTRUMENTS, expected_hashes, strict=True)
-        ),
+        "result_sha256_by_instrument": dict(zip(_INSTRUMENTS, expected_hashes, strict=True)),
         "runtime_reduction_percent": (
             (baseline_median - optimized_median) / baseline_median * 100.0
         ),
