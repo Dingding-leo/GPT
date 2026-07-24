@@ -1,0 +1,404 @@
+{
+  "architecture_freeze_eligible": false,
+  "candidate_accounting": {
+    "passed": 0,
+    "passed_candidates": [],
+    "rejected": 3,
+    "searched": 3
+  },
+  "candidates": {
+    "15pct": {
+      "architecture_freeze_eligible": false,
+      "joint_gates": {
+        "capacity": "blocked",
+        "development_benchmark_relative_risk_adjusted": "fail",
+        "execution_delay_robustness": "fail",
+        "fold_stability": "fail",
+        "parameter_neighbourhood_stability": "pass",
+        "prospective_forward_validation": "blocked",
+        "separate_spread_slippage_impact_latency": "blocked",
+        "tail_risk": "pass",
+        "turnover_and_5_7.5_10_15bps_viability": "pass",
+        "untouched_market_validation": "blocked",
+        "year_stability": "pass"
+      },
+      "live_eligible": false,
+      "markets": {
+        "BTC-USDT": {
+          "bootstrap_vs_volatility_targeted_long": {
+            "calmar_delta": {
+              "lower": -0.8835313903184434,
+              "point": 0.22372900966225706,
+              "probability_positive": 0.614,
+              "upper": 0.9379378016280181
+            },
+            "sharpe_delta": {
+              "lower": -0.6093122278751271,
+              "point": 0.03086367841025084,
+              "probability_positive": 0.5305,
+              "upper": 0.6909161296037284
+            }
+          },
+          "calendar_stability": {
+            "passes": true
+          },
+          "fold_stability": {
+            "fold_count": 27,
+            "max_positive_fold_share": 0.3437134878188079,
+            "passes": false,
+            "profitable_folds": 13
+          },
+          "metrics_5bps": {
+            "annualized_arithmetic_mean": 0.12095876241678304,
+            "annualized_turnover": 10.500097035344297,
+            "average_abs_exposure": 0.17398988173826913,
+            "cagr": 0.11489841637031306,
+            "calmar": 0.6046691702269795,
+            "exchange_fee_sum": 0.034305111546981015,
+            "max_drawdown": -0.19001864495122633,
+            "sharpe": 0.7732571546331812,
+            "sortino": 1.2172015814056767,
+            "total_return": 1.0353874293409033
+          },
+          "risk_budget_scaling": {
+            "fully_scaled_folds": 27,
+            "maximum_scale": 0.894234369289995,
+            "mean_scale": 0.6368551376708117,
+            "minimum_scale": 0.4486077766863442
+          }
+        },
+        "ETH-USDT": {
+          "bootstrap_vs_volatility_targeted_long": {
+            "calmar_delta": {
+              "lower": -1.7481465306439323,
+              "point": -0.3553301561828837,
+              "probability_positive": 0.1565,
+              "upper": 0.3019195451641234
+            },
+            "sharpe_delta": {
+              "lower": -1.1148836445723147,
+              "point": -0.48014666944802226,
+              "probability_positive": 0.094,
+              "upper": 0.20962247396495165
+            }
+          },
+          "calendar_stability": {
+            "passes": true
+          },
+          "fold_stability": {
+            "fold_count": 27,
+            "max_positive_fold_share": 0.2400091703646572,
+            "passes": true,
+            "profitable_folds": 17
+          },
+          "metrics_5bps": {
+            "annualized_arithmetic_mean": 0.07664779769206662,
+            "annualized_turnover": 11.969020582369666,
+            "average_abs_exposure": 0.14357728765898548,
+            "cagr": 0.06380121962253638,
+            "calmar": 0.2855914058923447,
+            "exchange_fee_sum": 0.03910426587527624,
+            "max_drawdown": -0.2234003485615621,
+            "sharpe": 0.446250986874224,
+            "sortino": 0.6373048667871468,
+            "total_return": 0.4980041788913707
+          },
+          "risk_budget_scaling": {
+            "fully_scaled_folds": 25,
+            "maximum_scale": 1.0,
+            "mean_scale": 0.6585978475097026,
+            "minimum_scale": 0.4142412525737486
+          }
+        }
+      },
+      "risk_budget": 0.15
+    },
+    "20pct": {
+      "architecture_freeze_eligible": false,
+      "joint_gates": {
+        "capacity": "blocked",
+        "development_benchmark_relative_risk_adjusted": "fail",
+        "execution_delay_robustness": "fail",
+        "fold_stability": "fail",
+        "parameter_neighbourhood_stability": "pass",
+        "prospective_forward_validation": "blocked",
+        "separate_spread_slippage_impact_latency": "blocked",
+        "tail_risk": "pass",
+        "turnover_and_5_7.5_10_15bps_viability": "pass",
+        "untouched_market_validation": "blocked",
+        "year_stability": "pass"
+      },
+      "live_eligible": false,
+      "markets": {
+        "BTC-USDT": {
+          "bootstrap_vs_volatility_targeted_long": {
+            "calmar_delta": {
+              "lower": -0.8127215696169586,
+              "point": 0.17934534479538933,
+              "probability_positive": 0.603,
+              "upper": 0.9799179982267308
+            },
+            "sharpe_delta": {
+              "lower": -0.6485309640241327,
+              "point": 0.015832070470952142,
+              "probability_positive": 0.538,
+              "upper": 0.6925329057722935
+            }
+          },
+          "calendar_stability": {
+            "passes": true
+          },
+          "fold_stability": {
+            "fold_count": 27,
+            "max_positive_fold_share": 0.373869927752058,
+            "passes": false,
+            "profitable_folds": 12
+          },
+          "metrics_5bps": {
+            "annualized_arithmetic_mean": 0.1489456155262648,
+            "annualized_turnover": 13.507469211585766,
+            "average_abs_exposure": 0.22057375280750086,
+            "cagr": 0.13849833404195322,
+            "calmar": 0.5602855053601118,
+            "exchange_fee_sum": 0.04413056721867405,
+            "max_drawdown": -0.24719242728390112,
+            "sharpe": 0.7582255466938825,
+            "sortino": 1.1841241904704607,
+            "total_return": 1.3339405428392883
+          },
+          "risk_budget_scaling": {
+            "fully_scaled_folds": 21,
+            "maximum_scale": 1.0,
+            "mean_scale": 0.8158082680795901,
+            "minimum_scale": 0.598143702248459
+          }
+        },
+        "ETH-USDT": {
+          "bootstrap_vs_volatility_targeted_long": {
+            "calmar_delta": {
+              "lower": -1.6378734284079803,
+              "point": -0.28323543327424233,
+              "probability_positive": 0.1995,
+              "upper": 0.3609944433923958
+            },
+            "sharpe_delta": {
+              "lower": -1.0125067981443154,
+              "point": -0.4027185435951517,
+              "probability_positive": 0.1275,
+              "upper": 0.2432047060713482
+            }
+          },
+          "calendar_stability": {
+            "passes": true
+          },
+          "fold_stability": {
+            "fold_count": 27,
+            "max_positive_fold_share": 0.25137028479424905,
+            "passes": true,
+            "profitable_folds": 17
+          },
+          "metrics_5bps": {
+            "annualized_arithmetic_mean": 0.1100794510327195,
+            "annualized_turnover": 14.865112388838464,
+            "average_abs_exposure": 0.17951437327043712,
+            "cagr": 0.09199246119223736,
+            "calmar": 0.3576861288009861,
+            "exchange_fee_sum": 0.048566154859424296,
+            "max_drawdown": -0.25718766758053757,
+            "sharpe": 0.5236791127270946,
+            "sortino": 0.7674088315073594,
+            "total_return": 0.7772010151737294
+          },
+          "risk_budget_scaling": {
+            "fully_scaled_folds": 19,
+            "maximum_scale": 1.0,
+            "mean_scale": 0.8225422147300939,
+            "minimum_scale": 0.5523216700983316
+          }
+        }
+      },
+      "risk_budget": 0.2
+    },
+    "25pct": {
+      "architecture_freeze_eligible": false,
+      "joint_gates": {
+        "capacity": "blocked",
+        "development_benchmark_relative_risk_adjusted": "fail",
+        "execution_delay_robustness": "fail",
+        "fold_stability": "fail",
+        "parameter_neighbourhood_stability": "pass",
+        "prospective_forward_validation": "blocked",
+        "separate_spread_slippage_impact_latency": "blocked",
+        "tail_risk": "pass",
+        "turnover_and_5_7.5_10_15bps_viability": "pass",
+        "untouched_market_validation": "blocked",
+        "year_stability": "pass"
+      },
+      "live_eligible": false,
+      "markets": {
+        "BTC-USDT": {
+          "bootstrap_vs_volatility_targeted_long": {
+            "calmar_delta": {
+              "lower": -0.9182418592509549,
+              "point": 0.13245553225659212,
+              "probability_positive": 0.5505,
+              "upper": 0.888758933180851
+            },
+            "sharpe_delta": {
+              "lower": -0.6601394658084262,
+              "point": -0.01763915215413092,
+              "probability_positive": 0.484,
+              "upper": 0.6719099370051318
+            }
+          },
+          "calendar_stability": {
+            "passes": true
+          },
+          "fold_stability": {
+            "fold_count": 27,
+            "max_positive_fold_share": 0.3882708874813745,
+            "passes": false,
+            "profitable_folds": 12
+          },
+          "metrics_5bps": {
+            "annualized_arithmetic_mean": 0.16023050803500738,
+            "annualized_turnover": 15.698745870118673,
+            "average_abs_exposure": 0.2511897810091431,
+            "cagr": 0.14550284286419757,
+            "calmar": 0.5133956928213146,
+            "exchange_fee_sum": 0.05128973821949731,
+            "max_drawdown": -0.28341266765328954,
+            "sharpe": 0.7247543240687995,
+            "sortino": 1.1190247010355892,
+            "total_return": 1.4293804404282633
+          },
+          "risk_budget_scaling": {
+            "fully_scaled_folds": 16,
+            "maximum_scale": 1.0,
+            "mean_scale": 0.9437491878678431,
+            "minimum_scale": 0.7476796278105737
+          }
+        },
+        "ETH-USDT": {
+          "bootstrap_vs_volatility_targeted_long": {
+            "calmar_delta": {
+              "lower": -1.8604647584355982,
+              "point": -0.26147713291405533,
+              "probability_positive": 0.2095,
+              "upper": 0.41691218216745196
+            },
+            "sharpe_delta": {
+              "lower": -1.0184594427713682,
+              "point": -0.36194596663662226,
+              "probability_positive": 0.136,
+              "upper": 0.28445328946486054
+            }
+          },
+          "calendar_stability": {
+            "passes": true
+          },
+          "fold_stability": {
+            "fold_count": 27,
+            "max_positive_fold_share": 0.2758946147128629,
+            "passes": true,
+            "profitable_folds": 17
+          },
+          "metrics_5bps": {
+            "annualized_arithmetic_mean": 0.13256410852350736,
+            "annualized_turnover": 16.477178114242935,
+            "average_abs_exposure": 0.20053726901143965,
+            "cagr": 0.11072404003724023,
+            "calmar": 0.3794444291611731,
+            "exchange_fee_sum": 0.053832972332149856,
+            "max_drawdown": -0.2918056809583809,
+            "sharpe": 0.564451689685624,
+            "sortino": 0.8313892226459121,
+            "total_return": 0.9861039308016928
+          },
+          "risk_budget_scaling": {
+            "fully_scaled_folds": 11,
+            "maximum_scale": 1.0,
+            "mean_scale": 0.92681577663202,
+            "minimum_scale": 0.6904020876229143
+          }
+        }
+      },
+      "risk_budget": 0.25
+    }
+  },
+  "canonical_5bps_reference": {
+    "BTC-USDT": {
+      "annualized_turnover": 16.42531928667807,
+      "cagr": 0.14489118250139654,
+      "calmar": 0.5100604649374113,
+      "max_drawdown": -0.28406667926943896,
+      "sharpe": 0.7067199135624018,
+      "sortino": 1.086816700425676,
+      "total_return": 1.4209166759944099
+    },
+    "ETH-USDT": {
+      "annualized_turnover": 17.301474510838435,
+      "cagr": 0.12070883291787071,
+      "calmar": 0.41366169610346726,
+      "max_drawdown": -0.29180568095838,
+      "sharpe": 0.5794669646974043,
+      "sortino": 0.8518351446613286,
+      "total_return": 1.1057078943260912
+    }
+  },
+  "canonical_signature": "fold-local-ex-ante-strategy-volatility-budget-family-v2|markets=BTC-USDT,ETH-USDT|development-markets-only=true|source=verified-OKX-1Dutc-snapshots-and-canonical-5bps-fold-selections|base-path=canonical-market-specific-27-grid-730-selection-90-test|overlay=per-fold-selected-candidate-gross-strategy-volatility-estimated-on-prior-730-bars|risk-budgets=15pct,20pct,25pct-annualized|scale=min(1,risk-budget/prior-window-gross-strategy-volatility)|scale-fixed-through-next-oos-fold|no-leverage=true|fee=5bps-one-way|all-in-cost-stress=5,7.5,10,15bps-fixed-path|delay-stress=total-delay-2,3-bars-at-all-costs|benchmark=volatility-targeted-long|inference=paired-noncircular-moving-block-bootstrap-20-resamples2000-confidence0.95|seed=sha256-canonical-scope-label-market-scenario|claim=at-least-one-budget-passes-all-BTC-ETH-development-freeze-gates|candidate_count=3",
+  "economic_rationale": "The canonical selector concentrates returns in a small number of folds and fails execution-delay robustness. A no-leverage second-stage risk budget uses only each selected candidate's preceding 730-session gross strategy volatility to reduce exposure during historically high-risk regimes, while leaving signal direction and the 27-candidate selection process unchanged.",
+  "failure_reasons": [
+    "no disclosed risk-budget candidate passes every joint development freeze gate",
+    "untouched-market validation remains unavailable for any new architecture",
+    "component-level execution friction, capacity, and prospective evidence remain blocked"
+  ],
+  "hypothesis": "At least one fixed fold-local ex ante strategy-volatility budget overlay from the disclosed 15%, 20%, and 25% annualized family passes every BTC-USDT/ETH-USDT development architecture-freeze gate.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "The disclosed 15%, 20%, and 25% budgets are a three-candidate architecture family.",
+    "The overlay estimates strategy volatility from historical close-to-close gross returns, not executable fills.",
+    "Delay stresses shift daily positions rather than model next-open execution.",
+    "The 7.5, 10, and 15 bps scenarios are aggregate repricings and do not separately measure spread, slippage, market impact, or latency.",
+    "SOL-USDT is a consumed sealed holdout and was not accessed or used."
+  ],
+  "live_eligible": false,
+  "method": {
+    "all_in_cost_sensitivities_bps": [
+      5.0,
+      7.5,
+      10.0,
+      15.0
+    ],
+    "baseline_exchange_fee_bps_one_way": 5.0,
+    "block_length": 20,
+    "confidence": 0.95,
+    "development_markets_only": true,
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "no_leverage": true,
+    "resamples": 2000,
+    "risk_budgets": [
+      0.15,
+      0.2,
+      0.25
+    ],
+    "scale_rule": "min(1, risk_budget / prior_window_gross_strategy_volatility)",
+    "scale_timing": "estimated on preceding 730 sessions and fixed through next OOS fold",
+    "sealed_market_data_used": false,
+    "seed_rule": "sha256(canonical_signature|scope|candidate|market|scenario) first 64 bits",
+    "selection_bars": 730,
+    "spread_slippage_impact_latency": "not_modeled_separately",
+    "test_bars": 90
+  },
+  "source": {
+    "artifact_id": 8577163034,
+    "artifact_name": "quant-research-source-348-attempt-1",
+    "artifact_sha256": "a06f20584f243c4db1420e8ed0b6cacdc13eb11aebddefb72c30cc80176ccd45",
+    "source_head_sha": "eea39bc685246209cdb6c0d917fddcc6ef29f34b",
+    "workflow_run_id": 30040842607
+  },
+  "verdict": "rejected"
+}
