@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   format:
@@ -33,15 +33,24 @@ jobs:
             src/gpt_quant/walk_forward.py \
             tests/test_walk_forward_selection_score.py \
             benchmarks/run_walk_forward_selection_score.py
-          mkdir -p /tmp/formatted/src/gpt_quant /tmp/formatted/tests /tmp/formatted/benchmarks
-          cp src/gpt_quant/walk_forward.py /tmp/formatted/src/gpt_quant/
-          cp tests/test_walk_forward_selection_score.py /tmp/formatted/tests/
-          cp benchmarks/run_walk_forward_selection_score.py /tmp/formatted/benchmarks/
 
-      - name: Upload formatted files
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v4.6.2
-        with:
-          name: formatted-performance-candidate
-          path: /tmp/formatted
-          if-no-files-found: error
-          retention-days: 1
+      - name: Commit canonical formatting
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if git diff --quiet -- \
+            src/gpt_quant/walk_forward.py \
+            tests/test_walk_forward_selection_score.py \
+            benchmarks/run_walk_forward_selection_score.py; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/gpt_quant/walk_forward.py \
+            tests/test_walk_forward_selection_score.py \
+            benchmarks/run_walk_forward_selection_score.py
+          git commit -m "style: apply canonical Ruff formatting"
+          git push \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "HEAD:auto/performance/20260724-11-candidate-score-fast-path"
