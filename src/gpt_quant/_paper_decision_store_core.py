@@ -162,7 +162,8 @@ def record_paper_order_decision(
     directory = Path(decision_directory)
     if directory.is_symlink():
         raise ValueError("paper decision directory must not be a symbolic link")
-    directory.mkdir(parents=True, exist_ok=True)
+    if not directory.is_dir():
+        raise FileNotFoundError("paper decision store is not initialized")
     path = directory / f"{decision.target_intent_id}.json"
     with _decision_lock(path):
         _find_target(target_journal_path, decision)
@@ -205,18 +206,19 @@ def replay_paper_order_decision_store(
     target_by_id = {target.intent_id: target for target in targets}
     decisions_by_target: dict[str, PaperOrderDecision] = {}
     directory = Path(decision_directory)
-    if directory.exists():
-        if directory.is_symlink() or not directory.is_dir():
-            raise ValueError("paper decision directory must be a regular directory")
-        for path in sorted(directory.glob("*.json")):
-            decision = load_paper_order_decision(path)
-            target = target_by_id.get(decision.target_intent_id)
-            if target is None or path.name != f"{decision.target_intent_id}.json":
-                raise ValueError(f"{_ERROR} store references an unknown target intent")
-            if decision.target_intent_id in decisions_by_target:
-                raise ValueError(f"{_ERROR} store contains a duplicate target decision")
-            _validate_decision_target(target, decision)
-            decisions_by_target[decision.target_intent_id] = decision
+    if not directory.exists():
+        raise FileNotFoundError("paper decision store is not initialized")
+    if directory.is_symlink() or not directory.is_dir():
+        raise ValueError("paper decision directory must be a regular directory")
+    for path in sorted(directory.glob("*.json")):
+        decision = load_paper_order_decision(path)
+        target = target_by_id.get(decision.target_intent_id)
+        if target is None or path.name != f"{decision.target_intent_id}.json":
+            raise ValueError(f"{_ERROR} store references an unknown target intent")
+        if decision.target_intent_id in decisions_by_target:
+            raise ValueError(f"{_ERROR} store contains a duplicate target decision")
+        _validate_decision_target(target, decision)
+        decisions_by_target[decision.target_intent_id] = decision
 
     decisions = tuple(
         decisions_by_target[target.intent_id]

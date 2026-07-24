@@ -13,6 +13,7 @@ import gpt_quant.paper_decision_store as store_module
 from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.paper_decision_store import (
     PaperOrderDecision,
+    initialize_paper_order_decision_store,
     load_paper_order_decision,
     pending_target_position_intents,
     record_paper_order_decision,
@@ -87,6 +88,7 @@ def _paths(tmp_path: Path) -> tuple[Path, Path, TargetPositionIntent]:
     decision_directory = tmp_path / "paper-decisions"
     target = _target()
     record_target_position_intent(target_path, target)
+    initialize_paper_order_decision_store(target_path, decision_directory)
     return target_path, decision_directory, target
 
 
@@ -262,7 +264,6 @@ def test_replay_rejects_canonical_decision_that_precedes_target_activation(
     tmp_path: Path,
 ) -> None:
     target_path, decision_directory, target = _paths(tmp_path)
-    decision_directory.mkdir()
     invalid = _decision(
         target,
         outcome="rejected",

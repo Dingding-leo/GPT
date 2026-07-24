@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import shutil
 import stat
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
 
-import gpt_quant.paper_decision_store as store_module
 from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.paper_decision_store import (
     PaperOrderDecision,
+    initialize_paper_order_decision_store,
+    record_paper_order_decision,
     replay_paper_order_decision_store,
 )
 from gpt_quant.target_intent_journal import record_target_position_intent
@@ -20,8 +24,8 @@ _REVISION = "bd3bf844d0c37e2e65d6591cb2a3c4a03e6e45c3"
 _DIGEST = "7bde34f3315c0774f12544c730b4fc19baa3399285aef9cabbb6bbf25869f31b"
 
 
-def _target() -> TargetPositionIntent:
-    signal_open = datetime(2026, 7, 21, tzinfo=UTC)
+def _target(*, day: int = 21) -> TargetPositionIntent:
+    signal_open = datetime(2026, 7, day, tzinfo=UTC)
     signal_close = signal_open + timedelta(days=1)
     return TargetPositionIntent(
         instrument_id="BTC-USDT",
@@ -64,38 +68,66 @@ def _decision(target: TargetPositionIntent) -> PaperOrderDecision:
     )
 
 
-def test_missing_store_is_created_privately_before_replay(
+def test_missing_store_requires_explicit_genesis_and_never_requeues_after_loss(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     target_path = tmp_path / "target-intents.jsonl"
     decision_directory = tmp_path / "paper-decisions"
     target = _target()
     decision = _decision(target)
     record_target_position_intent(target_path, target)
-    original_replay = store_module._core.replay_paper_order_decision_store
 
-    def inject_if_missing(
-        target_journal_path: str | Path,
-        directory_path: str | Path,
-    ):
-        directory = Path(directory_path)
-        if not directory.exists():
-            directory.mkdir(mode=0o700)
-            path = directory / f"{target.intent_id}.json"
-            path.write_bytes(decision.to_json_bytes())
-            path.chmod(0o600)
-        return original_replay(target_journal_path, directory)
+    with pytest.raises(FileNotFoundError, match="not initialized"):
+        replay_paper_order_decision_store(target_path, decision_directory)
+    with pytest.raises(FileNotFoundError, match="not initialized"):
+        record_paper_order_decision(target_path, decision_directory, decision)
+    assert not decision_directory.exists()
 
-    monkeypatch.setattr(
-        store_module._core,
-        "replay_paper_order_decision_store",
-        inject_if_missing,
+    genesis_sha256 = initialize_paper_order_decision_store(
+        target_path,
+        decision_directory,
     )
-
-    replay = replay_paper_order_decision_store(target_path, decision_directory)
-
-    assert replay.decisions == ()
-    assert replay.pending_target_intents == (target,)
+    genesis_path = decision_directory / ".paper-decision-store.genesis"
+    assert genesis_sha256 == hashlib.sha256(genesis_path.read_bytes()).hexdigest()
+    assert initialize_paper_order_decision_store(target_path, decision_directory) == genesis_sha256
     assert stat.S_IMODE(decision_directory.stat().st_mode) == 0o700
-    assert not list(decision_directory.iterdir())
+    assert stat.S_IMODE(genesis_path.stat().st_mode) == 0o600
+    assert replay_paper_order_decision_store(
+        target_path,
+        decision_directory,
+    ).pending_target_intents == (target,)
+
+    record_paper_order_decision(target_path, decision_directory, decision)
+    before_loss = replay_paper_order_decision_store(target_path, decision_directory)
+    assert before_loss.decisions == (decision,)
+    assert before_loss.pending_target_intents == ()
+
+    shutil.rmtree(decision_directory)
+    with pytest.raises(FileNotFoundError, match="not initialized"):
+        replay_paper_order_decision_store(target_path, decision_directory)
+    with pytest.raises(FileNotFoundError, match="not initialized"):
+        record_paper_order_decision(target_path, decision_directory, decision)
+    assert not decision_directory.exists()
+
+
+def test_genesis_rejects_replaced_target_journal_even_when_it_is_canonical(
+    tmp_path: Path,
+) -> None:
+    target_path = tmp_path / "target-intents.jsonl"
+    decision_directory = tmp_path / "paper-decisions"
+    original = _target(day=21)
+    replacement = _target(day=22)
+    record_target_position_intent(target_path, original)
+    initialize_paper_order_decision_store(target_path, decision_directory)
+
+    target_path.write_bytes(replacement.to_json_bytes())
+    with pytest.raises(ValueError, match="no longer contains the store genesis state"):
+        replay_paper_order_decision_store(target_path, decision_directory)
+
+    genesis = json.loads(
+        (decision_directory / ".paper-decision-store.genesis").read_text(encoding="utf-8")
+    )
+    assert genesis["target_intent_ids"] == [original.intent_id]
+    assert genesis["target_journal_sha256"] == hashlib.sha256(
+        original.to_json_bytes()
+    ).hexdigest()
