@@ -126,7 +126,7 @@ def _attempt(
         average_fill_price=(
             average_fill_price
             if average_fill_price is not None
-            else quote.ask_price if Decimal(filled) > 0 else "0"
+            else (quote.ask_price if Decimal(filled) > 0 else "0")
         ),
         reason_code="paper-touch-fill" if Decimal(filled) > 0 else "paper-accepted",
     )
