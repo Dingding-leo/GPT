@@ -216,9 +216,7 @@ def collect(output_dir: Path) -> dict[str, object]:
             record_execution_quote_evidence(market_dir / "quotes", observation.quote)
             raw_dir = market_dir / "raw"
             raw_dir.mkdir(parents=True, exist_ok=True)
-            (raw_dir / f"{sample_index:02d}.books.json").write_bytes(
-                observation.raw_response_json
-            )
+            (raw_dir / f"{sample_index:02d}.books.json").write_bytes(observation.raw_response_json)
             (raw_dir / f"{sample_index:02d}.server-time.json").write_bytes(
                 observation.raw_server_time_response_json
             )
