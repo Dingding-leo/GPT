@@ -10,19 +10,10 @@ import pandas as pd
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
-_ANALYSIS_PATH = (
-    _ROOT
-    / "reports"
-    / "research"
-    / "dual-horizon-hysteresis-1h"
-    / "analysis.py"
-)
+_ANALYSIS_PATH = _ROOT / "reports" / "research" / "dual-horizon-hysteresis-1h" / "analysis.py"
 _RESULT_PATH = _ANALYSIS_PATH.with_name("result.json")
 _FIXTURE_DIR = (
-    _ROOT
-    / "tests"
-    / "fixtures"
-    / "okx_btc_usdt_1h_dual_horizon_hysteresis_20220125_20220125"
+    _ROOT / "tests" / "fixtures" / "okx_btc_usdt_1h_dual_horizon_hysteresis_20220125_20220125"
 )
 
 
@@ -120,12 +111,8 @@ def test_committed_result_locks_candidate_accounting_and_rejection() -> None:
     }
     assert result["fixed_architecture"]["transaction_cost_bps_one_way"] == 5.0
     assert result["fixed_architecture"]["modeled_cost_paths"] == ["5bps_one_way_only"]
-    assert result["markets"]["BTC-USDT"]["metrics"]["sharpe"] == pytest.approx(
-        1.075791531062742
-    )
-    assert result["markets"]["ETH-USDT"]["metrics"]["sharpe"] == pytest.approx(
-        1.1782020542655411
-    )
+    assert result["markets"]["BTC-USDT"]["metrics"]["sharpe"] == pytest.approx(1.075791531062742)
+    assert result["markets"]["ETH-USDT"]["metrics"]["sharpe"] == pytest.approx(1.1782020542655411)
     assert result["joint_retrospective_passes"] is False
     assert result["paper_testable"] is False
     assert result["live_eligible"] is False
