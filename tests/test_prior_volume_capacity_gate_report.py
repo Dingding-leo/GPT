@@ -59,16 +59,41 @@ def test_capacity_formula_uses_only_prior_real_okx_quote_volume() -> None:
     assert metrics["maximum_participation"] == pytest.approx(0.002071095767825777)
     assert metrics["minimum_supported_initial_capital_usd"] == pytest.approx(482836.1949915012)
 
-    future_changed = snapshot.copy()
-    future_changed.loc[
-        future_changed.index[-10] :,
-        "volume_quote",
-    ] *= 1000.0
-    changed = analysis.capacity_frame(future_changed, returns)
-    first_oos = returns.index[0]
-    pd.testing.assert_series_equal(
-        frame.loc[:first_oos, "prior_median_quote_volume"],
-        changed.loc[:first_oos, "prior_median_quote_volume"],
+
+def test_capacity_evidence_is_invariant_to_same_day_and_future_liquidity() -> None:
+    analysis = _load_analysis()
+    fixture = _fixture()
+    snapshot = fixture[["volume_quote"]]
+    returns = fixture.dropna(subset=["turnover", "nav"])[["turnover", "nav"]]
+    baseline = analysis.capacity_frame(snapshot, returns)
+
+    cutoff = pd.Timestamp("2020-01-24T00:00:00Z")
+    assert cutoff in returns.index
+    assert returns.loc[cutoff, "turnover"] > analysis.ADJUSTMENT_THRESHOLD
+
+    changed_snapshot = snapshot.copy()
+    changed_snapshot.loc[cutoff:, "volume_quote"] *= 1000.0
+    changed = analysis.capacity_frame(changed_snapshot, returns)
+
+    evidence_columns = [
+        "prior_median_quote_volume",
+        "equity_multiple_before",
+        "trade_notional_usd",
+        "participation",
+        "capacity_initial_usd",
+    ]
+    pd.testing.assert_frame_equal(
+        baseline.loc[:cutoff, evidence_columns],
+        changed.loc[:cutoff, evidence_columns],
+    )
+    assert analysis.capacity_metrics(baseline.loc[:cutoff]) == analysis.capacity_metrics(
+        changed.loc[:cutoff]
+    )
+
+    final_date = returns.index[-1]
+    assert (
+        changed.loc[final_date, "prior_median_quote_volume"]
+        > baseline.loc[final_date, "prior_median_quote_volume"] * 100.0
     )
 
 
