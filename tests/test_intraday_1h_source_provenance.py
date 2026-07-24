@@ -37,7 +37,7 @@ def test_exact_byte_source_provenance_reconstructs_from_immutable_okx_fixture(
     assert payload["offline_replay_verified"] is True
     assert payload["source_transport"] == "trusted_okx_https_bounded_exact_bytes"
     assert payload["source_response_sha256"] == [source["raw_response_extract_sha256"]]
-    assert payload["normalized_csv_sha256"] == source["fixture_files"]["csv"]["sha256"]
+    assert payload["normalized_csv_sha256"] == source["fixture_files"]["candles"]["sha256"]
     assert payload["raw_pages_sha256"] == source["fixture_files"]["raw"]["sha256"]
     assert payload["economic_boundary"]["modeled_fee_bps_one_way"] == 5.0
     assert payload["safety"]["orders_placed"] is False
