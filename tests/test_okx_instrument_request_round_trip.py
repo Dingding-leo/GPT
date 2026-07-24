@@ -25,9 +25,7 @@ _BOOK_RESPONSE_SHA256 = "7d12a351f8f51320d1c8beee0063557e1c90388d66ac63412bf66ca
 
 def _real_instrument_response() -> bytes:
     response = (_INSTRUMENT_FIXTURE_DIR / "response.json").read_bytes()
-    metadata = json.loads(
-        (_INSTRUMENT_FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8")
-    )
+    metadata = json.loads((_INSTRUMENT_FIXTURE_DIR / "metadata.json").read_text(encoding="utf-8"))
     assert metadata["fixture_sha256"] == _INSTRUMENT_RESPONSE_SHA256
     assert hashlib.sha256(response).hexdigest() == _INSTRUMENT_RESPONSE_SHA256
     return response
