@@ -49,6 +49,35 @@ jobs:
           python -c 'import os, setuptools; assert setuptools.__version__ == os.environ["BUILD_BACKEND_VERSION"]'
           python -m build --no-isolation
 
+      - name: Generate canonical Ruff diagnostic
+        if: ${{ matrix.python-version == '3.11' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e ".[dev]"
+          ruff check --fix \
+            src/gpt_quant/paper_execution_reconciliation.py \
+            tests/test_paper_execution_reconciliation.py || true
+          ruff format \
+            src/gpt_quant/paper_execution_reconciliation.py \
+            tests/test_paper_execution_reconciliation.py
+          mkdir -p /tmp/ruff-canonical/src/gpt_quant /tmp/ruff-canonical/tests
+          cp src/gpt_quant/paper_execution_reconciliation.py /tmp/ruff-canonical/src/gpt_quant/
+          cp tests/test_paper_execution_reconciliation.py /tmp/ruff-canonical/tests/
+          ruff check \
+            src/gpt_quant/paper_execution_reconciliation.py \
+            tests/test_paper_execution_reconciliation.py \
+            > /tmp/ruff-canonical/ruff-check.txt 2>&1 || true
+
+      - name: Upload canonical Ruff diagnostic
+        if: ${{ matrix.python-version == '3.11' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ruff-canonical-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: /tmp/ruff-canonical/
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Verify distributions and wheel environment
         shell: bash
         run: |
