@@ -47,6 +47,20 @@ def test_hourly_release_evidence_binds_the_resolved_target_sha() -> None:
     assert '--tested-sha "$LIVE_READINESS_TESTED_SHA"' in workflow
 
 
+def test_coverage_artifact_persists_validated_tested_sha() -> None:
+    workflow = (_WORKFLOW_ROOT / "okx-1h-coverage.yml").read_text(encoding="utf-8")
+    sidecar = "reports/okx/1h-coverage/tested-sha.txt"
+    write_marker = "printf '%s\\n' \"$EXPECTED_TESTED_SHA\""
+    upload_marker = "- name: Upload immutable OKX 1H source evidence"
+
+    assert write_marker in workflow
+    assert f"> {sidecar}" in workflow
+    assert f'test "$(wc -l < {sidecar})" -eq 1' in workflow
+    assert "grep -Eq '^[0-9a-f]{40}$' " + sidecar in workflow
+    assert f'test "$(cat {sidecar})" = "$EXPECTED_TESTED_SHA"' in workflow
+    assert workflow.index(write_marker) < workflow.index(upload_marker)
+
+
 def test_exact_sha_dispatch_preserves_public_read_only_boundaries() -> None:
     combined = "\n".join(
         (_WORKFLOW_ROOT / workflow_name).read_text(encoding="utf-8")
