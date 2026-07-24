@@ -98,3 +98,40 @@ def test_hourly_workflow_never_publishes_rejected_portfolio_as_verified() -> Non
         in upload_block
     )
     assert "always()" not in upload_block
+
+
+def test_hourly_workflow_enforces_paper_execution_constraints_before_research() -> None:
+    workflow = _WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    paper = workflow.index("- name: Test paper execution replay and OKX constraints")
+    remaining = workflow.index("- name: Test remaining public OKX data")
+    enforcement = workflow.index("- name: Enforce complete test gate")
+    research = workflow.index("- name: Run OKX rolling out-of-sample research")
+    paper_block = workflow[paper:remaining]
+    remaining_block = workflow[remaining:enforcement]
+    enforcement_block = workflow[enforcement:research]
+    critical_suites = (
+        "tests/test_paper_execution_attempt.py",
+        "tests/test_okx_order_constraints.py",
+        "tests/test_okx_limit_order_constraints.py",
+        "tests/test_okx_paper_execution_constraints.py",
+    )
+
+    assert paper < remaining < enforcement < research
+    assert "id: paper_execution_gate" in paper_block
+    assert "continue-on-error: true" in paper_block
+    assert "OKX_BASE_URL: https://www.okx.com" in paper_block
+    assert "id: remaining_tests" in remaining_block
+    assert "continue-on-error: true" in remaining_block
+    assert "OKX_BASE_URL: https://www.okx.com" in remaining_block
+    for suite in critical_suites:
+        assert suite in paper_block
+        assert f"--ignore={suite}" in remaining_block
+        assert workflow.count(suite) == 2
+    assert "id: tests" in enforcement_block
+    assert "if: ${{ !cancelled() }}" in enforcement_block
+    assert "steps.paper_execution_gate.outcome" in enforcement_block
+    assert "steps.remaining_tests.outcome" in enforcement_block
+    assert 'test "$PAPER_EXECUTION_GATE_OUTCOME" = success' in enforcement_block
+    assert 'test "$REMAINING_TESTS_OUTCOME" = success' in enforcement_block
+    assert workflow.count("steps.tests.outcome") == 2
