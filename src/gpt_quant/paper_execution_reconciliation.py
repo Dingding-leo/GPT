@@ -14,9 +14,7 @@ from .target_intent_journal import TargetPositionIntentJournal
 _SCHEMA_VERSION = 2
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _EXCHANGE_FEE_ONE_WAY_BPS = "5"
-_EXCHANGE_FEE_CONFIG_BYTES = (
-    b'{"component":"exchange_fee","one_way_bps":"5","version":1}\n'
-)
+_EXCHANGE_FEE_CONFIG_BYTES = b'{"component":"exchange_fee","one_way_bps":"5","version":1}\n'
 _EXCHANGE_FEE_CONFIG_SHA256 = hashlib.sha256(_EXCHANGE_FEE_CONFIG_BYTES).hexdigest()
 _FIELDS = {
     "schema_version",
