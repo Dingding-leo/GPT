@@ -138,7 +138,9 @@ def _quote_age_ms(raw_books: bytes, exchange_observed_at: datetime) -> int:
     return age
 
 
-def _market_summary(observations: list[dict[str, object]], failures: list[str]) -> dict[str, object]:
+def _market_summary(
+    observations: list[dict[str, object]], failures: list[str]
+) -> dict[str, object]:
     half_spreads = [float(item["half_spread_bps"]) for item in observations]
     books_rtts = [float(item["books_round_trip_seconds"]) for item in observations]
     server_rtts = [float(item["server_round_trip_seconds"]) for item in observations]
@@ -167,8 +169,7 @@ def _market_summary(observations: list[dict[str, object]], failures: list[str]) 
         ),
         "maximum_quote_age": metrics["maximum_quote_age_ms"] <= MAXIMUM_QUOTE_AGE_MS,
         "maximum_abs_clock_skew": (
-            metrics["maximum_abs_midpoint_clock_skew_seconds"]
-            <= MAX_ABS_CLOCK_SKEW_SECONDS
+            metrics["maximum_abs_midpoint_clock_skew_seconds"] <= MAX_ABS_CLOCK_SKEW_SECONDS
         ),
     }
     return {
@@ -284,10 +285,19 @@ def collect(output_dir: Path) -> dict[str, object]:
         "hypothesis_passes": joint_pass,
         "live_eligible": False,
         "limitations": [
-            "This bounded sample establishes collection feasibility only, not prospective strategy performance.",
+            (
+                "This bounded sample establishes collection feasibility only, not "
+                "prospective strategy performance."
+            ),
             "Top-of-book half-spread is measured separately from the 5 bps exchange fee.",
-            "Slippage, nonlinear impact, decision-to-order latency, fills and rejections remain unmeasured.",
-            "BTC-USDT and ETH-USDT remain development markets; SOL-USDT remains a consumed holdout.",
+            (
+                "Slippage, nonlinear impact, decision-to-order latency, fills and "
+                "rejections remain unmeasured."
+            ),
+            (
+                "BTC-USDT and ETH-USDT remain development markets; SOL-USDT remains a "
+                "consumed holdout."
+            ),
         ],
     }
     (output_dir / "result.json").write_bytes(_canonical_json_bytes(result))
