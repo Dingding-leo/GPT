@@ -4,8 +4,9 @@ import hashlib
 import io
 import json
 import math
+from collections.abc import Collection
 from pathlib import Path, PurePosixPath
-from typing import Any, Collection
+from typing import Any
 
 import numpy as np
 import pandas as pd
