@@ -1,0 +1,144 @@
+{
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "failure_reasons": [
+        "BTC-USDT low-liquidity mean 95% lower bound is non-positive: -0.254984164624",
+        "ETH-USDT high-liquidity mean 95% lower bound is non-positive: -0.047791791099",
+        "ETH-USDT low-liquidity mean 95% lower bound is non-positive: -0.235410018545"
+      ],
+      "name": "selection-window-lagged-liquidity-regime-consistency",
+      "verdict": "reject"
+    }
+  ],
+  "canonical_signature": "selection-window-lagged-liquidity-regime-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns-and-OKX-volume_quote|liquidity=prior-30-session-median-volume_quote|threshold=median-of-lagged-liquidity-in-each-prior-730-session-selection-window|regimes=at-or-above-threshold,below-threshold|metric=conditional-annualized-arithmetic-mean-net-return|annualization=365|resampling=paired-noncircular-moving-block-over-regime-return-rows|block=20|resamples=2000|confidence=0.95|seeds=BTC:20260722,ETH:20260723|candidate_count=1",
+  "economic_rationale": "A credible daily strategy should not require only liquid, high-participation sessions or only quiet sessions. Each fold's regime threshold is fixed using its preceding selection window, so no test-fold volume informs the threshold.",
+  "failure_reasons": [
+    "BTC-USDT low-liquidity mean 95% lower bound is non-positive: -0.254984164624",
+    "ETH-USDT high-liquidity mean 95% lower bound is non-positive: -0.047791791099",
+    "ETH-USDT low-liquidity mean 95% lower bound is non-positive: -0.235410018545"
+  ],
+  "hypothesis": "BTC-USDT and ETH-USDT net rolling OOS returns have positive annualized arithmetic means in both high and low prior quote-volume regimes.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "Quote volume is exchange-specific and can change with price level and venue activity.",
+    "Moving-block concatenation introduces artificial joins between observed blocks.",
+    "The analysis does not model spread, impact, capacity, latency, or partial fills."
+  ],
+  "markets": {
+    "BTC-USDT": {
+      "folds": 26,
+      "observations": 2340,
+      "passes": false,
+      "regimes": {
+        "high": {
+          "annualized_arithmetic_mean": 0.319934975211474,
+          "confidence_interval": {
+            "lower": 0.03342349395516322,
+            "upper": 0.6593661872315933
+          },
+          "observations": 1509,
+          "passes": true,
+          "probability_mean_positive": 0.986
+        },
+        "low": {
+          "annualized_arithmetic_mean": -0.09750697179745248,
+          "confidence_interval": {
+            "lower": -0.2549841646238896,
+            "upper": 0.09380326486102375
+          },
+          "observations": 831,
+          "passes": false,
+          "probability_mean_positive": 0.1825
+        }
+      },
+      "seed": 20260722,
+      "threshold_summary": {
+        "first_fold_valid_selection_observations": 700,
+        "later_fold_valid_selection_observations": 730,
+        "maximum": 614772284.36925,
+        "median": 397127151.69275,
+        "minimum": 88824613.632225
+      }
+    },
+    "ETH-USDT": {
+      "folds": 26,
+      "observations": 2340,
+      "passes": false,
+      "regimes": {
+        "high": {
+          "annualized_arithmetic_mean": 0.20584380598280305,
+          "confidence_interval": {
+            "lower": -0.04779179109872094,
+            "upper": 0.4739339942087684
+          },
+          "observations": 1731,
+          "passes": false,
+          "probability_mean_positive": 0.944
+        },
+        "low": {
+          "annualized_arithmetic_mean": -0.058521836156451984,
+          "confidence_interval": {
+            "lower": -0.23541001854503155,
+            "upper": 0.10757356921848357
+          },
+          "observations": 609,
+          "passes": false,
+          "probability_mean_positive": 0.2355
+        }
+      },
+      "seed": 20260723,
+      "threshold_summary": {
+        "first_fold_valid_selection_observations": 700,
+        "later_fold_valid_selection_observations": 730,
+        "maximum": 466721680.656,
+        "median": 213636269.83775002,
+        "minimum": 36473526.2183
+      }
+    }
+  },
+  "method": {
+    "acceptance_rule": "all four 95% lower bounds must be strictly positive",
+    "annualization": 365,
+    "block_length_observations": 20,
+    "confidence": 0.95,
+    "high_regime_rule": "lagged liquidity is greater than or equal to the fold threshold",
+    "liquidity_field": "OKX volume_quote",
+    "liquidity_statistic": "median of the prior 30 confirmed 1Dutc sessions",
+    "low_regime_rule": "lagged liquidity is below the fold threshold",
+    "resamples": 2000,
+    "resampling": "paired non-circular moving blocks over observed regime and net-return rows",
+    "threshold": "median lagged-liquidity statistic in each fold's prior 730-session selection window"
+  },
+  "source": {
+    "artifact_id": 8523312240,
+    "artifact_name": "quant-research-source-780-attempt-1",
+    "artifact_sha256": "5e8578dcc2aed7edbbc30b02b25cdb62ef7c01614305afeb09a940184c8d70a4",
+    "code_commit": "b383df39c2df12f5f11f059b8a2a2c463061f8e3",
+    "development_markets": true,
+    "market_type": "spot",
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "observations_per_market": 2340,
+    "oos_end": "2026-06-07T00:00:00+00:00",
+    "oos_start": "2020-01-11T00:00:00+00:00",
+    "provider": "OKX",
+    "report_sha256": {
+      "BTC-USDT": "93f5e00a3252bae08c3b5ee3f66036df36cc061a965c152dbfdfee3f523d20c4",
+      "ETH-USDT": "bd46b5f17470b8680155e2659575fad5ffcc623da751ab51982ad347cd0a2f0e"
+    },
+    "returns_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "snapshot_sha256": {
+      "BTC-USDT": "b0bd7c6c7e30fcc095073169f60bde24559f481b24cc6f4bdfb85349f57974bb",
+      "ETH-USDT": "78f3bf81d3983e6c894066a1c298fbf14ae06a5eff9ca7326554b0a8933c0df5"
+    },
+    "timeframe": "1Dutc",
+    "workflow_run_id": 29904635219
+  },
+  "verdict": "rejected"
+}
