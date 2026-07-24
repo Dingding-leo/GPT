@@ -107,7 +107,11 @@ def _position_activity_metrics(
             "exchange_fee_per_rebalance": 0.0,
         }
 
-    position = pd.to_numeric(frame["position"], errors="coerce").fillna(0.0).astype(float)
+    position = (
+        pd.to_numeric(frame["position"], errors="coerce")
+        .fillna(0.0)
+        .astype(float)
+    )
     active = position.abs() > _POSITION_EPSILON
     previous_active = active.shift(1, fill_value=False)
     entries = active & ~previous_active
@@ -129,7 +133,9 @@ def _position_activity_metrics(
     ):
         if is_entry:
             if in_episode:
-                raise RuntimeError("position episode tracking entered an invalid nested state")
+                raise RuntimeError(
+                    "position episode tracking entered an invalid nested state"
+                )
             in_episode = True
             episode_growth = 1.0
             episode_holding_bars = 0
@@ -163,11 +169,15 @@ def _position_activity_metrics(
     return {
         "target_position_turnover_sum": total_turnover,
         "target_position_rebalance_count": rebalance_count,
-        "annualized_target_position_rebalance_count": rebalance_count / len(frame) * annualization,
+        "annualized_target_position_rebalance_count": (
+            rebalance_count / len(frame) * annualization
+        ),
         "position_entry_count": int(entries.sum()),
         "position_exit_count": int(exits.sum()),
         "position_episode_count": int(entries.sum()),
-        "annualized_position_episode_count": int(entries.sum()) / len(frame) * annualization,
+        "annualized_position_episode_count": (
+            int(entries.sum()) / len(frame) * annualization
+        ),
         "completed_position_episode_count": completed_count,
         "open_position_episode_count": int(in_episode),
         "active_bar_count": active_bar_count,
@@ -185,7 +195,9 @@ def _position_activity_metrics(
         "completed_episode_win_count": win_count,
         "completed_episode_loss_count": loss_count,
         "completed_episode_flat_count": flat_count,
-        "completed_episode_hit_rate": win_count / completed_count if completed_count else 0.0,
+        "completed_episode_hit_rate": (
+            win_count / completed_count if completed_count else 0.0
+        ),
         "completed_episode_profit_factor": profit_factor,
         "completed_episode_profit_factor_defined": profit_factor_defined,
         "average_turnover_per_rebalance": (
@@ -296,7 +308,7 @@ def performance_metrics(
         missing_gross_inputs = {"position", "asset_return"} - set(frame.columns)
         if missing_gross_inputs:
             raise ValueError("gross_strategy_return requires position and asset_return")
-        position = pd.to_numeric(frame["position"], errors="coerce").fillna(0.0).astype(float)
+        position = _validated_returns(frame["position"], label="position")
         asset_returns = _validated_returns(frame["asset_return"], label="asset_return")
         expected_gross = position * asset_returns
         if not np.allclose(
@@ -310,7 +322,9 @@ def performance_metrics(
             )
         if "trading_cost" not in frame:
             raise ValueError("gross_strategy_return requires trading_cost")
-        trading_cost = trading_cost_series
+        trading_cost = _validated_returns(frame["trading_cost"], label="trading_cost")
+        if (trading_cost < 0.0).any():
+            raise ValueError("trading_cost must be non-negative")
         expected_net = gross_returns - trading_cost
         if not np.allclose(
             returns.to_numpy(),
@@ -318,7 +332,9 @@ def performance_metrics(
             rtol=0.0,
             atol=1e-12,
         ):
-            raise ValueError("strategy_return must equal gross_strategy_return minus trading_cost")
+            raise ValueError(
+                "strategy_return must equal gross_strategy_return minus trading_cost"
+            )
 
         gross_growth, gross_total_return = _compounded_return(gross_returns)
         gross_cagr = gross_growth ** (1.0 / years) - 1.0 if gross_growth > 0 else -1.0
