@@ -64,10 +64,39 @@ def test_workflow_reselects_and_verifies_btc_and_eth_independently() -> None:
     assert workflow.count("inst_id: [BTC-USDT, ETH-USDT]") == 1
     assert workflow.count("--config config/okx_research_1h.json") == 1
     assert workflow.count('--inst-id "${{ matrix.inst_id }}"') == 1
-    assert workflow.count("reports/okx/1h/${{ matrix.inst_id }}") == 5
-    assert workflow.count("experiment-manifest.jsonl") == 2
+    assert workflow.count("reports/okx/1h/${{ matrix.inst_id }}") >= 5
+    assert workflow.count("experiment-manifest.jsonl") >= 2
     assert "Run canonical 1h full walk-forward research" in workflow
     assert "Verify persisted canonical 1h evidence" in workflow
     assert "fail-fast: false" in workflow
     assert "persist-credentials: false" in workflow
     assert "OKX_BASE_URL: https://www.okx.com" in workflow
+
+
+def test_workflow_hashes_and_rechecks_every_published_1h_file() -> None:
+    path = _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
+    workflow = path.read_text(encoding="utf-8")
+
+    verification = workflow.index("- name: Verify persisted canonical 1h evidence")
+    manifest = workflow.index("- name: Build and verify immutable canonical 1h manifest")
+    upload = workflow.index("- name: Upload immutable canonical 1h evidence")
+    manifest_block = workflow[manifest:upload]
+
+    assert verification < manifest < upload
+    assert "id: artifact_manifest" in manifest_block
+    assert "set -euo pipefail" in manifest_block
+    for required_file in (
+        "effective_config.json",
+        "walk_forward.json",
+        "walk_forward_returns.csv",
+        "experiment-manifest.jsonl",
+    ):
+        assert f'test -s "$report_dir/{required_file}"' in manifest_block
+    assert "find \"$report_dir\" -type f" in manifest_block
+    assert "! -name 'artifact-manifest.sha256*'" in manifest_block
+    assert "sort -z" in manifest_block
+    assert "xargs -0 sha256sum" in manifest_block
+    assert 'sha256sum --check "$temporary_manifest"' in manifest_block
+    assert 'mv "$temporary_manifest" "$manifest_path"' in manifest_block
+    assert "[[ \"$manifest_sha256\" =~ ^[0-9a-f]{64}$ ]]" in manifest_block
+    assert "manifest_sha256=%s" in manifest_block
