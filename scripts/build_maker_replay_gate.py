@@ -17,9 +17,7 @@ from gpt_quant.maker_fill_replay import (
 )
 
 _SCHEMA_VERSION = 2
-_EXPECTED_SOURCE_SHA256 = (
-    "01438cc23709d9c8e9ea8d9d49d3f64c65978d27d592356a333f7a3da213d563"
-)
+_EXPECTED_SOURCE_SHA256 = "01438cc23709d9c8e9ea8d9d49d3f64c65978d27d592356a333f7a3da213d563"
 _MANIFEST_NAME = "artifact-manifest.sha256"
 _GATE_NAME = "maker-order-replay-gate.json"
 _NO_FILL_NAME = "cancelled-no-fill.json"
@@ -135,10 +133,7 @@ def _build_replays(
         raise ValueError("maker replay did not preserve the no-fill scenario")
     if partial_fill.get("outcome") != "cancelled_partial":
         raise ValueError("maker replay did not preserve the partial-fill scenario")
-    if (
-        no_fill.get("filled_base_quantity") != "0"
-        or no_fill.get("exchange_fee_quote") != "0"
-    ):
+    if no_fill.get("filled_base_quantity") != "0" or no_fill.get("exchange_fee_quote") != "0":
         raise ValueError("no-fill scenario must not create quantity or fee")
     if partial_fill.get("exchange_fee_one_way_bps") != "5":
         raise ValueError("partial-fill scenario must use exactly 5 bps one-way")
@@ -147,12 +142,8 @@ def _build_replays(
 
 def _coverage_evidence(metadata: Mapping[str, Any]) -> dict[str, Any]:
     source_kind = metadata.get("source_kind")
-    coverage_start_raw = metadata.get(
-        "coverage_start_utc", metadata.get("exchange_start_utc")
-    )
-    coverage_end_raw = metadata.get(
-        "coverage_end_utc", metadata.get("exchange_end_utc")
-    )
+    coverage_start_raw = metadata.get("coverage_start_utc", metadata.get("exchange_start_utc"))
+    coverage_end_raw = metadata.get("coverage_end_utc", metadata.get("exchange_end_utc"))
     coverage_start = _utc_metadata_timestamp(
         coverage_start_raw,
         field="coverage_start_utc",
@@ -387,9 +378,7 @@ def main() -> int:
         gate = verify_evidence(args.output_dir)
     else:
         if not args.source_response or not args.source_metadata:
-            raise SystemExit(
-                "--source-response and --source-metadata are required when building"
-            )
+            raise SystemExit("--source-response and --source-metadata are required when building")
         gate = build_evidence(
             source_response=args.source_response,
             source_metadata=args.source_metadata,
@@ -400,9 +389,7 @@ def main() -> int:
         json.dumps(
             {
                 "blockers": gate["blockers"],
-                "execution_interval_coverage_passes": gate[
-                    "execution_interval_coverage_passes"
-                ],
+                "execution_interval_coverage_passes": gate["execution_interval_coverage_passes"],
                 "manifest_sha256": manifest_sha256,
                 "maker_order_replay_passes": gate["maker_order_replay_passes"],
                 "observed_outcomes": gate["observed_outcomes"],
