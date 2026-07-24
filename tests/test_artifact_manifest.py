@@ -1,5 +1,49 @@
 from __future__ import annotations
 
+import shutil
+from pathlib import Path
 
-def test_placeholder() -> None:
-    assert True
+import pytest
+
+from gpt_quant.artifact_manifest import build_manifest, verify_manifest
+
+
+def test_manifest_is_deterministic_and_verifies_from_download_root(tmp_path: Path) -> None:
+    artifact = tmp_path / "workspace" / "reports" / "okx" / "1h" / "BTC-USDT"
+    artifact.mkdir(parents=True)
+    (artifact / "effective_config.json").write_text('{"bar":"1H"}\n', encoding="utf-8")
+    (artifact / "snapshot").mkdir()
+    (artifact / "snapshot" / "source.raw.json").write_bytes(b'{"code":"0"}\n')
+    (artifact / "walk_forward.json").write_text('{"fee_bps":5}\n', encoding="utf-8")
+
+    first_digest = build_manifest(artifact)
+    first_manifest = (artifact / "artifact-manifest.sha256").read_text(encoding="utf-8")
+    second_digest = build_manifest(artifact)
+
+    assert second_digest == first_digest
+    assert (artifact / "artifact-manifest.sha256").read_text(encoding="utf-8") == first_manifest
+    manifest_paths = [line.split("  ", 1)[1] for line in first_manifest.splitlines()]
+    assert manifest_paths == sorted(manifest_paths)
+    assert manifest_paths == [
+        "effective_config.json",
+        "snapshot/source.raw.json",
+        "walk_forward.json",
+    ]
+    assert all(not Path(path).is_absolute() and "reports/" not in path for path in manifest_paths)
+
+    downloaded = tmp_path / "downloaded-artifact"
+    shutil.copytree(artifact, downloaded)
+    verify_manifest(downloaded)
+
+
+def test_manifest_fails_closed_after_downloaded_file_is_tampered(tmp_path: Path) -> None:
+    artifact = tmp_path / "artifact"
+    artifact.mkdir()
+    report = artifact / "walk_forward.json"
+    report.write_text('{"value":0.1}\n', encoding="utf-8")
+    build_manifest(artifact)
+
+    report.write_text('{"value":9.9}\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="digest mismatch"):
+        verify_manifest(artifact)
