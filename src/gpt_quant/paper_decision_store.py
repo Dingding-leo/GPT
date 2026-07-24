@@ -86,7 +86,7 @@ def _private_decision_directory(
     directory: Path,
     *,
     create: bool,
-) -> Iterator[None]:
+) -> Iterator[int]:
     if directory.is_symlink():
         raise ValueError("paper decision directory must not be a symbolic link")
     directory_was_missing = not directory.exists()
@@ -104,7 +104,7 @@ def _private_decision_directory(
     try:
         opened = _validate_private_directory(descriptor)
         _assert_directory_identity(directory, opened)
-        yield
+        yield descriptor
         _assert_directory_identity(directory, opened)
     finally:
         os.close(descriptor)
@@ -145,10 +145,16 @@ def _genesis_payload(target_journal_path: str | Path) -> bytes:
     )
 
 
-def _read_private_bytes(path: Path, *, label: str) -> bytes:
+def _read_private_bytes_at(
+    directory_descriptor: int,
+    name: str,
+    *,
+    label: str,
+) -> bytes:
     descriptor = os.open(
-        path,
+        name,
         os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0),
+        dir_fd=directory_descriptor,
     )
     try:
         opened = _core._validate_private_file(descriptor, label)
@@ -162,7 +168,11 @@ def _read_private_bytes(path: Path, *, label: str) -> bytes:
             total += len(chunk)
             if total > _GENESIS_MAX_BYTES:
                 raise ValueError("paper decision store genesis exceeds the size limit")
-        current = os.stat(path, follow_symlinks=False)
+        current = os.stat(
+            name,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
         if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
             raise RuntimeError("paper decision store genesis path changed during replay")
         return b"".join(chunks)
@@ -172,12 +182,21 @@ def _read_private_bytes(path: Path, *, label: str) -> bytes:
 
 def _validate_store_genesis(
     target_journal_path: str | Path,
-    directory: Path,
+    directory_descriptor: int,
 ) -> str:
-    path = directory / _GENESIS_NAME
-    if not path.exists():
-        raise FileNotFoundError("paper decision store is not initialized")
-    payload = _read_private_bytes(path, label="paper decision store genesis")
+    try:
+        os.stat(
+            _GENESIS_NAME,
+            dir_fd=directory_descriptor,
+            follow_symlinks=False,
+        )
+    except FileNotFoundError as exc:
+        raise FileNotFoundError("paper decision store is not initialized") from exc
+    payload = _read_private_bytes_at(
+        directory_descriptor,
+        _GENESIS_NAME,
+        label="paper decision store genesis",
+    )
     try:
         decoded = json.loads(
             payload.decode("utf-8"),
@@ -242,18 +261,18 @@ def initialize_paper_order_decision_store(
     """
 
     directory = Path(decision_directory)
-    with _private_decision_directory(directory, create=True):
-        genesis_path = directory / _GENESIS_NAME
-        if genesis_path.exists():
-            return _validate_store_genesis(target_journal_path, directory)
-        if any(directory.iterdir()):
+    with _private_decision_directory(directory, create=True) as directory_descriptor:
+        if _GENESIS_NAME in os.listdir(directory_descriptor):
+            return _validate_store_genesis(target_journal_path, directory_descriptor)
+        if os.listdir(directory_descriptor):
             raise ValueError("uninitialized paper decision directory must be empty")
 
         payload = _genesis_payload(target_journal_path)
         descriptor = os.open(
-            genesis_path,
+            _GENESIS_NAME,
             os.O_CREAT | os.O_EXCL | os.O_WRONLY | getattr(os, "O_NOFOLLOW", 0),
             0o600,
+            dir_fd=directory_descriptor,
         )
         try:
             os.fchmod(descriptor, 0o600)
@@ -264,13 +283,16 @@ def initialize_paper_order_decision_store(
         except BaseException:
             os.close(descriptor)
             descriptor = -1
-            genesis_path.unlink(missing_ok=True)
+            try:
+                os.unlink(_GENESIS_NAME, dir_fd=directory_descriptor)
+            except FileNotFoundError:
+                pass
             raise
         finally:
             if descriptor >= 0:
                 os.close(descriptor)
-        _core._fsync_directory(directory)
-        return _validate_store_genesis(target_journal_path, directory)
+        os.fsync(directory_descriptor)
+        return _validate_store_genesis(target_journal_path, directory_descriptor)
 
 
 def record_paper_order_decision(
@@ -281,11 +303,11 @@ def record_paper_order_decision(
     """Consume one target only through an initialized private decision store."""
 
     directory = Path(decision_directory)
-    with _private_decision_directory(directory, create=False):
-        _validate_store_genesis(target_journal_path, directory)
+    with _private_decision_directory(directory, create=False) as directory_descriptor:
+        _validate_store_genesis(target_journal_path, directory_descriptor)
         return _core.record_paper_order_decision(
             target_journal_path,
-            directory,
+            directory_descriptor,
             decision,
         )
 
@@ -297,11 +319,11 @@ def replay_paper_order_decision_store(
     """Replay decisions only through an initialized private decision store."""
 
     directory = Path(decision_directory)
-    with _private_decision_directory(directory, create=False):
-        _validate_store_genesis(target_journal_path, directory)
+    with _private_decision_directory(directory, create=False) as directory_descriptor:
+        _validate_store_genesis(target_journal_path, directory_descriptor)
         return _core.replay_paper_order_decision_store(
             target_journal_path,
-            directory,
+            directory_descriptor,
         )
 
 
