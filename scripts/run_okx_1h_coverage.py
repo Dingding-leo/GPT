@@ -16,6 +16,7 @@ from gpt_quant.okx_1h import (
     fetch_okx_one_hour_candles,
     replay_persisted_okx_one_hour_snapshot,
 )
+from gpt_quant.okx_execution_quote import _required_base_url
 from gpt_quant.okx_live_response_evidence import sample_okx_server_time_with_response
 
 _SCHEMA_VERSION = 1
@@ -98,7 +99,7 @@ def main() -> int:
     if not instruments or len(set(instruments)) != len(instruments):
         raise ValueError("instruments must be a non-empty unique list")
     requested_start = _utc_timestamp(args.start, field="start")
-    base_url = args.base_url.rstrip("/")
+    base_url = _required_base_url(args.base_url)
     output = Path(args.output_dir)
 
     server_observation = sample_okx_server_time_with_response(
