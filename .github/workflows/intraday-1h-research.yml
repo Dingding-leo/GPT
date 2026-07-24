@@ -64,6 +64,31 @@ jobs:
             --output-dir "reports/okx/1h/${{ matrix.inst_id }}" \
             --manifest-path "reports/okx/1h/${{ matrix.inst_id }}/experiment-manifest.jsonl"
 
+      - name: Build and verify immutable canonical 1h manifest
+        id: artifact_manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="reports/okx/1h/${{ matrix.inst_id }}"
+          manifest_path="$report_dir/artifact-manifest.sha256"
+          temporary_manifest="${manifest_path}.tmp"
+
+          test -s "$report_dir/effective_config.json"
+          test -s "$report_dir/walk_forward.json"
+          test -s "$report_dir/walk_forward_returns.csv"
+          test -s "$report_dir/experiment-manifest.jsonl"
+
+          find "$report_dir" -type f ! -name 'artifact-manifest.sha256*' -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > "$temporary_manifest"
+          test -s "$temporary_manifest"
+          sha256sum --check "$temporary_manifest"
+          mv "$temporary_manifest" "$manifest_path"
+
+          manifest_sha256="$(sha256sum "$manifest_path" | awk '{print $1}')"
+          [[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]
+          printf 'manifest_sha256=%s\n' "$manifest_sha256" >> "$GITHUB_OUTPUT"
+
       - name: Upload immutable canonical 1h evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
