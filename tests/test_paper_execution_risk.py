@@ -153,3 +153,24 @@ def test_partial_sell_reserves_remaining_base_and_rejects_fee_tampering() -> Non
     tampered = json.dumps(payload, separators=(",", ":"), sort_keys=True).encode() + b"\n"
     with pytest.raises(ValueError, match="exactly 5 bps"):
         PaperExecutionRiskImpact.from_json_bytes(tampered)
+
+
+def test_high_precision_partial_buy_preserves_exact_five_bps_cash_math() -> None:
+    attempt = _attempt(
+        side="buy",
+        outcome="partial",
+        requested="0.12345678901234567890123456789",
+        filled="0.02345678901234567890123456789",
+        fill_price="41006.8",
+    )
+
+    impact = measure_paper_execution_risk(attempt)
+
+    assert impact.unfilled_base_quantity == "0.1"
+    assert impact.realized_quote_notional == "961.887855671456785567145678551652"
+    assert impact.realized_exchange_fee_quote == "0.480943927835728392783572839275826"
+    assert impact.realized_cash_delta_quote == "-962.368799599292513959929251390927826"
+    assert impact.pending_cash_reservation_quote == "4102.73034"
+    assert impact.total_buy_cash_commitment_quote == (
+        "5065.099139599292513959929251390927826"
+    )

@@ -5,7 +5,7 @@ import json
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from decimal import Decimal
+from decimal import Decimal, Inexact, Rounded, localcontext
 from typing import Literal
 
 from .paper_execution_attempt import PaperExecutionAttempt
@@ -18,6 +18,7 @@ __all__ = [
 _SCHEMA_VERSION = 1
 _EXCHANGE_FEE_ONE_WAY_BPS = 5
 _EXCHANGE_FEE_RATE = Decimal("0.0005")
+_ONE_PLUS_EXCHANGE_FEE_RATE = Decimal("1.0005")
 _RESERVATION_ASSUMPTION = "accepted-or-partial-unfilled-remains-open"
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
@@ -88,6 +89,15 @@ def _canonical_decimal(value: Decimal) -> str:
     if "." in canonical:
         canonical = canonical.rstrip("0").rstrip(".")
     return canonical
+
+
+def _exact_arithmetic_precision(*values: Decimal) -> int:
+    coefficient_digits = sum(max(1, len(value.as_tuple().digits)) for value in values)
+    maximum_scale = max(
+        (max(0, -value.as_tuple().exponent) for value in values),
+        default=0,
+    )
+    return max(64, coefficient_digits + maximum_scale + 16)
 
 
 def _json_bytes(payload: Mapping[str, object]) -> bytes:
@@ -193,28 +203,41 @@ class PaperExecutionRiskImpact:
             if side == "sell" and fill_price > bid:
                 raise ValueError("sell fill price cannot improve through the reference bid")
 
-        unfilled = requested - filled
-        realized_notional = filled * fill_price
-        realized_fee = realized_notional * _EXCHANGE_FEE_RATE
-        position_delta = filled if side == "buy" else -filled
-        realized_cash_delta = (
-            -(realized_notional + realized_fee)
-            if side == "buy"
-            else realized_notional - realized_fee
-        )
+        with localcontext() as context:
+            context.prec = _exact_arithmetic_precision(
+                requested,
+                filled,
+                fill_price,
+                bid,
+                ask,
+                _EXCHANGE_FEE_RATE,
+                _ONE_PLUS_EXCHANGE_FEE_RATE,
+            )
+            context.traps[Inexact] = True
+            context.traps[Rounded] = True
 
-        pending_cash = Decimal("0")
-        pending_base = Decimal("0")
-        if outcome in {"accepted", "partial"}:
-            if side == "buy":
-                pending_notional = unfilled * ask
-                pending_cash = pending_notional * (Decimal("1") + _EXCHANGE_FEE_RATE)
-            else:
-                pending_base = unfilled
+            unfilled = requested - filled
+            realized_notional = filled * fill_price
+            realized_fee = realized_notional * _EXCHANGE_FEE_RATE
+            position_delta = filled if side == "buy" else -filled
+            realized_cash_delta = (
+                -(realized_notional + realized_fee)
+                if side == "buy"
+                else realized_notional - realized_fee
+            )
 
-        total_buy_commitment = (
-            -realized_cash_delta + pending_cash if side == "buy" else Decimal("0")
-        )
+            pending_cash = Decimal("0")
+            pending_base = Decimal("0")
+            if outcome in {"accepted", "partial"}:
+                if side == "buy":
+                    pending_notional = unfilled * ask
+                    pending_cash = pending_notional * _ONE_PLUS_EXCHANGE_FEE_RATE
+                else:
+                    pending_base = unfilled
+
+            total_buy_commitment = (
+                -realized_cash_delta + pending_cash if side == "buy" else Decimal("0")
+            )
         derived = {
             "unfilled_base_quantity": unfilled,
             "realized_quote_notional": realized_notional,
