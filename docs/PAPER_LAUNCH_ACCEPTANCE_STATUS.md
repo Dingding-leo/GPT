@@ -44,9 +44,9 @@ account_connectivity = absent
 order_submission = absent
 ```
 
-## Executed verification command
+## Verification command and evidence rule
 
-The following command is the repository contract for this status document and its
+The following sequence is the repository contract for this status document and its
 fail-closed source bindings:
 
 ```bash
@@ -55,16 +55,32 @@ python -m pip check
 pytest -q tests/test_paper_launch_acceptance_status_documentation.py
 ```
 
-This command verifies documentation against the executable promotion gate,
-cross-market gate, workflow permissions, exact 5 bps economics, secure artifact
-materialization, and disabled paper/capital permissions. It does not start a paper
-runtime.
+The presence of these commands in documentation or a workflow definition is not
+execution evidence. For every reviewed head, operators must record the immutable commit
+SHA, workflow run ID, final conclusion, artifact ID, and artifact SHA-256 when an
+artifact is emitted. A missing run is **UNVERIFIED**, not a pass or a failure. Historical
+green runs cannot authorize a moved PR head or a squash-merged `main` commit.
+
+G0 completion requires successful exact-head results for all four current workflows:
+
+```text
+Python Package Build
+Hourly Quant Research
+Canonical BTC ETH 1h Research
+OKX 1H Data Coverage
+```
+
+Until all four results are recorded on one unchanged `main` SHA, the release decision
+remains **BLOCKED** and G1 must not start. The documentation contract test verifies the
+executable promotion gate, cross-market gate, workflow permissions, exact 5 bps
+economics, secure artifact materialization, and disabled paper/capital permissions. It
+does not start a paper runtime.
 
 ## Operator command inventory
 
 | Capability | Status | Executable operator evidence |
 |---|---|---|
-| Canonical `1H` acquisition, replay, and promotion evidence | **AVAILABLE FOR G0 REVIEW** | `.github/workflows/intraday-1h-research.yml` executes public exact-byte acquisition, persisted replay, 5 bps verification, portable manifests, secure semantic reconstruction, and fail-closed blocker publication. |
+| Canonical `1H` acquisition, replay, and promotion evidence | **IMPLEMENTED; EXACT-HEAD EVIDENCE REQUIRED** | `.github/workflows/intraday-1h-research.yml` executes public exact-byte acquisition, persisted replay, 5 bps verification, portable manifests, secure semantic reconstruction, and fail-closed blocker publication. Its definition or a historical run is not current-head execution evidence. |
 | Paper startup and shutdown | **BLOCKED** | No executable paper-runner startup or shutdown command exists on `main`. |
 | Health, heartbeat, and event-loop status | **BLOCKED** | No unattended paper runtime publishes an operator health or heartbeat contract. |
 | Restart recovery and reconciliation | **BLOCKED** | Journal and replay primitives do not form one integrated startup-recovery command with a zero-drift reconciliation result. |
