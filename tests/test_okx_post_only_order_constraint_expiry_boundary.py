@@ -19,9 +19,7 @@ from gpt_quant.paper_order_decision import PaperOrderDecision
 from gpt_quant.paper_post_only_order_intent import build_paper_post_only_order_intent
 
 _FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "okx"
-_INSTRUMENT_RESPONSE = (
-    _FIXTURE_ROOT / "public_instruments_btc_usdt_20251125" / "response.json"
-)
+_INSTRUMENT_RESPONSE = _FIXTURE_ROOT / "public_instruments_btc_usdt_20251125" / "response.json"
 _BOOK_RESPONSE = _FIXTURE_ROOT / "order-book-btc-usdt-docs-20210826" / "response.json"
 _INSTRUMENT_SHA256 = "290bd86ecbb1683351993197b0ec18001dfb604b9ba1cb864d9d6d327855f0eb"
 _BOOK_SHA256 = "7d12a351f8f51320d1c8beee0063557e1c90388d66ac63412bf66ca544aeb3e3"
