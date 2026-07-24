@@ -10,9 +10,7 @@ from types import ModuleType
 import pandas as pd
 import pytest
 
-_FIXTURE_ROOT = (
-    Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1h-grid-20260723-20260724"
-)
+_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1h-grid-20260723-20260724"
 
 
 def _load_module() -> ModuleType:
