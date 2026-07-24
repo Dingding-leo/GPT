@@ -97,11 +97,9 @@ def test_workflow_gates_persisted_fee_profile_before_artifact_hashing() -> None:
         "experiment-manifest.jsonl",
     ):
         assert f'test -s "$report_dir/{required_file}"' in manifest_block
-    assert 'find "$report_dir" -type f' in manifest_block
-    assert "! -name 'artifact-manifest.sha256*'" in manifest_block
-    assert "sort -z" in manifest_block
-    assert "xargs -0 sha256sum" in manifest_block
-    assert 'sha256sum --check "$temporary_manifest"' in manifest_block
-    assert 'mv "$temporary_manifest" "$manifest_path"' in manifest_block
+    assert 'python -m gpt_quant.artifact_manifest --root "$report_dir"' in manifest_block
     assert '[[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]' in manifest_block
+    assert 'cd "$report_dir"' in manifest_block
+    assert "sha256sum --check artifact-manifest.sha256" in manifest_block
+    assert 'sha256sum --check "$temporary_manifest"' not in manifest_block
     assert "manifest_sha256=%s" in manifest_block
