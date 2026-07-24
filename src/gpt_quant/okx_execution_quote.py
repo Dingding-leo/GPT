@@ -387,9 +387,7 @@ def _parse_server_time_response(value: bytes) -> Mapping[str, object]:
     if payload["code"] != "0":
         if not isinstance(payload["msg"], str):
             raise ValueError("OKX server-time response message must be a string")
-        raise RuntimeError(
-            f"OKX API error code={payload['code']!r} message={payload['msg']!r}"
-        )
+        raise RuntimeError(f"OKX API error code={payload['code']!r} message={payload['msg']!r}")
     if not isinstance(payload["msg"], str):
         raise ValueError("OKX server-time response message must be a string")
     data = payload["data"]
