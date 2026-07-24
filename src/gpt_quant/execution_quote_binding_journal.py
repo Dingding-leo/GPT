@@ -138,7 +138,7 @@ def _open_output_directory(path: Path, *, create: bool) -> tuple[int, os.stat_re
         if not create:
             raise
         if not path.name or path.name in {".", ".."}:
-            raise ValueError(f"{_ERROR_LABEL} output path must name one directory")
+            raise ValueError(f"{_ERROR_LABEL} output path must name one directory") from None
         parent_descriptor = os.open(path.parent, flags)
         try:
             os.mkdir(path.name, 0o700, dir_fd=parent_descriptor)
@@ -155,10 +155,7 @@ def _open_output_directory(path: Path, *, create: bool) -> tuple[int, os.stat_re
     try:
         directory_stat = _validate_directory_descriptor(descriptor)
         path_stat = os.stat(path, follow_symlinks=False)
-        if (
-            path_stat.st_dev != directory_stat.st_dev
-            or path_stat.st_ino != directory_stat.st_ino
-        ):
+        if path_stat.st_dev != directory_stat.st_dev or path_stat.st_ino != directory_stat.st_ino:
             raise RuntimeError(f"{_ERROR_LABEL} output directory path changed while opening")
         return descriptor, directory_stat, created
     except BaseException:
