@@ -89,9 +89,7 @@ def test_immutable_real_okx_one_hour_fixture_replays_exactly() -> None:
 
     assert len(snapshot.candles) == source["observations"] == 3
     assert snapshot.metadata["raw_pages_sha256"] == source["fixture_files"]["raw"]["sha256"]
-    assert snapshot.metadata["source_response_sha256"] == [
-        source["raw_response_extract_sha256"]
-    ]
+    assert snapshot.metadata["source_response_sha256"] == [source["raw_response_extract_sha256"]]
     assert snapshot.metadata["source_transport"] == "trusted_okx_https_bounded_exact_bytes"
     assert snapshot.metadata["missing_intervals"] == 0
     assert snapshot.metadata["incomplete_rows_removed"] == 1
