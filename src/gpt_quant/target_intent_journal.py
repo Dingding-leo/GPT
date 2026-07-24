@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import errno
 import hashlib
 import os
 import stat
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,11 +14,13 @@ try:
 except ImportError:  # pragma: no cover - exercised only on non-POSIX platforms
     _fcntl = None
 
-from ._atomic_publish import publish_payloads_atomically
+from ._atomic_publish import publish_staged_paths_atomically
 from .execution_intent import TargetPositionIntent
 
 _STAGING_PREFIX = ".target-intent-journal-"
 _ERROR_LABEL = "target-position intent journal"
+_PRIVATE_FILE_MODE = 0o600
+_READ_CHUNK_SIZE = 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,13 +98,122 @@ def _parse_journal_bytes(value: bytes) -> TargetPositionIntentJournal:
     return journal
 
 
+def _same_inode(first: os.stat_result, second: os.stat_result) -> bool:
+    return first.st_dev == second.st_dev and first.st_ino == second.st_ino
+
+
+def _validate_private_descriptor(descriptor: int, *, label: str) -> os.stat_result:
+    file_stat = os.fstat(descriptor)
+    if not stat.S_ISREG(file_stat.st_mode) or file_stat.st_nlink != 1:
+        raise ValueError(f"{label} must be a regular single-link file")
+    if hasattr(os, "geteuid") and file_stat.st_uid != os.geteuid():
+        raise ValueError(f"{label} must be owned by the current user")
+    if stat.S_IMODE(file_stat.st_mode) != _PRIVATE_FILE_MODE:
+        raise ValueError(f"{label} must use owner-only mode 0600")
+    return file_stat
+
+
+def _read_private_journal_bytes(path: Path) -> bytes:
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    non_blocking = getattr(os, "O_NONBLOCK", 0)
+    try:
+        descriptor = os.open(path, os.O_RDONLY | no_follow | non_blocking)
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise ValueError(f"{_ERROR_LABEL} must not be a symbolic link") from exc
+        raise
+
+    try:
+        initial_stat = _validate_private_descriptor(descriptor, label=_ERROR_LABEL)
+        chunks: list[bytes] = []
+        while True:
+            try:
+                chunk = os.read(descriptor, _READ_CHUNK_SIZE)
+            except InterruptedError:
+                continue
+            if not chunk:
+                break
+            chunks.append(chunk)
+
+        final_stat = _validate_private_descriptor(descriptor, label=_ERROR_LABEL)
+        if (
+            final_stat.st_size != initial_stat.st_size
+            or final_stat.st_mtime_ns != initial_stat.st_mtime_ns
+            or final_stat.st_ctime_ns != initial_stat.st_ctime_ns
+        ):
+            raise RuntimeError(f"{_ERROR_LABEL} changed during replay")
+        try:
+            path_stat = os.stat(path, follow_symlinks=False)
+        except FileNotFoundError as exc:
+            raise RuntimeError(f"{_ERROR_LABEL} path changed during replay") from exc
+        if not _same_inode(initial_stat, path_stat):
+            raise RuntimeError(f"{_ERROR_LABEL} path changed during replay")
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
+
+
+def _write_private_file(path: Path, payload: bytes) -> None:
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    descriptor = os.open(
+        path,
+        os.O_CREAT | os.O_EXCL | os.O_WRONLY | no_follow,
+        _PRIVATE_FILE_MODE,
+    )
+    try:
+        os.fchmod(descriptor, _PRIVATE_FILE_MODE)
+        remaining = memoryview(payload)
+        while remaining:
+            try:
+                written = os.write(descriptor, remaining)
+            except InterruptedError:
+                continue
+            if written <= 0:
+                raise OSError("failed to write target-position intent journal staging file")
+            remaining = remaining[written:]
+        os.fsync(descriptor)
+        _validate_private_descriptor(descriptor, label=f"{_ERROR_LABEL} staging file")
+    finally:
+        os.close(descriptor)
+
+
+def publish_payloads_atomically(
+    output: Path,
+    paths: Mapping[str, Path],
+    payloads: Mapping[str, bytes],
+    *,
+    commit_order: Sequence[str],
+    staging_prefix: str,
+    error_label: str,
+) -> dict[str, Path]:
+    """Publish owner-only payload files through the shared atomic transaction."""
+
+    if set(payloads) != set(paths):
+        raise ValueError(f"{error_label} payloads must exactly match the destination file set")
+
+    def stage_paths(staging: Path) -> dict[str, Path]:
+        staged_paths = {name: staging / path.name for name, path in paths.items()}
+        for name, staged_path in staged_paths.items():
+            _write_private_file(staged_path, payloads[name])
+        return staged_paths
+
+    return publish_staged_paths_atomically(
+        output,
+        paths,
+        stage_paths=stage_paths,
+        commit_order=commit_order,
+        staging_prefix=staging_prefix,
+        error_label=error_label,
+    )
+
+
 def _validate_lock_descriptor(descriptor: int) -> os.stat_result:
     lock_stat = os.fstat(descriptor)
     if not stat.S_ISREG(lock_stat.st_mode) or lock_stat.st_nlink != 1:
         raise ValueError(f"{_ERROR_LABEL} writer lock must be a regular single-link file")
     if hasattr(os, "geteuid") and lock_stat.st_uid != os.geteuid():
         raise ValueError(f"{_ERROR_LABEL} writer lock must be owned by the current user")
-    os.fchmod(descriptor, 0o600)
+    os.fchmod(descriptor, _PRIVATE_FILE_MODE)
     return lock_stat
 
 
@@ -118,7 +230,7 @@ def _exclusive_writer_lock(journal_path: Path) -> Iterator[None]:
     if _fcntl is None:
         flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | no_follow
         try:
-            descriptor = os.open(lock_path, flags, 0o600)
+            descriptor = os.open(lock_path, flags, _PRIVATE_FILE_MODE)
         except FileExistsError as exc:
             raise RuntimeError(f"{_ERROR_LABEL} writer lock already exists") from exc
         os.close(descriptor)
@@ -132,7 +244,7 @@ def _exclusive_writer_lock(journal_path: Path) -> Iterator[None]:
         return
 
     flags = os.O_CREAT | os.O_RDWR | no_follow
-    descriptor = os.open(lock_path, flags, 0o600)
+    descriptor = os.open(lock_path, flags, _PRIVATE_FILE_MODE)
     acquired = False
     lock_stat: os.stat_result | None = None
     try:
@@ -150,10 +262,7 @@ def _exclusive_writer_lock(journal_path: Path) -> Iterator[None]:
         if acquired:
             try:
                 current_stat = os.stat(lock_path, follow_symlinks=False)
-                if lock_stat is None or (
-                    current_stat.st_dev != lock_stat.st_dev
-                    or current_stat.st_ino != lock_stat.st_ino
-                ):
+                if lock_stat is None or not _same_inode(lock_stat, current_stat):
                     raise RuntimeError(f"{_ERROR_LABEL} writer lock path changed during commit")
                 lock_path.unlink()
             finally:
@@ -167,10 +276,10 @@ def _exclusive_writer_lock(journal_path: Path) -> Iterator[None]:
 def load_target_position_intent_journal(
     path: str | Path,
 ) -> TargetPositionIntentJournal:
-    """Load and fully replay-verify one persisted target-position intent journal."""
+    """Load and fully replay-verify one owner-only target-position intent journal."""
 
     journal_path = Path(path)
-    return _parse_journal_bytes(journal_path.read_bytes())
+    return _parse_journal_bytes(_read_private_journal_bytes(journal_path))
 
 
 def record_target_position_intent(
@@ -215,4 +324,7 @@ def record_target_position_intent(
             staging_prefix=_STAGING_PREFIX,
             error_label=_ERROR_LABEL,
         )
-        return updated
+        persisted = load_target_position_intent_journal(journal_path)
+        if persisted != updated:
+            raise RuntimeError(f"{_ERROR_LABEL} changed during publication")
+        return persisted
