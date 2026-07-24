@@ -40,9 +40,17 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Run repository gates
+      - name: Canonicalize candidate files and run repository gates
         run: |
           set -euo pipefail
+          ruff check --fix \
+            src/gpt_quant/okx_1h.py \
+            scripts/run_okx_1h_coverage.py \
+            tests/test_okx_1h_coverage.py
+          ruff format \
+            src/gpt_quant/okx_1h.py \
+            scripts/run_okx_1h_coverage.py \
+            tests/test_okx_1h_coverage.py
           ruff check .
           ruff format --check .
           pytest
@@ -57,10 +65,15 @@ jobs:
           test -s reports/okx/1h-coverage/BTC-USDT/snapshot/okx-BTC-USDT-1H.raw.json
           test -s reports/okx/1h-coverage/ETH-USDT/snapshot/okx-ETH-USDT-1H.raw.json
 
-      - name: Upload immutable OKX 1H source evidence
+      - name: Upload immutable OKX 1H source evidence and formatted candidates
+        if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: reports/okx/1h-coverage/
+          path: |
+            reports/okx/1h-coverage/
+            src/gpt_quant/okx_1h.py
+            scripts/run_okx_1h_coverage.py
+            tests/test_okx_1h_coverage.py
           if-no-files-found: error
           retention-days: 14
