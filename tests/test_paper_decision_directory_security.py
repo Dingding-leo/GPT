@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+import gpt_quant.paper_decision_store as store_module
 from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.paper_decision_store import (
     PaperOrderDecision,
@@ -108,3 +109,35 @@ def test_store_rejects_group_world_writable_directory_before_consumption(
         replay_paper_order_decision_store(target_path, decision_directory)
 
     assert not list(decision_directory.iterdir())
+
+
+def test_record_pins_the_opened_store_when_directory_path_is_replaced(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target_path, decision_directory, target = _paths(tmp_path)
+    initialize_paper_order_decision_store(target_path, decision_directory)
+    decision = _decision(target)
+    original_directory = tmp_path / "paper-decisions-original"
+    replacement_directory = decision_directory
+    real_validate_genesis = store_module._validate_store_genesis
+    swapped = False
+
+    def swap_after_genesis(*args: object, **kwargs: object) -> str:
+        nonlocal swapped
+        result = real_validate_genesis(*args, **kwargs)
+        if not swapped:
+            decision_directory.rename(original_directory)
+            replacement_directory.mkdir(mode=0o700)
+            swapped = True
+        return result
+
+    monkeypatch.setattr(store_module, "_validate_store_genesis", swap_after_genesis)
+
+    with pytest.raises(RuntimeError, match="directory changed during operation"):
+        record_paper_order_decision(target_path, decision_directory, decision)
+
+    assert list(replacement_directory.iterdir()) == []
+    assert (original_directory / f"{target.intent_id}.json").read_bytes() == (
+        decision.to_json_bytes()
+    )
