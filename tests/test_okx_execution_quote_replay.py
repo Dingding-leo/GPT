@@ -77,10 +77,19 @@ def test_top_of_book_replay_round_trips_complete_real_okx_evidence() -> None:
     replayed = ReconstructableOKXTopOfBookEvidence.from_json_bytes(evidence.to_json_bytes())
 
     assert replayed == evidence
+    assert replayed.schema_version == 2
     assert replayed.observation.raw_response_json == _fixture_response()
     assert replayed.observation.source_response_sha256 == _EXPECTED_RESPONSE_SHA256
     assert replayed.observation.raw_server_time_response_json == _SERVER_TIME_RESPONSE
-    assert replayed.observation.server_time_response_sha256 == _EXPECTED_SERVER_TIME_RESPONSE_SHA256
+    assert (
+        replayed.observation.server_time_response_sha256
+        == _EXPECTED_SERVER_TIME_RESPONSE_SHA256
+    )
+    payload = _canonical_payload(replayed)
+    assert (
+        payload["server_time_response_sha256"]
+        == _EXPECTED_SERVER_TIME_RESPONSE_SHA256
+    )
     assert replayed.observation.quote.instrument_snapshot_sha256 == _INSTRUMENT_SNAPSHOT_SHA256
     assert replayed.observation.server_time_request_started_utc == datetime(
         2021, 8, 26, 8, 27, 16, 460_000, tzinfo=UTC
@@ -89,6 +98,26 @@ def test_top_of_book_replay_round_trips_complete_real_okx_evidence() -> None:
     assert replayed.observation.max_server_round_trip_seconds == 2.0
     assert replayed.observation.max_abs_midpoint_clock_skew_seconds == 5.0
     assert len(replayed.evidence_id) == 64
+
+
+def test_top_of_book_replay_rejects_legacy_version_for_new_source_layout() -> None:
+    evidence = ReconstructableOKXTopOfBookEvidence(observation=_observation())
+    payload = _canonical_payload(evidence)
+    payload["schema_version"] = 1
+
+    with pytest.raises(ValueError, match="unsupported OKX quote replay schema"):
+        ReconstructableOKXTopOfBookEvidence.from_json_bytes(_serialized(payload))
+
+
+def test_top_of_book_replay_rejects_server_time_hash_mismatch() -> None:
+    evidence = ReconstructableOKXTopOfBookEvidence(observation=_observation())
+    payload = _canonical_payload(evidence)
+    payload["raw_server_time_response_json_utf8"] = (
+        '{"code":"0","msg":"","data":[{"ts":"1629966436499"}]}'
+    )
+
+    with pytest.raises(ValueError, match="SHA-256 does not match its bytes"):
+        ReconstructableOKXTopOfBookEvidence.from_json_bytes(_serialized(payload))
 
 
 def test_top_of_book_replay_rejects_forged_timing_envelope() -> None:
@@ -106,6 +135,9 @@ def test_top_of_book_replay_rejects_altered_server_time_source_bytes() -> None:
     payload["raw_server_time_response_json_utf8"] = (
         '{"code":"0","msg":"","data":[{"ts":"1629966436499"}]}'
     )
+    payload["server_time_response_sha256"] = hashlib.sha256(
+        payload["raw_server_time_response_json_utf8"].encode("utf-8")
+    ).hexdigest()
 
     with pytest.raises(ValueError, match="does not reproduce the exchange timestamp"):
         ReconstructableOKXTopOfBookEvidence.from_json_bytes(_serialized(payload))
