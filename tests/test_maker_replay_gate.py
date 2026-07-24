@@ -5,9 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-_FIXTURE_ROOT = (
-    Path(__file__).parent / "fixtures" / "okx" / "trades-btc-usdt-docs-20220602"
-)
+_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "okx" / "trades-btc-usdt-docs-20220602"
 _SCRIPT = Path(__file__).parents[1] / "scripts" / "build_maker_replay_gate.py"
 _COVERAGE_BLOCKER = "complete_submission_to_expiry_trade_coverage_missing"
 
@@ -63,9 +61,7 @@ def _directory_bytes(root: Path) -> dict[str, bytes]:
 
 
 def _write_metadata(path: Path, **updates: object) -> Path:
-    metadata = json.loads(
-        (_FIXTURE_ROOT / "metadata.json").read_text(encoding="utf-8")
-    )
+    metadata = json.loads((_FIXTURE_ROOT / "metadata.json").read_text(encoding="utf-8"))
     metadata.update(updates)
     path.write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -178,9 +174,7 @@ def test_maker_replay_gate_rejects_tampered_replay_bytes(tmp_path: Path) -> None
     output_dir = tmp_path / "evidence"
     _build(output_dir)
     replay_path = output_dir / "cancelled-partial.json"
-    replay_path.write_bytes(
-        replay_path.read_bytes().replace(b'"0.00001"', b'"0.00002"', 1)
-    )
+    replay_path.write_bytes(replay_path.read_bytes().replace(b'"0.00001"', b'"0.00002"', 1))
 
     result = _verify(output_dir, check=False)
     assert result.returncode != 0
@@ -194,8 +188,7 @@ def test_maker_replay_gate_rejects_manifest_inventory_drift(
     _build(output_dir)
     manifest_path = output_dir / "artifact-manifest.sha256"
     manifest_path.write_text(
-        manifest_path.read_text(encoding="utf-8")
-        + f"{'0' * 64}  unexpected.json\n",
+        manifest_path.read_text(encoding="utf-8") + f"{'0' * 64}  unexpected.json\n",
         encoding="utf-8",
     )
 
