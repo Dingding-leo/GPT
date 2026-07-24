@@ -1,9 +1,8 @@
 name: Risk Format Probe
 
 on:
-  push:
-    branches:
-      - auto/risk/20260724-11-session-kill-switch
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
@@ -47,7 +46,7 @@ jobs:
             /tmp/risk-format/tests/test_paper_risk_session_gate.py
 
       - name: Upload probe result
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v6.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: risk-format-probe
           path: /tmp/risk-format
