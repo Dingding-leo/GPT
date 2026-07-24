@@ -194,3 +194,31 @@ def test_okx_attempt_gate_rejects_a_different_instrument_snapshot() -> None:
             attempt,
             maximum_snapshot_age_ms=1_000,
         )
+
+
+def test_okx_attempt_gate_rejects_off_tick_average_fill_price() -> None:
+    snapshot = _instrument_snapshot()
+    quote = _quote(snapshot.raw_response_sha256)
+    attempt = record_paper_execution_attempt(
+        _binding(quote),
+        quote,
+        submitted_at_utc=datetime(2026, 7, 24, 0, 0, 0, 450_000, tzinfo=UTC),
+        outcome_at_utc=datetime(2026, 7, 24, 0, 0, 0, 500_000, tzinfo=UTC),
+        side="buy",
+        requested_base_quantity="0.1",
+        outcome="filled",
+        filled_base_quantity="0.1",
+        average_fill_price="41006.85",
+        reason_code="paper-off-tick-fill",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="average_fill_price is not an exact multiple of the OKX tick size",
+    ):
+        validate_okx_paper_execution_attempt_constraints(
+            snapshot,
+            quote,
+            attempt,
+            maximum_snapshot_age_ms=1_000,
+        )
