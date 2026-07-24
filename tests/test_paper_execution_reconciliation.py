@@ -64,10 +64,10 @@ def _persisted_chain(tmp_path):
         instrument_id="BTC-USDT",
         observed_at_utc=observed,
         received_at_utc=received,
-        bid_price="41006.7",
-        bid_quantity="0.3",
+        bid_price="41006.3",
+        bid_quantity="0.30178218",
         ask_price="41006.8",
-        ask_quantity="0.423",
+        ask_quantity="0.60038921",
         source_response_sha256=_BOOK_SHA256,
         instrument_snapshot_sha256=_INSTRUMENT_SHA256,
     )
@@ -136,7 +136,7 @@ def test_reconciliation_replays_exact_persisted_chain_and_cost_versions(tmp_path
     assert evidence.intent_count == evidence.quote_count == 1
     assert evidence.binding_count == evidence.attempt_count == 1
     assert evidence.reconciliation_id == (
-        "7a7913c171458654c981dbfd5b283d736fa6b6c85f122f677ebaf396125f132f"
+        "ce9fc583d2dcbb34f55b6c119c98fbcb8fa8aa01bfc7b56e0dee83b1c679274f"
     )
     assert (
         PaperExecutionReconciliationEvidence.from_json_bytes(evidence.to_json_bytes())
