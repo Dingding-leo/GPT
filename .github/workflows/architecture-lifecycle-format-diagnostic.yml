@@ -1,9 +1,9 @@
 name: Architecture Lifecycle Format Diagnostic
 
 on:
-  push:
+  pull_request:
     branches:
-      - auto/architecture/20260724-13-retry-stable-maker-intent
+      - main
 
 permissions:
   contents: read
