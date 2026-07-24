@@ -277,7 +277,8 @@ def _verify_snapshot_inventory(
     records: list[dict[str, Any]],
 ) -> None:
     record_snapshot_ids = [
-        _required_sha256(record["snapshot_id"], field="snapshot_id") for record in records
+        _required_sha256(record["snapshot_id"], field="snapshot_id")
+        for record in records
     ]
     referenced = set(record_snapshot_ids)
     if len(referenced) != len(record_snapshot_ids):
