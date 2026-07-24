@@ -185,13 +185,8 @@ class PaperRiskSessionHighWatermarks:
             raise ValueError("maximum_daily_loss_fraction cannot be below current daily loss")
         if self.maximum_drawdown_fraction + tolerance < snapshot.drawdown_fraction:
             raise ValueError("maximum_drawdown_fraction cannot be below current drawdown")
-        if (
-            self.maximum_daily_underlying_turnover + tolerance
-            < snapshot.daily_underlying_turnover
-        ):
-            raise ValueError(
-                "maximum_daily_underlying_turnover cannot be below current turnover"
-            )
+        if self.maximum_daily_underlying_turnover + tolerance < snapshot.daily_underlying_turnover:
+            raise ValueError("maximum_daily_underlying_turnover cannot be below current turnover")
 
 
 def advance_paper_risk_session_high_watermarks(
@@ -288,7 +283,7 @@ def evaluate_paper_risk_session_gate(
     high_watermarks: PaperRiskSessionHighWatermarks,
     evaluated_at_utc: datetime | str,
 ) -> PaperRiskSessionDecision:
-    """Apply session-latched loss/drawdown limits around the base kill switch."""
+    """Apply session-latched loss, drawdown and turnover limits."""
 
     if not isinstance(high_watermarks, PaperRiskSessionHighWatermarks):
         raise TypeError("high_watermarks must be a PaperRiskSessionHighWatermarks")
@@ -331,9 +326,7 @@ def evaluate_paper_risk_session_gate(
         "blockers": list(blockers),
         "maximum_daily_loss_fraction": high_watermarks.maximum_daily_loss_fraction,
         "maximum_drawdown_fraction": high_watermarks.maximum_drawdown_fraction,
-        "maximum_daily_underlying_turnover": (
-            high_watermarks.maximum_daily_underlying_turnover
-        ),
+        "maximum_daily_underlying_turnover": high_watermarks.maximum_daily_underlying_turnover,
     }
     return PaperRiskSessionDecision(
         decision_id=hashlib.sha256(_canonical_json_bytes(payload)).hexdigest(),
@@ -345,8 +338,6 @@ def evaluate_paper_risk_session_gate(
         blockers=blockers,
         maximum_daily_loss_fraction=high_watermarks.maximum_daily_loss_fraction,
         maximum_drawdown_fraction=high_watermarks.maximum_drawdown_fraction,
-        maximum_daily_underlying_turnover=(
-            high_watermarks.maximum_daily_underlying_turnover
-        ),
+        maximum_daily_underlying_turnover=high_watermarks.maximum_daily_underlying_turnover,
         base_decision=base_decision,
     )
