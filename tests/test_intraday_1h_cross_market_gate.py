@@ -130,6 +130,16 @@ def _write_real_artifact(
     return artifact
 
 
+def _write_forged_eligible_gate(artifact: Path, destination: Path) -> None:
+    gate = json.loads((artifact / "intraday-promotion-gate.json").read_text(encoding="utf-8"))
+    gate["research_gate"] = {
+        "research_candidate_eligible": True,
+        "blockers": [],
+    }
+    gate["promotion"]["allow_15m_evaluation"] = True
+    destination.write_text(_canonical_json(gate), encoding="utf-8")
+
+
 def test_cross_market_gate_blocks_15m_when_either_market_is_rejected(
     tmp_path: Path,
 ) -> None:
@@ -260,7 +270,7 @@ def test_market_artifact_rejects_missing_source_provenance(tmp_path: Path) -> No
     (artifact / "intraday-1h-source-provenance.json").unlink()
     build_manifest(artifact)
 
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ValueError, match="missing"):
         module._validate_market_artifact(artifact, "BTC-USDT")
 
 
@@ -287,6 +297,60 @@ def test_market_artifact_rejects_self_rehashed_forged_provenance(
     build_manifest(artifact)
 
     with pytest.raises(ValueError, match="does not reconstruct exactly"):
+        module._validate_market_artifact(artifact, "BTC-USDT")
+
+
+def test_market_artifact_rejects_symlink_substitution_after_materialization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    artifact = _write_real_artifact(
+        tmp_path / "artifacts",
+        "BTC-USDT",
+        eligible=False,
+        research_blockers=["fold_stability_rejected"],
+    )
+    forged_gate = tmp_path / "forged-promotion-gate.json"
+    _write_forged_eligible_gate(artifact, forged_gate)
+    real_materialize = module._materialize_verified_artifact
+
+    def materialize_then_substitute(source: Path, destination: Path) -> str:
+        digest = real_materialize(source, destination)
+        gate_path = source / "intraday-promotion-gate.json"
+        gate_path.unlink()
+        gate_path.symlink_to(forged_gate)
+        return digest
+
+    monkeypatch.setattr(module, "_materialize_verified_artifact", materialize_then_substitute)
+
+    with pytest.raises(ValueError, match="symlink|unsafe"):
+        module._validate_market_artifact(artifact, "BTC-USDT")
+
+
+def test_market_artifact_rejects_atomic_rename_after_materialization(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = _load_module()
+    artifact = _write_real_artifact(
+        tmp_path / "artifacts",
+        "BTC-USDT",
+        eligible=False,
+        research_blockers=["fold_stability_rejected"],
+    )
+    forged_gate = tmp_path / "forged-promotion-gate.json"
+    _write_forged_eligible_gate(artifact, forged_gate)
+    real_materialize = module._materialize_verified_artifact
+
+    def materialize_then_replace(source: Path, destination: Path) -> str:
+        digest = real_materialize(source, destination)
+        forged_gate.replace(source / "intraday-promotion-gate.json")
+        return digest
+
+    monkeypatch.setattr(module, "_materialize_verified_artifact", materialize_then_replace)
+
+    with pytest.raises(ValueError, match="digest mismatch"):
         module._validate_market_artifact(artifact, "BTC-USDT")
 
 
