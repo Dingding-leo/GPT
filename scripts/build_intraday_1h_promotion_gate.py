@@ -8,6 +8,9 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from gpt_quant.intraday_1h_source_provenance import (
+    verify_intraday_1h_source_provenance,
+)
 from verify_intraday_1h_profile import verify_intraday_1h_profile
 
 _OUTPUT_NAME = "intraday-promotion-gate.json"
@@ -72,12 +75,30 @@ def _require_string_sequence(value: Any, *, label: str) -> list[str]:
     return parsed
 
 
+def _source_artifact_binding(output: Path, instrument_id: str) -> dict[str, Any]:
+    provenance_path = output / "intraday-1h-source-provenance.json"
+    provenance = verify_intraday_1h_source_provenance(output, inst_id=instrument_id)
+    return {
+        "source_provenance_sha256": _sha256_file(provenance_path),
+        "source_response_inventory_sha256": provenance["source_response_inventory_sha256"],
+        "source_response_count": provenance["source_response_count"],
+        "source_response_total_bytes": provenance["source_response_total_bytes"],
+        "normalized_csv_sha256": provenance["normalized_csv_sha256"],
+        "raw_pages_sha256": provenance["raw_pages_sha256"],
+        "metadata_sha256": provenance["metadata_sha256"],
+        "effective_start": provenance["effective_start"],
+        "effective_end": provenance["effective_end"],
+        "observations": provenance["observations"],
+    }
+
+
 def build_intraday_1h_promotion_gate(output_dir: str | Path) -> dict[str, Any]:
     output = Path(output_dir)
     profile = verify_intraday_1h_profile(output)
     effective_path = output / "effective_config.json"
     report_path = output / "walk_forward.json"
     report = _load_json_object(report_path)
+    source_artifacts = _source_artifact_binding(output, profile["instrument_id"])
 
     robustness_status = _require_string(
         report.get("robustness_status"),
@@ -120,6 +141,7 @@ def build_intraday_1h_promotion_gate(output_dir: str | Path) -> dict[str, Any]:
         "source_artifacts": {
             "effective_config_sha256": _sha256_file(effective_path),
             "walk_forward_sha256": _sha256_file(report_path),
+            **source_artifacts,
         },
         "research_gate": {
             "candidate_count": profile["candidate_count"],
