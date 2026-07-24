@@ -200,5 +200,6 @@ def test_replay_blocks_concurrent_paper_attempt_publication(
     release_replay.set()
     replay_thread.join(timeout=5)
     assert not replay_thread.is_alive()
+    assert not path.with_name(f".{path.name}.lock").exists()
     assert replay_errors == []
     assert replay_result["journal"] == initial
