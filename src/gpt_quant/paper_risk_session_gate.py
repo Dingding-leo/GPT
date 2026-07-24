@@ -215,10 +215,7 @@ def advance_paper_risk_session_high_watermarks(
     tolerance = 1e-12
     if previous is None:
         if snapshot.observed_at_utc != snapshot.session_start_utc:
-            raise ValueError(
-                "initial session high-watermarks require "
-                "a session-start snapshot"
-            )
+            raise ValueError("initial session high-watermarks require a session-start snapshot")
         if (
             snapshot.daily_loss_fraction > tolerance
             or snapshot.drawdown_fraction > tolerance
