@@ -191,8 +191,7 @@ def write_walk_forward_report(
         "- Only completed OKX candles (`confirm=1`) are used.",
         "- Every fold selects parameters using data ending before its test period.",
         "- Test folds do not overlap; model switches incur boundary turnover costs.",
-        "- OOS fold results are used only as a post-evaluation robustness gate, "
-        "not for selection.",
+        "- OOS fold results are used only as a post-evaluation robustness gate, not for selection.",
         f"- {instrument} is tested long/cash only, with no leverage or synthetic shorting.",
         "- Gross return is executed position multiplied by close-to-close asset return "
         "before fees.",
