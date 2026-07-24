@@ -240,3 +240,17 @@ def test_transition_rejects_changed_intent_and_duplicate_serialized_fields() -> 
     )
     with pytest.raises(ValueError, match="duplicate field"):
         PaperOrderStateTransitionRequest.from_json_bytes(duplicate)
+
+
+def test_transition_rejects_equal_or_out_of_order_event_times() -> None:
+    intent, identity, acknowledgement = _acknowledged()
+
+    for occurred_at in (_at(500_000), _at(499_999)):
+        with pytest.raises(ValueError, match="strictly after the previous event"):
+            advance_paper_order_transition(
+                acknowledgement,
+                identity,
+                intent,
+                event_type="no_fill",
+                occurred_at_utc=occurred_at,
+            )
