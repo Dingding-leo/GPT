@@ -168,6 +168,10 @@ def validate_okx_server_time_sample(
     )
 
 
+# Backward-compatible private name used by the existing instrument evidence boundary.
+_validated_server_time_sample = validate_okx_server_time_sample
+
+
 def sample_okx_server_time(
     *,
     base_url: str = "https://www.okx.com",
