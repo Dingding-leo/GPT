@@ -91,7 +91,16 @@ def _intent(
     *,
     target: TargetPositionIntent | None = None,
     decision: PaperOrderDecision | None = None,
-    created_at_utc: datetime | str = datetime(2026, 7, 21, 0, 0, 0, 450_000, tzinfo=UTC),
+    created_at_utc: datetime | str = datetime(
+        2026,
+        7,
+        21,
+        0,
+        0,
+        0,
+        450_000,
+        tzinfo=UTC,
+    ),
     expires_at_utc: datetime | str = datetime(2026, 7, 21, 0, 0, 2, tzinfo=UTC),
     maximum_quote_age_ms: int = 250,
     limit_price: str = "66113.8",
@@ -177,7 +186,10 @@ def test_post_only_order_intent_cannot_outlive_or_postdate_target() -> None:
         _intent(target=target, created_at_utc=target.expires_at_utc)
 
     with pytest.raises(ValueError, match="cannot outlive"):
-        _intent(target=target, expires_at_utc=target.expires_at_utc + timedelta(microseconds=1))
+        _intent(
+            target=target,
+            expires_at_utc=target.expires_at_utc + timedelta(microseconds=1),
+        )
 
 
 def test_post_only_sell_requires_limit_at_or_above_reference_ask() -> None:
