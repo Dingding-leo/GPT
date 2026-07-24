@@ -1,9 +1,8 @@
 name: Data Format Diagnostic
 
 on:
-  push:
-    branches:
-      - auto/data/20260724-11-instrument-origin-boundary
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
