@@ -1,0 +1,110 @@
+{
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "failure_reasons": [
+        "BTC-USDT weekday 95% lower bound is non-positive: -0.073152633617",
+        "BTC-USDT weekend 95% lower bound is non-positive: -0.031538594545",
+        "ETH-USDT weekday 95% lower bound is non-positive: -0.145993825117"
+      ],
+      "name": "weekday-weekend-conditional-mean-consistency",
+      "verdict": "reject"
+    }
+  ],
+  "canonical_signature": "weekday-weekend-conditional-mean-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|regimes=weekday,weekend|metric=conditional-annualized-arithmetic-mean|annualization=365|resampling=timestamp-return-paired-noncircular-moving-block|block=20|resamples=2000|confidence=0.95|seeds=BTC:20260722,ETH:20260723|candidate_count=1",
+  "economic_rationale": "Crypto liquidity and institutional participation differ between weekdays and weekends. A robust daily strategy should not depend on only one calendar-liquidity regime.",
+  "failure_reasons": [
+    "BTC-USDT weekday 95% lower bound is non-positive: -0.073152633617",
+    "BTC-USDT weekend 95% lower bound is non-positive: -0.031538594545",
+    "ETH-USDT weekday 95% lower bound is non-positive: -0.145993825117"
+  ],
+  "hypothesis": "For both BTC-USDT and ETH-USDT, net rolling OOS returns have a positive conditional annualized arithmetic mean in weekday and weekend sessions, with every 95% moving-block-bootstrap lower bound above zero.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "Conditional regime means are descriptive and do not constitute a trading calendar rule.",
+    "The analysis does not model spread, impact, capacity, latency, or partial fills."
+  ],
+  "markets": {
+    "BTC-USDT": {
+      "end": "2026-06-07T00:00:00+00:00",
+      "observations": 2340,
+      "regimes": {
+        "weekday": {
+          "annualized_arithmetic_mean": 0.1697646801959576,
+          "confidence_interval": {
+            "lower": -0.07315263361666263,
+            "upper": 0.4635594763364104
+          },
+          "observations": 1670,
+          "passes": false,
+          "probability_mean_positive": 0.917
+        },
+        "weekend": {
+          "annualized_arithmetic_mean": 0.17648741507937615,
+          "confidence_interval": {
+            "lower": -0.03153859454470335,
+            "upper": 0.4070674639182638
+          },
+          "observations": 670,
+          "passes": false,
+          "probability_mean_positive": 0.947
+        }
+      },
+      "seed": 20260722,
+      "start": "2020-01-11T00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "end": "2026-06-07T00:00:00+00:00",
+      "observations": 2340,
+      "regimes": {
+        "weekday": {
+          "annualized_arithmetic_mean": 0.08219656009903933,
+          "confidence_interval": {
+            "lower": -0.14599382511732037,
+            "upper": 0.3244018984286908
+          },
+          "observations": 1670,
+          "passes": false,
+          "probability_mean_positive": 0.758
+        },
+        "weekend": {
+          "annualized_arithmetic_mean": 0.27374264861426434,
+          "confidence_interval": {
+            "lower": 0.0037701810026728824,
+            "upper": 0.5757694729968721
+          },
+          "observations": 670,
+          "passes": true,
+          "probability_mean_positive": 0.976
+        }
+      },
+      "seed": 20260723,
+      "start": "2020-01-11T00:00:00+00:00"
+    }
+  },
+  "method": {
+    "annualization": 365,
+    "block_length": 20,
+    "confidence": 0.95,
+    "metric": "conditional daily arithmetic mean multiplied by 365",
+    "regime_definition": "UTC Monday-Friday=weekday; UTC Saturday-Sunday=weekend",
+    "resamples": 2000,
+    "resampling": "timestamp-return-paired non-circular moving block"
+  },
+  "provenance": {
+    "market_type": "spot",
+    "provider": "OKX",
+    "return_file_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "source_artifact_id": 8518541653,
+    "source_artifact_name": "quant-research-source-608",
+    "source_artifact_sha256": "049c82dff0ed05c37e106d8ac30857532d5f20f18cc9191aaf6f100d3642b7c0",
+    "source_head_sha": "36861294403b51b1ecb41d1586534df7bcf3e0ae",
+    "source_workflow_run_id": 29891907836,
+    "tested_base_sha": "b9efe58b7c804d122658c4dbc27192b0dae1294c",
+    "timeframe": "1Dutc"
+  },
+  "verdict": "reject"
+}
