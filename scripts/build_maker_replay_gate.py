@@ -23,9 +23,9 @@ _GATE_NAME = "maker-order-replay-gate.json"
 _NO_FILL_NAME = "cancelled-no-fill.json"
 _PARTIAL_FILL_NAME = "cancelled-partial.json"
 _REQUIRED_PATHS = (
-    _GATE_NAME,
     _NO_FILL_NAME,
     _PARTIAL_FILL_NAME,
+    _GATE_NAME,
     "source/metadata.json",
     "source/response.json",
 )
@@ -43,9 +43,8 @@ def _sha256_file(path: Path) -> str:
 
 
 def _canonical_json_bytes(payload: Mapping[str, Any]) -> bytes:
-    return (
-        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
-    ).encode("utf-8")
+    text = json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n"
+    return text.encode("utf-8")
 
 
 def _load_json_object(path: Path) -> dict[str, Any]:
@@ -69,33 +68,36 @@ def _modeled_economics() -> dict[str, Any]:
     }
 
 
+def _replay_arguments(*, expires_at_utc: datetime, quantity: str) -> dict[str, Any]:
+    return {
+        "order_intent_id": _ORDER_INTENT_ID,
+        "signal_at_utc": _SIGNAL,
+        "submitted_at_utc": _SUBMITTED,
+        "expires_at_utc": expires_at_utc,
+        "side": "buy",
+        "limit_price": "29964.1",
+        "requested_base_quantity": quantity,
+        "queue_ahead_base_quantity": "0",
+    }
+
+
 def _build_replays(source_bytes: bytes) -> tuple[OKXPublicTradeSnapshot, dict[str, bytes]]:
     if _sha256_bytes(source_bytes) != _EXPECTED_SOURCE_SHA256:
         raise ValueError("OKX public trade source hash mismatch")
     snapshot = OKXPublicTradeSnapshot.from_json_bytes(source_bytes)
-
     scenarios = {
-        _NO_FILL_NAME: {
-            "expires_at_utc": datetime(2022, 6, 2, 9, 20, 45, tzinfo=UTC),
-            "requested_base_quantity": "0.00001",
-        },
-        _PARTIAL_FILL_NAME: {
-            "expires_at_utc": datetime(2022, 6, 2, 9, 20, 50, tzinfo=UTC),
-            "requested_base_quantity": "0.00002",
-        },
+        _NO_FILL_NAME: _replay_arguments(
+            expires_at_utc=datetime(2022, 6, 2, 9, 20, 45, tzinfo=UTC),
+            quantity="0.00001",
+        ),
+        _PARTIAL_FILL_NAME: _replay_arguments(
+            expires_at_utc=datetime(2022, 6, 2, 9, 20, 50, tzinfo=UTC),
+            quantity="0.00002",
+        ),
     }
+
     replay_bytes: dict[str, bytes] = {}
-    for filename, scenario in scenarios.items():
-        arguments = {
-            "order_intent_id": _ORDER_INTENT_ID,
-            "signal_at_utc": _SIGNAL,
-            "submitted_at_utc": _SUBMITTED,
-            "expires_at_utc": scenario["expires_at_utc"],
-            "side": "buy",
-            "limit_price": "29964.1",
-            "requested_base_quantity": scenario["requested_base_quantity"],
-            "queue_ahead_base_quantity": "0",
-        }
+    for filename, arguments in scenarios.items():
         first = simulate_post_only_maker_fill(snapshot, **arguments)
         second = simulate_post_only_maker_fill(snapshot, **arguments)
         if first != second or first.to_json_bytes() != second.to_json_bytes():
@@ -174,31 +176,28 @@ def _gate_payload(
 
 
 def _write_manifest(root: Path) -> str:
-    paths = sorted(path for path in root.rglob("*") if path.is_file())
     entries: list[str] = []
-    for path in paths:
+    for path in sorted(item for item in root.rglob("*") if item.is_file()):
         relative = path.relative_to(root).as_posix()
-        if relative == _MANIFEST_NAME:
-            continue
-        entries.append(f"{_sha256_file(path)}  {relative}\n")
+        if relative != _MANIFEST_NAME:
+            entries.append(f"{_sha256_file(path)}  {relative}\n")
     manifest_bytes = "".join(entries).encode("utf-8")
     (root / _MANIFEST_NAME).write_bytes(manifest_bytes)
     return _sha256_bytes(manifest_bytes)
 
 
 def _parse_manifest(root: Path) -> dict[str, str]:
-    manifest_path = root / _MANIFEST_NAME
     try:
-        lines = manifest_path.read_text(encoding="utf-8").splitlines()
+        lines = (root / _MANIFEST_NAME).read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeDecodeError) as exc:
         raise ValueError("maker replay manifest is unreadable") from exc
+
     entries: dict[str, str] = {}
     previous = ""
     for line in lines:
         if len(line) < 67 or line[64:66] != "  ":
             raise ValueError("maker replay manifest entry is malformed")
-        digest = line[:64]
-        relative = line[66:]
+        digest, relative = line[:64], line[66:]
         if any(character not in "0123456789abcdef" for character in digest):
             raise ValueError("maker replay manifest digest is malformed")
         pure = PurePosixPath(relative)
