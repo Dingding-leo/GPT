@@ -223,10 +223,7 @@ def test_fetch_okx_top_of_book_rejects_duplicate_untrusted_response_fields() -> 
 
 
 def test_fetch_okx_top_of_book_rejects_duplicate_server_time_fields() -> None:
-    corrupted = (
-        b'{"code":"0","msg":"","data":['
-        b'{"ts":"1629966438500","ts":"1629966436500"}]}'
-    )
+    corrupted = b'{"code":"0","msg":"","data":[{"ts":"1629966438500","ts":"1629966436500"}]}'
 
     with pytest.raises(ValueError, match="duplicate field 'ts'"):
         fetch_okx_top_of_book(
