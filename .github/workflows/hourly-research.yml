@@ -187,7 +187,7 @@ jobs:
             --source-artifact-id "$SOURCE_ARTIFACT_ID" \
             --source-artifact-name "$SOURCE_ARTIFACT_NAME" \
             --source-artifact-sha256 "$source_artifact_digest" \
-            --source-head-sha "$GITHUB_SHA" \
+            --source-head-sha "$LIVE_READINESS_TESTED_SHA" \
             --max-variance-contribution "$MAX_VARIANCE_CONTRIBUTION" \
             --max-pairwise-correlation "$MAX_PAIRWISE_CORRELATION" \
             --fail-on-reject \
