@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 _ROOT = Path(__file__).parents[1]
 _ARCHITECTURE_PATH = (
@@ -29,6 +31,26 @@ def _load_fixture(architecture) -> pd.DataFrame:
     frame = pd.read_csv(_FIXTURE_PATH)
     frame.index = architecture.hourly_index(frame.pop("timestamp"))
     return frame
+
+
+def _real_fixture_artifact(tmp_path: Path) -> tuple[Path, bytes, set[str]]:
+    root = tmp_path / "artifact"
+    snapshot = _FIXTURE_PATH.read_bytes()
+    paths = {
+        "effective_config.json",
+        "walk_forward.json",
+        "walk_forward_returns.csv",
+        "snapshot/okx-BTC-USDT-1H.csv",
+    }
+    for relative in paths:
+        destination = root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(snapshot)
+    manifest = "".join(
+        f"{hashlib.sha256((root / relative).read_bytes()).hexdigest()}  {relative}\n"
+        for relative in sorted(paths)
+    ).encode()
+    return root, manifest, paths
 
 
 def test_real_okx_channel_target_is_causal_and_bounded() -> None:
@@ -58,6 +80,31 @@ def test_exact_five_bps_accounting_starts_from_cash() -> None:
         frame["strategy_return"],
         frame["gross_strategy_return"] - frame["trading_cost"],
     )
+
+
+def test_manifest_verification_binds_required_real_artifact_bytes(tmp_path: Path) -> None:
+    architecture = _load_architecture()
+    root, manifest, required = _real_fixture_artifact(tmp_path)
+
+    verified = architecture.verify_manifested_artifact_bytes(root, manifest, required)
+    assert verified["walk_forward_returns.csv"] == _FIXTURE_PATH.read_bytes()
+
+    returns_path = root / "walk_forward_returns.csv"
+    returns_path.write_bytes(returns_path.read_bytes() + b"\n")
+    with pytest.raises(ValueError, match="artifact manifest hash mismatch"):
+        architecture.verify_manifested_artifact_bytes(root, manifest, required)
+
+
+def test_manifest_verification_rejects_missing_required_entry(tmp_path: Path) -> None:
+    architecture = _load_architecture()
+    root, manifest, required = _real_fixture_artifact(tmp_path)
+    missing_line = next(
+        line for line in manifest.splitlines() if line.endswith(b"  walk_forward_returns.csv")
+    )
+    manifest = manifest.replace(missing_line + b"\n", b"")
+
+    with pytest.raises(ValueError, match="required artifact missing from manifest"):
+        architecture.verify_manifested_artifact_bytes(root, manifest, required)
 
 
 def test_persisted_result_records_single_rejected_candidate() -> None:
