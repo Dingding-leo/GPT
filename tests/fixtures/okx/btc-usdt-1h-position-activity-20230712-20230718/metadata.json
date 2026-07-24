@@ -1,0 +1,16 @@
+{
+  "artifact_archive_sha256": "0137944703456949e1cef18a45d58229e9fdf099a11f7f2cff37777776308a60",
+  "bar": "1H",
+  "end": "2023-07-18T00:00:00+00:00",
+  "extraction": "rows 283 through 408 inclusive from the persisted canonical BTC-USDT 1H walk_forward_returns.csv",
+  "fixture_sha256": "5de32a2455ce5ac66c76b409b7004ea52ae25210076a592a8e2539523bf400e2",
+  "instrument_id": "BTC-USDT",
+  "observations": 126,
+  "provider": "OKX",
+  "source_artifact_id": 8585638085,
+  "source_head_sha": "09baca05803bfcee8f0083b88c002925131d795e",
+  "source_returns_sha256": "a10404c8d24dc7899baf382d7695198118d4490065838a3a1d41720da1edba92",
+  "source_workflow_run_id": 30064074036,
+  "start": "2023-07-12T19:00:00+00:00",
+  "usage": "software regression tests only; not independent alpha evidence"
+}
