@@ -143,7 +143,7 @@ def test_timezone_equivalent_inputs_preserve_order_intent_identity() -> None:
     utc_intent = _intent()
     adelaide = timezone(timedelta(hours=9, minutes=30))
     offset_intent = _intent(
-        created_at_utc=datetime(2026, 7, 21, 9, 30, 0, 450_000, tzinfo=adelaide)
+        created_at_utc=datetime(2026, 7, 21, 9, 30, 0, 450_000, tzinfo=adelaide),
     )
 
     assert offset_intent.order_intent_id == utc_intent.order_intent_id
