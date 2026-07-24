@@ -84,9 +84,7 @@ def hourly_index(values: pd.Series) -> pd.DatetimeIndex:
     index = pd.DatetimeIndex(pd.to_datetime(raw, utc=True, errors="raise"))
     if index.duplicated().any() or not index.is_monotonic_increasing:
         raise ValueError("timestamps must be unique and increasing")
-    if len(index) > 1 and not (
-        (index[1:] - index[:-1]) == pd.Timedelta(hours=1)
-    ).all():
+    if len(index) > 1 and not ((index[1:] - index[:-1]) == pd.Timedelta(hours=1)).all():
         raise ValueError("timestamps must be hourly")
     return index
 
@@ -149,10 +147,15 @@ def target_path(
     prior_high = candles["high"].shift(1).rolling(channel, min_periods=channel).max()
     prior_low = candles["low"].shift(1).rolling(channel, min_periods=channel).min()
     regime_return = np.log(close).diff(regime)
-    realized = np.log(close).diff().rolling(
-        volatility,
-        min_periods=volatility,
-    ).std(ddof=0)
+    realized = (
+        np.log(close)
+        .diff()
+        .rolling(
+            volatility,
+            min_periods=volatility,
+        )
+        .std(ddof=0)
+    )
     realized *= math.sqrt(ANNUALIZATION)
     values = np.zeros(len(candles))
     is_long = False
@@ -168,15 +171,9 @@ def target_path(
         )
         if not valid:
             is_long = False
-        elif (
-            not is_long
-            and close.iloc[row] > prior_high.iloc[row]
-            and regime_return.iloc[row] > 0
-        ):
+        elif not is_long and close.iloc[row] > prior_high.iloc[row] and regime_return.iloc[row] > 0:
             is_long = True
-        elif is_long and (
-            close.iloc[row] < prior_low.iloc[row] or regime_return.iloc[row] <= 0
-        ):
+        elif is_long and (close.iloc[row] < prior_low.iloc[row] or regime_return.iloc[row] <= 0):
             is_long = False
         if is_long and realized.iloc[row] > 0:
             values[row] = min(1.0, TARGET_VOLATILITY / realized.iloc[row])

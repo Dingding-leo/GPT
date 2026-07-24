@@ -9,7 +9,6 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-
 from architecture import (
     ANNUALIZATION,
     BENCHMARKS,
@@ -31,10 +30,7 @@ from architecture import (
     TEST_BARS,
     VOLATILITY,
     build_frame,
-    hourly_index,
     load_artifact,
-    return_frame,
-    target_path,
 )
 
 
@@ -46,11 +42,7 @@ def core_metrics(returns: Sequence[float]) -> dict[str, float]:
     standard = float(np.std(values, ddof=0))
     nav = np.concatenate(([1.0], np.cumprod(1.0 + values)))
     drawdown = float(np.min(nav / np.maximum.accumulate(nav) - 1.0))
-    sharpe = (
-        float(np.mean(values)) / standard * math.sqrt(ANNUALIZATION)
-        if standard
-        else 0.0
-    )
+    sharpe = float(np.mean(values)) / standard * math.sqrt(ANNUALIZATION) if standard else 0.0
     return {
         "net_total_return": growth - 1.0,
         "cagr": cagr,
@@ -67,14 +59,10 @@ def performance(frame: pd.DataFrame) -> dict[str, float | int]:
     result.update(
         {
             "observations": len(frame),
-            "gross_total_return": float(
-                np.prod(1.0 + frame["gross_strategy_return"]) - 1.0
-            ),
+            "gross_total_return": float(np.prod(1.0 + frame["gross_strategy_return"]) - 1.0),
             "annualized_arithmetic_mean": float(np.mean(returns)) * ANNUALIZATION,
             "sortino": (
-                float(np.mean(returns)) / downside * math.sqrt(ANNUALIZATION)
-                if downside
-                else 0.0
+                float(np.mean(returns)) / downside * math.sqrt(ANNUALIZATION) if downside else 0.0
             ),
             "annualized_turnover": float(frame["turnover"].mean()) * ANNUALIZATION,
             "average_abs_exposure": float(frame["position"].abs().mean()),
@@ -86,10 +74,7 @@ def performance(frame: pd.DataFrame) -> dict[str, float | int]:
 
 def fold_gate(frame: pd.DataFrame) -> dict[str, Any]:
     values = [
-        float(
-            np.prod(1 + frame["strategy_return"].iloc[start : start + TEST_BARS])
-            - 1
-        )
+        float(np.prod(1 + frame["strategy_return"].iloc[start : start + TEST_BARS]) - 1)
         for start in range(0, len(frame), TEST_BARS)
     ]
     positive = [value for value in values if value > 0]
@@ -112,18 +97,12 @@ def calendar_gate(frame: pd.DataFrame, frequency: str, required: int) -> dict[st
         start = period.start_time.tz_localize("UTC")
         end = period.end_time.floor("h").tz_localize("UTC")
         expected = int((end - start) / pd.Timedelta(hours=1)) + 1
-        complete = (
-            len(subset) == expected
-            and subset.index[0] == start
-            and subset.index[-1] == end
-        )
+        complete = len(subset) == expected and subset.index[0] == start and subset.index[-1] == end
         records.append(
             {
                 "period": str(period),
                 "complete": complete,
-                "total_return": float(
-                    np.prod(1 + subset["strategy_return"]) - 1
-                ),
+                "total_return": float(np.prod(1 + subset["strategy_return"]) - 1),
             }
         )
     complete = [record for record in records if record["complete"]]
@@ -147,15 +126,7 @@ def activity_gate(frame: pd.DataFrame) -> dict[str, Any]:
             end = int(later[0])
             durations.append(end - int(start))
             episode_returns.append(
-                float(
-                    np.prod(
-                        1
-                        + frame["strategy_return"].iloc[
-                            int(start) : end + 1
-                        ]
-                    )
-                    - 1
-                )
+                float(np.prod(1 + frame["strategy_return"].iloc[int(start) : end + 1]) - 1)
             )
     gains = sum(value for value in episode_returns if value > 0)
     losses = -sum(value for value in episode_returns if value < 0)
@@ -209,12 +180,8 @@ def capacity_gate(candles: pd.DataFrame, frame: pd.DataFrame) -> dict[str, Any]:
     return {
         "adjustment_observations": int(adjustment.sum()),
         "breach_observations": int(breaches.sum()),
-        "maximum_participation": float(
-            np.nanmax(observed_participation[adjustment])
-        ),
-        "maximum_supported_initial_capital_usd": float(
-            np.nanmin(supported[adjustment])
-        ),
+        "maximum_participation": float(np.nanmax(observed_participation[adjustment])),
+        "maximum_supported_initial_capital_usd": float(np.nanmin(supported[adjustment])),
         "passes": not breaches.any(),
     }
 
@@ -227,29 +194,23 @@ def bootstrap(
     rng = np.random.default_rng(seed)
     blocks = math.ceil(len(candidate) / BLOCK)
     observed = core_metrics(candidate)
-    distributions = {
-        name: {metric: [] for metric in ("sharpe", "calmar")}
-        for name in BENCHMARKS
-    }
+    distributions = {name: {metric: [] for metric in ("sharpe", "calmar")} for name in BENCHMARKS}
     points = {}
     for name, column in BENCHMARKS.items():
         benchmark = core_metrics(benchmarks[column].to_numpy(float))
         points[name] = {
-            metric: observed[metric] - benchmark[metric]
-            for metric in ("sharpe", "calmar")
+            metric: observed[metric] - benchmark[metric] for metric in ("sharpe", "calmar")
         }
     for _ in range(RESAMPLES):
         starts = rng.integers(0, len(candidate) - BLOCK + 1, size=blocks)
-        index = np.concatenate(
-            [np.arange(start, start + BLOCK) for start in starts]
-        )[: len(candidate)]
+        index = np.concatenate([np.arange(start, start + BLOCK) for start in starts])[
+            : len(candidate)
+        ]
         sampled = core_metrics(candidate[index])
         for name, column in BENCHMARKS.items():
             benchmark = core_metrics(benchmarks[column].to_numpy(float)[index])
             for metric in ("sharpe", "calmar"):
-                distributions[name][metric].append(
-                    sampled[metric] - benchmark[metric]
-                )
+                distributions[name][metric].append(sampled[metric] - benchmark[metric])
     result = {}
     for name in BENCHMARKS:
         result[name] = {}
@@ -261,9 +222,7 @@ def bootstrap(
                 "upper": float(np.quantile(values, 0.975)),
             }
     result["passes"] = all(
-        result[name][metric]["lower"] > 0
-        for name in BENCHMARKS
-        for metric in ("sharpe", "calmar")
+        result[name][metric]["lower"] > 0 for name in BENCHMARKS for metric in ("sharpe", "calmar")
     )
     return result
 
@@ -287,18 +246,13 @@ def evaluate(root: Path, market: str) -> dict[str, Any]:
         for name, parameters in NEIGHBOURS.items()
     }
     neighbourhood_pass = all(
-        value["net_total_return"] > 0 and value["sharpe"] > 0
-        for value in neighbourhood.values()
+        value["net_total_return"] > 0 and value["sharpe"] > 0 for value in neighbourhood.values()
     )
     candidate_tail = expected_shortfall(frame["strategy_return"])
-    benchmark_tail = expected_shortfall(
-        benchmarks[BENCHMARKS["volatility_targeted_long"]]
-    )
+    benchmark_tail = expected_shortfall(benchmarks[BENCHMARKS["volatility_targeted_long"]])
     gates = {
         "source_and_exact_5bps": True,
-        "net_viability": (
-            metrics["net_total_return"] > 0 and metrics["sharpe"] >= 0.5
-        ),
+        "net_viability": (metrics["net_total_return"] > 0 and metrics["sharpe"] >= 0.5),
         "benchmark_relative_sharpe_and_calmar": inference["passes"],
         "fold_stability": folds["passes"],
         "month_stability": months["passes"],
@@ -404,9 +358,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     result = build_result(args.btc_artifact_dir, args.eth_artifact_dir)
-    args.output.write_text(
-        json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    )
+    args.output.write_text(json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n")
     return 0
 
 
