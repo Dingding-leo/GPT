@@ -8,6 +8,17 @@
   "exchange_end_utc": "2022-06-02T09:20:46.974000Z",
   "captured_from_documentation_utc": "2026-07-24T05:12:00Z",
   "response_sha256": "01438cc23709d9c8e9ea8d9d49d3f64c65978d27d592356a333f7a3da213d563",
+  "modeled_exchange_fee_one_way_bps": "5",
+  "execution_diagnostics_outside_modeled_pnl": [
+    "touch_count",
+    "trade_through_count",
+    "queue_ahead",
+    "no_fill",
+    "partial_fill",
+    "timeout",
+    "cancellation",
+    "requote"
+  ],
   "limitations": [
     "This is the official OKX public API response example, not a contemporaneous live trade stream.",
     "OKX trade side is interpreted as taker side according to the public API documentation.",
