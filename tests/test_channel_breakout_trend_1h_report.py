@@ -25,6 +25,7 @@ def _load_analysis():
         spec.loader.exec_module(module)
         return module
     finally:
+        sys.modules.pop("architecture", None)
         sys.path.pop(0)
 
 
