@@ -40,6 +40,36 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
+      - name: Produce exact Ruff diagnostic
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("reports/research/cross-sectional-leader-rotation-1h/analysis.py")
+          content = path.read_text(encoding="utf-8")
+          malformed = "float(row_volatilityleader])"
+          if malformed in content:
+              path.write_text(
+                  content.replace(malformed, "float(row_volatility[leader])"),
+                  encoding="utf-8",
+              )
+          PY
+          ruff check --fix reports/research/cross-sectional-leader-rotation-1h
+          ruff format reports/research/cross-sectional-leader-rotation-1h
+          python -m py_compile \
+            reports/research/cross-sectional-leader-rotation-1h/analysis.py \
+            reports/research/cross-sectional-leader-rotation-1h/test_report.py
+          pytest -q reports/research/cross-sectional-leader-rotation-1h/test_report.py
+
+      - name: Upload exact Ruff diagnostic
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: formatted-cross-sectional
+          path: reports/research/cross-sectional-leader-rotation-1h/
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Run repository gates
         run: |
           set -euo pipefail
