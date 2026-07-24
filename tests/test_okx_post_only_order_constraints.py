@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -107,7 +108,12 @@ def _intent(
     base_quantity: str = "0.001",
     limit_price: str = "41006.3",
     instrument_snapshot_sha256: str = _INSTRUMENT_SHA256,
-) -> tuple[ExecutionQuoteSnapshot, PaperPostOnlyOrderIntent]:
+) -> tuple[
+    TargetPositionIntent,
+    PaperOrderDecision,
+    ExecutionQuoteSnapshot,
+    PaperPostOnlyOrderIntent,
+]:
     target = _target()
     quote = _quote(instrument_snapshot_sha256=instrument_snapshot_sha256)
     decision = PaperOrderDecision(
@@ -130,7 +136,7 @@ def _intent(
         market_impact_bps="0",
         latency_ms=50,
     )
-    return quote, build_paper_post_only_order_intent(
+    intent = build_paper_post_only_order_intent(
         decision,
         target,
         quote,
@@ -139,19 +145,34 @@ def _intent(
         maximum_quote_age_ms=250,
         limit_price=limit_price,
     )
+    return target, decision, quote, intent
 
 
-def test_real_okx_post_only_intent_satisfies_exact_order_constraints() -> None:
-    snapshot = _instrument_snapshot()
-    quote, intent = _intent()
-
+def _validate(
+    snapshot: OKXSpotInstrumentSnapshot,
+    target: TargetPositionIntent,
+    decision: PaperOrderDecision,
+    quote: ExecutionQuoteSnapshot,
+    intent: PaperPostOnlyOrderIntent,
+    *,
+    minimum_paper_quote_notional: str = "1",
+) -> None:
     validate_okx_paper_post_only_order_intent_constraints(
         snapshot,
         quote,
         intent,
+        decision=decision,
+        target=target,
         maximum_snapshot_age_ms=1_000,
-        minimum_paper_quote_notional="1",
+        minimum_paper_quote_notional=minimum_paper_quote_notional,
     )
+
+
+def test_real_okx_post_only_intent_satisfies_exact_order_constraints() -> None:
+    snapshot = _instrument_snapshot()
+    target, decision, quote, intent = _intent()
+
+    _validate(snapshot, target, decision, quote, intent)
 
 
 @pytest.mark.parametrize(
@@ -167,41 +188,42 @@ def test_post_only_intent_rejects_off_lot_or_off_tick_values(
     error: str,
 ) -> None:
     snapshot = _instrument_snapshot()
-    quote, intent = _intent(base_quantity=base_quantity, limit_price=limit_price)
+    target, decision, quote, intent = _intent(
+        base_quantity=base_quantity,
+        limit_price=limit_price,
+    )
 
     with pytest.raises(ValueError, match=error):
-        validate_okx_paper_post_only_order_intent_constraints(
-            snapshot,
-            quote,
-            intent,
-            maximum_snapshot_age_ms=1_000,
-            minimum_paper_quote_notional="1",
-        )
+        _validate(snapshot, target, decision, quote, intent)
 
 
 def test_post_only_intent_rejects_below_declared_paper_minimum_notional() -> None:
     snapshot = _instrument_snapshot()
-    quote, intent = _intent(base_quantity="0.00001")
+    target, decision, quote, intent = _intent(base_quantity="0.00001")
 
     with pytest.raises(ValueError, match="below the declared paper minimum"):
-        validate_okx_paper_post_only_order_intent_constraints(
+        _validate(
             snapshot,
+            target,
+            decision,
             quote,
             intent,
-            maximum_snapshot_age_ms=1_000,
             minimum_paper_quote_notional="0.410064",
         )
 
 
 def test_post_only_intent_rejects_different_instrument_evidence() -> None:
     snapshot = _instrument_snapshot()
-    quote, intent = _intent(instrument_snapshot_sha256="0" * 64)
+    target, decision, quote, intent = _intent(instrument_snapshot_sha256="0" * 64)
 
     with pytest.raises(ValueError, match="execution quote does not reference"):
-        validate_okx_paper_post_only_order_intent_constraints(
-            snapshot,
-            quote,
-            intent,
-            maximum_snapshot_age_ms=1_000,
-            minimum_paper_quote_notional="1",
-        )
+        _validate(snapshot, target, decision, quote, intent)
+
+
+def test_post_only_intent_rejects_forged_decision_binding() -> None:
+    snapshot = _instrument_snapshot()
+    target, decision, quote, intent = _intent()
+    forged = replace(intent, decision_id="9" * 64)
+
+    with pytest.raises(ValueError, match="does not match its decision"):
+        _validate(snapshot, target, decision, quote, forged)
