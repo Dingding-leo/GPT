@@ -2,7 +2,7 @@ name: Coordination Ruff Repair
 
 on:
   pull_request:
-    branches: [auto/live/20260724-06-okx-top-of-book]
+    branches: [main]
 
 permissions:
   contents: write
@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Check out support branch
+      - name: Check out canonical quote branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: auto/coordination/20260724-10-pr358-ruff-repair
+          ref: auto/live/20260724-06-okx-top-of-book
           persist-credentials: true
 
       - name: Set up Python
@@ -40,4 +40,4 @@ tests/test_okx_execution_quote_clock_domains.py"
           git config user.email "actions@users.noreply.github.com"
           git add src/gpt_quant/okx_execution_quote.py tests/test_okx_execution_quote_clock_domains.py
           git commit -m "style(coordination): restore PR 358 Ruff gate"
-          git push origin HEAD:auto/coordination/20260724-10-pr358-ruff-repair
+          git push origin HEAD:auto/live/20260724-06-okx-top-of-book
