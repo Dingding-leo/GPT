@@ -47,6 +47,19 @@ def _require_exact_profile(value: Any, *, label: str) -> None:
         raise ValueError(f"{label} must equal {_EXPECTED_COST_MULTIPLIERS}")
 
 
+def _metric_values_match(left: Any, right: Any) -> bool:
+    if isinstance(left, bool) or isinstance(right, bool):
+        return left == right
+    if isinstance(left, int | float) and isinstance(right, int | float):
+        return math.isclose(
+            float(left),
+            float(right),
+            rel_tol=0.0,
+            abs_tol=_NUMERIC_TOLERANCE,
+        )
+    return left == right
+
+
 def _require_metric_equivalence(
     aggregate: Mapping[str, Any],
     one_x: Mapping[str, Any],
@@ -54,24 +67,7 @@ def _require_metric_equivalence(
     if set(aggregate) != set(one_x):
         raise ValueError("walk_forward 1x metric keys must exactly match aggregate metrics")
     for key in aggregate:
-        left = aggregate[key]
-        right = one_x[key]
-        if isinstance(left, bool) or isinstance(right, bool):
-            if left != right:
-                raise ValueError(f"walk_forward 1x metric {key} does not match aggregate metrics")
-            continue
-        if isinstance(left, int | float) and isinstance(right, int | float):
-            if not math.isclose(
-                float(left),
-                float(right),
-                rel_tol=0.0,
-                abs_tol=_NUMERIC_TOLERANCE,
-            ):
-                raise ValueError(
-                    f"walk_forward 1x metric {key} does not match aggregate metrics"
-                )
-            continue
-        if left != right:
+        if not _metric_values_match(aggregate[key], one_x[key]):
             raise ValueError(f"walk_forward 1x metric {key} does not match aggregate metrics")
 
 
