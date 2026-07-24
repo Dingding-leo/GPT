@@ -1,0 +1,123 @@
+    result["eth_momentum"] = momentum["eth_close"]
+    return result
+
+
+def _build_position_path(
+    source: pd.DataFrame,
+    btc_target: pd.Series,
+    eth_target: pd.Series,
+) -> pd.DataFrame:
+    close = source[["btc_close", "eth_close"]]
+    asset_returns = close.pct_change(fill_method=None).fillna(0.0)
+    target = pd.DataFrame(
+        {"btc_position": btc_target, "eth_position": eth_target},
+        index=source.index,
+    ).fillna(0.0)
+    position = target.shift(1).fillna(0.0)
+    turnover = position.diff().abs()
+    turnover.iloc[0] = position.iloc[0].abs()
+    total_turnover = turnover.sum(axis=1)
+    gross = (
+        position["btc_position"] * asset_returns["btc_close"]
+        + position["eth_position"] * asset_returns["eth_close"]
+    )
+    fee = total_turnover * (TRANSACTION_COST_BPS / 10_000.0)
+    return pd.DataFrame(
+        {
+            "btc_position": position["btc_position"],
+            "eth_position": position["eth_position"],
+            "turnover": total_turnover,
+            "gross_return": gross,
+            "exchange_fee": fee,
+            "net_return": gross - fee,
+        },
+        index=source.index,
+    )
+
+
+def build_benchmarks(source: pd.DataFrame) -> dict[str, pd.DataFrame]:
+    index = source.index
+    half = pd.Series(0.5, index=index)
+    buy_hold = _build_position_path(source, half, half)
+
+    btc_vol = _annualized_volatility(source["btc_close"], VOLATILITY_LOOKBACK)
+    eth_vol = _annualized_volatility(source["eth_close"], VOLATILITY_LOOKBACK)
+    btc_vol_target = (0.5 * (TARGET_VOLATILITY / btc_vol).clip(upper=1.0)).fillna(0.0)
+    eth_vol_target = (0.5 * (TARGET_VOLATILITY / eth_vol).clip(upper=1.0)).fillna(0.0)
+    volatility_targeted = _build_position_path(source, btc_vol_target, eth_vol_target)
+
+    btc_trend = (source["btc_close"].divide(source["btc_close"].shift(REGIME_LOOKBACK)) - 1.0)
+    eth_trend = (source["eth_close"].divide(source["eth_close"].shift(REGIME_LOOKBACK)) - 1.0)
+    simple_trend = _build_position_path(
+        source,
+        0.5 * (btc_trend > 0.0).astype(float),
+        0.5 * (eth_trend > 0.0).astype(float),
+    )
+    return {
+        "equal_weight_buy_and_hold": buy_hold,
+        "equal_weight_volatility_targeted_long": volatility_targeted,
+        "equal_weight_simple_trend_long_cash": simple_trend,
+    }
+
+
+def evaluation_slice(frame: pd.DataFrame) -> pd.DataFrame:
+    evaluated = frame.loc[EVALUATION_START:EVALUATION_END].copy()
+    expected = int((EVALUATION_END - EVALUATION_START) / pd.Timedelta(hours=1)) + 1
+    if len(evaluated) != expected:
+        raise ValueError(
+            f"evaluation window must contain {expected} rows, observed {len(evaluated)}"
+        )
+    return evaluated
+
+
+def maximum_drawdown(returns: np.ndarray) -> float:
+    nav = np.cumprod(1.0 + np.asarray(returns, dtype=float))
+    if nav.size == 0 or not np.isfinite(nav).all() or np.any(nav <= 0.0):
+        raise ValueError("returns must produce a finite positive NAV")
+    peaks = np.maximum.accumulate(np.concatenate(([1.0], nav)))
+    drawdowns = np.concatenate(([1.0], nav)) / peaks - 1.0
+    return float(drawdowns.min())
+
+
+def performance_metrics(
+    returns: pd.Series | np.ndarray,
+    turnover: pd.Series | np.ndarray | None = None,
+) -> dict[str, float]:
+    values = np.asarray(returns, dtype=float)
+    if values.ndim != 1 or values.size == 0 or not np.isfinite(values).all():
+        raise ValueError("returns must be a non-empty finite vector")
+    nav = np.cumprod(1.0 + values)
+    if np.any(nav <= 0.0) or not np.isfinite(nav).all():
+        raise ValueError("returns must preserve positive finite capital")
+    total_return = float(nav[-1] - 1.0)
+    cagr = float(nav[-1] ** (ANNUALIZATION / values.size) - 1.0)
+    mean = float(values.mean())
+    std = float(values.std(ddof=0))
+    sharpe = float(math.sqrt(ANNUALIZATION) * mean / std) if std > 0 else 0.0
+    downside = np.minimum(values, 0.0)
+    downside_deviation = float(math.sqrt(np.mean(downside**2)))
+    sortino = (
+        float(math.sqrt(ANNUALIZATION) * mean / downside_deviation)
+        if downside_deviation > 0
+        else 0.0
+    )
+    max_dd = maximum_drawdown(values)
+    calmar = float(cagr / abs(max_dd)) if max_dd < 0 else 0.0
+    metrics = {
+        "total_return": total_return,
+        "cagr": cagr,
+        "annualized_arithmetic_mean": mean * ANNUALIZATION,
+        "sharpe": sharpe,
+        "sortino": sortino,
+        "calmar": calmar,
+        "maximum_drawdown": max_dd,
+    }
+    if turnover is not None:
+        turn = np.asarray(turnover, dtype=float)
+        if turn.shape != values.shape or not np.isfinite(turn).all() or np.any(turn < 0.0):
+            raise ValueError("turnover must be a finite non-negative vector aligned with returns")
+        metrics["annualized_turnover"] = float(turn.sum() * ANNUALIZATION / values.size)
+    return metrics
+
+
+def expected_shortfall(returns: pd.Series | np.ndarray, fraction: float = TAIL_FRACTION) -> float:
