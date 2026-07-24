@@ -1,0 +1,59 @@
+name: Temporary Maker Gate Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  format-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+
+      - name: Install project
+        run: |
+          python -m pip install "pip==26.1.2"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Apply repository formatter
+        run: |
+          ruff check --fix \
+            scripts/build_maker_replay_gate.py \
+            tests/test_maker_replay_gate.py
+          ruff format \
+            scripts/build_maker_replay_gate.py \
+            tests/test_maker_replay_gate.py
+
+      - name: Run focused gate
+        run: |
+          python -m py_compile \
+            scripts/build_maker_replay_gate.py \
+            tests/test_maker_replay_gate.py
+          pytest -q \
+            tests/test_maker_fill_replay.py \
+            tests/test_maker_replay_gate.py \
+            tests/test_maker_replay_workflow.py
+
+      - name: Upload canonical files
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: canonical-maker-gate-files
+          path: |
+            scripts/build_maker_replay_gate.py
+            tests/test_maker_replay_gate.py
+          if-no-files-found: error
+          retention-days: 1
