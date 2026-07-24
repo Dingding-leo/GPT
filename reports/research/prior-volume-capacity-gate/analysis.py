@@ -38,8 +38,10 @@ SOURCE = {
 CANONICAL_SIGNATURE = (
     "canonical-5bps-prior-volume-capacity-gate-v1|markets=BTC-USDT,ETH-USDT|"
     "source=verified-OKX-1Dutc-snapshots-and-canonical-5bps-returns|"
-    "candidate=initial-capital-usd-1000000|trade-notional=abs-turnover*prior-nav*initial-capital|"
-    "liquidity-proxy=prior-30-session-median-daily-quote-volume|participation-limit=0.10pct|"
+    "candidate=initial-capital-usd-1000000|"
+    "trade-notional=abs-turnover*prior-nav*initial-capital|"
+    "liquidity-proxy=prior-30-session-median-daily-quote-volume|"
+    "participation-limit=0.10pct|"
     "claim=every-adjustment-at-or-below-limit-in-both-markets|candidate_count=1"
 )
 _EXPLICIT_ZONE = re.compile(r"(?:Z|[+-]\d{2}:?\d{2})$")
@@ -55,7 +57,9 @@ def file_sha256(path: Path) -> str:
 
 def _timestamps(values: pd.Series) -> pd.DatetimeIndex:
     raw = values.astype("string")
-    if not bool(raw.map(lambda value: bool(_EXPLICIT_ZONE.search(str(value)))).all()):
+    if not bool(
+        raw.map(lambda value: bool(_EXPLICIT_ZONE.search(str(value)))).all()
+    ):
         raise ValueError("timestamps must contain an explicit timezone")
     timestamps = pd.DatetimeIndex(pd.to_datetime(raw, utc=True, errors="raise"))
     if timestamps.has_duplicates or not timestamps.is_monotonic_increasing:
@@ -76,7 +80,10 @@ def load_snapshot(path: Path, expected_sha256: str) -> pd.DataFrame:
     if missing:
         raise ValueError(f"snapshot missing columns: {sorted(missing)}")
     validated = pd.DataFrame(index=_timestamps(frame["timestamp"]))
-    validated["volume_quote"] = pd.to_numeric(frame["volume_quote"], errors="raise").to_numpy()
+    validated["volume_quote"] = pd.to_numeric(
+        frame["volume_quote"],
+        errors="raise",
+    ).to_numpy()
     confirm = pd.to_numeric(frame["confirm"], errors="raise")
     values = validated["volume_quote"].to_numpy(dtype=float)
     if not np.isfinite(values).all() or np.any(values <= 0.0):
@@ -96,18 +103,30 @@ def load_returns(path: Path, expected_sha256: str) -> pd.DataFrame:
         raise ValueError(f"returns missing columns: {sorted(missing)}")
     validated = pd.DataFrame(index=_timestamps(frame["timestamp"]))
     for column in ("turnover", "nav", "strategy_return", "fold"):
-        validated[column] = pd.to_numeric(frame[column], errors="raise").to_numpy()
-    values = validated[["turnover", "nav", "strategy_return"]].to_numpy(dtype=float)
+        validated[column] = pd.to_numeric(
+            frame[column],
+            errors="raise",
+        ).to_numpy()
+    values = validated[["turnover", "nav", "strategy_return"]].to_numpy(
+        dtype=float
+    )
     if len(validated) != EXPECTED_OBSERVATIONS:
         raise ValueError(f"expected {EXPECTED_OBSERVATIONS} OOS observations")
     if not np.isfinite(values).all() or np.any(validated["turnover"] < 0.0):
-        raise ValueError("returns must contain finite non-negative turnover and finite metrics")
-    if np.any(validated["nav"] <= 0.0) or np.any(validated["strategy_return"] <= -1.0):
+        raise ValueError(
+            "returns must contain finite non-negative turnover and finite metrics"
+        )
+    if np.any(validated["nav"] <= 0.0) or np.any(
+        validated["strategy_return"] <= -1.0
+    ):
         raise ValueError("NAV must be positive and returns greater than -100%")
     return validated
 
 
-def capacity_frame(snapshot: pd.DataFrame, returns: pd.DataFrame) -> pd.DataFrame:
+def capacity_frame(
+    snapshot: pd.DataFrame,
+    returns: pd.DataFrame,
+) -> pd.DataFrame:
     lagged_liquidity = (
         snapshot["volume_quote"]
         .rolling(LIQUIDITY_LOOKBACK, min_periods=LIQUIDITY_LOOKBACK)
@@ -118,15 +137,21 @@ def capacity_frame(snapshot: pd.DataFrame, returns: pd.DataFrame) -> pd.DataFram
     result = returns.join(lagged_liquidity, how="left")
     result["equity_multiple_before"] = result["nav"].shift(1).fillna(1.0)
     result["trade_notional_usd"] = (
-        result["turnover"].abs() * result["equity_multiple_before"] * INITIAL_CAPITAL_USD
+        result["turnover"].abs()
+        * result["equity_multiple_before"]
+        * INITIAL_CAPITAL_USD
     )
     result["participation"] = (
         result["trade_notional_usd"] / result["prior_median_quote_volume"]
     )
     adjustments = result["turnover"].abs() > ADJUSTMENT_THRESHOLD
     if result.loc[adjustments, "prior_median_quote_volume"].isna().any():
-        raise ValueError("every adjustment must have a complete prior liquidity window")
-    if not np.isfinite(result.loc[adjustments, "participation"].to_numpy(dtype=float)).all():
+        raise ValueError(
+            "every adjustment must have a complete prior liquidity window"
+        )
+    if not np.isfinite(
+        result.loc[adjustments, "participation"].to_numpy(dtype=float)
+    ).all():
         raise ValueError("capacity participation must be finite on adjustment days")
     result["capacity_initial_usd"] = np.where(
         adjustments,
@@ -139,7 +164,9 @@ def capacity_frame(snapshot: pd.DataFrame, returns: pd.DataFrame) -> pd.DataFram
 
 
 def capacity_metrics(frame: pd.DataFrame) -> dict[str, Any]:
-    adjustments = frame.loc[frame["turnover"].abs() > ADJUSTMENT_THRESHOLD].copy()
+    adjustments = frame.loc[
+        frame["turnover"].abs() > ADJUSTMENT_THRESHOLD
+    ].copy()
     if adjustments.empty:
         raise ValueError("capacity analysis requires at least one adjustment")
     participation = adjustments["participation"]
@@ -155,7 +182,9 @@ def capacity_metrics(frame: pd.DataFrame) -> dict[str, Any]:
         "p99_participation": float(participation.quantile(0.99)),
         "maximum_participation": float(participation.max()),
         "maximum_participation_date": max_index.isoformat(),
-        "maximum_trade_notional_usd": float(adjustments["trade_notional_usd"].max()),
+        "maximum_trade_notional_usd": float(
+            adjustments["trade_notional_usd"].max()
+        ),
         "maximum_trade_notional_date": max_trade_index.isoformat(),
         "minimum_supported_initial_capital_usd": float(
             adjustments["capacity_initial_usd"].min()
@@ -211,13 +240,15 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
         market_results[market] = capacity_metrics(frame)
         baseline_metrics[market] = return_metrics(returns)
 
-    candidate_passes = all(market_results[market]["passes"] for market in MARKETS)
+    candidate_passes = all(
+        market_results[market]["passes"] for market in MARKETS
+    )
     return {
         "canonical_signature": CANONICAL_SIGNATURE,
         "hypothesis": (
-            "A USD 1,000,000 canonical 5 bps account can execute every BTC-USDT and "
-            "ETH-USDT OOS position adjustment at no more than 0.10% of the strictly lagged "
-            "30-session median daily quote volume."
+            "A USD 1,000,000 canonical 5 bps account can execute every "
+            "BTC-USDT and ETH-USDT OOS position adjustment at no more than "
+            "0.10% of the strictly lagged 30-session median daily quote volume."
         ),
         "verdict": "supported" if candidate_passes else "rejected",
         "candidate_accounting": {
@@ -230,8 +261,12 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
             "initial_capital_usd": INITIAL_CAPITAL_USD,
             "participation_limit": PARTICIPATION_LIMIT,
             "liquidity_lookback_sessions": LIQUIDITY_LOOKBACK,
-            "liquidity_estimator": "prior-session-shifted rolling median of daily quote volume",
-            "trade_notional": "absolute turnover * prior NAV multiple * initial capital",
+            "liquidity_estimator": (
+                "prior-session-shifted rolling median of daily quote volume"
+            ),
+            "trade_notional": (
+                "absolute turnover * prior NAV multiple * initial capital"
+            ),
             "adjustment_threshold": ADJUSTMENT_THRESHOLD,
             "baseline_exchange_fee_bps_one_way": 5.0,
             "all_in_cost_sensitivities_bps": [5.0, 7.5, 10.0, 15.0],
@@ -269,10 +304,23 @@ def analyze(artifact_dir: Path) -> dict[str, Any]:
             "overall_live_eligibility": "false",
         },
         "limitations": [
-            "Daily quote volume is a retrospective capacity proxy, not executable top-of-book depth.",
-            "The 0.10% limit is applied to a strictly lagged 30-session median, but it does not model intraday concentration or partial fills.",
-            "BTC-USDT and ETH-USDT are development markets; SOL-USDT is a consumed holdout and was not used.",
-            "Spread, slippage, market impact, and latency remain separately unmeasured.",
+            (
+                "Daily quote volume is a retrospective capacity proxy, not "
+                "executable top-of-book depth."
+            ),
+            (
+                "The 0.10% limit is applied to a strictly lagged 30-session "
+                "median, but it does not model intraday concentration or "
+                "partial fills."
+            ),
+            (
+                "BTC-USDT and ETH-USDT are development markets; SOL-USDT is a "
+                "consumed holdout and was not used."
+            ),
+            (
+                "Spread, slippage, market impact, and latency remain "
+                "separately unmeasured."
+            ),
         ],
     }
 
