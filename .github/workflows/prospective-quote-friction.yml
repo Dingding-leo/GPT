@@ -43,12 +43,14 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Validate repository and protocol
-        run: |
-          set -euo pipefail
-          ruff check .
-          ruff format --check .
-          pytest -q tests/test_prospective_top_of_book_friction.py
+      - name: Lint
+        run: ruff check .
+
+      - name: Formatting
+        run: ruff format --check .
+
+      - name: Test prospective protocol
+        run: pytest -q tests/test_prospective_top_of_book_friction.py
 
       - name: Collect bounded public quote evidence
         id: collect
@@ -78,7 +80,7 @@ jobs:
               "workflow_run_id": int(os.environ["GITHUB_RUN_ID"]),
               "workflow_run_attempt": int(os.environ["GITHUB_RUN_ATTEMPT"]),
               "tested_sha": os.environ["GITHUB_SHA"],
-              "head_sha": os.environ.get("GITHUB_HEAD_REF", ""),
+              "head_ref": os.environ.get("GITHUB_HEAD_REF", ""),
               "hypothesis_exit_code": int(os.environ["HYPOTHESIS_EXIT_CODE"]),
           }
           path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
