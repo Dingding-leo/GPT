@@ -1,0 +1,14 @@
+{
+  "bar": "1H",
+  "end": "2022-01-25T23:00:00.000000Z",
+  "fixture_sha256": "c5738ff91221c196b701c032c141d56fed1de687a6b983b89e3715952545d04f",
+  "instrument": "BTC-USDT",
+  "market_type": "spot",
+  "provider": "OKX",
+  "rows": 16,
+  "source_artifact_id": 8586473477,
+  "source_artifact_zip_sha256": "44ef21be41117768f34422bff2458ef3daf1709b6335387c8ddc9d23077ebed7",
+  "source_snapshot_sha256": "bbba1e9b36e17b03ff6aed237a4de949b4a39b1d17eaf1b4979627794acb909c",
+  "start": "2022-01-25T08:00:00.000000Z",
+  "usage": "mechanics-only regression; no performance claim"
+}
