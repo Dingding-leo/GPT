@@ -171,6 +171,4 @@ def test_high_precision_partial_buy_preserves_exact_five_bps_cash_math() -> None
     assert impact.realized_exchange_fee_quote == "0.480943927835728392783572839275826"
     assert impact.realized_cash_delta_quote == "-962.368799599292513959929251390927826"
     assert impact.pending_cash_reservation_quote == "4102.73034"
-    assert impact.total_buy_cash_commitment_quote == (
-        "5065.099139599292513959929251390927826"
-    )
+    assert impact.total_buy_cash_commitment_quote == ("5065.099139599292513959929251390927826")
