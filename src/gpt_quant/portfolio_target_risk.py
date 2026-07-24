@@ -498,9 +498,7 @@ def evaluate_target_position_intents(
 
     batch_turnover = traded_notional / snapshot.equity
     tolerance = max(1.0, snapshot.equity) * 1e-12
-    sell_only_reduction = (
-        required_sell_notional > tolerance and required_buy_notional <= tolerance
-    )
+    sell_only_reduction = required_sell_notional > tolerance and required_buy_notional <= tolerance
     if projected_gross_exposure > policy.maximum_gross_target_exposure:
         blockers.append("portfolio_gross_target_exposure_limit")
     if projected_gross_notional > policy.maximum_gross_notional:
