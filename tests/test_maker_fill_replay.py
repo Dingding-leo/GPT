@@ -17,6 +17,7 @@ _FIXTURE = (
 _ORDER_INTENT_ID = "a" * 64
 _SIGNAL = datetime(2022, 6, 2, 9, 0, tzinfo=UTC)
 _SUBMITTED = datetime(2022, 6, 2, 9, 20, 40, tzinfo=UTC)
+_TRADE_THROUGH_AT = datetime(2022, 6, 2, 9, 20, 46, 974000, tzinfo=UTC)
 
 
 def _snapshot() -> OKXPublicTradeSnapshot:
@@ -140,6 +141,48 @@ def test_full_trade_through_fill_is_deterministic_and_hash_bound() -> None:
     assert first.requote_eligible is False
     assert first.to_json_bytes() == second.to_json_bytes()
     assert hashlib.sha256(first.to_json_bytes()).hexdigest() != first.replay_id
+
+
+@pytest.mark.parametrize(
+    ("submitted_at_utc", "expires_at_utc", "expected_touch_count"),
+    [
+        (
+            _TRADE_THROUGH_AT,
+            datetime(2022, 6, 2, 9, 20, 50, tzinfo=UTC),
+            0,
+        ),
+        (
+            _SUBMITTED,
+            _TRADE_THROUGH_AT,
+            1,
+        ),
+    ],
+    ids=("trade-at-submission", "trade-at-exclusive-expiry"),
+)
+def test_boundary_trade_cannot_fill_post_only_order(
+    submitted_at_utc: datetime,
+    expires_at_utc: datetime,
+    expected_touch_count: int,
+) -> None:
+    replay = simulate_post_only_maker_fill(
+        _snapshot(),
+        order_intent_id=_ORDER_INTENT_ID,
+        signal_at_utc=_SIGNAL,
+        submitted_at_utc=submitted_at_utc,
+        expires_at_utc=expires_at_utc,
+        side="buy",
+        limit_price="29964.1",
+        requested_base_quantity="0.000005",
+        queue_ahead_base_quantity="0",
+    )
+
+    assert replay.outcome == "cancelled_no_fill"
+    assert replay.touch_trade_count == expected_touch_count
+    assert replay.trade_through_trade_count == 0
+    assert replay.filled_base_quantity == "0"
+    assert replay.exchange_fee_quote == "0"
+    assert replay.cancelled_at_utc == expires_at_utc
+    assert replay.requote_eligible is True
 
 
 def test_duplicate_public_trade_fields_fail_closed() -> None:
