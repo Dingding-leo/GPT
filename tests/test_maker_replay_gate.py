@@ -5,7 +5,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "okx" / "trades-btc-usdt-docs-20220602"
+_FIXTURE_ROOT = (
+    Path(__file__).parent / "fixtures" / "okx" / "trades-btc-usdt-docs-20220602"
+)
 _SCRIPT = Path(__file__).parents[1] / "scripts" / "build_maker_replay_gate.py"
 _COVERAGE_BLOCKER = "complete_submission_to_expiry_trade_coverage_missing"
 
@@ -40,7 +42,10 @@ def _build(
     assert summary["execution_interval_coverage_passes"] is False
     assert summary["replay_equivalent"] is True
     assert summary["blockers"] == [_COVERAGE_BLOCKER]
-    assert summary["structural_outcomes"] == ["cancelled_no_fill", "cancelled_partial"]
+    assert summary["structural_outcomes"] == [
+        "cancelled_no_fill",
+        "cancelled_partial",
+    ]
     assert summary["observed_outcomes"] == []
     return json.loads((output_dir / "maker-order-replay-gate.json").read_text())
 
@@ -58,7 +63,9 @@ def _directory_bytes(root: Path) -> dict[str, bytes]:
 
 
 def _write_metadata(path: Path, **updates: object) -> Path:
-    metadata = json.loads((_FIXTURE_ROOT / "metadata.json").read_text(encoding="utf-8"))
+    metadata = json.loads(
+        (_FIXTURE_ROOT / "metadata.json").read_text(encoding="utf-8")
+    )
     metadata.update(updates)
     path.write_text(
         json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
@@ -67,7 +74,9 @@ def _write_metadata(path: Path, **updates: object) -> Path:
     return path
 
 
-def test_maker_replay_gate_is_deterministic_offline_and_fail_closed(tmp_path: Path) -> None:
+def test_maker_replay_gate_is_deterministic_offline_and_fail_closed(
+    tmp_path: Path,
+) -> None:
     first_root = tmp_path / "first"
     second_root = tmp_path / "second"
 
@@ -79,7 +88,10 @@ def test_maker_replay_gate_is_deterministic_offline_and_fail_closed(tmp_path: Pa
     verification = json.loads(_verify(first_root).stdout)
     assert verification["maker_order_replay_passes"] is False
     assert verification["execution_interval_coverage_passes"] is False
-    assert verification["structural_outcomes"] == ["cancelled_no_fill", "cancelled_partial"]
+    assert verification["structural_outcomes"] == [
+        "cancelled_no_fill",
+        "cancelled_partial",
+    ]
     assert verification["observed_outcomes"] == []
     assert first["schema_version"] == 2
     assert first["canonical_timeframe"] == "1H"
@@ -120,7 +132,9 @@ def test_maker_replay_gate_is_deterministic_offline_and_fail_closed(tmp_path: Pa
     assert partial_fill["requote_eligible"] is True
 
 
-def test_documentation_fixture_cannot_self_assert_complete_interval(tmp_path: Path) -> None:
+def test_documentation_fixture_cannot_self_assert_complete_interval(
+    tmp_path: Path,
+) -> None:
     metadata_path = _write_metadata(
         tmp_path / "metadata.json",
         coverage_complete=True,
@@ -164,19 +178,24 @@ def test_maker_replay_gate_rejects_tampered_replay_bytes(tmp_path: Path) -> None
     output_dir = tmp_path / "evidence"
     _build(output_dir)
     replay_path = output_dir / "cancelled-partial.json"
-    replay_path.write_bytes(replay_path.read_bytes().replace(b'"0.00001"', b'"0.00002"', 1))
+    replay_path.write_bytes(
+        replay_path.read_bytes().replace(b'"0.00001"', b'"0.00002"', 1)
+    )
 
     result = _verify(output_dir, check=False)
     assert result.returncode != 0
     assert "artifact digest mismatch" in result.stderr
 
 
-def test_maker_replay_gate_rejects_manifest_inventory_drift(tmp_path: Path) -> None:
+def test_maker_replay_gate_rejects_manifest_inventory_drift(
+    tmp_path: Path,
+) -> None:
     output_dir = tmp_path / "evidence"
     _build(output_dir)
     manifest_path = output_dir / "artifact-manifest.sha256"
     manifest_path.write_text(
-        manifest_path.read_text(encoding="utf-8") + f"{'0' * 64}  unexpected.json\n",
+        manifest_path.read_text(encoding="utf-8")
+        + f"{'0' * 64}  unexpected.json\n",
         encoding="utf-8",
     )
 
