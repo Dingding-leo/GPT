@@ -25,6 +25,15 @@ def test_paper_launch_status_matches_current_fail_closed_gates() -> None:
         "allow_paper_promotion = false",
         "allow_limited_capital = false",
         "copies every manifested file into a private temporary tree",
+        "The presence of these commands in documentation or a workflow definition is not",
+        "A missing run is **UNVERIFIED**, not a pass or a failure.",
+        "Historical green runs cannot authorize a moved PR head",
+        "Python Package Build",
+        "Hourly Quant Research",
+        "Canonical BTC ETH 1h Research",
+        "OKX 1H Data Coverage",
+        "the release decision\nremains **BLOCKED** and G1 must not start",
+        "IMPLEMENTED; EXACT-HEAD EVIDENCE REQUIRED",
         "Paper startup and shutdown | **BLOCKED**",
         "No executable paper-runner startup or shutdown command exists on `main`.",
         "Health, heartbeat, and event-loop status | **BLOCKED**",
@@ -48,6 +57,9 @@ def test_paper_launch_status_matches_current_fail_closed_gates() -> None:
     assert "_materialize_verified_artifact" in cross_market
     assert "O_NOFOLLOW" in cross_market
     assert "source artifact manifest changed during semantic reconstruction" in cross_market
+    assert "workflow_dispatch:" in workflow
+    assert "push:" in workflow
+    assert "branches: [main]" in workflow
     assert "contents: read" in workflow
     assert "persist-credentials: false" in workflow
 
@@ -55,6 +67,7 @@ def test_paper_launch_status_matches_current_fail_closed_gates() -> None:
         "Until that release train reaches `main`",
         "operator acceptance remains **BLOCKED** even when an earlier workflow exited",
         "G0 artifact build therefore does not authorize paper execution",
+        "## Executed verification command",
     )
     for text in stale_text:
         assert text not in documentation
