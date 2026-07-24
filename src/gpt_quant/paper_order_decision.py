@@ -178,7 +178,8 @@ class PaperOrderDecision:
                 or Decimal(quantity) <= 0
             ):
                 raise ValueError(
-                    "planned decisions require a positive market or post-only limit buy/sell quantity"
+                    "planned decisions require a positive market or post-only "
+                    "limit buy/sell quantity"
                 )
         elif (order_type, side, quantity) != ("none", "none", "0"):
             raise ValueError("rejected decisions require zero quantity and no order fields")
