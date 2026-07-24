@@ -5,9 +5,9 @@ import json
 import math
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from numbers import Real
-from typing import Literal
+from typing import Literal, Self
 
 from .paper_risk_kill_switch import (
     PaperRiskKillSwitchDecision,
@@ -43,6 +43,14 @@ def _required_hash(value: object, *, field_name: str) -> str:
     return value
 
 
+def _required_utc_datetime(value: object, *, field_name: str) -> datetime:
+    if not isinstance(value, datetime):
+        raise TypeError(f"{field_name} must be a timezone-aware datetime")
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError(f"{field_name} must be a timezone-aware datetime")
+    return value.astimezone(UTC)
+
+
 def _canonical_json_bytes(payload: object) -> bytes:
     return json.dumps(
         payload,
@@ -52,52 +60,165 @@ def _canonical_json_bytes(payload: object) -> bytes:
     ).encode("utf-8")
 
 
-@dataclass(frozen=True, slots=True)
-class PaperRiskSessionHighWatermarks:
-    """Source-bound session maxima that keep loss and drawdown stops latched."""
+def _format_utc(value: datetime) -> str:
+    return value.astimezone(UTC).isoformat(timespec="microseconds").replace("+00:00", "Z")
 
+
+@dataclass(frozen=True, slots=True, init=False)
+class PaperRiskSessionHighWatermarks:
+    """Append-only session maxima bound to one exact portfolio-state snapshot."""
+
+    observed_at_utc: datetime
+    session_start_utc: datetime
+    snapshot_id: str
     portfolio_state_sha256: str
     maximum_daily_loss_fraction: float
     maximum_drawdown_fraction: float
+    previous_high_watermark_id: str | None
     schema_version: int = field(default=_SCHEMA_VERSION, init=False)
     high_watermark_id: str = field(init=False)
 
-    def __post_init__(self) -> None:
+    @classmethod
+    def _create(
+        cls,
+        *,
+        snapshot: PaperRiskStateSnapshot,
+        maximum_daily_loss_fraction: float,
+        maximum_drawdown_fraction: float,
+        previous_high_watermark_id: str | None,
+    ) -> Self:
+        instance = object.__new__(cls)
+        observed_at = _required_utc_datetime(
+            snapshot.observed_at_utc,
+            field_name="observed_at_utc",
+        )
+        session_start = _required_utc_datetime(
+            snapshot.session_start_utc,
+            field_name="session_start_utc",
+        )
+        snapshot_id = _required_hash(snapshot.snapshot_id, field_name="snapshot_id")
         state_hash = _required_hash(
-            self.portfolio_state_sha256,
+            snapshot.portfolio_state_sha256,
             field_name="portfolio_state_sha256",
         )
         maximum_daily_loss = _nonnegative_fraction(
-            self.maximum_daily_loss_fraction,
+            maximum_daily_loss_fraction,
             field_name="maximum_daily_loss_fraction",
         )
         maximum_drawdown = _nonnegative_fraction(
-            self.maximum_drawdown_fraction,
+            maximum_drawdown_fraction,
             field_name="maximum_drawdown_fraction",
         )
-        object.__setattr__(self, "portfolio_state_sha256", state_hash)
-        object.__setattr__(self, "maximum_daily_loss_fraction", maximum_daily_loss)
-        object.__setattr__(self, "maximum_drawdown_fraction", maximum_drawdown)
+        previous_id = (
+            None
+            if previous_high_watermark_id is None
+            else _required_hash(
+                previous_high_watermark_id,
+                field_name="previous_high_watermark_id",
+            )
+        )
+
+        object.__setattr__(instance, "observed_at_utc", observed_at)
+        object.__setattr__(instance, "session_start_utc", session_start)
+        object.__setattr__(instance, "snapshot_id", snapshot_id)
+        object.__setattr__(instance, "portfolio_state_sha256", state_hash)
+        object.__setattr__(
+            instance,
+            "maximum_daily_loss_fraction",
+            maximum_daily_loss,
+        )
+        object.__setattr__(
+            instance,
+            "maximum_drawdown_fraction",
+            maximum_drawdown,
+        )
+        object.__setattr__(instance, "previous_high_watermark_id", previous_id)
+        object.__setattr__(instance, "schema_version", _SCHEMA_VERSION)
+
         payload = {
-            "schema_version": self.schema_version,
+            "schema_version": _SCHEMA_VERSION,
+            "observed_at_utc": _format_utc(observed_at),
+            "session_start_utc": _format_utc(session_start),
+            "snapshot_id": snapshot_id,
             "portfolio_state_sha256": state_hash,
             "maximum_daily_loss_fraction": maximum_daily_loss,
             "maximum_drawdown_fraction": maximum_drawdown,
+            "previous_high_watermark_id": previous_id,
         }
         object.__setattr__(
-            self,
+            instance,
             "high_watermark_id",
             hashlib.sha256(_canonical_json_bytes(payload)).hexdigest(),
         )
+        return instance
 
     def assert_compatible(self, snapshot: PaperRiskStateSnapshot) -> None:
+        if self.snapshot_id != snapshot.snapshot_id:
+            raise ValueError("session high-watermarks do not match the exact portfolio snapshot")
         if self.portfolio_state_sha256 != snapshot.portfolio_state_sha256:
             raise ValueError("session high-watermarks do not match the portfolio-state source hash")
+        if self.session_start_utc != snapshot.session_start_utc:
+            raise ValueError("session high-watermarks do not match the portfolio session")
+        if self.observed_at_utc != snapshot.observed_at_utc:
+            raise ValueError("session high-watermarks do not match the portfolio observation time")
         tolerance = 1e-12
         if self.maximum_daily_loss_fraction + tolerance < snapshot.daily_loss_fraction:
             raise ValueError("maximum_daily_loss_fraction cannot be below current daily loss")
         if self.maximum_drawdown_fraction + tolerance < snapshot.drawdown_fraction:
             raise ValueError("maximum_drawdown_fraction cannot be below current drawdown")
+
+
+def advance_paper_risk_session_high_watermarks(
+    snapshot: PaperRiskStateSnapshot,
+    *,
+    previous: PaperRiskSessionHighWatermarks | None = None,
+) -> PaperRiskSessionHighWatermarks:
+    """Advance append-only session maxima to one exact source-bound snapshot."""
+
+    if not isinstance(snapshot, PaperRiskStateSnapshot):
+        raise TypeError("snapshot must be a PaperRiskStateSnapshot")
+    tolerance = 1e-12
+    if previous is None:
+        if (
+            snapshot.daily_loss_fraction > tolerance
+            or snapshot.drawdown_fraction > tolerance
+        ):
+            raise ValueError(
+                "initial session high-watermarks require a zero-loss, zero-drawdown snapshot"
+            )
+        maximum_daily_loss = snapshot.daily_loss_fraction
+        maximum_drawdown = snapshot.drawdown_fraction
+        previous_id = None
+    else:
+        if not isinstance(previous, PaperRiskSessionHighWatermarks):
+            raise TypeError("previous must be a PaperRiskSessionHighWatermarks")
+        if previous.session_start_utc != snapshot.session_start_utc:
+            raise ValueError("cannot advance session high-watermarks across sessions")
+        if snapshot.observed_at_utc < previous.observed_at_utc:
+            raise ValueError("cannot advance session high-watermarks to an older snapshot")
+        if snapshot.observed_at_utc == previous.observed_at_utc:
+            if snapshot.snapshot_id != previous.snapshot_id:
+                raise ValueError(
+                    "conflicting portfolio snapshots share one session observation time"
+                )
+            previous.assert_compatible(snapshot)
+            return previous
+        maximum_daily_loss = max(
+            previous.maximum_daily_loss_fraction,
+            snapshot.daily_loss_fraction,
+        )
+        maximum_drawdown = max(
+            previous.maximum_drawdown_fraction,
+            snapshot.drawdown_fraction,
+        )
+        previous_id = previous.high_watermark_id
+
+    return PaperRiskSessionHighWatermarks._create(
+        snapshot=snapshot,
+        maximum_daily_loss_fraction=maximum_daily_loss,
+        maximum_drawdown_fraction=maximum_drawdown,
+        previous_high_watermark_id=previous_id,
+    )
 
 
 @dataclass(frozen=True, slots=True)
