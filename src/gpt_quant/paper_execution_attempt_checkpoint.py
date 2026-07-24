@@ -111,9 +111,7 @@ class PaperExecutionAttemptCheckpoint:
         checkpoint = cls(
             schema_version=_SCHEMA_VERSION,
             sequence=sequence,
-            journal_sha256=_require_sha256(
-                payload["journal_sha256"], field="journal_sha256"
-            ),
+            journal_sha256=_require_sha256(payload["journal_sha256"], field="journal_sha256"),
             attempt_count=attempt_count,
             previous_checkpoint_id=previous,
             checkpoint_id=_require_sha256(payload["checkpoint_id"], field="checkpoint_id"),
