@@ -3,9 +3,11 @@ from __future__ import annotations
 import re
 from decimal import Decimal, localcontext
 
+from .execution_intent import TargetPositionIntent
 from .execution_quote import ExecutionQuoteSnapshot
 from .okx_instruments import OKXSpotInstrumentSnapshot
 from .okx_order_constraints import validate_okx_spot_limit_order_constraints
+from .paper_order_decision import PaperOrderDecision
 from .paper_post_only_order_intent import PaperPostOnlyOrderIntent
 
 __all__ = ["validate_okx_paper_post_only_order_intent_constraints"]
@@ -32,16 +34,19 @@ def validate_okx_paper_post_only_order_intent_constraints(
     quote: ExecutionQuoteSnapshot,
     intent: PaperPostOnlyOrderIntent,
     *,
+    decision: PaperOrderDecision,
+    target: TargetPositionIntent,
     maximum_snapshot_age_ms: int,
     minimum_paper_quote_notional: str,
 ) -> None:
-    """Bind one maker paper intent to exact public OKX order constraints.
+    """Bind one approved maker intent to exact public OKX order constraints.
 
-    This offline gate performs no account or order operation. It verifies that the
-    intent reproduces the supplied quote and immutable instrument response, then
-    enforces the exact OKX lot and tick increments plus one explicit paper-policy
-    quote-notional floor at the maker limit. The floor is not an inferred exchange
-    minimum, and no spread, slippage, impact, latency, or fill probability is added.
+    This offline gate performs no account or order operation. It first reconstructs
+    the intent from the exact approved paper decision, target intent, and execution
+    quote. It then verifies the immutable OKX instrument response and enforces the
+    exact lot and tick increments plus one explicit paper-policy quote-notional floor
+    at the maker limit. The floor is not an inferred exchange minimum, and no spread,
+    slippage, impact, latency, or fill probability is added.
     """
 
     if not isinstance(snapshot, OKXSpotInstrumentSnapshot):
@@ -50,6 +55,12 @@ def validate_okx_paper_post_only_order_intent_constraints(
         raise TypeError("quote must be an ExecutionQuoteSnapshot")
     if not isinstance(intent, PaperPostOnlyOrderIntent):
         raise TypeError("intent must be a PaperPostOnlyOrderIntent")
+    if not isinstance(decision, PaperOrderDecision):
+        raise TypeError("decision must be a PaperOrderDecision")
+    if not isinstance(target, TargetPositionIntent):
+        raise TypeError("target must be a TargetPositionIntent")
+
+    intent.assert_reconstructs(decision, target, quote)
 
     if quote.instrument_snapshot_sha256 != snapshot.raw_response_sha256:
         raise ValueError("execution quote does not reference the supplied OKX instrument snapshot")
