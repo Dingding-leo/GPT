@@ -20,6 +20,8 @@ from .paper_order_decision import PaperOrderDecision
 from .target_intent_journal import load_target_position_intent_journal
 
 _ERROR = "paper order decision"
+_MAX_DECISION_RECORD_BYTES = 16 * 1024
+_READ_CHUNK_BYTES = 1024 * 1024
 
 
 def _json_bytes(payload: Mapping[str, object]) -> bytes:
@@ -54,8 +56,19 @@ def _validate_private_file(descriptor: int, label: str) -> os.stat_result:
 
 def _read_decision_descriptor(descriptor: int, label: str) -> tuple[os.stat_result, bytes]:
     opened = _validate_private_file(descriptor, label)
+    if opened.st_size > _MAX_DECISION_RECORD_BYTES:
+        raise ValueError(f"{label} exceeds the maximum record size")
+
     chunks: list[bytes] = []
-    while chunk := os.read(descriptor, 1024 * 1024):
+    total = 0
+    while True:
+        remaining_with_sentinel = _MAX_DECISION_RECORD_BYTES - total + 1
+        chunk = os.read(descriptor, min(_READ_CHUNK_BYTES, remaining_with_sentinel))
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > _MAX_DECISION_RECORD_BYTES:
+            raise ValueError(f"{label} exceeds the maximum record size")
         chunks.append(chunk)
     return opened, b"".join(chunks)
 
