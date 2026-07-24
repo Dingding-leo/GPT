@@ -92,18 +92,12 @@ class PaperRiskSessionHighWatermarks:
 
     def assert_compatible(self, snapshot: PaperRiskStateSnapshot) -> None:
         if self.portfolio_state_sha256 != snapshot.portfolio_state_sha256:
-            raise ValueError(
-                "session high-watermarks do not match the portfolio-state source hash"
-            )
+            raise ValueError("session high-watermarks do not match the portfolio-state source hash")
         tolerance = 1e-12
         if self.maximum_daily_loss_fraction + tolerance < snapshot.daily_loss_fraction:
-            raise ValueError(
-                "maximum_daily_loss_fraction cannot be below current daily loss"
-            )
+            raise ValueError("maximum_daily_loss_fraction cannot be below current daily loss")
         if self.maximum_drawdown_fraction + tolerance < snapshot.drawdown_fraction:
-            raise ValueError(
-                "maximum_drawdown_fraction cannot be below current drawdown"
-            )
+            raise ValueError("maximum_drawdown_fraction cannot be below current drawdown")
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,8 +116,7 @@ class PaperRiskSessionDecision:
     def assert_allowed(self) -> None:
         if not self.allowed:
             raise RuntimeError(
-                "paper risk session gate rejected exposure change: "
-                + ", ".join(self.blockers)
+                "paper risk session gate rejected exposure change: " + ", ".join(self.blockers)
             )
 
 
@@ -148,17 +141,12 @@ def evaluate_paper_risk_session_gate(
     )
 
     trigger_names = set(base_decision.active_triggers)
-    if (
-        high_watermarks.maximum_daily_loss_fraction
-        >= policy.daily_loss_trigger_fraction
-    ):
+    if high_watermarks.maximum_daily_loss_fraction >= policy.daily_loss_trigger_fraction:
         trigger_names.add("daily_loss_limit")
     if high_watermarks.maximum_drawdown_fraction >= policy.drawdown_trigger_fraction:
         trigger_names.add("drawdown_limit")
     active_triggers = tuple(name for name in _TRIGGER_ORDER if name in trigger_names)
-    mode: Literal["normal", "reduce_only"] = (
-        "reduce_only" if active_triggers else "normal"
-    )
+    mode: Literal["normal", "reduce_only"] = "reduce_only" if active_triggers else "normal"
     blockers = (
         tuple(
             f"kill_switch_exposure_increase:{instrument_id}"
