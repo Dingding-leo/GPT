@@ -115,6 +115,12 @@ def _json_bytes(payload: Mapping[str, object]) -> bytes:
     ).encode("utf-8")
 
 
+def _serialized_attempt_bytes(payload_bytes: bytes, attempt_id: str) -> bytes:
+    if not payload_bytes.startswith(b'{"average_fill_price":'):
+        raise ValueError("paper execution attempt payload has unexpected canonical field order")
+    return b'{"attempt_id":"' + attempt_id.encode("ascii") + b'",' + payload_bytes[1:] + b"\n"
+
+
 def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
     result: dict[str, object] = {}
     for key, value in pairs:
@@ -161,6 +167,7 @@ class PaperExecutionAttempt:
     quote_received_to_submission_latency_us: int = field(init=False)
     submission_to_outcome_latency_us: int = field(init=False)
     attempt_id: str = field(init=False)
+    _canonical_json_bytes: bytes = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "binding_id", _hash(self.binding_id, "binding_id"))
@@ -252,10 +259,13 @@ class PaperExecutionAttempt:
         }
         for name, value in latency_values.items():
             object.__setattr__(self, name, _microseconds(value))
+        payload_bytes = _json_bytes(self._payload())
+        attempt_id = hashlib.sha256(payload_bytes).hexdigest()
+        object.__setattr__(self, "attempt_id", attempt_id)
         object.__setattr__(
             self,
-            "attempt_id",
-            hashlib.sha256(_json_bytes(self._payload())).hexdigest(),
+            "_canonical_json_bytes",
+            _serialized_attempt_bytes(payload_bytes, attempt_id),
         )
 
     def _payload(self) -> dict[str, object]:
@@ -293,7 +303,7 @@ class PaperExecutionAttempt:
         return {**self._payload(), "attempt_id": self.attempt_id}
 
     def to_json_bytes(self) -> bytes:
-        return _json_bytes(self.to_dict()) + b"\n"
+        return self._canonical_json_bytes
 
     def assert_reconstructs(
         self,
