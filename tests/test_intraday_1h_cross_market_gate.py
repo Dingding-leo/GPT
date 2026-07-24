@@ -241,9 +241,12 @@ def test_market_artifact_reconstructs_exact_byte_source_provenance(
 
     assert market["source_response_count"] == 1
     assert market["observations"] == source["observations"]
-    assert market["source_provenance_sha256"] == hashlib.sha256(
-        (artifact / "intraday-1h-source-provenance.json").read_bytes()
-    ).hexdigest()
+    assert (
+        market["source_provenance_sha256"]
+        == hashlib.sha256(
+            (artifact / "intraday-1h-source-provenance.json").read_bytes()
+        ).hexdigest()
+    )
 
 
 def test_market_artifact_rejects_missing_source_provenance(tmp_path: Path) -> None:
@@ -331,9 +334,7 @@ def test_cross_market_gate_rejects_tampered_manifested_evidence(
     failure = json.loads((output / "intraday-cross-market-gate.json").read_text())
     assert failure["evidence_integrity_passes"] is False
     assert failure["promotion"]["allow_15m_evaluation"] is False
-    assert failure["research_gate"]["blockers"] == [
-        "cross_market_evidence_validation_failed"
-    ]
+    assert failure["research_gate"]["blockers"] == ["cross_market_evidence_validation_failed"]
 
 
 def test_cross_market_gate_records_failed_upstream_research_without_artifacts(
