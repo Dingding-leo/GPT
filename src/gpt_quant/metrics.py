@@ -241,10 +241,12 @@ def performance_metrics(
     )
     exposure = float(position_series.abs().mean()) if "position" in frame else 0.0
     trading_cost_series = (
-        pd.to_numeric(frame["trading_cost"], errors="coerce").fillna(0.0).astype(float)
+        _validated_returns(frame["trading_cost"], label="trading_cost")
         if "trading_cost" in frame
         else pd.Series(0.0, index=frame.index, name="trading_cost")
     )
+    if (trading_cost_series < 0.0).any():
+        raise ValueError("trading_cost must be non-negative")
     cost_drag = float(trading_cost_series.sum())
 
     nonzero_returns = returns[returns != 0.0]
@@ -304,10 +306,7 @@ def performance_metrics(
             )
         if "trading_cost" not in frame:
             raise ValueError("gross_strategy_return requires trading_cost")
-        trading_cost = _validated_returns(frame["trading_cost"], label="trading_cost")
-        if (trading_cost < 0.0).any():
-            raise ValueError("trading_cost must be non-negative")
-        expected_net = gross_returns - trading_cost
+        expected_net = gross_returns - trading_cost_series
         if not np.allclose(
             returns.to_numpy(),
             expected_net.to_numpy(),
