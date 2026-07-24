@@ -1,0 +1,119 @@
+{
+  "candidate_count": 1,
+  "candidates": [
+    {
+      "failure_reasons": [
+        "BTC-USDT positive_trend 95% lower bound is non-positive: -0.077627311150",
+        "BTC-USDT nonpositive_trend 95% lower bound is non-positive: -0.158886683172",
+        "ETH-USDT positive_trend 95% lower bound is non-positive: -0.133410893689",
+        "ETH-USDT nonpositive_trend 95% lower bound is non-positive: -0.147805697151"
+      ],
+      "name": "lagged-market-trend-regime-consistency",
+      "verdict": "reject"
+    }
+  ],
+  "canonical_signature": "lagged-market-trend-regime-consistency-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-asset-and-strategy-returns|regimes=prior-90d-compounded-asset-return-positive-vs-nonpositive|trend=asset-return-shift1-rolling-product-90-minus1|metric=conditional-annualized-arithmetic-mean-net-return|annualization=365|resampling=asset-strategy-return-paired-noncircular-moving-block-with-trend-recomputed|block=20|resamples=2000|confidence=0.95|seeds=BTC:20260722,ETH:20260723|candidate_count=1",
+  "economic_rationale": "A credible long/cash strategy should not require only an established rising market or only a flat/falling market to produce positive net returns. The regime uses only asset returns available before each evaluated session.",
+  "failure_reasons": [
+    "BTC-USDT positive_trend 95% lower bound is non-positive: -0.077627311150",
+    "BTC-USDT nonpositive_trend 95% lower bound is non-positive: -0.158886683172",
+    "ETH-USDT positive_trend 95% lower bound is non-positive: -0.133410893689",
+    "ETH-USDT nonpositive_trend 95% lower bound is non-positive: -0.147805697151"
+  ],
+  "hypothesis": "For both BTC-USDT and ETH-USDT, net rolling OOS returns have a positive conditional annualized arithmetic mean when the prior 90-day compounded asset return is positive and when it is non-positive, with every 95% moving-block-bootstrap lower bound above zero.",
+  "limitations": [
+    "BTC-USDT and ETH-USDT are development markets, not untouched holdouts.",
+    "The trend split is a descriptive mechanism diagnostic, not a trading rule.",
+    "Moving-block concatenation creates artificial joins; trend is recomputed after resampling.",
+    "The analysis does not model spread, impact, capacity, latency, or partial fills."
+  ],
+  "markets": {
+    "BTC-USDT": {
+      "eligible_observations": 2250,
+      "end": "2026-06-07T00:00:00+00:00",
+      "observations": 2340,
+      "regimes": {
+        "nonpositive_trend": {
+          "annualized_arithmetic_mean": -0.03589390263285389,
+          "confidence_interval": {
+            "lower": -0.1588866831720857,
+            "upper": 0.4895752707171918
+          },
+          "observations": 930,
+          "passes": false,
+          "probability_mean_positive": 0.8095
+        },
+        "positive_trend": {
+          "annualized_arithmetic_mean": 0.4015717506401393,
+          "confidence_interval": {
+            "lower": -0.07762731114955752,
+            "upper": 0.4945463076424761
+          },
+          "observations": 1320,
+          "passes": false,
+          "probability_mean_positive": 0.9185
+        }
+      },
+      "seed": 20260722,
+      "start": "2020-01-11T00:00:00+00:00",
+      "warmup_observations": 90
+    },
+    "ETH-USDT": {
+      "eligible_observations": 2250,
+      "end": "2026-06-07T00:00:00+00:00",
+      "observations": 2340,
+      "regimes": {
+        "nonpositive_trend": {
+          "annualized_arithmetic_mean": 0.02495955834890617,
+          "confidence_interval": {
+            "lower": -0.14780569715104375,
+            "upper": 0.49050172767631733
+          },
+          "observations": 917,
+          "passes": false,
+          "probability_mean_positive": 0.808
+        },
+        "positive_trend": {
+          "annualized_arithmetic_mean": 0.27782790603528534,
+          "confidence_interval": {
+            "lower": -0.13341089368861225,
+            "upper": 0.4028389605070848
+          },
+          "observations": 1333,
+          "passes": false,
+          "probability_mean_positive": 0.8525
+        }
+      },
+      "seed": 20260723,
+      "start": "2020-01-11T00:00:00+00:00",
+      "warmup_observations": 90
+    }
+  },
+  "method": {
+    "annualization": 365,
+    "block_length": 20,
+    "confidence": 0.95,
+    "metric": "conditional daily arithmetic mean multiplied by 365",
+    "regime_definition": "positive_trend if compounded asset return over the previous 90 sessions is above zero; otherwise nonpositive_trend",
+    "resamples": 2000,
+    "resampling": "asset-return and strategy-return paired non-circular moving blocks; lagged trend recomputed inside every sample",
+    "trend_lookback": 90
+  },
+  "provenance": {
+    "market_type": "spot",
+    "merged_main_sha": "fc2100fa5ae4f815828960326405e7d171d59891",
+    "provider": "OKX",
+    "return_file_sha256": {
+      "BTC-USDT": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "ETH-USDT": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6"
+    },
+    "source_artifact_id": 8520542295,
+    "source_artifact_name": "quant-research-source-668-attempt-1",
+    "source_artifact_sha256": "9dd429dfab4e7644b7b7e1113ea1dcd7dfbcde5968974ed64e3ef176597dd73d",
+    "source_head_sha": "019823ff335d53247589ba8345298db4a93307d1",
+    "source_workflow_run_id": 29897472573,
+    "tested_base_sha": "f163f5863205ef642bd7a532c46ab142e111c60e",
+    "timeframe": "1Dutc"
+  },
+  "verdict": "reject"
+}
