@@ -1,0 +1,34 @@
+{
+  "bar": "1H",
+  "confirm": "1_only_after_filter",
+  "end": "2026-07-24T06:00:00+00:00",
+  "endpoint": "/api/v5/market/history-candles",
+  "expected_step_seconds": 3600,
+  "extract_rule": "first four rows of the first public response page; original values and ordering preserved; one confirm=0 row retained to test finality filtering",
+  "fixture_files": {
+    "candles": {
+      "path": "tests/fixtures/okx_1h/ETH-USDT/okx-ETH-USDT-1H.csv",
+      "sha256": "e3e07ae7238adbf7204e8ea9fbee539be13e5473b0048126efd397fc5753c235"
+    },
+    "metadata": {
+      "path": "tests/fixtures/okx_1h/ETH-USDT/okx-ETH-USDT-1H.metadata.json",
+      "sha256": "164cae315202d4ba84aa1d4f0de9a444e5038bbf0d9ac15a76a552f7834f4ac9"
+    },
+    "raw": {
+      "path": "tests/fixtures/okx_1h/ETH-USDT/okx-ETH-USDT-1H.raw.json",
+      "sha256": "a832bd090bb3bb0c5789919c33de3367065eea0b0bef09b3e1570443ba3adaba"
+    }
+  },
+  "instrument_id": "ETH-USDT",
+  "market_type": "spot",
+  "observations": 3,
+  "provider": "OKX",
+  "raw_response_extract_sha256": "63ffe72b9c9452743e60d46c3741e392e297d6275cfd4449aa925dfe8291dff7",
+  "raw_rows": 4,
+  "retrieved_at_utc": "2026-07-24T07:31:01.494815+00:00",
+  "source_artifact_id": 8589761181,
+  "source_artifact_sha256": "d3863b700459a85e8c4b9e38df11cd405f0580ccb6ff94305c6982063ab1b106",
+  "source_full_raw_pages_sha256": "dc06a85fc4b6a53d5c9d274f9589005d7e43d094b259d34ad2e40b7106bbd269",
+  "source_workflow_run_id": 30075536285,
+  "start": "2026-07-24T04:00:00+00:00"
+}
