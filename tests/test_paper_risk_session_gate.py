@@ -14,7 +14,7 @@ from gpt_quant.paper_risk_kill_switch import (
     ProposedInstrumentExposure,
 )
 from gpt_quant.paper_risk_session_gate import (
-    PaperRiskSessionHighWatermarks,
+    advance_paper_risk_session_high_watermarks,
     evaluate_paper_risk_session_gate,
 )
 
@@ -42,26 +42,62 @@ def _real_okx_anchor() -> tuple[datetime, float, str]:
     )
 
 
-def _recovered_snapshot() -> tuple[PaperRiskStateSnapshot, datetime]:
-    market_observed_at, real_mark, source_hash = _real_okx_anchor()
-    evaluated_at = market_observed_at + timedelta(seconds=2)
-    session_start_equity = real_mark * 0.2
-    state_hash = hashlib.sha256(b"recovered-paper-state").hexdigest()
-    return (
-        PaperRiskStateSnapshot(
-            observed_at_utc=evaluated_at - timedelta(seconds=1),
-            session_start_utc=market_observed_at,
-            market_data_observed_at_utc=market_observed_at,
-            session_start_equity=session_start_equity,
-            peak_equity=session_start_equity * 1.02,
-            current_equity=session_start_equity,
-            daily_underlying_turnover=0.25,
-            instrument_exposures=(InstrumentExposure("BTC-USDT", 0.50),),
-            portfolio_state_sha256=state_hash,
-            market_data_source_sha256=source_hash,
-        ),
-        evaluated_at,
+def _snapshot(
+    *,
+    observed_at: datetime,
+    session_start: datetime,
+    session_start_equity: float,
+    peak_equity: float,
+    current_equity: float,
+    state_name: str,
+) -> PaperRiskStateSnapshot:
+    return PaperRiskStateSnapshot(
+        observed_at_utc=observed_at,
+        session_start_utc=session_start,
+        market_data_observed_at_utc=observed_at - timedelta(seconds=1),
+        session_start_equity=session_start_equity,
+        peak_equity=peak_equity,
+        current_equity=current_equity,
+        daily_underlying_turnover=0.25,
+        instrument_exposures=(InstrumentExposure("BTC-USDT", 0.50),),
+        portfolio_state_sha256=hashlib.sha256(state_name.encode()).hexdigest(),
+        market_data_source_sha256=_EXPECTED_FIXTURE_SHA256,
     )
+
+
+def _session_path() -> tuple[
+    PaperRiskStateSnapshot,
+    PaperRiskStateSnapshot,
+    PaperRiskStateSnapshot,
+    datetime,
+]:
+    market_observed_at, real_mark, _ = _real_okx_anchor()
+    session_start_equity = real_mark * 0.2
+    initial = _snapshot(
+        observed_at=market_observed_at,
+        session_start=market_observed_at,
+        session_start_equity=session_start_equity,
+        peak_equity=session_start_equity,
+        current_equity=session_start_equity,
+        state_name="paper-state-initial",
+    )
+    breached = _snapshot(
+        observed_at=market_observed_at + timedelta(seconds=1),
+        session_start=market_observed_at,
+        session_start_equity=session_start_equity,
+        peak_equity=session_start_equity,
+        current_equity=session_start_equity * 0.88,
+        state_name="paper-state-breached",
+    )
+    recovered = _snapshot(
+        observed_at=market_observed_at + timedelta(seconds=2),
+        session_start=market_observed_at,
+        session_start_equity=session_start_equity,
+        peak_equity=session_start_equity * 1.02,
+        current_equity=session_start_equity,
+        state_name="paper-state-recovered",
+    )
+    return initial, breached, recovered, market_observed_at + timedelta(seconds=3)
 
 
 def _policy() -> PaperRiskKillSwitchPolicy:
@@ -74,19 +110,29 @@ def _policy() -> PaperRiskKillSwitchPolicy:
     )
 
 
-def test_recovered_equity_cannot_clear_session_loss_and_drawdown_stops() -> None:
-    snapshot, evaluated_at = _recovered_snapshot()
-    high_watermarks = PaperRiskSessionHighWatermarks(
-        portfolio_state_sha256=snapshot.portfolio_state_sha256,
-        maximum_daily_loss_fraction=0.06,
-        maximum_drawdown_fraction=0.12,
+def test_recovered_equity_cannot_clear_append_only_session_stops() -> None:
+    initial, breached, recovered, evaluated_at = _session_path()
+    initial_watermarks = advance_paper_risk_session_high_watermarks(initial)
+    breached_watermarks = advance_paper_risk_session_high_watermarks(
+        breached,
+        previous=initial_watermarks,
     )
+    recovered_watermarks = advance_paper_risk_session_high_watermarks(
+        recovered,
+        previous=breached_watermarks,
+    )
+
+    assert initial_watermarks.previous_high_watermark_id is None
+    assert breached_watermarks.previous_high_watermark_id == initial_watermarks.high_watermark_id
+    assert recovered_watermarks.previous_high_watermark_id == breached_watermarks.high_watermark_id
+    assert recovered_watermarks.maximum_daily_loss_fraction == pytest.approx(0.12)
+    assert recovered_watermarks.maximum_drawdown_fraction == pytest.approx(0.12)
 
     blocked = evaluate_paper_risk_session_gate(
         (ProposedInstrumentExposure("BTC-USDT", 0.60),),
-        snapshot=snapshot,
+        snapshot=recovered,
         policy=_policy(),
-        high_watermarks=high_watermarks,
+        high_watermarks=recovered_watermarks,
         evaluated_at_utc=evaluated_at,
     )
 
@@ -100,53 +146,43 @@ def test_recovered_equity_cannot_clear_session_loss_and_drawdown_stops() -> None
 
     reduction = evaluate_paper_risk_session_gate(
         (ProposedInstrumentExposure("BTC-USDT", 0.20),),
-        snapshot=snapshot,
+        snapshot=recovered,
         policy=_policy(),
-        high_watermarks=high_watermarks,
+        high_watermarks=recovered_watermarks,
         evaluated_at_utc=evaluated_at,
     )
     assert reduction.active_triggers == ("daily_loss_limit", "drawdown_limit")
     assert reduction.allowed is True
 
 
-def test_high_watermarks_fail_closed_on_state_hash_or_metric_regression() -> None:
-    snapshot, evaluated_at = _recovered_snapshot()
-    proposal = (ProposedInstrumentExposure("BTC-USDT", 0.20),)
-
-    with pytest.raises(ValueError, match="source hash"):
-        evaluate_paper_risk_session_gate(
-            proposal,
-            snapshot=snapshot,
-            policy=_policy(),
-            high_watermarks=PaperRiskSessionHighWatermarks(
-                portfolio_state_sha256=hashlib.sha256(b"wrong-state").hexdigest(),
-                maximum_daily_loss_fraction=0.06,
-                maximum_drawdown_fraction=0.12,
-            ),
-            evaluated_at_utc=evaluated_at,
-        )
-
-    loss_snapshot = PaperRiskStateSnapshot(
-        observed_at_utc=snapshot.observed_at_utc,
-        session_start_utc=snapshot.session_start_utc,
-        market_data_observed_at_utc=snapshot.market_data_observed_at_utc,
-        session_start_equity=snapshot.session_start_equity,
-        peak_equity=snapshot.peak_equity,
-        current_equity=snapshot.session_start_equity * 0.90,
-        daily_underlying_turnover=snapshot.daily_underlying_turnover,
-        instrument_exposures=snapshot.instrument_exposures,
-        portfolio_state_sha256=snapshot.portfolio_state_sha256,
-        market_data_source_sha256=snapshot.market_data_source_sha256,
+def test_session_watermark_transition_fails_closed_on_restart_and_ordering() -> None:
+    initial, breached, recovered, evaluated_at = _session_path()
+    initial_watermarks = advance_paper_risk_session_high_watermarks(initial)
+    breached_watermarks = advance_paper_risk_session_high_watermarks(
+        breached,
+        previous=initial_watermarks,
     )
-    with pytest.raises(ValueError, match="maximum_daily_loss_fraction"):
+
+    with pytest.raises(ValueError, match="zero-loss, zero-drawdown"):
+        advance_paper_risk_session_high_watermarks(recovered)
+
+    with pytest.raises(ValueError, match="exact portfolio snapshot"):
         evaluate_paper_risk_session_gate(
-            proposal,
-            snapshot=loss_snapshot,
+            (ProposedInstrumentExposure("BTC-USDT", 0.20),),
+            snapshot=recovered,
             policy=_policy(),
-            high_watermarks=PaperRiskSessionHighWatermarks(
-                portfolio_state_sha256=loss_snapshot.portfolio_state_sha256,
-                maximum_daily_loss_fraction=0.09,
-                maximum_drawdown_fraction=0.20,
-            ),
+            high_watermarks=breached_watermarks,
             evaluated_at_utc=evaluated_at,
         )
+
+    with pytest.raises(ValueError, match="older snapshot"):
+        advance_paper_risk_session_high_watermarks(
+            initial,
+            previous=breached_watermarks,
+        )
+
+    replayed = advance_paper_risk_session_high_watermarks(
+        breached,
+        previous=breached_watermarks,
+    )
+    assert replayed is breached_watermarks
