@@ -102,7 +102,11 @@ def _expected_midpoint_clock_skew_seconds(
         sample.local_response_received_utc,
         sample.server_time_utc,
     )
-    if all(type(value) is datetime for value in raw_values):
+    plain_datetimes = all(
+        isinstance(value, datetime) and not isinstance(value, pd.Timestamp)
+        for value in raw_values
+    )
+    if plain_datetimes:
         python_started = sample.local_request_started_utc.astimezone(UTC)
         python_received = sample.local_response_received_utc.astimezone(UTC)
         python_server_time = sample.server_time_utc.astimezone(UTC)
@@ -290,7 +294,7 @@ def build_okx_completed_bar_cutoff(
     max_round_trip_seconds: float = 2.0,
     max_abs_clock_skew_seconds: float = 5.0,
 ) -> OKXCompletedBarCutoff:
-    """Return the earliest safe decision timestamp for one observed, completed OKX candle.
+    """Return the earliest safe decision timestamp for an open-ended candle snapshot.
 
     A ``confirm=1`` flag and a local post-download timestamp are not sufficient for
     a live decision. The bar's scheduled close must be no later than a bounded OKX
