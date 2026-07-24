@@ -155,7 +155,10 @@ def test_workflow_aggregates_verified_markets_before_cross_market_promotion() ->
     assert "needs: research" in block
     assert "UPSTREAM_RESEARCH_RESULT: ${{ needs.research.result }}" in block
     assert "actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c" in block
-    assert "pattern: canonical-*-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}" in block
+    assert (
+        "pattern: canonical-*-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+        in block
+    )
     assert "merge-multiple: false" in block
     assert "continue-on-error: true" in block
     assert block.count("python scripts/build_intraday_1h_cross_market_gate.py") == 2
