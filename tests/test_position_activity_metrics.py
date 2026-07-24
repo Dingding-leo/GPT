@@ -10,10 +10,7 @@ import pytest
 from gpt_quant.metrics import performance_metrics
 
 _FIXTURE_DIR = (
-    Path(__file__).parent
-    / "fixtures"
-    / "okx"
-    / "btc-usdt-1h-position-activity-20230712-20230718"
+    Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1h-position-activity-20230712-20230718"
 )
 _RETURNS_PATH = _FIXTURE_DIR / "returns.csv"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
@@ -27,10 +24,7 @@ def _load_real_okx_frame() -> pd.DataFrame:
     assert metadata["source_workflow_run_id"] == 30064074036
     assert metadata["source_artifact_id"] == 8585638085
     assert metadata["source_head_sha"] == "09baca05803bfcee8f0083b88c002925131d795e"
-    assert (
-        hashlib.sha256(_RETURNS_PATH.read_bytes()).hexdigest()
-        == metadata["fixture_sha256"]
-    )
+    assert hashlib.sha256(_RETURNS_PATH.read_bytes()).hexdigest() == metadata["fixture_sha256"]
 
     frame = pd.read_csv(_RETURNS_PATH)
     timestamps = pd.to_datetime(frame.pop("timestamp"), utc=True, errors="raise")
@@ -42,21 +36,16 @@ def _load_real_okx_frame() -> pd.DataFrame:
     return frame
 
 
-def test_real_okx_position_path_exposes_rebalances_episodes_and_holding_periods(
-) -> None:
+def test_real_okx_position_path_exposes_rebalances_episodes_and_holding_periods() -> None:
     metrics = performance_metrics(_load_real_okx_frame(), annualization=8760)
 
     assert metrics["target_position_turnover_sum"] == pytest.approx(0.9569747341067639)
     assert metrics["target_position_rebalance_count"] == 87
-    assert metrics["annualized_target_position_rebalance_count"] == pytest.approx(
-        6048.571428571428
-    )
+    assert metrics["annualized_target_position_rebalance_count"] == pytest.approx(6048.571428571428)
     assert metrics["position_entry_count"] == 10
     assert metrics["position_exit_count"] == 10
     assert metrics["position_episode_count"] == 10
-    assert metrics["annualized_position_episode_count"] == pytest.approx(
-        695.2380952380952
-    )
+    assert metrics["annualized_position_episode_count"] == pytest.approx(695.2380952380952)
     assert metrics["completed_position_episode_count"] == 10
     assert metrics["open_position_episode_count"] == 0
     assert metrics["active_bar_count"] == 77
@@ -69,18 +58,12 @@ def test_real_okx_position_path_exposes_rebalances_episodes_and_holding_periods(
     assert metrics["completed_episode_loss_count"] == 8
     assert metrics["completed_episode_flat_count"] == 0
     assert metrics["completed_episode_hit_rate"] == pytest.approx(0.2)
-    assert metrics["completed_episode_profit_factor"] == pytest.approx(
-        0.1685676470610419
-    )
+    assert metrics["completed_episode_profit_factor"] == pytest.approx(0.1685676470610419)
     assert metrics["completed_episode_profit_factor_defined"] == 1
     assert metrics["bar_hit_rate"] == pytest.approx(0.38961038961038963)
     assert metrics["hit_rate"] == pytest.approx(0.3448275862068966)
-    assert metrics["average_turnover_per_rebalance"] == pytest.approx(
-        0.010999709587434068
-    )
-    assert metrics["exchange_fee_per_rebalance"] == pytest.approx(
-        5.499854793717057e-06
-    )
+    assert metrics["average_turnover_per_rebalance"] == pytest.approx(0.010999709587434068)
+    assert metrics["exchange_fee_per_rebalance"] == pytest.approx(5.499854793717057e-06)
 
 
 def test_real_okx_open_episode_is_reported_without_claiming_a_completed_trade() -> None:
@@ -158,9 +141,7 @@ def test_walk_forward_report_persists_activity_diagnostics_from_real_okx_prices(
         assert payload["aggregate_metrics"][key] == result.aggregate_metrics[key]
     assert "## Target-position activity diagnostics" in markdown
     assert "not submitted-order or fill counts" in markdown
-    assert (
-        "not broker order, queue, cancellation, partial-fill or fill counts" in markdown
-    )
+    assert "not broker order, queue, cancellation, partial-fill or fill counts" in markdown
 
     verification = verify_walk_forward_report(tmp_path, tolerance=1e-10)
     assert verification["status"] == "passed"
