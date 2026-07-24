@@ -115,11 +115,41 @@ jobs:
         id: lint_format
         run: ruff check . && ruff format --check .
 
-      - name: Test against public OKX data
-        id: tests
+      - name: Test paper execution replay and OKX constraints
+        id: paper_execution_gate
+        continue-on-error: true
         env:
           OKX_BASE_URL: https://www.okx.com
-        run: pytest
+        run: |
+          pytest -q \
+            tests/test_paper_execution_attempt.py \
+            tests/test_okx_order_constraints.py \
+            tests/test_okx_limit_order_constraints.py \
+            tests/test_okx_paper_execution_constraints.py
+
+      - name: Test remaining public OKX data
+        id: remaining_tests
+        continue-on-error: true
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: |
+          pytest \
+            --ignore=tests/test_paper_execution_attempt.py \
+            --ignore=tests/test_okx_order_constraints.py \
+            --ignore=tests/test_okx_limit_order_constraints.py \
+            --ignore=tests/test_okx_paper_execution_constraints.py
+
+      - name: Enforce complete test gate
+        id: tests
+        if: ${{ !cancelled() }}
+        shell: bash
+        env:
+          PAPER_EXECUTION_GATE_OUTCOME: ${{ steps.paper_execution_gate.outcome }}
+          REMAINING_TESTS_OUTCOME: ${{ steps.remaining_tests.outcome }}
+        run: |
+          set -euo pipefail
+          test "$PAPER_EXECUTION_GATE_OUTCOME" = success
+          test "$REMAINING_TESTS_OUTCOME" = success
 
       - name: Run OKX rolling out-of-sample research
         id: walk_forward
