@@ -112,6 +112,25 @@ def test_allowed_approval_round_trips_and_replays_exact_risk_inputs() -> None:
     assert len(approval.approval_id) == 64
 
 
+def test_approval_bytes_reject_changed_risk_decision_identity() -> None:
+    snapshot, evaluated_at = _state(current_fraction=1.0)
+    approval = create_paper_risk_approval(
+        _TARGET_INTENT_ID,
+        (ProposedInstrumentExposure("BTC-USDT", 0.40),),
+        snapshot=snapshot,
+        policy=_policy(),
+        evaluated_at_utc=evaluated_at,
+    )
+    payload = json.loads(approval.to_json_bytes())
+    payload["risk_decision_id"] = hashlib.sha256(b"substituted-risk-decision").hexdigest()
+    tampered = (
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n"
+    )
+
+    with pytest.raises(ValueError, match="ID does not match"):
+        PaperRiskApproval.from_json_bytes(tampered)
+
+
 def test_breached_state_cannot_mint_exposure_increase_approval() -> None:
     snapshot, evaluated_at = _state(current_fraction=0.94)
 
