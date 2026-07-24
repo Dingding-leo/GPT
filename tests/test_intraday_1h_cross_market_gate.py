@@ -18,7 +18,7 @@ from gpt_quant.intraday_1h_source_provenance import (
 
 _REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 _SCRIPT_PATH = _REPOSITORY_ROOT / "scripts" / "build_intraday_1h_cross_market_gate.py"
-_BTC_FIXTURE = Path(__file__).parent / "fixtures" / "okx_1h" / "BTC-USDT"
+_FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "okx_1h"
 
 
 def _load_module() -> ModuleType:
@@ -35,6 +35,18 @@ def _load_module() -> ModuleType:
 
 def _canonical_json(value: dict[str, Any]) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n"
+
+
+def _verified_fixture(instrument_id: str) -> tuple[Path, dict[str, Any]]:
+    fixture = _FIXTURE_ROOT / instrument_id
+    source = json.loads((fixture / "SOURCE.json").read_text(encoding="utf-8"))
+    assert source["provider"] == "OKX"
+    assert source["instrument_id"] == instrument_id
+    assert source["bar"] == "1H"
+    for evidence in source["fixture_files"].values():
+        path = _REPOSITORY_ROOT / evidence["path"]
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == evidence["sha256"]
+    return fixture, source
 
 
 def _source_binding(path: Path, provenance: dict[str, Any]) -> dict[str, Any]:
@@ -88,22 +100,24 @@ def _promotion_payload(
     }
 
 
-def _write_real_btc_artifact(
+def _write_real_artifact(
     artifacts_root: Path,
+    instrument_id: str,
     *,
     eligible: bool,
     research_blockers: list[str],
 ) -> Path:
-    artifact = artifacts_root / "canonical-BTC-USDT-1h-42-attempt-1"
+    fixture, _source = _verified_fixture(instrument_id)
+    artifact = artifacts_root / f"canonical-{instrument_id}-1h-42-attempt-1"
     artifact.mkdir(parents=True)
-    shutil.copytree(_BTC_FIXTURE, artifact / "snapshot")
+    shutil.copytree(fixture, artifact / "snapshot")
     provenance_path, _ = write_intraday_1h_source_provenance(
         artifact,
-        inst_id="BTC-USDT",
+        inst_id=instrument_id,
     )
-    provenance = verify_intraday_1h_source_provenance(artifact, inst_id="BTC-USDT")
+    provenance = verify_intraday_1h_source_provenance(artifact, inst_id=instrument_id)
     payload = _promotion_payload(
-        "BTC-USDT",
+        instrument_id,
         eligible=eligible,
         research_blockers=research_blockers,
         source_binding=_source_binding(provenance_path, provenance),
@@ -116,87 +130,19 @@ def _write_real_btc_artifact(
     return artifact
 
 
-def _eth_stub_provenance() -> dict[str, Any]:
-    digest = "1" * 64
-    return {
-        "schema_version": 1,
-        "provider": "OKX",
-        "instrument_id": "ETH-USDT",
-        "bar": "1H",
-        "source_transport": "trusted_okx_https_bounded_exact_bytes",
-        "offline_replay_verified": True,
-        "source_response_count": 1,
-        "source_response_total_bytes": 100,
-        "source_response_sha256": [digest],
-        "source_response_inventory_sha256": "2" * 64,
-        "normalized_csv_sha256": "3" * 64,
-        "raw_pages_sha256": "4" * 64,
-        "metadata_sha256": "5" * 64,
-        "requested_start": "2021-07-24T00:00:00+00:00",
-        "requested_end": "2026-07-24T04:00:00+00:00",
-        "effective_start": "2021-07-24T00:00:00+00:00",
-        "effective_end": "2026-07-24T04:00:00+00:00",
-        "observations": 43_829,
-        "expected_step_seconds": 3_600,
-        "duplicates_removed": 0,
-        "incomplete_rows_removed": 1,
-        "missing_intervals": 0,
-        "economic_boundary": {},
-        "safety": {},
-    }
-
-
-def _write_eth_orchestration_artifact(
-    artifacts_root: Path,
-    *,
-    eligible: bool,
-    research_blockers: list[str],
-) -> Path:
-    artifact = artifacts_root / "canonical-ETH-USDT-1h-42-attempt-1"
-    artifact.mkdir(parents=True)
-    provenance = _eth_stub_provenance()
-    provenance_path = artifact / "intraday-1h-source-provenance.json"
-    provenance_path.write_text(_canonical_json(provenance), encoding="utf-8")
-    payload = _promotion_payload(
-        "ETH-USDT",
-        eligible=eligible,
-        research_blockers=research_blockers,
-        source_binding=_source_binding(provenance_path, provenance),
-    )
-    (artifact / "intraday-promotion-gate.json").write_text(
-        _canonical_json(payload),
-        encoding="utf-8",
-    )
-    build_manifest(artifact)
-    return artifact
-
-
-def _install_eth_orchestration_stub(monkeypatch: pytest.MonkeyPatch, module: ModuleType) -> None:
-    real_verifier = module.verify_intraday_1h_source_provenance
-
-    def verifier(output_dir: str | Path, *, inst_id: str) -> dict[str, Any]:
-        if inst_id == "ETH-USDT":
-            return _eth_stub_provenance()
-        return real_verifier(output_dir, inst_id=inst_id)
-
-    monkeypatch.setattr(module, "verify_intraday_1h_source_provenance", verifier)
-
-
-def test_cross_market_gate_blocks_15m_when_either_market_is_rejected(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_cross_market_gate_blocks_15m_when_either_market_is_rejected(tmp_path: Path) -> None:
     module = _load_module()
-    _install_eth_orchestration_stub(monkeypatch, module)
     artifacts = tmp_path / "artifacts"
     output = tmp_path / "summary"
-    _write_real_btc_artifact(
+    _write_real_artifact(
         artifacts,
+        "BTC-USDT",
         eligible=False,
         research_blockers=["fold_stability_rejected"],
     )
-    _write_eth_orchestration_artifact(
+    _write_real_artifact(
         artifacts,
+        "ETH-USDT",
         eligible=True,
         research_blockers=[],
     )
@@ -222,9 +168,13 @@ def test_cross_market_gate_blocks_15m_when_either_market_is_rejected(
     }
     assert first["promotion"]["allow_15m_evaluation"] is False
     assert first["promotion"]["allow_paper_promotion"] is False
-    assert first["markets"]["BTC-USDT"]["source_response_count"] == 1
-    assert first["markets"]["BTC-USDT"]["observations"] == 2
-    assert first["markets"]["ETH-USDT"]["artifact_manifest_sha256"]
+    for instrument_id in ("BTC-USDT", "ETH-USDT"):
+        market = first["markets"][instrument_id]
+        assert market["source_response_count"] == 1
+        assert market["observations"] > 0
+        assert market["effective_start"] < market["effective_end"]
+        assert len(market["source_provenance_sha256"]) == 64
+        assert len(market["source_response_inventory_sha256"]) == 64
     assert (
         module.main(
             [
@@ -243,14 +193,17 @@ def test_cross_market_gate_blocks_15m_when_either_market_is_rejected(
 
 def test_cross_market_gate_allows_only_15m_research_when_both_markets_pass(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     module = _load_module()
-    _install_eth_orchestration_stub(monkeypatch, module)
     artifacts = tmp_path / "artifacts"
     output = tmp_path / "summary"
-    _write_real_btc_artifact(artifacts, eligible=True, research_blockers=[])
-    _write_eth_orchestration_artifact(artifacts, eligible=True, research_blockers=[])
+    for instrument_id in ("BTC-USDT", "ETH-USDT"):
+        _write_real_artifact(
+            artifacts,
+            instrument_id,
+            eligible=True,
+            research_blockers=[],
+        )
 
     payload = module.build_intraday_1h_cross_market_gate(
         artifacts,
@@ -268,18 +221,24 @@ def test_cross_market_gate_allows_only_15m_research_when_both_markets_pass(
     ]
 
 
-def test_market_artifact_reconstructs_exact_byte_source_provenance(tmp_path: Path) -> None:
+@pytest.mark.parametrize("instrument_id", ["BTC-USDT", "ETH-USDT"])
+def test_market_artifact_reconstructs_exact_byte_source_provenance(
+    tmp_path: Path,
+    instrument_id: str,
+) -> None:
     module = _load_module()
-    artifact = _write_real_btc_artifact(
+    artifact = _write_real_artifact(
         tmp_path / "artifacts",
+        instrument_id,
         eligible=False,
         research_blockers=["fold_stability_rejected"],
     )
 
-    market = module._validate_market_artifact(artifact, "BTC-USDT")
+    market = module._validate_market_artifact(artifact, instrument_id)
+    _fixture, source = _verified_fixture(instrument_id)
 
     assert market["source_response_count"] == 1
-    assert market["observations"] == 2
+    assert market["observations"] == source["observations"]
     assert market["source_provenance_sha256"] == hashlib.sha256(
         (artifact / "intraday-1h-source-provenance.json").read_bytes()
     ).hexdigest()
@@ -287,12 +246,12 @@ def test_market_artifact_reconstructs_exact_byte_source_provenance(tmp_path: Pat
 
 def test_market_artifact_rejects_missing_source_provenance(tmp_path: Path) -> None:
     module = _load_module()
-    artifact = _write_real_btc_artifact(
+    artifact = _write_real_artifact(
         tmp_path / "artifacts",
+        "BTC-USDT",
         eligible=False,
         research_blockers=["fold_stability_rejected"],
     )
-    (artifact / "artifact-manifest.sha256").unlink()
     (artifact / "intraday-1h-source-provenance.json").unlink()
     build_manifest(artifact)
 
@@ -302,8 +261,9 @@ def test_market_artifact_rejects_missing_source_provenance(tmp_path: Path) -> No
 
 def test_market_artifact_rejects_self_rehashed_forged_provenance(tmp_path: Path) -> None:
     module = _load_module()
-    artifact = _write_real_btc_artifact(
+    artifact = _write_real_artifact(
         tmp_path / "artifacts",
+        "BTC-USDT",
         eligible=False,
         research_blockers=["fold_stability_rejected"],
     )
@@ -317,28 +277,25 @@ def test_market_artifact_rejects_self_rehashed_forged_provenance(tmp_path: Path)
         provenance_path.read_bytes()
     ).hexdigest()
     gate_path.write_text(_canonical_json(gate), encoding="utf-8")
-    (artifact / "artifact-manifest.sha256").unlink()
     build_manifest(artifact)
 
     with pytest.raises(ValueError, match="does not reconstruct exactly"):
         module._validate_market_artifact(artifact, "BTC-USDT")
 
 
-def test_cross_market_gate_rejects_tampered_manifested_evidence(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_cross_market_gate_rejects_tampered_manifested_evidence(tmp_path: Path) -> None:
     module = _load_module()
-    _install_eth_orchestration_stub(monkeypatch, module)
     artifacts = tmp_path / "artifacts"
     output = tmp_path / "summary"
-    bitcoin = _write_real_btc_artifact(
+    bitcoin = _write_real_artifact(
         artifacts,
+        "BTC-USDT",
         eligible=False,
         research_blockers=["fold_stability_rejected"],
     )
-    _write_eth_orchestration_artifact(
+    _write_real_artifact(
         artifacts,
+        "ETH-USDT",
         eligible=False,
         research_blockers=["fold_stability_rejected"],
     )
