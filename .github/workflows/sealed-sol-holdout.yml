@@ -1,0 +1,100 @@
+name: Sealed SOL Holdout
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/sealed-sol-holdout.yml"
+      - "config/okx_sealed_holdout_sol.json"
+      - "scripts/evaluate_sealed_okx_holdout.py"
+      - "reports/research/sol-sealed-holdout/**"
+      - "tests/test_sol_sealed_holdout_report.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sealed-sol-holdout-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  holdout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+      OKX_BASE_URL: https://www.okx.com
+      FREEZE_HEAD: 5b622a5051f288abe3f294bcbc1206a4c568ceb4
+      HOLDOUT_ARTIFACT_NAME: sealed-sol-holdout-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Lint and formatting
+        run: ruff check . && ruff format --check .
+
+      - name: Test repository
+        run: pytest
+
+      - name: Run frozen SOL-USDT walk-forward holdout
+        run: |
+          python scripts/run_okx_research.py \
+            --config config/okx_sealed_holdout_sol.json \
+            --output-dir reports/sealed/SOL-USDT \
+            --manifest-path reports/sealed/experiment-manifest.jsonl
+
+      - name: Verify persisted SOL-USDT evidence
+        run: |
+          python scripts/verify_walk_forward_report.py \
+            --output-dir reports/sealed/SOL-USDT \
+            --manifest-path reports/sealed/experiment-manifest.jsonl
+
+      - name: Run paired moving-block bootstrap
+        run: |
+          python scripts/run_bootstrap_research.py \
+            --returns-csv reports/sealed/SOL-USDT/walk_forward_returns.csv \
+            --instrument SOL-USDT \
+            --output-dir reports/sealed/SOL-USDT/bootstrap \
+            --block-length 20 \
+            --resamples 2000 \
+            --confidence 0.95 \
+            --annualization 365 \
+            --seed 2026072405 \
+            --source-run-id "$GITHUB_RUN_ID" \
+            --source-head-sha "$FREEZE_HEAD"
+
+      - name: Evaluate predeclared sealed-holdout gates
+        run: |
+          python scripts/evaluate_sealed_okx_holdout.py \
+            --report-json reports/sealed/SOL-USDT/walk_forward.json \
+            --returns-csv reports/sealed/SOL-USDT/walk_forward_returns.csv \
+            --bootstrap-json reports/sealed/SOL-USDT/bootstrap/bootstrap.json \
+            --effective-config config/okx_sealed_holdout_sol.json \
+            --freeze-head "$FREEZE_HEAD" \
+            --output-dir reports/research/sol-sealed-holdout/generated
+
+      - name: Upload immutable SOL holdout evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.HOLDOUT_ARTIFACT_NAME }}
+          path: |
+            reports/sealed/
+            reports/research/sol-sealed-holdout/generated/
+          if-no-files-found: error
+          retention-days: 14
