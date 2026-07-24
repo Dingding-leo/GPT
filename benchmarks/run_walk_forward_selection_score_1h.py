@@ -60,7 +60,8 @@ def _worker(args: argparse.Namespace) -> int:
     if _sha256(snapshot_bytes) != expected_sha256:
         raise ValueError(f"immutable 1h snapshot hash mismatch for {args.instrument}")
 
-    effective = json.loads((instrument_root / "effective_config.json").read_text("utf-8"))
+    effective_path = instrument_root / "effective_config.json"
+    effective = json.loads(effective_path.read_text(encoding="utf-8"))
     if effective["data"]["bar"] != "1H":
         raise ValueError("benchmark requires canonical OKX 1H data")
     config = StrategyConfig(**effective["strategy"])
@@ -212,9 +213,7 @@ def main() -> int:
         "optimized_median_seconds": optimized_median,
         "optimized_peak_rss_kib": optimized_peak,
         "peak_rss_change_percent": (optimized_peak - baseline_peak) / baseline_peak * 100.0,
-        "result_sha256_by_instrument": dict(
-            zip(_INSTRUMENTS, expected_hashes, strict=True)
-        ),
+        "result_sha256_by_instrument": dict(zip(_INSTRUMENTS, expected_hashes, strict=True)),
         "runtime_reduction_percent": (
             (baseline_median - optimized_median) / baseline_median * 100.0
         ),
