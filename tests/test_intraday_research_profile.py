@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from gpt_quant import StrategyConfig
+
+_REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+_DAILY_BARS_PER_YEAR = 365
+_HOURLY_BARS_PER_DAY = 24
+
+
+def _load_config(name: str) -> dict[str, object]:
+    path = _REPOSITORY_ROOT / "config" / name
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def test_canonical_1h_profile_preserves_daily_horizons_at_five_bps() -> None:
+    daily = _load_config("okx_research.json")
+    hourly = _load_config("okx_research_1h.json")
+
+    daily_data = daily["data"]
+    hourly_data = hourly["data"]
+    daily_strategy = daily["strategy"]
+    hourly_strategy = hourly["strategy"]
+    daily_search = daily["search"]
+    hourly_search = hourly["search"]
+
+    assert isinstance(daily_data, dict)
+    assert isinstance(hourly_data, dict)
+    assert isinstance(daily_strategy, dict)
+    assert isinstance(hourly_strategy, dict)
+    assert isinstance(daily_search, dict)
+    assert isinstance(hourly_search, dict)
+
+    assert hourly_data["bar"] == "1H"
+    page_capacity = int(hourly_data["limit"]) * int(hourly_data["max_pages"])
+    minimum_five_year_bars = 5 * _DAILY_BARS_PER_YEAR * _HOURLY_BARS_PER_DAY
+    assert page_capacity >= minimum_five_year_bars
+
+    validated = StrategyConfig(**hourly_strategy)
+    assert validated.transaction_cost_bps == 5.0
+    assert validated.annualization == _DAILY_BARS_PER_YEAR * _HOURLY_BARS_PER_DAY
+
+    for key in ("momentum_lookback", "reversal_lookback", "volatility_lookback"):
+        expected = int(daily_strategy[key]) * _HOURLY_BARS_PER_DAY
+        assert int(hourly_strategy[key]) == expected
+
+    for key in ("momentum_lookbacks", "reversal_lookbacks"):
+        expected = [int(value) * _HOURLY_BARS_PER_DAY for value in daily_search[key]]
+        assert hourly_search[key] == expected
+
+    expected_selection_bars = int(daily_search["selection_bars"]) * _HOURLY_BARS_PER_DAY
+    expected_test_bars = int(daily_search["test_bars"]) * _HOURLY_BARS_PER_DAY
+    assert int(hourly_search["selection_bars"]) == expected_selection_bars
+    assert int(hourly_search["test_bars"]) == expected_test_bars
+    assert hourly["robustness"] == {"cost_multipliers": [1.0]}
+
+
+def test_workflow_reselects_and_verifies_btc_and_eth_independently() -> None:
+    path = _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
+    workflow = path.read_text(encoding="utf-8")
+
+    assert workflow.count("inst_id: [BTC-USDT, ETH-USDT]") == 1
+    assert workflow.count("--config config/okx_research_1h.json") == 1
+    assert workflow.count('--inst-id "${{ matrix.inst_id }}"') == 1
+    assert workflow.count("reports/okx/1h/${{ matrix.inst_id }}") >= 5
+    assert workflow.count("experiment-manifest.jsonl") >= 2
+    assert "Run canonical 1h full walk-forward research" in workflow
+    assert "Verify persisted canonical 1h evidence" in workflow
+    assert "fail-fast: false" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "OKX_BASE_URL: https://www.okx.com" in workflow
+
+
+def test_workflow_rejects_undeclared_cost_profiles_before_verification() -> None:
+    path = _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
+    workflow = path.read_text(encoding="utf-8")
+
+    run = workflow.index("- name: Run canonical 1h full walk-forward research")
+    profile = workflow.index("- name: Verify exact 5 bps-only cost profile")
+    persisted = workflow.index("- name: Verify persisted canonical 1h evidence")
+    profile_block = workflow[profile:persisted]
+
+    assert run < profile < persisted
+    assert 'effective["strategy"]["transaction_cost_bps"] == 5.0' in profile_block
+    assert 'effective["robustness"]["cost_multipliers"] == [1.0]' in profile_block
+    assert 'report["settings"]["base_config"]["transaction_cost_bps"] == 5.0' in profile_block
+    assert 'report["settings"]["cost_multipliers"] == [1.0]' in profile_block
+    assert 'set(report["cost_stress_metrics"]) == {"1x"}' in profile_block
+
+
+def test_workflow_hashes_and_rechecks_every_published_1h_file() -> None:
+    path = _REPOSITORY_ROOT / ".github/workflows/intraday-1h-research.yml"
+    workflow = path.read_text(encoding="utf-8")
+
+    verification = workflow.index("- name: Verify persisted canonical 1h evidence")
+    manifest = workflow.index("- name: Build and verify immutable canonical 1h manifest")
+    upload = workflow.index("- name: Upload immutable canonical 1h evidence")
+    manifest_block = workflow[manifest:upload]
+
+    assert verification < manifest < upload
+    assert "id: artifact_manifest" in manifest_block
+    assert "set -euo pipefail" in manifest_block
+    for required_file in (
+        "effective_config.json",
+        "walk_forward.json",
+        "walk_forward_returns.csv",
+        "experiment-manifest.jsonl",
+    ):
+        assert f'test -s "$report_dir/{required_file}"' in manifest_block
+    assert 'find "$report_dir" -type f' in manifest_block
+    assert "! -name 'artifact-manifest.sha256*'" in manifest_block
+    assert "sort -z" in manifest_block
+    assert "xargs -0 sha256sum" in manifest_block
+    assert 'sha256sum --check "$temporary_manifest"' in manifest_block
+    assert 'mv "$temporary_manifest" "$manifest_path"' in manifest_block
+    assert '[[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]' in manifest_block
+    assert "manifest_sha256=%s" in manifest_block
