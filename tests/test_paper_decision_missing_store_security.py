@@ -128,6 +128,4 @@ def test_genesis_rejects_replaced_target_journal_even_when_it_is_canonical(
         (decision_directory / ".paper-decision-store.genesis").read_text(encoding="utf-8")
     )
     assert genesis["target_intent_ids"] == [original.intent_id]
-    assert genesis["target_journal_sha256"] == hashlib.sha256(
-        original.to_json_bytes()
-    ).hexdigest()
+    assert genesis["target_journal_sha256"] == hashlib.sha256(original.to_json_bytes()).hexdigest()
