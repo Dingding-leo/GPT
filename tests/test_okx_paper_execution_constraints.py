@@ -284,3 +284,39 @@ def test_sell_minimum_notional_uses_the_conservative_bid() -> None:
             maximum_snapshot_age_ms=1_000,
             minimum_paper_quote_notional="0.410065",
         )
+
+
+@pytest.mark.parametrize(
+    ("side", "fill_price"),
+    [("buy", "41006.9"), ("sell", "41006.2")],
+)
+def test_okx_attempt_gate_rejects_unbound_fill_price_degradation(
+    side: str,
+    fill_price: str,
+) -> None:
+    snapshot = _instrument_snapshot()
+    quote = _quote(snapshot.raw_response_sha256)
+    attempt = record_paper_execution_attempt(
+        _binding(quote),
+        quote,
+        submitted_at_utc=datetime(2026, 7, 24, 0, 0, 0, 450_000, tzinfo=UTC),
+        outcome_at_utc=datetime(2026, 7, 24, 0, 0, 0, 500_000, tzinfo=UTC),
+        side=side,
+        requested_base_quantity="0.1",
+        outcome="filled",
+        filled_base_quantity="0.1",
+        average_fill_price=fill_price,
+        reason_code="paper-unbound-slippage",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="average_fill_price must equal the supplied same-side top-of-book price",
+    ):
+        validate_okx_paper_execution_attempt_constraints(
+            snapshot,
+            quote,
+            attempt,
+            maximum_snapshot_age_ms=1_000,
+            minimum_paper_quote_notional="1",
+        )
