@@ -8,8 +8,9 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from gpt_quant.intraday_1h_source_provenance import verify_intraday_1h_source_provenance
 from verify_intraday_1h_profile import verify_intraday_1h_profile
+
+from gpt_quant.intraday_1h_source_provenance import verify_intraday_1h_source_provenance
 
 _OUTPUT_NAME = "intraday-promotion-gate.json"
 _ACCEPTED_STATUS_PREFIXES = (
