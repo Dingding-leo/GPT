@@ -1,0 +1,82 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "volatility-matched-expected-shortfall-vs-volatility-benchmark-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=volatility-targeted-long-scaled-per-sample-to-strategy-sample-volatility|volatility=sample-standard-deviation-ddof1|metric=mean-worst-ceil-5pct-returns|tail-fraction=0.05|claim=strategy-minus-volatility-matched-benchmark-expected-shortfall>0-in-both-markets|resampling=paired-noncircular-moving-block-bootstrap|volatility-scale-recomputed-per-resample=true|block-length=20-sessions|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072325,ETH-USDT:2026072326|candidate_count=1",
+  "claim_scope": "Development-market tail-shape diagnostic only; a rejected result means the unscaled expected-shortfall reduction versus volatility-targeted long is not shown to survive simple sample-volatility matching.",
+  "hypothesis": "The adaptive strategy has less severe 5% expected shortfall than the volatility-targeted-long benchmark after that benchmark is scaled to the strategy's sample volatility in both BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "bootstrap_scale_ci_lower": 0.4063243444195321,
+      "bootstrap_scale_ci_upper": 0.5376168526079189,
+      "ci_lower": -0.0033132747192603125,
+      "ci_upper": 0.0015685761118989596,
+      "observations": 2385,
+      "observed_delta": -0.0009550359305191547,
+      "passed": false,
+      "period_end": "2026-07-22T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.226,
+      "return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "strategy_expected_shortfall": -0.0290198365319767,
+      "tail_observations": 120,
+      "volatility_match_scale": 0.47394621609770354,
+      "volatility_matched_benchmark_expected_shortfall": -0.028064800601457544
+    },
+    "ETH-USDT": {
+      "bootstrap_scale_ci_lower": 0.41621748683672816,
+      "bootstrap_scale_ci_upper": 0.5257443364802393,
+      "ci_lower": -0.006590174273439996,
+      "ci_upper": -0.0014482154574633867,
+      "observations": 2385,
+      "observed_delta": -0.004179768015039168,
+      "passed": false,
+      "period_end": "2026-07-22T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.001,
+      "return_file_sha256": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047",
+      "strategy_expected_shortfall": -0.03348469335215429,
+      "tail_observations": 120,
+      "volatility_match_scale": 0.4722482108460196,
+      "volatility_matched_benchmark_expected_shortfall": -0.02930492533711512
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "expected_return_file_sha256": {
+      "BTC-USDT": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "ETH-USDT": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047"
+    },
+    "market_type": "spot",
+    "merged_main_commit": "7928c12f53d0d4f8149ed9d5c4205eaa2ba072f5",
+    "provider": "OKX",
+    "source_artifact_id": 8559031387,
+    "source_artifact_name": "quant-research-source-1839-attempt-1",
+    "source_artifact_sha256": "9d7f5c91ac46c8a3d5a3b0d34f569936bd70bc4197161ae5d977c2c6730e0c04",
+    "source_code_commit": "d2d569ee2e20d4fc4172e5339a2aa06862d66ea8",
+    "source_main_base": "d1433f4e423861b953736f812f76cf24ac00de89",
+    "source_workflow_run_id": 29996094865,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reason": "The 95% paired moving-block-bootstrap lower bound for the strategy-minus-volatility-matched-volatility-targeted-long expected-shortfall delta was non-positive in: BTC-USDT, ETH-USDT",
+  "settings": {
+    "benchmark": "volatility-targeted long scaled to strategy sample volatility",
+    "block_length_sessions": 20,
+    "confidence": 0.95,
+    "expected_shortfall_definition": "mean of worst ceil(tail_fraction * n) returns",
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072325,
+      "ETH-USDT": 2026072326
+    },
+    "tail_fraction": 0.05,
+    "volatility_definition": "sample standard deviation with ddof=1",
+    "volatility_scale_recomputed_per_resample": true
+  },
+  "verdict": "rejected"
+}
