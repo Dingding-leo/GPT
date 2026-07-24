@@ -1,0 +1,41 @@
+{
+  "bar": "1H",
+  "base_url": "https://www.okx.com",
+  "duplicates_removed": 0,
+  "end": "2026-07-24T06:00:00+00:00",
+  "endpoint": "/api/v5/market/history-candles",
+  "expected_step_seconds": 3600,
+  "fetched_at_utc": "2026-07-24T07:31:01.494815+00:00",
+  "freshness_age_seconds": null,
+  "freshness_checked_at_utc": null,
+  "freshness_max_age_seconds": null,
+  "incomplete_rows_removed": 1,
+  "instrument_id": "ETH-USDT",
+  "limit": 100,
+  "limitations": [
+    "OKX public candle data is exchange-specific and may be revised by the provider.",
+    "The final unconfirmed candle is excluded.",
+    "A close-price backtest does not model order-book depth or guaranteed fills."
+  ],
+  "max_pages": 3,
+  "missing_intervals": 0,
+  "normalized_csv_sha256": "e3e07ae7238adbf7204e8ea9fbee539be13e5473b0048126efd397fc5753c235",
+  "observations": 3,
+  "pages": 1,
+  "pagination_complete": true,
+  "pagination_termination": "requested_start",
+  "parsed_rows": 4,
+  "provider": "OKX",
+  "raw_pages_sha256": "a832bd090bb3bb0c5789919c33de3367065eea0b0bef09b3e1570443ba3adaba",
+  "raw_rows": 4,
+  "requested_end": "2026-07-24T06:00:00+00:00",
+  "requested_start": "2026-07-24T04:00:00+00:00",
+  "requested_start_reached": true,
+  "source_response_count": 1,
+  "source_response_sha256": [
+    "63ffe72b9c9452743e60d46c3741e392e297d6275cfd4449aa925dfe8291dff7"
+  ],
+  "source_response_total_bytes": 481,
+  "source_transport": "trusted_okx_https_bounded_exact_bytes",
+  "start": "2026-07-24T04:00:00+00:00"
+}
