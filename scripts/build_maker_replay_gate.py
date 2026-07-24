@@ -16,7 +16,7 @@ from gpt_quant.maker_fill_replay import (
     simulate_post_only_maker_fill,
 )
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
 _EXPECTED_SOURCE_SHA256 = "01438cc23709d9c8e9ea8d9d49d3f64c65978d27d592356a333f7a3da213d563"
 _MANIFEST_NAME = "artifact-manifest.sha256"
 _GATE_NAME = "maker-order-replay-gate.json"
@@ -31,7 +31,11 @@ _REQUIRED_PATHS = (
 )
 _SIGNAL = datetime(2022, 6, 2, 9, 0, tzinfo=UTC)
 _SUBMITTED = datetime(2022, 6, 2, 9, 20, 40, tzinfo=UTC)
+_NO_FILL_EXPIRY = datetime(2022, 6, 2, 9, 20, 45, tzinfo=UTC)
+_PARTIAL_FILL_EXPIRY = datetime(2022, 6, 2, 9, 20, 50, tzinfo=UTC)
 _ORDER_INTENT_ID = "a" * 64
+_COMPLETE_CAPTURE_SOURCE_KIND = "complete_public_trade_capture"
+_COVERAGE_BLOCKER = "complete_submission_to_expiry_trade_coverage_missing"
 
 
 def _sha256_bytes(value: bytes) -> str:
@@ -55,6 +59,20 @@ def _load_json_object(path: Path) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"JSON evidence must be an object: {path.name}")
     return payload
+
+
+def _utc_metadata_timestamp(value: object, *, field: str) -> datetime | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise ValueError(f"{field} must be a UTC timestamp string")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError(f"{field} must be a UTC timestamp string") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise ValueError(f"{field} must be timezone-aware")
+    return parsed.astimezone(UTC)
 
 
 def _modeled_economics() -> dict[str, Any]:
@@ -81,23 +99,28 @@ def _replay_arguments(*, expires_at_utc: datetime, quantity: str) -> dict[str, A
     }
 
 
-def _build_replays(source_bytes: bytes) -> tuple[OKXPublicTradeSnapshot, dict[str, bytes]]:
-    if _sha256_bytes(source_bytes) != _EXPECTED_SOURCE_SHA256:
-        raise ValueError("OKX public trade source hash mismatch")
-    snapshot = OKXPublicTradeSnapshot.from_json_bytes(source_bytes)
-    scenarios = {
+def _scenario_arguments() -> dict[str, dict[str, Any]]:
+    return {
         _NO_FILL_NAME: _replay_arguments(
-            expires_at_utc=datetime(2022, 6, 2, 9, 20, 45, tzinfo=UTC),
+            expires_at_utc=_NO_FILL_EXPIRY,
             quantity="0.00001",
         ),
         _PARTIAL_FILL_NAME: _replay_arguments(
-            expires_at_utc=datetime(2022, 6, 2, 9, 20, 50, tzinfo=UTC),
+            expires_at_utc=_PARTIAL_FILL_EXPIRY,
             quantity="0.00002",
         ),
     }
 
+
+def _build_replays(
+    source_bytes: bytes,
+) -> tuple[OKXPublicTradeSnapshot, dict[str, bytes]]:
+    if _sha256_bytes(source_bytes) != _EXPECTED_SOURCE_SHA256:
+        raise ValueError("OKX public trade source hash mismatch")
+    snapshot = OKXPublicTradeSnapshot.from_json_bytes(source_bytes)
+
     replay_bytes: dict[str, bytes] = {}
-    for filename, arguments in scenarios.items():
+    for filename, arguments in _scenario_arguments().items():
         first = simulate_post_only_maker_fill(snapshot, **arguments)
         second = simulate_post_only_maker_fill(snapshot, **arguments)
         if first != second or first.to_json_bytes() != second.to_json_bytes():
@@ -107,28 +130,65 @@ def _build_replays(source_bytes: bytes) -> tuple[OKXPublicTradeSnapshot, dict[st
     no_fill = json.loads(replay_bytes[_NO_FILL_NAME])
     partial_fill = json.loads(replay_bytes[_PARTIAL_FILL_NAME])
     if no_fill.get("outcome") != "cancelled_no_fill":
-        raise ValueError("maker replay did not preserve the no-fill outcome")
+        raise ValueError("maker replay did not preserve the no-fill scenario")
     if partial_fill.get("outcome") != "cancelled_partial":
-        raise ValueError("maker replay did not preserve the partial-fill outcome")
+        raise ValueError("maker replay did not preserve the partial-fill scenario")
     if no_fill.get("filled_base_quantity") != "0" or no_fill.get("exchange_fee_quote") != "0":
-        raise ValueError("no-fill replay must not create quantity or fee")
+        raise ValueError("no-fill scenario must not create quantity or fee")
     if partial_fill.get("exchange_fee_one_way_bps") != "5":
-        raise ValueError("partial-fill replay must use exactly 5 bps one-way")
+        raise ValueError("partial-fill scenario must use exactly 5 bps one-way")
     return snapshot, replay_bytes
+
+
+def _coverage_evidence(metadata: Mapping[str, Any]) -> dict[str, Any]:
+    source_kind = metadata.get("source_kind")
+    coverage_start_raw = metadata.get("coverage_start_utc", metadata.get("exchange_start_utc"))
+    coverage_end_raw = metadata.get("coverage_end_utc", metadata.get("exchange_end_utc"))
+    coverage_start = _utc_metadata_timestamp(
+        coverage_start_raw,
+        field="coverage_start_utc",
+    )
+    coverage_end = _utc_metadata_timestamp(
+        coverage_end_raw,
+        field="coverage_end_utc",
+    )
+    source_declares_complete = metadata.get("coverage_complete") is True
+    source_is_complete_capture = source_kind == _COMPLETE_CAPTURE_SOURCE_KIND
+    brackets_submission = coverage_start is not None and coverage_start <= _SUBMITTED
+    brackets_expiry = coverage_end is not None and coverage_end >= _PARTIAL_FILL_EXPIRY
+    passes = (
+        source_declares_complete
+        and source_is_complete_capture
+        and brackets_submission
+        and brackets_expiry
+    )
+    return {
+        "coverage_complete_declared": source_declares_complete,
+        "coverage_start_utc": coverage_start_raw,
+        "coverage_end_utc": coverage_end_raw,
+        "required_submission_utc": _SUBMITTED.isoformat().replace("+00:00", "Z"),
+        "required_expiry_utc": _PARTIAL_FILL_EXPIRY.isoformat().replace("+00:00", "Z"),
+        "source_kind": source_kind,
+        "source_kind_is_complete_capture": source_is_complete_capture,
+        "submission_bracketed": brackets_submission,
+        "expiry_bracketed": brackets_expiry,
+        "complete_submission_to_expiry": passes,
+    }
 
 
 def _gate_payload(
     *,
     snapshot: OKXPublicTradeSnapshot,
     replay_bytes: Mapping[str, bytes],
+    metadata: Mapping[str, Any],
     metadata_sha256: str,
 ) -> dict[str, Any]:
     replays: dict[str, Any] = {}
-    observed_outcomes: list[str] = []
+    structural_outcomes: list[str] = []
     for filename in (_NO_FILL_NAME, _PARTIAL_FILL_NAME):
         replay = json.loads(replay_bytes[filename])
         outcome = replay["outcome"]
-        observed_outcomes.append(outcome)
+        structural_outcomes.append(outcome)
         replays[outcome] = {
             "evidence_file": filename,
             "evidence_sha256": _sha256_bytes(replay_bytes[filename]),
@@ -141,14 +201,22 @@ def _gate_payload(
             "unfilled_base_quantity": replay["unfilled_base_quantity"],
         }
 
+    coverage = _coverage_evidence(metadata)
+    replay_passes = coverage["complete_submission_to_expiry"] is True
+    blockers = [] if replay_passes else [_COVERAGE_BLOCKER]
     return {
         "schema_version": _SCHEMA_VERSION,
         "canonical_timeframe": "1H",
         "benchmark_timeframe": "1Dutc",
         "optional_next_timeframe": "15m",
         "evidence_integrity_passes": True,
-        "maker_order_replay_passes": True,
+        "mechanics_replay_passes": True,
+        "execution_interval_coverage_passes": replay_passes,
+        "maker_order_replay_passes": replay_passes,
         "replay_equivalent": True,
+        "outcome_evidence_scope": (
+            "terminal_execution_evidence" if replay_passes else "structural_scenario_only"
+        ),
         "modeled_economics": _modeled_economics(),
         "source": {
             "provider": "OKX",
@@ -157,21 +225,23 @@ def _gate_payload(
             "response_sha256": snapshot.source_sha256,
             "metadata_sha256": metadata_sha256,
             "trade_snapshot_id": snapshot.snapshot_id,
-            "source_kind": "official_documentation_response_example",
+            "source_kind": metadata.get("source_kind"),
+            "coverage": coverage,
         },
         "execution_policy": {
             "order_type": "post_only_limit",
             "same_price_touch_is_fill": False,
             "strict_trade_through_required": True,
             "queue_ahead_is_explicit": True,
-            "unfilled_quantity_cancelled_at_expiry": True,
+            "terminal_cancellation_requires_complete_interval": True,
         },
         "required_outcomes": ["cancelled_no_fill", "cancelled_partial"],
-        "observed_outcomes": observed_outcomes,
+        "structural_outcomes": structural_outcomes,
+        "observed_outcomes": structural_outcomes if replay_passes else [],
         "replays": replays,
         "account_connectivity": "disabled",
         "order_submission": "not_performed",
-        "blockers": [],
+        "blockers": blockers,
     }
 
 
@@ -235,6 +305,7 @@ def verify_evidence(output_dir: str | Path) -> dict[str, Any]:
     expected_gate = _gate_payload(
         snapshot=snapshot,
         replay_bytes=replay_bytes,
+        metadata=metadata,
         metadata_sha256=_sha256_file(metadata_path),
     )
     gate_path = root / _GATE_NAME
@@ -265,6 +336,7 @@ def build_evidence(
     gate = _gate_payload(
         snapshot=snapshot,
         replay_bytes=replay_bytes,
+        metadata=metadata,
         metadata_sha256=_sha256_bytes(metadata_bytes),
     )
 
@@ -316,10 +388,13 @@ def main() -> int:
     print(
         json.dumps(
             {
+                "blockers": gate["blockers"],
+                "execution_interval_coverage_passes": gate["execution_interval_coverage_passes"],
                 "manifest_sha256": manifest_sha256,
                 "maker_order_replay_passes": gate["maker_order_replay_passes"],
                 "observed_outcomes": gate["observed_outcomes"],
                 "replay_equivalent": gate["replay_equivalent"],
+                "structural_outcomes": gate["structural_outcomes"],
             },
             separators=(",", ":"),
             sort_keys=True,
