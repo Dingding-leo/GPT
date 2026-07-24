@@ -1,0 +1,73 @@
+{
+  "candidate_accounting": {
+    "passed": 1,
+    "rejected": 0,
+    "searched": 1
+  },
+  "canonical_signature": "expected-shortfall-vs-buy-and-hold-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=buy-and-hold|metric=mean-worst-ceil-5pct-returns|tail-fraction=0.05|claim=strategy-minus-benchmark-expected-shortfall>0-in-both-markets|resampling=paired-noncircular-moving-block-bootstrap|block-length=20-sessions|resamples=2000|confidence=0.95|seeds=BTC-USDT:2026072313,ETH-USDT:2026072314|candidate_count=1",
+  "claim_scope": "Development-market tail-risk diagnostic only; the supported result does not establish alpha or a deployable strategy improvement.",
+  "hypothesis": "The adaptive strategy has less severe 5% expected shortfall than buy-and-hold in both BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "benchmark_expected_shortfall": -0.07161941836406788,
+      "ci_lower": 0.03440214900779887,
+      "ci_upper": 0.0518149188119934,
+      "observations": 2385,
+      "observed_delta": 0.04259958183209118,
+      "passed": true,
+      "period_end": "2026-07-22T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 1.0,
+      "return_file_sha256": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "strategy_expected_shortfall": -0.0290198365319767,
+      "tail_observations": 120
+    },
+    "ETH-USDT": {
+      "benchmark_expected_shortfall": -0.09453811163460936,
+      "ci_lower": 0.050557921247506576,
+      "ci_upper": 0.07228964904491636,
+      "observations": 2385,
+      "observed_delta": 0.06105341828245507,
+      "passed": true,
+      "period_end": "2026-07-22T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 1.0,
+      "return_file_sha256": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047",
+      "strategy_expected_shortfall": -0.03348469335215429,
+      "tail_observations": 120
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "expected_return_file_sha256": {
+      "BTC-USDT": "ebf2e4cc63e6b21a2d89420e2c2dd5b3517179baacfd12931f75fb0d99bdd2ce",
+      "ETH-USDT": "bd4fbc471d506069c01b86b39f7726b1bd05752bfd64e75b7d677d2d7f473047"
+    },
+    "market_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8550634027,
+    "source_artifact_name": "quant-research-source-1553-attempt-1",
+    "source_artifact_sha256": "60eeccc96a8baee381cde8e49c519543ce274bfcb48af4fa6bcb016ebc93aaf2",
+    "source_code_commit": "3375a17230726d8587f3a07398841c6dd861c2cf",
+    "source_main_base": "7282c22dffc8006d844dcb3095935f0e3e0ea70f",
+    "source_workflow_run_id": 29973627370,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reason": null,
+  "settings": {
+    "benchmark": "buy-and-hold",
+    "block_length_sessions": 20,
+    "confidence": 0.95,
+    "expected_shortfall_definition": "mean of worst ceil(tail_fraction * n) returns",
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072313,
+      "ETH-USDT": 2026072314
+    },
+    "tail_fraction": 0.05
+  },
+  "verdict": "supported"
+}
