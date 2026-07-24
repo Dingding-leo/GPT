@@ -3,8 +3,8 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import secrets
 import stat
-import tempfile
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -52,18 +52,52 @@ def _validate_private_file(descriptor: int, label: str) -> os.stat_result:
     return file_stat
 
 
+def _read_decision_descriptor(descriptor: int, label: str) -> tuple[os.stat_result, bytes]:
+    opened = _validate_private_file(descriptor, label)
+    chunks: list[bytes] = []
+    while chunk := os.read(descriptor, 1024 * 1024):
+        chunks.append(chunk)
+    return opened, b"".join(chunks)
+
+
 def load_paper_order_decision(path: str | Path) -> PaperOrderDecision:
     decision_path = Path(path)
-    descriptor = os.open(
-        decision_path,
-        os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0),
+    parent = decision_path.parent
+    directory_descriptor = os.open(
+        parent,
+        os.O_RDONLY | getattr(os, "O_DIRECTORY", 0) | getattr(os, "O_NOFOLLOW", 0),
     )
     try:
-        opened = _validate_private_file(descriptor, _ERROR)
-        payload = b""
-        while chunk := os.read(descriptor, 1024 * 1024):
-            payload += chunk
-        current = os.stat(decision_path, follow_symlinks=False)
+        opened = os.fstat(directory_descriptor)
+        if not stat.S_ISDIR(opened.st_mode):
+            raise ValueError(f"{_ERROR} parent must be a regular directory")
+        current = os.stat(parent, follow_symlinks=False)
+        if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
+            raise RuntimeError(f"{_ERROR} parent changed during replay")
+        decision = _load_paper_order_decision_at(
+            directory_descriptor,
+            decision_path.name,
+        )
+        current = os.stat(parent, follow_symlinks=False)
+        if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
+            raise RuntimeError(f"{_ERROR} parent changed during replay")
+        return decision
+    finally:
+        os.close(directory_descriptor)
+
+
+def _load_paper_order_decision_at(
+    directory_descriptor: int,
+    name: str,
+) -> PaperOrderDecision:
+    descriptor = os.open(
+        name,
+        os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0),
+        dir_fd=directory_descriptor,
+    )
+    try:
+        opened, payload = _read_decision_descriptor(descriptor, _ERROR)
+        current = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
         if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
             raise RuntimeError(f"{_ERROR} path changed during replay")
         return PaperOrderDecision.from_json_bytes(payload)
@@ -72,12 +106,13 @@ def load_paper_order_decision(path: str | Path) -> PaperOrderDecision:
 
 
 @contextmanager
-def _decision_lock(path: Path) -> Iterator[None]:
-    lock_path = path.with_name(f".{path.name}.lock")
+def _decision_lock(directory_descriptor: int, decision_name: str) -> Iterator[None]:
+    lock_name = f".{decision_name}.lock"
     descriptor = os.open(
-        lock_path,
+        lock_name,
         os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0),
         0o600,
+        dir_fd=directory_descriptor,
     )
     acquired = False
     lock_stat: os.stat_result | None = None
@@ -94,13 +129,17 @@ def _decision_lock(path: Path) -> Iterator[None]:
         yield
     finally:
         if acquired:
-            current = os.stat(lock_path, follow_symlinks=False)
+            current = os.stat(
+                lock_name,
+                dir_fd=directory_descriptor,
+                follow_symlinks=False,
+            )
             if lock_stat is None or (current.st_dev, current.st_ino) != (
                 lock_stat.st_dev,
                 lock_stat.st_ino,
             ):
                 raise RuntimeError(f"{_ERROR} lock path changed")
-            lock_path.unlink()
+            os.unlink(lock_name, dir_fd=directory_descriptor)
             _fcntl.flock(descriptor, _fcntl.LOCK_UN)
         os.close(descriptor)
 
@@ -150,31 +189,68 @@ def _fsync_directory(directory: Path) -> None:
         os.close(descriptor)
 
 
+def _descriptor_entry_path(directory_descriptor: int, name: str) -> str:
+    opened = os.fstat(directory_descriptor)
+    for root in (Path("/proc/self/fd"), Path("/dev/fd")):
+        descriptor_path = root / str(directory_descriptor)
+        try:
+            current = os.stat(descriptor_path)
+        except FileNotFoundError:
+            continue
+        if (opened.st_dev, opened.st_ino) == (current.st_dev, current.st_ino):
+            return os.fspath(descriptor_path / name)
+    raise RuntimeError("paper decision descriptor path is unavailable")
+
+
+def _create_temporary_file(directory_descriptor: int) -> tuple[int, str]:
+    for _ in range(128):
+        name = f".paper-decision-{secrets.token_hex(16)}"
+        try:
+            descriptor = os.open(
+                name,
+                os.O_CREAT
+                | os.O_EXCL
+                | os.O_RDWR
+                | getattr(os, "O_NOFOLLOW", 0),
+                0o600,
+                dir_fd=directory_descriptor,
+            )
+        except FileExistsError:
+            continue
+        return descriptor, name
+    raise FileExistsError("unable to allocate a unique paper decision staging file")
+
+
 def record_paper_order_decision(
     target_journal_path: str | Path,
-    decision_directory: str | Path,
+    directory_descriptor: int,
     decision: PaperOrderDecision,
 ) -> PaperOrderDecision:
     """Atomically consume one target intent into one durable paper decision file."""
 
     if not isinstance(decision, PaperOrderDecision):
         raise TypeError("decision must be a PaperOrderDecision")
-    directory = Path(decision_directory)
-    if directory.is_symlink():
-        raise ValueError("paper decision directory must not be a symbolic link")
-    if not directory.is_dir():
-        raise FileNotFoundError("paper decision store is not initialized")
-    path = directory / f"{decision.target_intent_id}.json"
-    with _decision_lock(path):
+    decision_name = f"{decision.target_intent_id}.json"
+    with _decision_lock(directory_descriptor, decision_name):
         _find_target(target_journal_path, decision)
-        if path.exists():
-            existing = load_paper_order_decision(path)
+        try:
+            os.stat(
+                decision_name,
+                dir_fd=directory_descriptor,
+                follow_symlinks=False,
+            )
+        except FileNotFoundError:
+            pass
+        else:
+            existing = _load_paper_order_decision_at(
+                directory_descriptor,
+                decision_name,
+            )
             if existing.to_json_bytes() != decision.to_json_bytes():
                 raise ValueError(f"{_ERROR} conflicts with the consumed target intent")
             return existing
 
-        descriptor, temporary_name = tempfile.mkstemp(prefix=".paper-decision-", dir=directory)
-        temporary = Path(temporary_name)
+        descriptor, temporary_name = _create_temporary_file(directory_descriptor)
         try:
             os.fchmod(descriptor, 0o600)
             payload = decision.to_json_bytes()
@@ -184,13 +260,19 @@ def record_paper_order_decision(
             os.fsync(descriptor)
             os.close(descriptor)
             descriptor = -1
-            os.replace(temporary, path)
-            _fsync_directory(directory)
+            os.replace(
+                _descriptor_entry_path(directory_descriptor, temporary_name),
+                _descriptor_entry_path(directory_descriptor, decision_name),
+            )
+            os.fsync(directory_descriptor)
         finally:
             if descriptor >= 0:
                 os.close(descriptor)
-            temporary.unlink(missing_ok=True)
-        replayed = load_paper_order_decision(path)
+            try:
+                os.unlink(temporary_name, dir_fd=directory_descriptor)
+            except FileNotFoundError:
+                pass
+        replayed = _load_paper_order_decision_at(directory_descriptor, decision_name)
         if replayed != decision:
             raise RuntimeError(f"{_ERROR} replay differs after publication")
         return replayed
@@ -198,22 +280,20 @@ def record_paper_order_decision(
 
 def replay_paper_order_decision_store(
     target_journal_path: str | Path,
-    decision_directory: str | Path,
+    directory_descriptor: int,
 ) -> PaperDecisionStoreReplay:
     """Replay every durable decision in target-journal order and hash the result."""
 
     targets = load_target_position_intent_journal(target_journal_path).intents
     target_by_id = {target.intent_id: target for target in targets}
     decisions_by_target: dict[str, PaperOrderDecision] = {}
-    directory = Path(decision_directory)
-    if not directory.exists():
-        raise FileNotFoundError("paper decision store is not initialized")
-    if directory.is_symlink() or not directory.is_dir():
-        raise ValueError("paper decision directory must be a regular directory")
-    for path in sorted(directory.glob("*.json")):
-        decision = load_paper_order_decision(path)
+    decision_names = sorted(
+        item for item in os.listdir(directory_descriptor) if item.endswith(".json")
+    )
+    for name in decision_names:
+        decision = _load_paper_order_decision_at(directory_descriptor, name)
         target = target_by_id.get(decision.target_intent_id)
-        if target is None or path.name != f"{decision.target_intent_id}.json":
+        if target is None or name != f"{decision.target_intent_id}.json":
             raise ValueError(f"{_ERROR} store references an unknown target intent")
         if decision.target_intent_id in decisions_by_target:
             raise ValueError(f"{_ERROR} store contains a duplicate target decision")
@@ -246,11 +326,11 @@ def replay_paper_order_decision_store(
 
 def pending_target_position_intents(
     target_journal_path: str | Path,
-    decision_directory: str | Path,
+    directory_descriptor: int,
 ) -> tuple[TargetPositionIntent, ...]:
     """Return target intents without a replay-validated durable paper decision file."""
 
     return replay_paper_order_decision_store(
         target_journal_path,
-        decision_directory,
+        directory_descriptor,
     ).pending_target_intents
