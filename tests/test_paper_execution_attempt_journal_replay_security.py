@@ -159,10 +159,7 @@ def test_replay_blocks_concurrent_paper_attempt_publication(
 
     def pause_after_replay_read(directory_descriptor: int, name: str) -> bytes:
         payload = original_read(directory_descriptor, name)
-        if (
-            threading.current_thread().name == "attempt-journal-replay"
-            and name == path.name
-        ):
+        if threading.current_thread().name == "attempt-journal-replay" and name == path.name:
             replay_read.set()
             assert release_replay.wait(timeout=5)
         return payload
