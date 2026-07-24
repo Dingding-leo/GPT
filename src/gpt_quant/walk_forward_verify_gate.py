@@ -9,8 +9,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .backtest import run_backtest
 from .config import StrategyConfig
+from .features import build_target_position
 from .walk_forward_verify import verify_walk_forward_report as _verify_report_metrics
 
 _ACCOUNTING_TOLERANCE = 1e-12
@@ -208,6 +208,7 @@ def _validate_selected_position_paths(
 
     expected_fold_ids: list[int] = []
     verified_rows = 0
+    selected_path_cache: dict[StrategyConfig, pd.DataFrame] = {}
     for ordinal, fold in enumerate(folds, start=1):
         fold_mapping = _mapping(fold, f"fold {ordinal}")
         fold_id_value = fold_mapping.get("fold")
@@ -250,12 +251,13 @@ def _validate_selected_position_paths(
         ):
             raise ValueError(f"fold {fold_id} selected fee must match the canonical baseline")
 
-        expected_fold = run_backtest(
-            source_close.loc[:test_end],
-            selected_config,
-            start=test_start,
-            end=test_end,
-        ).frame
+        expected_path = selected_path_cache.get(selected_config)
+        if expected_path is None:
+            target_position = build_target_position(source_close, selected_config)
+            position = target_position.shift(1).fillna(0.0).rename("position")
+            expected_path = pd.concat([target_position, position], axis=1)
+            selected_path_cache[selected_config] = expected_path
+        expected_fold = expected_path.loc[test_start:test_end]
         if not expected_fold.index.equals(fold_frame.index):
             raise ValueError(f"fold {fold_id} source timestamps do not match persisted returns")
         _assert_accounting(
