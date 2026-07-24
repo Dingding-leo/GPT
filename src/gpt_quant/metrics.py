@@ -10,17 +10,25 @@ import pandas as pd
 from .backtest import BacktestResult
 
 
-def max_drawdown_from_returns(returns: pd.Series) -> float:
-    clean = pd.to_numeric(returns, errors="coerce").fillna(0.0).astype(float)
-    if clean.empty:
+def _max_drawdown_from_validated_values(values: np.ndarray) -> float:
+    if values.size == 0:
         return 0.0
 
-    # Include initial capital so a loss on the first observation is measured
-    # against the true starting peak rather than treated as a zero drawdown.
-    nav = np.concatenate(([1.0], np.cumprod(1.0 + clean.to_numpy())))
+    # The caller already owns a validated finite float array. Build cumulative
+    # NAV once and reuse that buffer for the drawdown ratio.
+    nav = np.empty(values.size + 1, dtype=float)
+    nav[0] = 1.0
+    np.add(values, 1.0, out=nav[1:])
+    np.cumprod(nav[1:], out=nav[1:])
     running_peak = np.maximum.accumulate(nav)
-    drawdown = nav / running_peak - 1.0
-    return float(drawdown.min())
+    np.divide(nav, running_peak, out=nav)
+    nav -= 1.0
+    return float(nav.min())
+
+
+def max_drawdown_from_returns(returns: pd.Series) -> float:
+    clean = pd.to_numeric(returns, errors="coerce").fillna(0.0).astype(float)
+    return _max_drawdown_from_validated_values(clean.to_numpy(copy=False))
 
 
 def _invalid_return_error(series: pd.Series, position: int, *, label: str) -> ValueError:
@@ -84,6 +92,7 @@ def performance_metrics(
         raise ValueError("cannot calculate metrics for an empty frame")
     returns = _validated_returns(frame["strategy_return"])
     _validate_solvent_returns(returns)
+    return_values = returns.to_numpy(copy=False)
     n = int(len(returns))
 
     total_growth, total_return = _compounded_return(returns)
@@ -100,7 +109,7 @@ def performance_metrics(
     downside_std = float(np.sqrt(np.mean(np.square(downside))))
     sortino = daily_mean / downside_std * math.sqrt(ann) if downside_std > 0 else 0.0
 
-    max_drawdown = max_drawdown_from_returns(returns)
+    max_drawdown = _max_drawdown_from_validated_values(return_values)
     calmar = cagr / abs(max_drawdown) if max_drawdown < 0 else 0.0
 
     turnover = (
