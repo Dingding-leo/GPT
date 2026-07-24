@@ -272,10 +272,7 @@ def _stored_snapshot_ids(instrument_dir: Path) -> set[str]:
     return snapshot_ids
 
 
-def _verify_snapshot_inventory(
-    instrument_dir: Path,
-    records: list[dict[str, Any]],
-) -> None:
+def _verify_snapshot_inventory(instrument_dir: Path, records: list[dict[str, Any]]) -> None:
     record_snapshot_ids = [
         _required_sha256(record["snapshot_id"], field="snapshot_id") for record in records
     ]
