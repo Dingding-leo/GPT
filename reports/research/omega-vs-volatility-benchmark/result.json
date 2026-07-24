@@ -1,0 +1,66 @@
+{
+  "candidate_accounting": {
+    "passed": 0,
+    "rejected": 1,
+    "searched": 1
+  },
+  "canonical_signature": "omega-vs-volatility-benchmark-v1|markets=BTC-USDT,ETH-USDT|source=persisted-net-rolling-oos-returns|benchmark=volatility-targeted-long|metric=omega-ratio-threshold-zero|omega=sum(max(return-threshold,0))/abs(sum(min(return-threshold,0)))|claim=strategy-minus-benchmark-omega>0-in-both-markets|resampling=paired-noncircular-moving-block-bootstrap|block-length=20-sessions|resamples=2000|confidence=0.95|threshold=0|seeds=BTC-USDT:2026072307,ETH-USDT:2026072308|candidate_count=1",
+  "claim_scope": "Development-market diagnostic only; no deployable strategy improvement is claimed.",
+  "hypothesis": "The strategy has a higher zero-threshold Omega ratio than the volatility-targeted-long benchmark in both BTC-USDT and ETH-USDT.",
+  "markets": {
+    "BTC-USDT": {
+      "benchmark_omega": 1.120161123754299,
+      "ci_lower": -0.0838951611262493,
+      "ci_upper": 0.23471654512667797,
+      "observations": 2340,
+      "observed_delta": 0.06305809178585764,
+      "passed": false,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.796,
+      "return_file_sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "strategy_omega": 1.1832192155401566
+    },
+    "ETH-USDT": {
+      "benchmark_omega": 1.1431328405104462,
+      "ci_lower": -0.1589249689499303,
+      "ci_upper": 0.12818427584340267,
+      "observations": 2340,
+      "observed_delta": -0.014039084554448245,
+      "passed": false,
+      "period_end": "2026-06-07T00:00:00+00:00",
+      "period_start": "2020-01-11T00:00:00+00:00",
+      "probability_delta_positive": 0.387,
+      "return_file_sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "strategy_omega": 1.129093755955998
+    }
+  },
+  "provenance": {
+    "development_markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "market_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8540375016,
+    "source_artifact_name": "quant-research-source-1276-attempt-1",
+    "source_artifact_sha256": "d6434dfc7e03ce664fce6e0a86455fb0f025588f17d14fe8dd27f0b6937bc52f",
+    "source_head_sha": "60b68e7f4675f0441dbda723bbf6bf6f35d56f2d",
+    "source_workflow_run": 29946477873,
+    "timeframe": "1Dutc"
+  },
+  "rejection_reason": "The 95% paired moving-block-bootstrap lower bound for the strategy-minus-benchmark Omega-ratio delta was non-positive in: BTC-USDT, ETH-USDT",
+  "settings": {
+    "benchmark": "volatility-targeted-long",
+    "block_length_sessions": 20,
+    "confidence": 0.95,
+    "omega_definition": "sum(max(return-threshold, 0)) / abs(sum(min(return-threshold, 0)))",
+    "resamples": 2000,
+    "seeds": {
+      "BTC-USDT": 2026072307,
+      "ETH-USDT": 2026072308
+    },
+    "threshold": 0.0
+  },
+  "verdict": "rejected"
+}
