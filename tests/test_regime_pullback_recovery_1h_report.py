@@ -9,17 +9,12 @@ import pandas as pd
 import pytest
 
 _REPORT_DIR = (
-    Path(__file__).resolve().parents[1]
-    / "reports"
-    / "research"
-    / "regime-pullback-recovery-1h"
+    Path(__file__).resolve().parents[1] / "reports" / "research" / "regime-pullback-recovery-1h"
 )
 _ANALYSIS_PATH = _REPORT_DIR / "analysis.py"
 _RESULT_PATH = _REPORT_DIR / "result.json"
 _FIXTURE_DIR = (
-    Path(__file__).resolve().parent
-    / "fixtures"
-    / "okx_btc_usdt_1h_pullback_recovery_20220125"
+    Path(__file__).resolve().parent / "fixtures" / "okx_btc_usdt_1h_pullback_recovery_20220125"
 )
 
 
@@ -50,9 +45,7 @@ def test_committed_result_rejects_the_single_architecture_candidate() -> None:
         "parameter_neighbourhood_paths": 4,
     }
     assert result["fixed_architecture"]["transaction_cost_bps_one_way"] == 5.0
-    assert result["fixed_architecture"]["modeled_cost_paths"] == [
-        "5bps_one_way_only"
-    ]
+    assert result["fixed_architecture"]["modeled_cost_paths"] == ["5bps_one_way_only"]
     assert result["joint_retrospective_passes"] is False
     assert result["paper_testable"] is False
     assert result["live_eligible"] is False
@@ -85,27 +78,22 @@ def test_committed_result_rejects_the_single_architecture_candidate() -> None:
         assert details["metrics"]["net_total_return"] == pytest.approx(
             expected_values["net_total_return"], abs=1e-15
         )
-        assert details["metrics"]["sharpe"] == pytest.approx(
-            expected_values["sharpe"], abs=1e-15
-        )
+        assert details["metrics"]["sharpe"] == pytest.approx(expected_values["sharpe"], abs=1e-15)
         assert details["metrics"]["annualized_turnover"] == pytest.approx(
             expected_values["annualized_turnover"], abs=1e-12
         )
-        assert details["fold_stability"]["profitable_folds"] == expected_values[
-            "profitable_folds"
-        ]
-        assert details["month_stability"][
-            "profitable_complete_periods"
-        ] == expected_values["profitable_months"]
+        assert details["fold_stability"]["profitable_folds"] == expected_values["profitable_folds"]
+        assert (
+            details["month_stability"]["profitable_complete_periods"]
+            == expected_values["profitable_months"]
+        )
         assert details["activity"]["episodes_per_year"] == pytest.approx(
             expected_values["episodes_per_year"], abs=1e-12
         )
-        assert details["activity"][
-            "completed_episode_profit_factor"
-        ] == pytest.approx(expected_values["profit_factor"], abs=1e-15)
-        assert details["capacity"][
-            "maximum_supported_initial_capital_usd"
-        ] == pytest.approx(
+        assert details["activity"]["completed_episode_profit_factor"] == pytest.approx(
+            expected_values["profit_factor"], abs=1e-15
+        )
+        assert details["capacity"]["maximum_supported_initial_capital_usd"] == pytest.approx(
             expected_values["maximum_supported_initial_capital_usd"], abs=1e-9
         )
         assert details["tail_risk"]["passes"] is True
@@ -193,6 +181,4 @@ def test_future_real_candle_mutation_cannot_change_prior_evidence(
         changed.loc[:prior_end, columns],
         check_exact=True,
     )
-    assert baseline.loc[mutation_time, "asset_return"] != changed.loc[
-        mutation_time, "asset_return"
-    ]
+    assert baseline.loc[mutation_time, "asset_return"] != changed.loc[mutation_time, "asset_return"]
