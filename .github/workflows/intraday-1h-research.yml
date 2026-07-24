@@ -57,6 +57,7 @@ jobs:
             tests/test_intraday_research_profile.py \
             tests/test_verify_intraday_1h_profile.py \
             tests/test_intraday_1h_promotion_gate.py \
+            tests/test_intraday_1h_cross_market_gate.py \
             tests/test_artifact_manifest.py
 
       - name: Run canonical 1h full walk-forward research
@@ -121,3 +122,66 @@ jobs:
           path: reports/okx/1h/${{ matrix.inst_id }}/
           if-no-files-found: error
           retention-days: 14
+
+  cross_market_gate:
+    name: Cross-market 1h launch blockers
+    if: ${{ always() }}
+    needs: research
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      UPSTREAM_RESEARCH_RESULT: ${{ needs.research.result }}
+      DOWNLOADED_ARTIFACTS: reports/okx/1h/downloaded
+      CROSS_MARKET_OUTPUT: reports/okx/1h/cross-market
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Download immutable canonical 1h evidence
+        if: ${{ needs.research.result == 'success' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: canonical-*-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: ${{ env.DOWNLOADED_ARTIFACTS }}
+          merge-multiple: false
+
+      - name: Build deterministic cross-market launch blockers
+        id: cross_market_gate
+        continue-on-error: true
+        run: |
+          PYTHONPATH=src python scripts/build_intraday_1h_cross_market_gate.py \
+            --artifacts-root "$DOWNLOADED_ARTIFACTS" \
+            --output-dir "$CROSS_MARKET_OUTPUT" \
+            --upstream-result "$UPSTREAM_RESEARCH_RESULT"
+
+      - name: Upload cross-market launch-blocker evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: canonical-cross-market-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: reports/okx/1h/cross-market/intraday-cross-market-gate.json
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce cross-market evidence integrity
+        if: ${{ always() }}
+        env:
+          CROSS_MARKET_GATE_OUTCOME: ${{ steps.cross_market_gate.outcome }}
+        run: test "$CROSS_MARKET_GATE_OUTCOME" = success
+
+      - name: Enforce fail-closed cross-market research promotion
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.enforce_intraday_research_promotion }}
+        run: |
+          PYTHONPATH=src python scripts/build_intraday_1h_cross_market_gate.py \
+            --artifacts-root "$DOWNLOADED_ARTIFACTS" \
+            --output-dir "$CROSS_MARKET_OUTPUT" \
+            --upstream-result "$UPSTREAM_RESEARCH_RESULT" \
+            --enforce-research-promotion
