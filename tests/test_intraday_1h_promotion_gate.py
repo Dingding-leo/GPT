@@ -97,9 +97,10 @@ def test_rejected_1h_candidate_writes_deterministic_fail_closed_summary(tmp_path
         "latency": "separate_not_modeled",
     }
     source_path = output / "intraday-1h-source-provenance.json"
-    assert first["source_artifacts"]["source_provenance_sha256"] == hashlib.sha256(
-        source_path.read_bytes()
-    ).hexdigest()
+    assert (
+        first["source_artifacts"]["source_provenance_sha256"]
+        == hashlib.sha256(source_path.read_bytes()).hexdigest()
+    )
     assert first["source_artifacts"]["source_response_count"] == 1
     assert first["source_artifacts"]["observations"] == 2
     assert first["research_gate"]["research_candidate_eligible"] is False
