@@ -61,7 +61,10 @@ def test_books_response_rejects_oversized_success_message_before_snapshotting() 
 
     with pytest.raises(
         ValueError,
-        match=rf"books response message exceeds the {_MAX_API_MESSAGE_UTF8_BYTES}-byte safety limit",
+        match=(
+            rf"books response message exceeds the "
+            rf"{_MAX_API_MESSAGE_UTF8_BYTES}-byte safety limit"
+        ),
     ):
         _fetch(books_response=response)
 
@@ -76,7 +79,10 @@ def test_books_response_rejects_oversized_error_message_before_log_amplification
 
     with pytest.raises(
         ValueError,
-        match=rf"books response message exceeds the {_MAX_API_MESSAGE_UTF8_BYTES}-byte safety limit",
+        match=(
+            rf"books response message exceeds the "
+            rf"{_MAX_API_MESSAGE_UTF8_BYTES}-byte safety limit"
+        ),
     ):
         _fetch(books_response=response)
 
