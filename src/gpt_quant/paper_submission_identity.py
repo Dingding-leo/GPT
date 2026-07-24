@@ -12,6 +12,14 @@ __all__ = ["PaperSubmissionIdentity"]
 _SCHEMA_VERSION = 1
 _ACTION = "initial_post_only_submission"
 _ERROR = "paper submission identity"
+_FIELDS = {
+    "schema_version",
+    "action",
+    "decision_id",
+    "submission_key",
+    "record_id",
+    "record_sha256",
+}
 
 
 def _json_bytes(payload: Mapping[str, object]) -> bytes:
@@ -21,6 +29,15 @@ def _json_bytes(payload: Mapping[str, object]) -> bytes:
         separators=(",", ":"),
         sort_keys=True,
     ).encode("utf-8")
+
+
+def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    result: dict[str, object] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"{_ERROR} JSON contains duplicate field {key!r}")
+        result[key] = value
+    return result
 
 
 def _submission_key(decision_id: str) -> str:
@@ -63,6 +80,52 @@ class PaperSubmissionIdentity:
             hashlib.sha256(canonical_record_bytes).hexdigest(),
         )
 
+    def _payload(self) -> dict[str, object]:
+        return {
+            "schema_version": _SCHEMA_VERSION,
+            "action": _ACTION,
+            "decision_id": self.decision_id,
+            "submission_key": self.submission_key,
+            "record_id": self.record_id,
+            "record_sha256": self.record_sha256,
+        }
+
+    def to_json_bytes(self) -> bytes:
+        """Serialize the retry identity as canonical provider-neutral evidence."""
+
+        return _json_bytes(self._payload()) + b"\n"
+
+    @classmethod
+    def from_json_bytes(
+        cls,
+        value: bytes,
+        *,
+        intent: PaperPostOnlyOrderIntent,
+    ) -> PaperSubmissionIdentity:
+        """Restore canonical identity bytes only when exact intent evidence agrees."""
+
+        if not isinstance(value, bytes):
+            raise TypeError("value must be bytes")
+        if not isinstance(intent, PaperPostOnlyOrderIntent):
+            raise TypeError("intent must be a PaperPostOnlyOrderIntent")
+        try:
+            payload = json.loads(value.decode("utf-8"), object_pairs_hook=_reject_duplicates)
+        except (UnicodeDecodeError, ValueError) as exc:
+            raise ValueError(f"{_ERROR} JSON is unreadable") from exc
+        if not isinstance(payload, Mapping) or set(payload) != _FIELDS:
+            raise ValueError(f"{_ERROR} fields do not match schema")
+        if payload["schema_version"] != _SCHEMA_VERSION:
+            raise ValueError(f"unsupported {_ERROR} schema")
+        if payload["action"] != _ACTION:
+            raise ValueError(f"unsupported {_ERROR} action")
+
+        expected = cls.from_order_intent(intent)
+        if payload != expected._payload():
+            raise ValueError(f"{_ERROR} does not reconstruct from the exact order intent")
+        if expected.to_json_bytes() != value:
+            raise ValueError(f"{_ERROR} JSON must use canonical encoding")
+        return expected
+
     @classmethod
     def from_order_intent(cls, intent: PaperPostOnlyOrderIntent) -> PaperSubmissionIdentity:
         return cls(intent)
@@ -80,5 +143,8 @@ class PaperSubmissionIdentity:
             or candidate.submission_key != self.submission_key
         ):
             raise ValueError(f"{_ERROR} belongs to a different paper decision")
-        if candidate.record_id != self.record_id or candidate.record_sha256 != self.record_sha256:
+        if (
+            candidate.record_id != self.record_id
+            or candidate.record_sha256 != self.record_sha256
+        ):
             raise ValueError(f"{_ERROR} conflicts with the initial request for this paper decision")
