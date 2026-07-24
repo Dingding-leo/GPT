@@ -1,0 +1,80 @@
+{
+  "candidate_count": 1,
+  "canonical_signature": "upside-participation-asymmetry-v1|markets=BTC-USDT,ETH-USDT|benchmark=volatility-targeted-long|metric=upside-capture-minus-downside-capture|capture=conditional-arithmetic-mean-ratio|block=20|resamples=2000|confidence=0.95|seeds=BTC-USDT:20260722,ETH-USDT:20260723|candidate_count=1",
+  "claim_boundary": "This is a single predeclared exploratory mechanism test on BTC-USDT and ETH-USDT development markets. It does not alter the strategy, candidate grid, fees, execution delay, split rules, or sealed-market verdict.",
+  "hypothesis": "For both BTC-USDT and ETH-USDT, upside capture relative to the volatility-targeted-long benchmark exceeds downside capture, with a positive 95% paired moving-block-bootstrap lower bound for the difference.",
+  "joint_supported": false,
+  "markets": {
+    "BTC-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.026675196824827167,
+        "ci_upper": 0.06320257814225302,
+        "lower_bound_positive": false,
+        "median": 0.01737286710158839,
+        "probability_positive": 0.779
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "asymmetry": 0.017421715303727936,
+        "downside_capture": 0.308804096015329,
+        "downside_observations": 1149,
+        "upside_capture": 0.3262258113190569,
+        "upside_observations": 1191,
+        "zero_benchmark_observations": 0
+      },
+      "sha256": "539a8a770ae10c702acac250e59daf417e478896284265ee20225de3e676cf73",
+      "start": "2020-01-11 00:00:00+00:00"
+    },
+    "ETH-USDT": {
+      "bootstrap": {
+        "ci_lower": -0.046172047798431766,
+        "ci_upper": 0.0342036223515748,
+        "lower_bound_positive": false,
+        "median": -0.0041523339035109685,
+        "probability_positive": 0.42
+      },
+      "end": "2026-06-07 00:00:00+00:00",
+      "observations": 2340,
+      "point": {
+        "asymmetry": -0.0038419587858729565,
+        "downside_capture": 0.3151356560422077,
+        "downside_observations": 1128,
+        "upside_capture": 0.31129369725633477,
+        "upside_observations": 1212,
+        "zero_benchmark_observations": 0
+      },
+      "sha256": "027e02ad4c133955b359ba5642fda28ea2e9ad6020895d1eec82d5ec92a379e6",
+      "start": "2020-01-11 00:00:00+00:00"
+    }
+  },
+  "provenance": {
+    "bar": "1Dutc",
+    "instrument_type": "spot",
+    "provider": "OKX",
+    "source_artifact_id": 8509324116,
+    "source_artifact_name": "quant-research-306",
+    "source_artifact_sha256": "67e84186d26f3d5e1806d77be1c9ff3c4f9da8d041da12d63a40d00e79a42a4a",
+    "source_persistent_head": "28d9911192806a045e27aef5512967ecb570d919",
+    "source_tested_commit": "a48afc549121678fb066899db67fe20faf2f5b30",
+    "source_workflow_run_id": 29866245582
+  },
+  "settings": {
+    "benchmark_column": "benchmark_volatility_targeted_long_return",
+    "block_length": 20,
+    "candidate_count": 1,
+    "capture_definition": "conditional arithmetic mean strategy return divided by conditional arithmetic mean benchmark return, with conditioning determined by benchmark return sign",
+    "confidence": 0.95,
+    "development_market_screen": true,
+    "markets": [
+      "BTC-USDT",
+      "ETH-USDT"
+    ],
+    "primary_metric": "upside_capture_minus_downside_capture",
+    "resamples": 2000,
+    "resampling": "paired moving block bootstrap without circular wrapping",
+    "seed_rule": "20260722 for BTC-USDT and 20260723 for ETH-USDT",
+    "strategy_column": "strategy_return"
+  },
+  "verdict": "rejected"
+}
