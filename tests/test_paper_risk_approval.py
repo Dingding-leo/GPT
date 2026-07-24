@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.paper_risk_approval import (
     PaperRiskApproval,
     RiskApprovedExposure,
@@ -22,11 +23,11 @@ from gpt_quant.paper_risk_kill_switch import (
     evaluate_paper_risk_kill_switch,
 )
 
-_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1dutc-raw-20260717-20260721"
+_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1h-raw-20260724"
 _ROWS_PATH = _FIXTURE_DIR / "rows.json"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
-_EXPECTED_FIXTURE_SHA256 = "dcb30e58e10f8415aefe8c206f99c21fc8862b3b4f5ea65679a01262980c5481"
-_TARGET_INTENT_ID = hashlib.sha256(b"paper-risk-approval-target").hexdigest()
+_EXPECTED_FIXTURE_SHA256 = "228828e32a5a43f0010a326ab65c368dbdc6202a158738b0e9956ad7c6393137"
+_CONFIG_SHA256 = hashlib.sha256(b"paper-risk-approval-target-replay-v1").hexdigest()
 
 
 def _real_okx_mark() -> tuple[datetime, float, str]:
@@ -36,7 +37,7 @@ def _real_okx_mark() -> tuple[datetime, float, str]:
     assert metadata["fixture_rows_sha256"] == _EXPECTED_FIXTURE_SHA256
     assert metadata["provider"] == "OKX"
     assert metadata["instrument_id"] == "BTC-USDT"
-    assert metadata["bar"] == "1Dutc"
+    assert metadata["bar"] == "1H"
 
     rows = json.loads(rows_bytes)
     confirmed = next(row for row in rows if row[8] == "1")
@@ -75,6 +76,31 @@ def _state(*, current_fraction: float) -> tuple[PaperRiskStateSnapshot, datetime
     )
 
 
+def _target(
+    snapshot: PaperRiskStateSnapshot,
+    evaluated_at: datetime,
+    *,
+    target_position: float = 0.40,
+    expires_at_utc: datetime | None = None,
+) -> TargetPositionIntent:
+    signal_close = snapshot.market_data_observed_at_utc
+    return TargetPositionIntent(
+        instrument_id="BTC-USDT",
+        bar="1H",
+        strategy_id="paper-risk-approval-target-replay",
+        strategy_revision="1" * 40,
+        source_data_sha256=snapshot.market_data_source_sha256,
+        config_sha256=_CONFIG_SHA256,
+        signal_bar_open_utc=signal_close - timedelta(hours=1),
+        signal_bar_close_utc=signal_close,
+        decision_not_before_utc=signal_close,
+        expires_at_utc=expires_at_utc or evaluated_at + timedelta(hours=1),
+        target_position=target_position,
+        minimum_position=0.0,
+        maximum_position=1.0,
+    )
+
+
 def _policy() -> PaperRiskKillSwitchPolicy:
     return PaperRiskKillSwitchPolicy(
         daily_loss_trigger_fraction=0.05,
@@ -85,13 +111,14 @@ def _policy() -> PaperRiskKillSwitchPolicy:
     )
 
 
-def test_allowed_approval_round_trips_and_replays_exact_risk_inputs() -> None:
+def test_allowed_approval_round_trips_and_replays_exact_target_and_risk_inputs() -> None:
     snapshot, evaluated_at = _state(current_fraction=1.0)
+    target = _target(snapshot, evaluated_at)
     policy = _policy()
-    proposals = (ProposedInstrumentExposure("BTC-USDT", 0.40),)
+    proposals = (ProposedInstrumentExposure("BTC-USDT", target.target_position),)
 
     approval = create_paper_risk_approval(
-        _TARGET_INTENT_ID,
+        target,
         proposals,
         snapshot=snapshot,
         policy=policy,
@@ -100,6 +127,7 @@ def test_allowed_approval_round_trips_and_replays_exact_risk_inputs() -> None:
     replayed = PaperRiskApproval.from_json_bytes(approval.to_json_bytes())
     reconstructed = verify_paper_risk_approval(
         replayed,
+        target=target,
         snapshot=snapshot,
         policy=policy,
     )
@@ -107,6 +135,7 @@ def test_allowed_approval_round_trips_and_replays_exact_risk_inputs() -> None:
     assert replayed == approval
     assert reconstructed.allowed is True
     assert reconstructed.decision_id == approval.risk_decision_id
+    assert approval.target_intent_id == target.intent_id
     assert approval.snapshot_id == snapshot.snapshot_id
     assert approval.policy_id == policy.policy_id
     assert len(approval.approval_id) == 64
@@ -114,9 +143,10 @@ def test_allowed_approval_round_trips_and_replays_exact_risk_inputs() -> None:
 
 def test_approval_bytes_reject_changed_risk_decision_identity() -> None:
     snapshot, evaluated_at = _state(current_fraction=1.0)
+    target = _target(snapshot, evaluated_at)
     approval = create_paper_risk_approval(
-        _TARGET_INTENT_ID,
-        (ProposedInstrumentExposure("BTC-USDT", 0.40),),
+        target,
+        (ProposedInstrumentExposure("BTC-USDT", target.target_position),),
         snapshot=snapshot,
         policy=_policy(),
         evaluated_at_utc=evaluated_at,
@@ -131,11 +161,12 @@ def test_approval_bytes_reject_changed_risk_decision_identity() -> None:
 
 def test_breached_state_cannot_mint_exposure_increase_approval() -> None:
     snapshot, evaluated_at = _state(current_fraction=0.94)
+    target = _target(snapshot, evaluated_at, target_position=0.60)
 
     with pytest.raises(RuntimeError, match="risk kill switch rejected"):
         create_paper_risk_approval(
-            _TARGET_INTENT_ID,
-            (ProposedInstrumentExposure("BTC-USDT", 0.60),),
+            target,
+            (ProposedInstrumentExposure("BTC-USDT", target.target_position),),
             snapshot=snapshot,
             policy=_policy(),
             evaluated_at_utc=evaluated_at,
@@ -144,8 +175,9 @@ def test_breached_state_cannot_mint_exposure_increase_approval() -> None:
 
 def test_caller_forged_allowed_decision_cannot_be_promoted_without_replay() -> None:
     snapshot, evaluated_at = _state(current_fraction=0.94)
+    target = _target(snapshot, evaluated_at, target_position=0.60)
     policy = _policy()
-    proposals = (ProposedInstrumentExposure("BTC-USDT", 0.60),)
+    proposals = (ProposedInstrumentExposure("BTC-USDT", target.target_position),)
     blocked = evaluate_paper_risk_kill_switch(
         proposals,
         snapshot=snapshot,
@@ -176,16 +208,70 @@ def test_caller_forged_allowed_decision_cannot_be_promoted_without_replay() -> N
     forged.assert_allowed()
 
     forged_approval = PaperRiskApproval(
-        target_intent_id=_TARGET_INTENT_ID,
+        target_intent_id=target.intent_id,
         evaluated_at_utc=forged.evaluated_at_utc,
         snapshot_id=forged.snapshot_id,
         policy_id=forged.policy_id,
         risk_decision_id=forged.decision_id,
-        proposed_exposures=(RiskApprovedExposure("BTC-USDT", 0.60),),
+        proposed_exposures=(RiskApprovedExposure("BTC-USDT", target.target_position),),
     )
     with pytest.raises(RuntimeError, match="risk kill switch rejected"):
         verify_paper_risk_approval(
             forged_approval,
+            target=target,
             snapshot=snapshot,
             policy=policy,
+        )
+
+
+def test_expired_target_cannot_mint_or_replay_risk_approval() -> None:
+    snapshot, evaluated_at = _state(current_fraction=1.0)
+    target = _target(snapshot, evaluated_at, expires_at_utc=evaluated_at)
+    policy = _policy()
+    proposals = (ProposedInstrumentExposure("BTC-USDT", target.target_position),)
+
+    with pytest.raises(ValueError, match="target-position intent has expired"):
+        create_paper_risk_approval(
+            target,
+            proposals,
+            snapshot=snapshot,
+            policy=policy,
+            evaluated_at_utc=evaluated_at,
+        )
+
+    decision = evaluate_paper_risk_kill_switch(
+        proposals,
+        snapshot=snapshot,
+        policy=policy,
+        evaluated_at_utc=evaluated_at,
+    )
+    decision.assert_allowed()
+    replayed = PaperRiskApproval(
+        target_intent_id=target.intent_id,
+        evaluated_at_utc=decision.evaluated_at_utc,
+        snapshot_id=decision.snapshot_id,
+        policy_id=decision.policy_id,
+        risk_decision_id=decision.decision_id,
+        proposed_exposures=(RiskApprovedExposure("BTC-USDT", target.target_position),),
+    )
+    with pytest.raises(ValueError, match="target-position intent has expired"):
+        verify_paper_risk_approval(
+            replayed,
+            target=target,
+            snapshot=snapshot,
+            policy=policy,
+        )
+
+
+def test_target_exposure_must_match_exact_target_position() -> None:
+    snapshot, evaluated_at = _state(current_fraction=1.0)
+    target = _target(snapshot, evaluated_at, target_position=0.40)
+
+    with pytest.raises(ValueError, match="target exposure does not match"):
+        create_paper_risk_approval(
+            target,
+            (ProposedInstrumentExposure("BTC-USDT", 0.60),),
+            snapshot=snapshot,
+            policy=_policy(),
+            evaluated_at_utc=evaluated_at,
         )
