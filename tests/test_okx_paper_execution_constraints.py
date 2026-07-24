@@ -112,17 +112,19 @@ def _attempt(
     requested: str,
     outcome: str,
     filled: str,
+    side: str = "buy",
 ):
+    fill_price = quote.ask_price if side == "buy" else quote.bid_price
     return record_paper_execution_attempt(
         _binding(quote),
         quote,
         submitted_at_utc=datetime(2026, 7, 24, 0, 0, 0, 450_000, tzinfo=UTC),
         outcome_at_utc=datetime(2026, 7, 24, 0, 0, 0, 500_000, tzinfo=UTC),
-        side="buy",
+        side=side,
         requested_base_quantity=requested,
         outcome=outcome,
         filled_base_quantity=filled,
-        average_fill_price=quote.ask_price if Decimal(filled) > 0 else "0",
+        average_fill_price=fill_price if Decimal(filled) > 0 else "0",
         reason_code="paper-touch-fill" if Decimal(filled) > 0 else "paper-accepted",
     )
 
@@ -137,6 +139,7 @@ def test_real_okx_attempt_is_bound_to_instrument_lot_and_visible_touch_capacity(
         quote,
         attempt,
         maximum_snapshot_age_ms=1_000,
+        minimum_paper_quote_notional="1",
     )
 
 
@@ -179,6 +182,7 @@ def test_okx_attempt_gate_rejects_unexecutable_quantity_evidence(
             quote,
             attempt,
             maximum_snapshot_age_ms=1_000,
+            minimum_paper_quote_notional="1",
         )
 
 
@@ -193,6 +197,7 @@ def test_okx_attempt_gate_rejects_a_different_instrument_snapshot() -> None:
             quote,
             attempt,
             maximum_snapshot_age_ms=1_000,
+            minimum_paper_quote_notional="1",
         )
 
 
@@ -221,4 +226,61 @@ def test_okx_attempt_gate_rejects_off_tick_average_fill_price() -> None:
             quote,
             attempt,
             maximum_snapshot_age_ms=1_000,
+            minimum_paper_quote_notional="1",
+        )
+
+
+def test_okx_attempt_gate_rejects_below_declared_paper_minimum_notional() -> None:
+    snapshot = _instrument_snapshot()
+    quote = _quote(snapshot.raw_response_sha256)
+    attempt = _attempt(quote, requested="0.00001", outcome="accepted", filled="0")
+
+    with pytest.raises(
+        ValueError,
+        match="requested quote notional is below the declared paper minimum",
+    ):
+        validate_okx_paper_execution_attempt_constraints(
+            snapshot,
+            quote,
+            attempt,
+            maximum_snapshot_age_ms=1_000,
+            minimum_paper_quote_notional="1",
+        )
+
+
+def test_okx_attempt_gate_accepts_exact_declared_paper_notional_boundary() -> None:
+    snapshot = _instrument_snapshot()
+    quote = _quote(snapshot.raw_response_sha256)
+    attempt = _attempt(quote, requested="0.00001", outcome="accepted", filled="0")
+
+    validate_okx_paper_execution_attempt_constraints(
+        snapshot,
+        quote,
+        attempt,
+        maximum_snapshot_age_ms=1_000,
+        minimum_paper_quote_notional="0.410068",
+    )
+
+
+def test_sell_minimum_notional_uses_the_conservative_bid() -> None:
+    snapshot = _instrument_snapshot()
+    quote = _quote(snapshot.raw_response_sha256)
+    attempt = _attempt(
+        quote,
+        requested="0.00001",
+        outcome="accepted",
+        filled="0",
+        side="sell",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="requested quote notional is below the declared paper minimum",
+    ):
+        validate_okx_paper_execution_attempt_constraints(
+            snapshot,
+            quote,
+            attempt,
+            maximum_snapshot_age_ms=1_000,
+            minimum_paper_quote_notional="0.410065",
         )
