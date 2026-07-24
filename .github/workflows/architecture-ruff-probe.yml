@@ -1,0 +1,43 @@
+name: Architecture Ruff Probe
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  format:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.11"
+      - name: Capture canonical feature files
+        run: |
+          git fetch --depth=1 origin auto/live/20260724-06-okx-top-of-book
+          mkdir -p /tmp/architecture-ruff/src/gpt_quant /tmp/architecture-ruff/tests
+          git show FETCH_HEAD:src/gpt_quant/okx_execution_quote.py > /tmp/architecture-ruff/src/gpt_quant/okx_execution_quote.py
+          git show FETCH_HEAD:tests/test_okx_execution_quote.py > /tmp/architecture-ruff/tests/test_okx_execution_quote.py
+          git show FETCH_HEAD:tests/test_okx_execution_quote_clock_domains.py > /tmp/architecture-ruff/tests/test_okx_execution_quote_clock_domains.py
+      - name: Format bounded architecture files
+        run: |
+          python -m pip install --disable-pip-version-check --no-input ruff==0.16.0
+          ruff format --config pyproject.toml \
+            /tmp/architecture-ruff/src/gpt_quant/okx_execution_quote.py \
+            /tmp/architecture-ruff/tests/test_okx_execution_quote.py \
+            /tmp/architecture-ruff/tests/test_okx_execution_quote_clock_domains.py
+      - name: Upload formatted files
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: architecture-ruff-formatted
+          path: /tmp/architecture-ruff
+          if-no-files-found: error
+          retention-days: 1
