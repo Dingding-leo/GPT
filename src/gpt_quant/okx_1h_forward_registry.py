@@ -267,8 +267,12 @@ def _stored_snapshot_ids(instrument_dir: Path) -> set[str]:
     snapshot_ids: set[str] = set()
     for entry in snapshots_dir.iterdir():
         if entry.is_symlink() or not entry.is_dir():
-            raise ValueError("forward registry snapshot evidence must be immutable directories")
-        snapshot_ids.add(_required_sha256(entry.name, field="stored snapshot directory"))
+            raise ValueError(
+                "forward registry snapshot evidence must be immutable directories"
+            )
+        snapshot_ids.add(
+            _required_sha256(entry.name, field="stored snapshot directory")
+        )
     return snapshot_ids
 
 
