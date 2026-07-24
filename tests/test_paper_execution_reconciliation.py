@@ -138,7 +138,9 @@ def test_reconciliation_replays_exact_persisted_chain_and_cost_versions(tmp_path
     assert evidence.reconciliation_id == (
         "ce9fc583d2dcbb34f55b6c119c98fbcb8fa8aa01bfc7b56e0dee83b1c679274f"
     )
-    assert PaperExecutionReconciliationEvidence.from_json_bytes(evidence.to_json_bytes()) == evidence
+    assert (
+        PaperExecutionReconciliationEvidence.from_json_bytes(evidence.to_json_bytes()) == evidence
+    )
     evidence.assert_reconstructs(
         intent_journal=chain[0],
         quote_store=chain[1],
