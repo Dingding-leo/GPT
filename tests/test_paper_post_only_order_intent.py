@@ -107,7 +107,7 @@ def _intent(
         450_000,
         tzinfo=UTC,
     ),
-    expires_at_utc: datetime | str = datetime(2026, 7, 21, 0, 0, 2, tzinfo=UTC),
+    expires_at_utc: datetime | str = datetime(2026, 7, 21, 0, 0, 0, 500_000, tzinfo=UTC),
     maximum_quote_age_ms: int = 250,
     limit_price: str = "66113.8",
 ) -> PaperPostOnlyOrderIntent:
@@ -163,6 +163,30 @@ def test_post_only_order_intent_rejects_taker_or_stale_requests() -> None:
     with pytest.raises(ValueError, match="stale"):
         _intent(
             created_at_utc=datetime(2026, 7, 21, 0, 0, 0, 600_000, tzinfo=UTC),
+            expires_at_utc=datetime(2026, 7, 21, 0, 0, 0, 700_000, tzinfo=UTC),
+            maximum_quote_age_ms=250,
+        )
+
+
+def test_post_only_order_intent_cannot_outlive_quote_freshness() -> None:
+    accepted = _intent(
+        expires_at_utc=datetime(2026, 7, 21, 0, 0, 0, 550_001, tzinfo=UTC),
+        maximum_quote_age_ms=250,
+    )
+    assert accepted.expires_at_utc == datetime(
+        2026,
+        7,
+        21,
+        0,
+        0,
+        0,
+        550_001,
+        tzinfo=UTC,
+    )
+
+    with pytest.raises(ValueError, match="cannot outlive its execution quote freshness window"):
+        _intent(
+            expires_at_utc=datetime(2026, 7, 21, 0, 0, 0, 550_002, tzinfo=UTC),
             maximum_quote_age_ms=250,
         )
 
