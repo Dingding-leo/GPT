@@ -28,10 +28,11 @@ def _validated_output_name(output_name: str) -> str:
 
 def _manifest_files(root: Path, output_name: str, temporary_name: str) -> list[Path]:
     files: list[Path] = []
+    excluded_paths = {root / output_name, root / temporary_name}
     for path in root.rglob("*"):
         if path.is_symlink():
             raise ValueError(f"artifact tree must not contain symlinks: {path}")
-        if not path.is_file() or path.name in {output_name, temporary_name}:
+        if not path.is_file() or path in excluded_paths:
             continue
         relative = path.relative_to(root).as_posix()
         if any(character in relative for character in ("\n", "\r", "\\")):
@@ -45,7 +46,10 @@ def verify_manifest(root: str | Path, output_name: str = _DEFAULT_OUTPUT_NAME) -
     if not root_path.is_dir():
         raise ValueError("artifact root must be a directory")
     output_name = _validated_output_name(output_name)
+    temporary_name = f"{output_name}.tmp"
     manifest_path = root_path / output_name
+    if manifest_path.is_symlink():
+        raise ValueError("artifact manifest must not be a symlink")
     try:
         lines = manifest_path.read_text(encoding="utf-8").splitlines()
     except FileNotFoundError as exc:
@@ -82,6 +86,18 @@ def verify_manifest(root: str | Path, output_name: str = _DEFAULT_OUTPUT_NAME) -
             raise ValueError(f"artifact manifest path escapes the artifact root: {relative}")
         if _sha256_file(file_path) != expected:
             raise ValueError(f"artifact manifest digest mismatch: {relative}")
+
+    actual_paths = {
+        path.relative_to(root_path).as_posix()
+        for path in _manifest_files(root_path, output_name, temporary_name)
+    }
+    if seen != actual_paths:
+        details: list[str] = []
+        if unmanifested := sorted(actual_paths - seen):
+            details.append(f"unmanifested files: {', '.join(unmanifested)}")
+        if missing := sorted(seen - actual_paths):
+            details.append(f"missing files: {', '.join(missing)}")
+        raise ValueError(f"artifact manifest file set mismatch ({'; '.join(details)})")
 
 
 def build_manifest(root: str | Path, output_name: str = _DEFAULT_OUTPUT_NAME) -> str:
