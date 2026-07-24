@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import stat
 from collections.abc import Iterator
 from contextlib import contextmanager, suppress
@@ -19,6 +20,7 @@ from .execution_quote_evidence import ExecutionQuoteEvidenceStore
 from .target_intent_journal import TargetPositionIntentJournal
 
 _STAGING_PREFIX = ".execution-quote-binding-journal-"
+_STAGE_NAME = re.compile(r"\.execution-quote-binding-journal-[0-9]+-[0-9a-f]{16}\.tmp")
 _ERROR_LABEL = "execution quote binding journal"
 
 
@@ -217,6 +219,40 @@ def _verify_directory_path(path: Path, expected: os.stat_result) -> None:
         raise RuntimeError(f"{_ERROR_LABEL} output directory path changed during use")
 
 
+def _recover_stale_stages(directory_descriptor: int) -> None:
+    recovered = False
+    no_follow = getattr(os, "O_NOFOLLOW", 0)
+    nonblock = getattr(os, "O_NONBLOCK", 0)
+    for name in sorted(os.listdir(directory_descriptor)):
+        if _STAGE_NAME.fullmatch(name) is None:
+            continue
+        try:
+            descriptor = os.open(
+                name,
+                os.O_RDONLY | no_follow | nonblock,
+                dir_fd=directory_descriptor,
+            )
+        except OSError as exc:
+            raise ValueError(f"{_ERROR_LABEL} staged file must be a private regular file") from exc
+        try:
+            staged_stat = _validate_private_file_descriptor(
+                descriptor,
+                label=f"{_ERROR_LABEL} staged file",
+            )
+            path_stat = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+            if (
+                path_stat.st_dev != staged_stat.st_dev
+                or path_stat.st_ino != staged_stat.st_ino
+            ):
+                raise RuntimeError(f"{_ERROR_LABEL} staged file changed during recovery")
+        finally:
+            os.close(descriptor)
+        os.unlink(name, dir_fd=directory_descriptor)
+        recovered = True
+    if recovered:
+        os.fsync(directory_descriptor)
+
+
 def _validate_lock_descriptor(descriptor: int) -> os.stat_result:
     os.fchmod(descriptor, 0o600)
     return _validate_private_file_descriptor(
@@ -256,6 +292,7 @@ def _exclusive_writer_lock(
         os.ftruncate(descriptor, 0)
         os.write(descriptor, f"pid={os.getpid()}\n".encode("ascii"))
         os.fsync(descriptor)
+        _recover_stale_stages(directory_descriptor)
         yield directory_descriptor, directory_stat
     finally:
         if acquired:
