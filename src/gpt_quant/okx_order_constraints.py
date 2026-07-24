@@ -4,7 +4,9 @@ import re
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+from .execution_quote import ExecutionQuoteSnapshot
 from .okx_instruments import OKXSpotInstrumentSnapshot
+from .paper_execution_attempt import PaperExecutionAttempt
 
 _DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 
@@ -127,3 +129,63 @@ def validate_okx_spot_limit_order_constraints(
     if price % snapshot.tick_size_decimal != 0:
         raise ValueError("limit_price is not an exact multiple of the OKX tick size")
     return canonical_quantity, canonical_price
+
+
+def validate_okx_paper_execution_attempt_constraints(
+    snapshot: OKXSpotInstrumentSnapshot,
+    quote: ExecutionQuoteSnapshot,
+    attempt: PaperExecutionAttempt,
+    *,
+    maximum_snapshot_age_ms: int,
+) -> None:
+    """Bind one paper attempt to exact OKX instrument and touch-capacity evidence.
+
+    This offline gate performs no network or account operation. It proves that the
+    attempt references the supplied quote and immutable instrument response, that the
+    requested quantity was valid when submitted, and that any claimed fill is aligned
+    to the exchange lot and no larger than the visible same-side top-of-book quantity.
+    It does not infer deeper liquidity, minimum quote notional, slippage or impact.
+    """
+
+    if not isinstance(snapshot, OKXSpotInstrumentSnapshot):
+        raise TypeError("snapshot must be an OKXSpotInstrumentSnapshot")
+    if not isinstance(quote, ExecutionQuoteSnapshot):
+        raise TypeError("quote must be an ExecutionQuoteSnapshot")
+    if not isinstance(attempt, PaperExecutionAttempt):
+        raise TypeError("attempt must be a PaperExecutionAttempt")
+
+    if quote.instrument_snapshot_sha256 != snapshot.raw_response_sha256:
+        raise ValueError("execution quote does not reference the supplied OKX instrument snapshot")
+    if (
+        quote.instrument_id != snapshot.instrument_id
+        or attempt.instrument_id != quote.instrument_id
+    ):
+        raise ValueError("paper execution instrument does not match the supplied OKX evidence")
+    if attempt.quote_snapshot_id != quote.snapshot_id:
+        raise ValueError("paper execution attempt does not reference the supplied quote")
+    if (
+        attempt.quote_observed_at_utc != quote.observed_at_utc
+        or attempt.quote_received_at_utc != quote.received_at_utc
+        or attempt.reference_bid_price != quote.bid_price
+        or attempt.reference_ask_price != quote.ask_price
+    ):
+        raise ValueError("paper execution attempt does not reproduce the supplied quote")
+
+    validate_okx_spot_order_quantity(
+        snapshot,
+        submitted_at_utc=attempt.submitted_at_utc,
+        maximum_snapshot_age_ms=maximum_snapshot_age_ms,
+        base_quantity=attempt.requested_base_quantity,
+    )
+
+    filled = Decimal(attempt.filled_base_quantity)
+    if filled % snapshot.lot_size_decimal != 0:
+        raise ValueError("filled_base_quantity is not an exact multiple of the OKX lot size")
+    if filled == 0:
+        return
+
+    visible_touch_quantity = Decimal(
+        quote.ask_quantity if attempt.side == "buy" else quote.bid_quantity
+    )
+    if filled > visible_touch_quantity:
+        raise ValueError("filled_base_quantity exceeds the supplied same-side top-of-book quantity")
