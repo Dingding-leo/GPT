@@ -11,6 +11,7 @@ import gpt_quant.paper_decision_store as store_module
 from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.paper_decision_store import (
     PaperOrderDecision,
+    initialize_paper_order_decision_store,
     pending_target_position_intents,
     record_paper_order_decision,
 )
@@ -96,9 +97,12 @@ def test_publication_fsyncs_store_parent_file_then_directory_entry(
     monkeypatch.setattr(store_module.os, "fsync", trace_fsync)
     monkeypatch.setattr(store_module.os, "replace", trace_replace)
 
+    initialize_paper_order_decision_store(target_path, decision_directory)
     assert record_paper_order_decision(target_path, decision_directory, decision) == decision
     assert events == [
         "parent_directory_fsync",
+        "file_fsync",
+        "decision_directory_fsync",
         "file_fsync",
         "replace",
         "decision_directory_fsync",
