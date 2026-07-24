@@ -8,6 +8,8 @@ from .okx_instruments import OKXSpotInstrumentSnapshot
 from .okx_order_constraints import validate_okx_spot_limit_order_constraints
 from .paper_post_only_order_intent import PaperPostOnlyOrderIntent
 
+__all__ = ["validate_okx_paper_post_only_order_intent_constraints"]
+
 _DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 
 
