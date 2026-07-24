@@ -74,7 +74,7 @@ def test_workflow_reselects_and_verifies_btc_and_eth_independently() -> None:
     assert research_block.count("--config config/okx_research_1h.json") == 1
     assert research_block.count('--inst-id "${{ matrix.inst_id }}"') == 1
     assert provenance_block.count("python -m gpt_quant.intraday_1h_source_provenance") == 1
-    assert provenance_block.count('--inst-id "${{ matrix.inst_id }}"') == 1
+    assert provenance_block.count('--inst-id="${{ matrix.inst_id }}"') == 1
     assert 'REPORT_DIR: "reports/okx/1h/${{ matrix.inst_id }}"' in workflow
     assert 'SOURCE_ROOT: "reports/okx/1h/source/${{ matrix.inst_id }}"' in workflow
     assert workflow.count("experiment-manifest.jsonl") >= 2
