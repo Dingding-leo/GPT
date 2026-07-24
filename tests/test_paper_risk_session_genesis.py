@@ -16,10 +16,14 @@ from gpt_quant.paper_risk_session_gate import (
     advance_paper_risk_session_high_watermarks,
 )
 
-_FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1h-raw-20260724"
+_FIXTURE_DIR = (
+    Path(__file__).parent / "fixtures" / "okx" / "btc-usdt-1h-raw-20260724"
+)
 _ROWS_PATH = _FIXTURE_DIR / "rows.json"
 _METADATA_PATH = _FIXTURE_DIR / "metadata.json"
-_EXPECTED_ROWS_SHA256 = "228828e32a5a43f0010a326ab65c368dbdc6202a158738b0e9956ad7c6393137"
+_EXPECTED_ROWS_SHA256 = (
+    "228828e32a5a43f0010a326ab65c368dbdc6202a158738b0e9956ad7c6393137"
+)
 
 
 def _real_okx_1h_anchor() -> tuple[datetime, datetime, float]:
@@ -33,14 +37,22 @@ def _real_okx_1h_anchor() -> tuple[datetime, datetime, float]:
     assert metadata["confirm_values"] == ["1"]
 
     rows = json.loads(rows_bytes)
-    timestamps = sorted(datetime.fromtimestamp(int(row[0]) / 1000, tz=UTC) for row in rows)
+    timestamps = sorted(
+        datetime.fromtimestamp(int(row[0]) / 1000, tz=UTC) for row in rows
+    )
     close_by_timestamp = {
-        datetime.fromtimestamp(int(row[0]) / 1000, tz=UTC): float(row[4]) for row in rows
+        datetime.fromtimestamp(int(row[0]) / 1000, tz=UTC): float(row[4])
+        for row in rows
     }
     return timestamps[0], timestamps[1], close_by_timestamp[timestamps[0]]
 
 
-def _snapshot(*, observed_at: datetime, session_start: datetime, equity: float) -> PaperRiskStateSnapshot:
+def _snapshot(
+    *,
+    observed_at: datetime,
+    session_start: datetime,
+    equity: float,
+) -> PaperRiskStateSnapshot:
     return PaperRiskStateSnapshot(
         observed_at_utc=observed_at,
         session_start_utc=session_start,
@@ -50,7 +62,9 @@ def _snapshot(*, observed_at: datetime, session_start: datetime, equity: float) 
         current_equity=equity,
         daily_underlying_turnover=0.0,
         instrument_exposures=(InstrumentExposure("BTC-USDT", 0.25),),
-        portfolio_state_sha256=hashlib.sha256(observed_at.isoformat().encode()).hexdigest(),
+        portfolio_state_sha256=hashlib.sha256(
+            observed_at.isoformat().encode()
+        ).hexdigest(),
         market_data_source_sha256=_EXPECTED_ROWS_SHA256,
     )
 
