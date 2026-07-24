@@ -7,13 +7,13 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
+from test_execution_quote_binding_journal import _sources
 
 from gpt_quant.execution_quote_binding import bind_execution_quote
 from gpt_quant.execution_quote_binding_journal import (
     load_execution_quote_binding_journal,
     record_execution_quote_binding,
 )
-from test_execution_quote_binding_journal import _sources
 
 
 @contextmanager
