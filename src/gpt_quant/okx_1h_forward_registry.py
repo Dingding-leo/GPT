@@ -20,6 +20,7 @@ _JOURNAL_NAME = "okx-1h-forward-registry.jsonl"
 _DESCRIPTOR_NAME = "snapshot-descriptor.json"
 _ONE_HOUR = pd.Timedelta(hours=1)
 _SAFE_INSTRUMENT = re.compile(r"^[A-Z0-9-]+$")
+_VOLATILE_REACQUISITION_METADATA_FIELDS = frozenset({"fetched_at_utc"})
 _RECORD_KEYS = {
     "schema_version",
     "provider",
@@ -269,6 +270,24 @@ def _persist_snapshot(
     _write_once_or_same(destination_dir / _DESCRIPTOR_NAME, _canonical_json_bytes(descriptor))
 
 
+def _same_window_reacquisition(previous: Any, current: Any) -> bool:
+    if not previous.candles.equals(current.candles):
+        return False
+    if previous.raw_pages != current.raw_pages:
+        return False
+    previous_metadata = {
+        key: value
+        for key, value in previous.metadata.items()
+        if key not in _VOLATILE_REACQUISITION_METADATA_FIELDS
+    }
+    current_metadata = {
+        key: value
+        for key, value in current.metadata.items()
+        if key not in _VOLATILE_REACQUISITION_METADATA_FIELDS
+    }
+    return previous_metadata == current_metadata
+
+
 def _compare_snapshots(previous: Any, current: Any) -> dict[str, Any]:
     previous_start = _timestamp(previous.metadata["start"], field="previous snapshot start")
     previous_end = _timestamp(previous.metadata["end"], field="previous snapshot end")
@@ -396,6 +415,8 @@ def register_okx_one_hour_forward_snapshot(
     if previous_record is not None:
         previous_dir = _stored_snapshot_dir(instrument_dir, previous_record["snapshot_id"])
         previous_snapshot = replay_persisted_okx_one_hour_snapshot(previous_dir, inst_id=inst_id)
+        if _same_window_reacquisition(previous_snapshot, current_snapshot):
+            return dict(previous_record)
         transition = _compare_snapshots(previous_snapshot, current_snapshot)
     record = _record_payload(
         descriptor,
