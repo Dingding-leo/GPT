@@ -84,22 +84,6 @@ jobs:
           print(module_path)
           PY
 
-      - name: Canonically format bounded data files
-        run: |
-          ruff format \
-            src/gpt_quant/okx_order_constraints.py \
-            tests/test_okx_instrument_request_round_trip.py
-
-      - name: Upload canonical data files
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: formatted-data-files-${{ github.run_number }}-attempt-${{ github.run_attempt }}
-          path: |
-            src/gpt_quant/okx_order_constraints.py
-            tests/test_okx_instrument_request_round_trip.py
-          if-no-files-found: error
-          retention-days: 1
-
       - name: Lint and formatting
         id: lint_format
         run: ruff check . && ruff format --check .
