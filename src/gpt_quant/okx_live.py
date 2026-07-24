@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from math import isfinite
 from typing import Any
 
@@ -87,6 +88,34 @@ def _required_finite_number(value: Any, *, field: str) -> float:
     return number
 
 
+def _expected_midpoint_clock_skew_seconds(
+    sample: OKXServerTimeSample,
+    *,
+    local_started: pd.Timestamp,
+    local_received: pd.Timestamp,
+    server_time: pd.Timestamp,
+) -> float:
+    """Reconstruct skew using the precision domain that produced the timestamps."""
+
+    raw_values = (
+        sample.local_request_started_utc,
+        sample.local_response_received_utc,
+        sample.server_time_utc,
+    )
+    plain_datetimes = all(
+        isinstance(value, datetime) and not isinstance(value, pd.Timestamp) for value in raw_values
+    )
+    if plain_datetimes:
+        python_started = sample.local_request_started_utc.astimezone(UTC)
+        python_received = sample.local_response_received_utc.astimezone(UTC)
+        python_server_time = sample.server_time_utc.astimezone(UTC)
+        midpoint = python_started + (python_received - python_started) / 2
+        return (python_server_time - midpoint).total_seconds()
+
+    midpoint = local_started + (local_received - local_started) / 2
+    return (server_time - midpoint).total_seconds()
+
+
 def validate_okx_server_time_sample(
     sample: OKXServerTimeSample,
     *,
@@ -148,8 +177,12 @@ def validate_okx_server_time_sample(
     if recorded_round_trip > round_trip_bound:
         raise ValueError("OKX server-time round trip exceeds the live cutoff bound")
 
-    midpoint = local_started + (local_received - local_started) / 2
-    expected_clock_skew = (server_time - midpoint).total_seconds()
+    expected_clock_skew = _expected_midpoint_clock_skew_seconds(
+        sample,
+        local_started=local_started,
+        local_received=local_received,
+        server_time=server_time,
+    )
     recorded_clock_skew = _required_finite_number(
         sample.midpoint_clock_skew_seconds,
         field="OKX midpoint clock skew",

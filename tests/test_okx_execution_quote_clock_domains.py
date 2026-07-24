@@ -82,6 +82,17 @@ def _intent() -> TargetPositionIntent:
             datetime(2021, 8, 26, 8, 27, 16, 496_000, tzinfo=UTC),
             datetime(2021, 8, 26, 8, 27, 16, 550_000, tzinfo=UTC),
         ),
+        (
+            (
+                "2021-08-26T08:27:16.320000Z",
+                "2021-08-26T08:27:16.350000Z",
+                "2021-08-26T08:27:16.360001Z",
+                "2021-08-26T08:27:16.440000Z",
+            ),
+            0.099999,
+            datetime(2021, 8, 26, 8, 27, 16, 296_001, tzinfo=UTC),
+            datetime(2021, 8, 26, 8, 27, 16, 350_000, tzinfo=UTC),
+        ),
     ],
 )
 def test_quote_uses_one_local_clock_for_downstream_chronology(
