@@ -161,7 +161,9 @@ def validate_okx_paper_post_only_order_intent_constraints(
         quote.instrument_snapshot_sha256 != snapshot.raw_response_sha256
         or intent.instrument_snapshot_sha256 != snapshot.raw_response_sha256
     ):
-        raise ValueError("maker order intent does not reference the supplied OKX instrument snapshot")
+        raise ValueError(
+            "maker order intent does not reference the supplied OKX instrument snapshot"
+        )
     if (
         quote.instrument_id != snapshot.instrument_id
         or intent.instrument_id != quote.instrument_id
