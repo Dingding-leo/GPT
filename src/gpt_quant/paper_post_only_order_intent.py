@@ -176,8 +176,14 @@ class PaperPostOnlyOrderIntent:
 
         maximum_age = _maximum_age(self.maximum_quote_age_ms)
         object.__setattr__(self, "maximum_quote_age_ms", maximum_age)
-        if self.created_at_utc - self.quote_observed_at_utc > timedelta(milliseconds=maximum_age):
+        maximum_quote_age = timedelta(milliseconds=maximum_age)
+        if self.created_at_utc - self.quote_observed_at_utc > maximum_quote_age:
             raise ValueError("execution quote is stale at post-only order intent creation")
+        latest_active_at = self.expires_at_utc - timedelta(microseconds=1)
+        if latest_active_at - self.quote_observed_at_utc > maximum_quote_age:
+            raise ValueError(
+                "post-only order intent cannot outlive its execution quote freshness window"
+            )
 
         if self.side not in {"buy", "sell"}:
             raise ValueError("side must be buy or sell")
