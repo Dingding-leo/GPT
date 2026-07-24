@@ -7,6 +7,7 @@ from pathlib import Path
 
 _FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "okx" / "trades-btc-usdt-docs-20220602"
 _SCRIPT = Path(__file__).parents[1] / "scripts" / "build_maker_replay_gate.py"
+_COVERAGE_BLOCKER = "complete_submission_to_expiry_trade_coverage_missing"
 
 
 def _run(*arguments: str, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -21,18 +22,26 @@ def _run(*arguments: str, check: bool = True) -> subprocess.CompletedProcess[str
     return result
 
 
-def _build(output_dir: Path) -> dict[str, object]:
+def _build(
+    output_dir: Path,
+    *,
+    metadata_path: Path | None = None,
+) -> dict[str, object]:
     result = _run(
         "--source-response",
         str(_FIXTURE_ROOT / "response.json"),
         "--source-metadata",
-        str(_FIXTURE_ROOT / "metadata.json"),
+        str(metadata_path or _FIXTURE_ROOT / "metadata.json"),
         "--output-dir",
         str(output_dir),
     )
     summary = json.loads(result.stdout)
-    assert summary["maker_order_replay_passes"] is True
+    assert summary["maker_order_replay_passes"] is False
+    assert summary["execution_interval_coverage_passes"] is False
     assert summary["replay_equivalent"] is True
+    assert summary["blockers"] == [_COVERAGE_BLOCKER]
+    assert summary["structural_outcomes"] == ["cancelled_no_fill", "cancelled_partial"]
+    assert summary["observed_outcomes"] == []
     return json.loads((output_dir / "maker-order-replay-gate.json").read_text())
 
 
@@ -48,7 +57,7 @@ def _directory_bytes(root: Path) -> dict[str, bytes]:
     }
 
 
-def test_maker_replay_gate_is_deterministic_and_offline(tmp_path: Path) -> None:
+def test_maker_replay_gate_is_deterministic_offline_and_fail_closed(tmp_path: Path) -> None:
     first_root = tmp_path / "first"
     second_root = tmp_path / "second"
 
@@ -58,17 +67,29 @@ def test_maker_replay_gate_is_deterministic_and_offline(tmp_path: Path) -> None:
     assert first == second
     assert _directory_bytes(first_root) == _directory_bytes(second_root)
     verification = json.loads(_verify(first_root).stdout)
-    assert verification["maker_order_replay_passes"] is True
-    assert verification["observed_outcomes"] == ["cancelled_no_fill", "cancelled_partial"]
+    assert verification["maker_order_replay_passes"] is False
+    assert verification["execution_interval_coverage_passes"] is False
+    assert verification["structural_outcomes"] == ["cancelled_no_fill", "cancelled_partial"]
+    assert verification["observed_outcomes"] == []
+    assert first["schema_version"] == 2
     assert first["canonical_timeframe"] == "1H"
     assert first["benchmark_timeframe"] == "1Dutc"
     assert first["optional_next_timeframe"] == "15m"
-    assert first["observed_outcomes"] == ["cancelled_no_fill", "cancelled_partial"]
-    assert first["maker_order_replay_passes"] is True
+    assert first["mechanics_replay_passes"] is True
+    assert first["execution_interval_coverage_passes"] is False
+    assert first["maker_order_replay_passes"] is False
     assert first["replay_equivalent"] is True
+    assert first["outcome_evidence_scope"] == "structural_scenario_only"
     assert first["account_connectivity"] == "disabled"
     assert first["order_submission"] == "not_performed"
-    assert first["blockers"] == []
+    assert first["blockers"] == [_COVERAGE_BLOCKER]
+
+    coverage = first["source"]["coverage"]
+    assert coverage["coverage_complete_declared"] is False
+    assert coverage["source_kind_is_complete_capture"] is False
+    assert coverage["submission_bracketed"] is False
+    assert coverage["expiry_bracketed"] is False
+    assert coverage["complete_submission_to_expiry"] is False
 
     assert first["modeled_economics"] == {
         "exchange_fee_one_way_bps": "5",
@@ -87,6 +108,32 @@ def test_maker_replay_gate_is_deterministic_and_offline(tmp_path: Path) -> None:
     assert partial_fill["unfilled_base_quantity"] == "0.00001"
     assert partial_fill["exchange_fee_one_way_bps"] == "5"
     assert partial_fill["requote_eligible"] is True
+
+
+def test_documentation_fixture_cannot_self_assert_complete_interval(tmp_path: Path) -> None:
+    metadata = json.loads((_FIXTURE_ROOT / "metadata.json").read_text(encoding="utf-8"))
+    metadata.update(
+        {
+            "coverage_complete": True,
+            "coverage_start_utc": "2022-06-02T09:20:39Z",
+            "coverage_end_utc": "2022-06-02T09:20:51Z",
+        }
+    )
+    metadata_path = tmp_path / "metadata.json"
+    metadata_path.write_text(
+        json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    gate = _build(tmp_path / "evidence", metadata_path=metadata_path)
+
+    coverage = gate["source"]["coverage"]
+    assert coverage["coverage_complete_declared"] is True
+    assert coverage["submission_bracketed"] is True
+    assert coverage["expiry_bracketed"] is True
+    assert coverage["source_kind_is_complete_capture"] is False
+    assert gate["maker_order_replay_passes"] is False
+    assert gate["blockers"] == [_COVERAGE_BLOCKER]
 
 
 def test_maker_replay_gate_rejects_tampered_replay_bytes(tmp_path: Path) -> None:
