@@ -408,13 +408,7 @@ def load_paper_execution_attempt_journal(
     """Replay every attempt from the exact persisted intent, quote, and binding chain."""
 
     journal_path = Path(path)
-    if not journal_path.name or journal_path.name in {".", ".."}:
-        raise ValueError(f"{_ERROR_LABEL} path must name one file")
-    directory_descriptor, directory_stat, _ = _open_output_directory(
-        journal_path.parent,
-        create=False,
-    )
-    try:
+    with _exclusive_writer_lock(journal_path) as (directory_descriptor, _):
         journal = _parse_journal_bytes(
             _read_private_journal(directory_descriptor, journal_path.name)
         )
@@ -425,11 +419,6 @@ def load_paper_execution_attempt_journal(
             binding_journal=binding_journal,
         )
         return journal
-    finally:
-        try:
-            _verify_directory_path(journal_path.parent, directory_stat)
-        finally:
-            os.close(directory_descriptor)
 
 
 def record_paper_execution_attempt_evidence(
