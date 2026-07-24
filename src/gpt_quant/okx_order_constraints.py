@@ -100,3 +100,30 @@ def validate_okx_spot_order_quantity(
     if quantity % lot_size != 0:
         raise ValueError("base_quantity is not an exact multiple of the OKX lot size")
     return canonical_quantity
+
+
+def validate_okx_spot_limit_order_constraints(
+    snapshot: OKXSpotInstrumentSnapshot,
+    *,
+    submitted_at_utc: datetime,
+    maximum_snapshot_age_ms: int,
+    base_quantity: str,
+    limit_price: str,
+) -> tuple[str, str]:
+    """Validate quantity and tick alignment for one offline OKX spot limit intent.
+
+    This is a pre-adapter constraint gate, not an order submission. It deliberately
+    does not infer minimum quote notional, spread, slippage, impact, latency or fill
+    probability; those require separately versioned current quote and cost evidence.
+    """
+
+    canonical_quantity = validate_okx_spot_order_quantity(
+        snapshot,
+        submitted_at_utc=submitted_at_utc,
+        maximum_snapshot_age_ms=maximum_snapshot_age_ms,
+        base_quantity=base_quantity,
+    )
+    canonical_price, price = _positive_canonical_decimal(limit_price, field="limit_price")
+    if price % snapshot.tick_size_decimal != 0:
+        raise ValueError("limit_price is not an exact multiple of the OKX tick size")
+    return canonical_quantity, canonical_price
