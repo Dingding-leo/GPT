@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+import gpt_quant._paper_decision_store_core as core_module
 import gpt_quant.paper_decision_store as store_module
 from gpt_quant.execution_intent import TargetPositionIntent
 from gpt_quant.paper_decision_store import (
@@ -278,3 +279,49 @@ def test_replay_rejects_canonical_decision_that_precedes_target_activation(
         replay_paper_order_decision_store(target_path, decision_directory)
     with pytest.raises(ValueError, match="cannot precede target activation"):
         pending_target_position_intents(target_path, decision_directory)
+
+
+def test_decision_record_size_limit_accepts_exact_boundary_and_rejects_plus_one(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    target_path, decision_directory, target = _paths(tmp_path)
+    decision = record_paper_order_decision(
+        target_path,
+        decision_directory,
+        _decision(target),
+    )
+    path = decision_directory / f"{target.intent_id}.json"
+    payload = path.read_bytes()
+    monkeypatch.setattr(core_module, "_MAX_DECISION_RECORD_BYTES", len(payload))
+
+    assert load_paper_order_decision(path) == decision
+    assert (
+        replay_paper_order_decision_store(target_path, decision_directory).decisions
+        == (decision,)
+    )
+
+    path.write_bytes(payload + b"\n")
+    os.chmod(path, 0o600)
+    with pytest.raises(ValueError, match="exceeds the maximum record size"):
+        load_paper_order_decision(path)
+    with pytest.raises(ValueError, match="exceeds the maximum record size"):
+        replay_paper_order_decision_store(target_path, decision_directory)
+
+
+def test_decision_record_read_limit_rejects_growth_after_fstat(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    path = tmp_path / "decision.json"
+    path.write_bytes(b"x")
+    os.chmod(path, 0o600)
+    descriptor = os.open(path, os.O_RDONLY)
+    chunks = iter((b"a" * 8, b"b", b""))
+    monkeypatch.setattr(core_module, "_MAX_DECISION_RECORD_BYTES", 8)
+    monkeypatch.setattr(core_module.os, "read", lambda _descriptor, _size: next(chunks))
+    try:
+        with pytest.raises(ValueError, match="exceeds the maximum record size"):
+            core_module._read_decision_descriptor(descriptor, "paper order decision")
+    finally:
+        os.close(descriptor)
