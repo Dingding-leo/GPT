@@ -170,13 +170,7 @@ def test_forward_registry_rejects_tampered_stored_source_artifact(tmp_path: Path
         registry,
         inst_id="BTC-USDT",
     )
-    stored_raw = (
-        registry
-        / "BTC-USDT"
-        / "snapshots"
-        / record["snapshot_id"]
-        / "okx-BTC-USDT-1H.raw.json"
-    )
+    stored_raw = registry / "BTC-USDT" / "snapshots" / record["snapshot_id"] / "okx-BTC-USDT-1H.raw.json"
     stored_raw.write_bytes(stored_raw.read_bytes() + b" ")
 
     with pytest.raises(ValueError, match="raw-pages hash mismatch"):
