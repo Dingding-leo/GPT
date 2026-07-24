@@ -81,11 +81,7 @@ def derive_okx_one_hour_page_budget(
 
     if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 100:
         raise ValueError("limit must be an integer in [1, 100]")
-    if (
-        isinstance(safety_pages, bool)
-        or not isinstance(safety_pages, int)
-        or safety_pages < 1
-    ):
+    if isinstance(safety_pages, bool) or not isinstance(safety_pages, int) or safety_pages < 1:
         raise ValueError("safety_pages must be a positive integer")
     start_timestamp = _hour_aligned_utc(start, field="start")
     end_timestamp = _hour_aligned_utc(end, field="end")
