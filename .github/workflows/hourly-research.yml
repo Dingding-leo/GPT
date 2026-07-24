@@ -60,9 +60,11 @@ jobs:
           [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           actual_sha="$(git rev-parse HEAD)"
           test "$actual_sha" = "$EXPECTED_TESTED_SHA"
+          if [[ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]]; then
+            test "$GITHUB_REF" = "refs/heads/main"
+          fi
           if [[ -n "$REQUESTED_TARGET_SHA" ]]; then
             test "$GITHUB_EVENT_NAME" = "workflow_dispatch"
-            test "$GITHUB_REF" = "refs/heads/main"
             test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"
             [[ "$DISPATCH_REF_SHA" =~ ^[0-9a-f]{40}$ ]]
             git cat-file -e "${DISPATCH_REF_SHA}^{commit}"
