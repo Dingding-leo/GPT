@@ -1,15 +1,28 @@
 from __future__ import annotations
 
+import importlib.util
 from pathlib import Path
+from types import ModuleType
 
 import pytest
-
-import scripts.run_okx_research as research_script
 
 _FIXTURE_DIR = Path(__file__).parent / "fixtures" / "okx_1h" / "BTC-USDT"
 
 
+def _load_run_okx_research_module() -> ModuleType:
+    spec = importlib.util.spec_from_file_location(
+        "run_okx_research_snapshot_cli", "scripts/run_okx_research.py"
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("unable to load scripts/run_okx_research.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def test_research_replays_exact_byte_one_hour_snapshot_without_network(monkeypatch) -> None:
+    research_script = _load_run_okx_research_module()
+
     def unexpected_fetch(**kwargs):
         pytest.fail(f"exact-byte research attempted a second network fetch: {kwargs}")
 
@@ -38,6 +51,8 @@ def test_research_replays_exact_byte_one_hour_snapshot_without_network(monkeypat
 
 
 def test_research_rejects_snapshot_boundary_drift() -> None:
+    research_script = _load_run_okx_research_module()
+
     with pytest.raises(ValueError, match="snapshot start does not match executed config"):
         research_script._load_market_snapshot(
             inst_id="BTC-USDT",
@@ -54,6 +69,8 @@ def test_research_rejects_snapshot_boundary_drift() -> None:
 
 
 def test_research_rejects_exact_byte_snapshot_for_non_hourly_path() -> None:
+    research_script = _load_run_okx_research_module()
+
     with pytest.raises(ValueError, match="supported only for the canonical 1H path"):
         research_script._load_market_snapshot(
             inst_id="BTC-USDT",
