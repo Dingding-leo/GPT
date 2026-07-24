@@ -270,7 +270,7 @@ def test_market_artifact_rejects_missing_source_provenance(tmp_path: Path) -> No
     (artifact / "intraday-1h-source-provenance.json").unlink()
     build_manifest(artifact)
 
-    with pytest.raises(ValueError, match="missing"):
+    with pytest.raises(FileNotFoundError):
         module._validate_market_artifact(artifact, "BTC-USDT")
 
 
