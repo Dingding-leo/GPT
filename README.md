@@ -37,6 +37,19 @@ r^{\text{strategy}}_t = p^*_{t-1}r_t-c\lvert p^*_{t-1}-p^*_{t-2}\rvert
 
 这条一根 bar 的执行延迟，是防止未来函数的最低要求之一。
 
+## 当前 `1Dutc` 信号、报价与绑定边界
+
+当前代码可以用 OKX 公共、无认证的服务器时间验证最新完整日线是否已在交易所时间上收盘，并把响应、哈希和派生的 `signal_not_before_utc` 持久化为可重放证据。下游随后可以生成不可变目标意图、把 provider-neutral `ExecutionQuoteSnapshot` 写入私有不可变证据库并重放确定性根哈希，再用 `ExecutionQuoteBinding` 把准确的目标意图 ID、报价 ID、决策时刻和新鲜度策略绑定为一个确定性的 `binding_id`。
+
+下面的离线命令使用仓库内带 SHA-256 来源的真实 OKX 小型快照，重放“完整 K 线 → 交易所时间证据 → 不可变目标意图 → 结构性报价持久化/重放 → 可重构报价绑定”：
+
+```bash
+python examples/signal_intent_timing.py \
+  --output-dir reports/examples/signal-intent-timing
+```
+
+报价部分明确标记为结构性示例，不是 OKX 盘口抓取、订单或成交证据。`signal_not_before_utc`、bid/ask、midpoint、`snapshot_id` 和 `binding_id` 都不是订单或成交。当前仓库仍没有集成的 OKX 盘口生产器、持久化报价绑定、订单尺寸约束、纸面经纪商或成交日志。精确定义、时间顺序、重放边界和禁止的操作性声明见 [`docs/SIGNAL_INTENT_TIMING.md`](docs/SIGNAL_INTENT_TIMING.md)。
+
 ## OKX 滚动样本外实验
 
 ```bash
