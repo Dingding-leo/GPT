@@ -25,13 +25,30 @@ jobs:
       - name: Install Ruff
         run: python -m pip install "ruff>=0.9,<1"
 
-      - name: Check changed Python files
+      - name: Capture changed-file lint diagnostics
+        shell: bash
         run: |
+          set +e
           ruff check \
             src/gpt_quant/artifact_manifest.py \
             tests/test_artifact_manifest.py \
-            tests/test_intraday_research_profile.py
-          ruff format --check \
+            tests/test_intraday_research_profile.py \
+            > ruff-check.txt 2>&1
+          printf 'check_status=%s\n' "$?" > ruff-status.txt
+          ruff format --check --diff \
             src/gpt_quant/artifact_manifest.py \
             tests/test_artifact_manifest.py \
-            tests/test_intraday_research_profile.py
+            tests/test_intraday_research_profile.py \
+            > ruff-format.txt 2>&1
+          printf 'format_status=%s\n' "$?" >> ruff-status.txt
+
+      - name: Upload diagnostics
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: backtest-manifest-lint-diagnostic
+          path: |
+            ruff-check.txt
+            ruff-format.txt
+            ruff-status.txt
+          if-no-files-found: error
+          retention-days: 1
