@@ -5,6 +5,11 @@ from typing import Protocol
 
 from .execution_intent import TargetPositionIntent
 
+_SUPPORTED_BAR_DURATIONS = {
+    "1Dutc": timedelta(days=1),
+    "1H": timedelta(hours=1),
+}
+
 
 class CompletedSignalCutoff(Protocol):
     """Provider-neutral completed-bar timing evidence accepted by the intent boundary."""
@@ -31,6 +36,40 @@ def _required_utc_datetime(value: object, *, field_name: str) -> datetime:
     return parsed.astimezone(UTC)
 
 
+def _required_canonical_bar_window(
+    bar: str,
+    *,
+    signal_bar_open: datetime,
+    signal_bar_close: datetime,
+) -> timedelta:
+    try:
+        expected_duration = _SUPPORTED_BAR_DURATIONS[bar]
+    except KeyError as exc:
+        supported = ", ".join(sorted(_SUPPORTED_BAR_DURATIONS))
+        raise ValueError(
+            f"unsupported completed signal bar {bar!r}; supported bars: {supported}"
+        ) from exc
+
+    bar_duration = signal_bar_close - signal_bar_open
+    if bar_duration != expected_duration:
+        if bar == "1Dutc":
+            raise ValueError("1Dutc signal cutoff must cover exactly one UTC day")
+        raise ValueError("1H signal cutoff must cover exactly one hour")
+
+    if bar == "1Dutc":
+        aligned_open = signal_bar_open.replace(hour=0, minute=0, second=0, microsecond=0)
+        aligned_close = signal_bar_close.replace(hour=0, minute=0, second=0, microsecond=0)
+        if signal_bar_open != aligned_open or signal_bar_close != aligned_close:
+            raise ValueError("1Dutc signal cutoff must align to UTC midnight")
+    elif bar == "1H":
+        aligned_open = signal_bar_open.replace(minute=0, second=0, microsecond=0)
+        aligned_close = signal_bar_close.replace(minute=0, second=0, microsecond=0)
+        if signal_bar_open != aligned_open or signal_bar_close != aligned_close:
+            raise ValueError("1H signal cutoff must align to exact UTC hours")
+
+    return expected_duration
+
+
 def build_target_position_intent(
     cutoff: CompletedSignalCutoff,
     *,
@@ -45,8 +84,8 @@ def build_target_position_intent(
     """Translate one verified completed-bar cutoff into one immutable target intent.
 
     The activation timestamp is copied from the cutoff and expiry is the next scheduled
-    bar close. This function does not create an exchange order or make any price, spread,
-    slippage, market-impact, latency, acceptance, or fill claim.
+    canonical bar close. This function does not create an exchange order or make any price,
+    spread, slippage, market-impact, latency, acceptance, or fill claim.
     """
 
     try:
@@ -67,24 +106,11 @@ def build_target_position_intent(
     except AttributeError as exc:
         raise TypeError("cutoff must implement the CompletedSignalCutoff contract") from exc
 
-    bar_duration = signal_bar_close - signal_bar_open
-    if bar_duration <= timedelta(0):
-        raise ValueError("signal cutoff bar_close_utc must be after bar_open_utc")
-    if bar == "1Dutc":
-        if bar_duration != timedelta(days=1):
-            raise ValueError("1Dutc signal cutoff must cover exactly one UTC day")
-        if signal_bar_open != signal_bar_open.replace(
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
-        ) or signal_bar_close != signal_bar_close.replace(
-            hour=0,
-            minute=0,
-            second=0,
-            microsecond=0,
-        ):
-            raise ValueError("1Dutc signal cutoff must align to UTC midnight")
+    bar_duration = _required_canonical_bar_window(
+        bar,
+        signal_bar_open=signal_bar_open,
+        signal_bar_close=signal_bar_close,
+    )
 
     if decision_not_before <= signal_bar_close:
         raise ValueError("signal cutoff signal_not_before_utc must be after the signal bar close")
