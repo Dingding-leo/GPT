@@ -92,11 +92,11 @@ def test_workflow_hashes_and_rechecks_every_published_1h_file() -> None:
         "experiment-manifest.jsonl",
     ):
         assert f'test -s "$report_dir/{required_file}"' in manifest_block
-    assert "find \"$report_dir\" -type f" in manifest_block
+    assert 'find "$report_dir" -type f' in manifest_block
     assert "! -name 'artifact-manifest.sha256*'" in manifest_block
     assert "sort -z" in manifest_block
     assert "xargs -0 sha256sum" in manifest_block
     assert 'sha256sum --check "$temporary_manifest"' in manifest_block
     assert 'mv "$temporary_manifest" "$manifest_path"' in manifest_block
-    assert "[[ \"$manifest_sha256\" =~ ^[0-9a-f]{64}$ ]]" in manifest_block
+    assert '[[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]' in manifest_block
     assert "manifest_sha256=%s" in manifest_block
