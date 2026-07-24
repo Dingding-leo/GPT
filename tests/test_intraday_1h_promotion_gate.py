@@ -104,7 +104,9 @@ def test_provisional_1h_candidate_allows_only_further_research(tmp_path: Path) -
     output = tmp_path / "BTC-USDT"
     _write_evidence(
         output,
-        robustness_status="provisional alpha candidate: beats tested benchmarks on return and Sharpe",
+        robustness_status=(
+            "provisional alpha candidate: beats tested benchmarks on return and Sharpe"
+        ),
         fold_stability_passes=True,
         failure_reasons=[],
     )
