@@ -84,6 +84,15 @@ jobs:
           print(module_path)
           PY
 
+      - name: Capture Ruff diagnostics
+        run: |
+          mkdir -p reports/live-readiness-gate
+          ruff check tests/test_paper_execution_attempt_journal_replay_security.py \
+            --output-format=concise \
+            > reports/live-readiness-gate/ruff-check.txt 2>&1 || true
+          ruff format --diff tests/test_paper_execution_attempt_journal_replay_security.py \
+            > reports/live-readiness-gate/ruff-format.diff 2>&1 || true
+
       - name: Lint and formatting
         id: lint_format
         run: ruff check . && ruff format --check .
