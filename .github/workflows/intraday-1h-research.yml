@@ -58,6 +58,7 @@ jobs:
             tests/test_verify_intraday_1h_profile.py \
             tests/test_intraday_1h_promotion_gate.py \
             tests/test_intraday_1h_cross_market_gate.py \
+            tests/test_verify_intraday_1h_timestamp_grid.py \
             tests/test_artifact_manifest.py
 
       - name: Run canonical 1h full walk-forward research
@@ -69,6 +70,11 @@ jobs:
             --inst-id "${{ matrix.inst_id }}" \
             --output-dir "reports/okx/1h/${{ matrix.inst_id }}" \
             --manifest-path "reports/okx/1h/${{ matrix.inst_id }}/experiment-manifest.jsonl"
+
+      - name: Verify exact persisted UTC-hour timestamp grid
+        run: |
+          python scripts/verify_intraday_1h_timestamp_grid.py \
+            --output-dir "reports/okx/1h/${{ matrix.inst_id }}"
 
       - name: Verify persisted canonical 1h evidence
         run: |
