@@ -1,0 +1,107 @@
+        raise ValueError(f"{market} volume values must be non-negative")
+    if not (pd.to_numeric(frame["confirm"], errors="coerce") == 1).all():
+        raise ValueError(f"{market} source must contain only completed candles")
+    validated = numeric.copy()
+    validated.index = timestamps
+    validated.index.name = "timestamp"
+    return validated
+
+
+def load_source(artifact_dir: str | Path) -> pd.DataFrame:
+    root = Path(artifact_dir)
+    manifest = root / "coverage-manifest.json"
+    observed_manifest_hash = file_sha256(manifest)
+    if observed_manifest_hash != SOURCE["coverage_manifest_sha256"]:
+        raise ValueError(
+            "coverage manifest SHA-256 mismatch: "
+            f"expected {SOURCE['coverage_manifest_sha256']}, observed {observed_manifest_hash}"
+        )
+    manifest_payload = json.loads(manifest.read_text(encoding="utf-8"))
+    if manifest_payload.get("bar") != "1H" or manifest_payload.get("coverage_complete") is not True:
+        raise ValueError("coverage manifest must declare complete 1H coverage")
+    economics = manifest_payload.get("economic_boundary")
+    if not isinstance(economics, dict) or economics.get("modeled_fee_bps_one_way") != 5.0:
+        raise ValueError("coverage manifest must preserve the exact 5 bps economic boundary")
+    btc = load_market(root, "BTC-USDT")
+    eth = load_market(root, "ETH-USDT")
+    if not btc.index.equals(eth.index):
+        raise ValueError("BTC-USDT and ETH-USDT timestamps must align exactly")
+    frame = pd.DataFrame(index=btc.index)
+    frame["btc_close"] = btc["close"]
+    frame["btc_volume_quote"] = btc["volume_quote"]
+    frame["eth_close"] = eth["close"]
+    frame["eth_volume_quote"] = eth["volume_quote"]
+    return frame
+
+
+def _annualized_volatility(close: pd.Series, lookback: int) -> pd.Series:
+    log_returns = np.log(close).diff()
+    return log_returns.rolling(lookback, min_periods=lookback).std(ddof=0) * math.sqrt(
+        ANNUALIZATION
+    )
+
+
+def build_architecture(source: pd.DataFrame, spec: ArchitectureSpec) -> pd.DataFrame:
+    close = source[["btc_close", "eth_close"]].copy()
+    asset_returns = close.pct_change(fill_method=None).fillna(0.0)
+    momentum = close.divide(close.shift(spec.momentum_lookback)).subtract(1.0)
+    regime_returns = close.divide(close.shift(spec.regime_lookback)).subtract(1.0)
+    broad_regime = regime_returns.mean(axis=1)
+    volatility = pd.DataFrame(
+        {
+            "btc_close": _annualized_volatility(close["btc_close"], spec.volatility_lookback),
+            "eth_close": _annualized_volatility(close["eth_close"], spec.volatility_lookback),
+        },
+        index=source.index,
+    )
+
+    target = pd.DataFrame(np.nan, index=source.index, columns=["btc_position", "eth_position"])
+    decision_mask = source.index.hour % spec.decision_cadence_hours == 0
+    for timestamp in source.index[decision_mask]:
+        target.loc[timestamp] = 0.0
+        row_momentum = momentum.loc[timestamp]
+        row_volatility = volatility.loc[timestamp]
+        if (
+            not math.isfinite(float(broad_regime.loc[timestamp]))
+            or float(broad_regime.loc[timestamp]) <= 0.0
+            or row_momentum.isna().any()
+            or row_volatility.isna().any()
+        ):
+            continue
+        leader = str(row_momentum.idxmax())
+        if float(row_momentum[leader]) <= 0.0:
+            continue
+        realized_volatility = float(row_volatility[leader])
+        if not math.isfinite(realized_volatility) or realized_volatility <= 0.0:
+            continue
+        size = min(1.0, spec.target_volatility / realized_volatility)
+        target_column = "btc_position" if leader == "btc_close" else "eth_position"
+        target.loc[timestamp, target_column] = size
+
+    target = target.ffill().fillna(0.0)
+    position = target.shift(1).fillna(0.0)
+    turnover = position.diff().abs()
+    turnover.iloc[0] = position.iloc[0].abs()
+    total_turnover = turnover.sum(axis=1)
+    gross_return = (
+        position["btc_position"] * asset_returns["btc_close"]
+        + position["eth_position"] * asset_returns["eth_close"]
+    )
+    exchange_fee = total_turnover * (TRANSACTION_COST_BPS / 10_000.0)
+    net_return = gross_return - exchange_fee
+
+    result = pd.DataFrame(index=source.index)
+    result["btc_asset_return"] = asset_returns["btc_close"]
+    result["eth_asset_return"] = asset_returns["eth_close"]
+    result["btc_target_position"] = target["btc_position"]
+    result["eth_target_position"] = target["eth_position"]
+    result["btc_position"] = position["btc_position"]
+    result["eth_position"] = position["eth_position"]
+    result["btc_turnover"] = turnover["btc_position"]
+    result["eth_turnover"] = turnover["eth_position"]
+    result["turnover"] = total_turnover
+    result["gross_return"] = gross_return
+    result["exchange_fee"] = exchange_fee
+    result["net_return"] = net_return
+    result["broad_regime"] = broad_regime
+    result["btc_momentum"] = momentum["btc_close"]
