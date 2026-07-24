@@ -39,9 +39,14 @@ def _clock(*values: datetime):
     return lambda: next(iterator)
 
 
-def _instrument_snapshot() -> OKXSpotInstrumentSnapshot:
+def _real_instrument_response() -> bytes:
     raw = (_INSTRUMENT_DIR / "response.json").read_bytes()
     assert hashlib.sha256(raw).hexdigest() == _INSTRUMENT_SHA256
+    return raw
+
+
+def _instrument_snapshot(raw_response: bytes | None = None) -> OKXSpotInstrumentSnapshot:
+    raw = raw_response if raw_response is not None else _real_instrument_response()
 
     request_started = datetime(2026, 7, 24, 0, 0, tzinfo=UTC)
     response_received = request_started + timedelta(milliseconds=125)
@@ -155,6 +160,7 @@ def _validate(
     quote: ExecutionQuoteSnapshot,
     intent: PaperPostOnlyOrderIntent,
     *,
+    maximum_snapshot_age_ms: int = 3_000,
     minimum_paper_quote_notional: str = "1",
 ) -> None:
     validate_okx_paper_post_only_order_intent_constraints(
@@ -163,7 +169,7 @@ def _validate(
         intent,
         decision=decision,
         target=target,
-        maximum_snapshot_age_ms=1_000,
+        maximum_snapshot_age_ms=maximum_snapshot_age_ms,
         minimum_paper_quote_notional=minimum_paper_quote_notional,
     )
 
@@ -227,3 +233,47 @@ def test_post_only_intent_rejects_forged_decision_binding() -> None:
 
     with pytest.raises(ValueError, match="does not match its decision"):
         _validate(snapshot, target, decision, quote, forged)
+
+
+def test_post_only_intent_rejects_lifetime_beyond_snapshot_freshness() -> None:
+    snapshot = _instrument_snapshot()
+    target, decision, quote, intent = _intent()
+
+    with pytest.raises(
+        ValueError,
+        match="outlives the supplied OKX instrument constraint",
+    ):
+        _validate(
+            snapshot,
+            target,
+            decision,
+            quote,
+            intent,
+            maximum_snapshot_age_ms=1_000,
+        )
+
+
+def test_post_only_intent_rejects_lifetime_crossing_pending_constraint_change() -> None:
+    payload = json.loads(_real_instrument_response())
+    effective_at = datetime(2026, 7, 24, 0, 0, 0, 800_000, tzinfo=UTC)
+    payload["data"][0]["upcChg"] = [
+        {
+            "param": "minSz",
+            "newValue": "0.0001",
+            "effTime": str(int(effective_at.timestamp() * 1_000)),
+        }
+    ]
+    mutated_response = json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    snapshot = _instrument_snapshot(mutated_response)
+    mutated_sha256 = hashlib.sha256(mutated_response).hexdigest()
+    target, decision, quote, intent = _intent(instrument_snapshot_sha256=mutated_sha256)
+
+    with pytest.raises(
+        ValueError,
+        match="outlives the supplied OKX instrument constraint",
+    ):
+        _validate(snapshot, target, decision, quote, intent)
