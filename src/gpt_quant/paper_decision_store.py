@@ -5,7 +5,7 @@ import json
 import os
 import stat
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 
 from . import _paper_decision_store_core as _core
@@ -283,10 +283,8 @@ def initialize_paper_order_decision_store(
         except BaseException:
             os.close(descriptor)
             descriptor = -1
-            try:
+            with suppress(FileNotFoundError):
                 os.unlink(_GENESIS_NAME, dir_fd=directory_descriptor)
-            except FileNotFoundError:
-                pass
             raise
         finally:
             if descriptor >= 0:

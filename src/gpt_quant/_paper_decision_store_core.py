@@ -6,7 +6,7 @@ import os
 import secrets
 import stat
 from collections.abc import Iterator, Mapping
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -268,10 +268,8 @@ def record_paper_order_decision(
         finally:
             if descriptor >= 0:
                 os.close(descriptor)
-            try:
+            with suppress(FileNotFoundError):
                 os.unlink(temporary_name, dir_fd=directory_descriptor)
-            except FileNotFoundError:
-                pass
         replayed = _load_paper_order_decision_at(directory_descriptor, decision_name)
         if replayed != decision:
             raise RuntimeError(f"{_ERROR} replay differs after publication")
