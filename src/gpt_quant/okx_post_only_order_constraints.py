@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from datetime import timedelta
 from decimal import Decimal, localcontext
 
 from .execution_intent import TargetPositionIntent
@@ -47,7 +48,8 @@ def validate_okx_paper_post_only_order_intent_constraints(
     then verifies the immutable OKX instrument response and enforces exact lot and tick
     increments plus one explicit paper-policy quote-notional floor at the maker limit.
     The floor is not an inferred exchange minimum, and no spread, slippage, impact,
-    latency, or fill probability is added.
+    latency, or fill probability is added. The instrument evidence must remain valid
+    throughout the intent's complete executable lifetime.
     """
 
     if not isinstance(snapshot, OKXSpotInstrumentSnapshot):
@@ -90,6 +92,19 @@ def validate_okx_paper_post_only_order_intent_constraints(
         base_quantity=intent.base_quantity,
         limit_price=intent.limit_price,
     )
+    latest_active_submission = intent.expires_at_utc - timedelta(microseconds=1)
+    try:
+        validate_okx_spot_limit_order_constraints(
+            snapshot,
+            submitted_at_utc=latest_active_submission,
+            maximum_snapshot_age_ms=maximum_snapshot_age_ms,
+            base_quantity=intent.base_quantity,
+            limit_price=intent.limit_price,
+        )
+    except ValueError as exc:
+        raise ValueError(
+            "post-only order intent outlives the supplied OKX instrument constraint evidence"
+        ) from exc
 
     minimum_notional = _positive_canonical_decimal(
         minimum_paper_quote_notional,
