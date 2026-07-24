@@ -203,3 +203,13 @@ def test_replay_blocks_concurrent_paper_attempt_publication(
     assert not path.with_name(f".{path.name}.lock").exists()
     assert replay_errors == []
     assert replay_result["journal"] == initial
+
+    updated = record_paper_execution_attempt_evidence(
+        path,
+        later_attempt,
+        intent_journal=intent_journal,
+        quote_store=quote_store,
+        binding_journal=binding_journal,
+    )
+    assert updated.count == 2
+    assert updated.attempts[-1] == later_attempt
