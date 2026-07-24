@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 _ROOT = Path(__file__).parents[1]
-_ANALYSIS_PATH = _ROOT / "reports" / "research" / "channel-breakout-trend-1h" / "analysis.py"
+_ANALYSIS_PATH = (
+    _ROOT / "reports" / "research" / "channel-breakout-trend-1h" / "analysis.py"
+)
 _FIXTURE_PATH = (
     Path(__file__).parent
     / "fixtures"
@@ -19,11 +22,18 @@ _FIXTURE_PATH = (
 
 
 def _load_analysis():
-    spec = importlib.util.spec_from_file_location("channel_breakout_analysis", _ANALYSIS_PATH)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    sys.path.insert(0, str(_ANALYSIS_PATH.parent))
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "channel_breakout_analysis",
+            _ANALYSIS_PATH,
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    finally:
+        sys.path.pop(0)
 
 
 def _load_fixture(analysis) -> pd.DataFrame:
