@@ -124,8 +124,7 @@ def write_walk_forward_report(
         "",
         f"- Gross compounded return: `{strategy_metrics['gross_total_return']:.6f}`",
         f"- Net compounded return: `{strategy_metrics['net_total_return']:.6f}`",
-        f"- Compounded exchange-fee drag: "
-        f"`{strategy_metrics['compounded_exchange_fee_drag']:.6f}`",
+        f"- Compounded exchange-fee drag: `{strategy_metrics['compounded_exchange_fee_drag']:.6f}`",
         f"- Sum of per-bar exchange-fee deductions: `{strategy_metrics['exchange_fee_sum']:.6f}`",
         f"- Gross annualized arithmetic mean: "
         f"`{strategy_metrics['gross_annualized_arithmetic_mean']:.6f}`",
@@ -138,8 +137,7 @@ def write_walk_forward_report(
         "> These are deterministic target-position path diagnostics, not submitted-order "
         "or fill counts.",
         "",
-        f"- Target-position turnover sum: "
-        f"`{strategy_metrics['target_position_turnover_sum']:.6f}`",
+        f"- Target-position turnover sum: `{strategy_metrics['target_position_turnover_sum']:.6f}`",
         f"- Target-position rebalances: "
         f"`{strategy_metrics['target_position_rebalance_count']}` "
         f"(`{strategy_metrics['annualized_target_position_rebalance_count']:.2f}` annualized)",
@@ -158,16 +156,14 @@ def write_walk_forward_report(
         f"`{strategy_metrics['max_completed_holding_bars']}`",
         f"- Current open holding bars: `{strategy_metrics['current_holding_bars']}`",
         f"- Active-position bar hit rate: `{strategy_metrics['bar_hit_rate']:.2%}`",
-        f"- Completed-episode hit rate: "
-        f"`{strategy_metrics['completed_episode_hit_rate']:.2%}`",
+        f"- Completed-episode hit rate: `{strategy_metrics['completed_episode_hit_rate']:.2%}`",
         f"- Completed-episode profit factor: "
         f"`{strategy_metrics['completed_episode_profit_factor']:.6f}` "
         f"(defined=`{bool(strategy_metrics['completed_episode_profit_factor_defined'])}`)",
         f"- Annualized target turnover: `{strategy_metrics['annualized_turnover']:.6f}`",
         f"- Average turnover per rebalance: "
         f"`{strategy_metrics['average_turnover_per_rebalance']:.6f}`",
-        f"- Exchange fee per rebalance: "
-        f"`{strategy_metrics['exchange_fee_per_rebalance']:.8f}`",
+        f"- Exchange fee per rebalance: `{strategy_metrics['exchange_fee_per_rebalance']:.8f}`",
         "",
         "## Cost and parameter stress",
         "",
