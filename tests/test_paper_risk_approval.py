@@ -123,9 +123,7 @@ def test_approval_bytes_reject_changed_risk_decision_identity() -> None:
     )
     payload = json.loads(approval.to_json_bytes())
     payload["risk_decision_id"] = hashlib.sha256(b"substituted-risk-decision").hexdigest()
-    tampered = (
-        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n"
-    )
+    tampered = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8") + b"\n"
 
     with pytest.raises(ValueError, match="ID does not match"):
         PaperRiskApproval.from_json_bytes(tampered)
