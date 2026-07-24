@@ -1,0 +1,106 @@
+name: Canonical BTC ETH 1h Research
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canonical-btc-eth-1h-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  research:
+    strategy:
+      fail-fast: false
+      matrix:
+        inst_id: [BTC-USDT, ETH-USDT]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+      ARTIFACT_NAME: "canonical-${{ matrix.inst_id }}-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Verify canonical 1h profile contract
+        run: |
+          pytest -q \
+            tests/test_intraday_research_profile.py \
+            tests/test_verify_intraday_1h_profile.py
+
+      - name: Run canonical 1h full walk-forward research
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: |
+          python scripts/run_okx_research.py \
+            --config config/okx_research_1h.json \
+            --inst-id "${{ matrix.inst_id }}" \
+            --output-dir "reports/okx/1h/${{ matrix.inst_id }}" \
+            --manifest-path "reports/okx/1h/${{ matrix.inst_id }}/experiment-manifest.jsonl"
+
+      - name: Verify persisted canonical 1h evidence
+        run: |
+          python scripts/verify_walk_forward_report.py \
+            --output-dir "reports/okx/1h/${{ matrix.inst_id }}" \
+            --manifest-path "reports/okx/1h/${{ matrix.inst_id }}/experiment-manifest.jsonl"
+
+      - name: Verify exact persisted 5 bps-only profile
+        run: |
+          python scripts/verify_intraday_1h_profile.py \
+            --output-dir "reports/okx/1h/${{ matrix.inst_id }}"
+
+      - name: Build and verify immutable canonical 1h manifest
+        id: artifact_manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          report_dir="reports/okx/1h/${{ matrix.inst_id }}"
+          manifest_path="$report_dir/artifact-manifest.sha256"
+          temporary_manifest="${manifest_path}.tmp"
+
+          test -s "$report_dir/effective_config.json"
+          test -s "$report_dir/walk_forward.json"
+          test -s "$report_dir/walk_forward_returns.csv"
+          test -s "$report_dir/experiment-manifest.jsonl"
+
+          find "$report_dir" -type f ! -name 'artifact-manifest.sha256*' -print0 \
+            | sort -z \
+            | xargs -0 sha256sum > "$temporary_manifest"
+          test -s "$temporary_manifest"
+          sha256sum --check "$temporary_manifest"
+          mv "$temporary_manifest" "$manifest_path"
+
+          manifest_sha256="$(sha256sum "$manifest_path" | awk '{print $1}')"
+          [[ "$manifest_sha256" =~ ^[0-9a-f]{64}$ ]]
+          printf 'manifest_sha256=%s\n' "$manifest_sha256" >> "$GITHUB_OUTPUT"
+
+      - name: Upload immutable canonical 1h evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: reports/okx/1h/${{ matrix.inst_id }}/
+          if-no-files-found: error
+          retention-days: 14
