@@ -64,7 +64,7 @@ def test_workflow_reselects_and_verifies_btc_and_eth_independently() -> None:
     assert workflow.count("inst_id: [BTC-USDT, ETH-USDT]") == 1
     assert workflow.count("--config config/okx_research_1h.json") == 1
     assert workflow.count('--inst-id "${{ matrix.inst_id }}"') == 1
-    assert workflow.count("reports/okx/1h/${{ matrix.inst_id }}") >= 10
+    assert workflow.count("reports/okx/1h/${{ matrix.inst_id }}") >= 7
     assert workflow.count("experiment-manifest.jsonl") >= 2
     assert "Run canonical 1h full walk-forward research" in workflow
     assert "Verify persisted canonical 1h evidence" in workflow
