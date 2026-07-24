@@ -1,0 +1,165 @@
+{
+  "accounting_maximum_absolute_error": 1.0003120293894385e-16,
+  "activity": {
+    "adjustment_count": 13867,
+    "annualized_adjustment_count": 4686.532407407408,
+    "annualized_effective_round_trips": 27.889889270643696,
+    "annualized_exposure_episode_count": 59.14351851851852,
+    "exposure_episode_count": 175,
+    "maximum_holding_hours": 4361,
+    "mean_holding_hours": 78.24,
+    "median_holding_hours": 5.0,
+    "passes": true
+  },
+  "benchmark_metrics": {
+    "buy_and_hold": {
+      "calmar": -0.054785815891155915,
+      "max_drawdown": -0.6914942770986678,
+      "net_total_return": -0.10798637071419714,
+      "sharpe": 0.256303871824649
+    },
+    "simple_trend_long_cash": {
+      "calmar": 0.3197794894280118,
+      "max_drawdown": -0.4731390411728009,
+      "net_total_return": 0.5172288689844002,
+      "sharpe": 0.5395539519005799
+    },
+    "volatility_targeted_long": {
+      "calmar": 0.020568803040620535,
+      "max_drawdown": -0.6482269574193213,
+      "net_total_return": 0.03996922374379919,
+      "sharpe": 0.2745525009917141
+    }
+  },
+  "candidate_accounting": {
+    "architecture_candidates_passed": 0,
+    "architecture_candidates_rejected": 1,
+    "architecture_candidates_searched": 1,
+    "candidate_evaluations": 324,
+    "fold_local_internal_candidates": 27,
+    "oos_folds": 12
+  },
+  "canonical_signature": "canonical-eth-1h-replication-v1|market=ETH-USDT|provider=OKX-spot|bar=1H|architecture=daily-horizons-scaled-24x|selection=17520|test=2160|internal-candidates=27|fee=5bps-one-way|execution=one-bar-delayed-close-return|claim=all-source-profile-oos-benchmark-fold-month-year-activity-neighbourhood-tail-capacity-maker-prospective-gates-pass|candidate_count=1",
+  "cost_profile": {
+    "declared": [
+      1.0
+    ],
+    "executed": [
+      1.0,
+      2.0
+    ],
+    "passes": false,
+    "reported": [
+      1.0,
+      2.0
+    ]
+  },
+  "design": {
+    "annualization": 8760,
+    "canonical_cost_scenarios_in_pnl": [
+      5.0
+    ],
+    "evaluation_end": "2026-06-14T23:00:00+00:00",
+    "evaluation_start": "2023-07-01T00:00:00+00:00",
+    "fee_bps_one_way": 5.0,
+    "oos_observations": 25920,
+    "selection_bars": 17520,
+    "separate_execution_diagnostics": [
+      "maker_fill_quality",
+      "no_fill",
+      "partial_fill",
+      "timeout",
+      "adverse_selection",
+      "latency"
+    ],
+    "test_bars": 2160,
+    "undeclared_artifact_diagnostics_excluded_from_claims": [
+      10.0
+    ]
+  },
+  "fold_stability": {
+    "best_fold_total_return": 0.22713040084844027,
+    "failure_reasons": [
+      "fewer than half of out-of-sample folds are profitable"
+    ],
+    "fold_count": 12,
+    "losing_or_flat_folds": 8,
+    "max_positive_fold_share": 0.3339803327404567,
+    "maximum_allowed_positive_fold_share": 0.5,
+    "minimum_profitable_folds": 6,
+    "minimum_required_folds": 3,
+    "passes": false,
+    "positive_fold_ratio": 0.3333333333333333,
+    "profitable_folds": 4,
+    "worst_fold_total_return": -0.16714840081023719
+  },
+  "gates": {
+    "benchmark_relative_risk_adjusted": "fail",
+    "capacity": "blocked",
+    "cross_market_replication": "fail",
+    "exact_5bps_profile_fidelity": "fail",
+    "fold_stability": "fail",
+    "maker_execution_diagnostics": "blocked",
+    "month_stability": "fail",
+    "parameter_neighbourhood_stability": "pass",
+    "positive_5bps_oos_path": "pass",
+    "prospective_paper_evidence": "blocked",
+    "source_data_and_reselection_reproducible": "pass",
+    "tail_risk": "pass",
+    "turnover_holding_and_trade_sufficiency": "pass",
+    "year_stability": "fail"
+  },
+  "hypothesis": "The frozen canonical ETH-USDT 1h replication clears all paper/live gates.",
+  "metrics_5bps": {
+    "annualized_turnover": 55.779778541287605,
+    "average_abs_exposure": 0.2400174684580566,
+    "calmar": 0.21179542055489556,
+    "exchange_fee_sum": 0.08252350797889127,
+    "gross_total_return": 0.31817076481691253,
+    "max_drawdown": -0.31946417250110914,
+    "net_annualized_arithmetic_mean": 0.09371057294555067,
+    "net_cagr": 0.06766104876709411,
+    "net_total_return": 0.21375686810673078,
+    "sharpe": 0.3945134663059659,
+    "sortino": 0.5507957866789293
+  },
+  "month_stability": {
+    "complete_months": 35,
+    "max_positive_share": 0.21764338696382876,
+    "passes": false,
+    "profitable_complete_month_ratio": 0.2571428571428571,
+    "profitable_complete_months": 9
+  },
+  "source": {
+    "artifact_id": 8585425240,
+    "artifact_sha256": "5770a6f850d81614734d45fe988ba83bc25263a31137877e371e0ee4a75ec46d",
+    "bar": "1H",
+    "config_sha256": "4c57e2bb99f49f4e75005ca2c0d1f6fe605ec127c5c5b9498e6a95284caa192c",
+    "instrument": "ETH-USDT",
+    "provider": "OKX",
+    "report_sha256": "e9a40524e00f825d9bea71ef3c8e7cce976f84b1158bbbb95fddb521923dfb87",
+    "returns_sha256": "aab10f37c716e1b32b93dcfc95adeceed4e4641495d3e517406346898e26b19d",
+    "snapshot_sha256": "401616ba2a3037bba6adabcc3e44d23617e3d9d034e7d55554e286665964af38",
+    "source_head_sha": "1d1da8d6f0cfb1cbd99e5533c693da139572bdc3",
+    "verification_sha256": "72c245afa8bc7d51b3beed104c962c16291a8199fd8f3e990b378c91e9820516",
+    "workflow_run_id": 30063491425
+  },
+  "tail_risk": {
+    "passes": true,
+    "strategy_expected_shortfall": -0.006424340510694883,
+    "volatility_targeted_long_expected_shortfall": -0.012766617694293603
+  },
+  "verdict": {
+    "live_eligible": false,
+    "paper_testable": false,
+    "reason": "ETH is positive at 5 bps but fails profile, benchmark, fold, month, year, capacity, maker, and prospective gates.",
+    "status": "rejected"
+  },
+  "year_stability": {
+    "complete_years": 2,
+    "max_positive_share": 1.0,
+    "passes": false,
+    "profitable_complete_year_ratio": 0.5,
+    "profitable_complete_years": 1
+  }
+}
