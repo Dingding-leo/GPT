@@ -89,11 +89,13 @@ def test_identity_restart_requires_bytes_and_exact_intent_type() -> None:
 
     with pytest.raises(TypeError, match="value must be bytes"):
         PaperSubmissionIdentity.from_json_bytes(
-            serialized.decode(), intent=intent
+            serialized.decode(),
+            intent=intent,
         )  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="PaperPostOnlyOrderIntent"):
         PaperSubmissionIdentity.from_json_bytes(
-            serialized, intent=b"not-an-intent"
+            serialized,
+            intent=b"not-an-intent",
         )  # type: ignore[arg-type]
 
 
