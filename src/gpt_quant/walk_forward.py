@@ -21,7 +21,13 @@ from .benchmarks import (
 )
 from .config import StrategyConfig
 from .data import validate_prices
-from .metrics import performance_metrics
+from .metrics import (
+    _compounded_return,
+    _validate_solvent_returns,
+    _validated_returns,
+    max_drawdown_from_returns,
+    performance_metrics,
+)
 
 _MIN_PROVISIONAL_FOLDS = 3
 _MAX_POSITIVE_FOLD_SHARE = 0.50
@@ -309,6 +315,78 @@ def _run_cached_candidate_window(
     return _rebase_test_window(template.loc[start:end], config, previous_position)
 
 
+def _selection_score(frame: pd.DataFrame, *, annualization: int) -> float:
+    """Calculate only the validated metrics required for candidate ranking."""
+
+    if "strategy_return" not in frame:
+        raise ValueError("frame must contain strategy_return")
+    if frame.empty:
+        raise ValueError("cannot calculate metrics for an empty frame")
+    returns = _validated_returns(frame["strategy_return"])
+    _validate_solvent_returns(returns)
+
+    if "gross_strategy_return" in frame:
+        gross_returns = _validated_returns(
+            frame["gross_strategy_return"],
+            label="gross_strategy_return",
+        )
+        missing_gross_inputs = {"position", "asset_return"} - set(frame.columns)
+        if missing_gross_inputs:
+            raise ValueError("gross_strategy_return requires position and asset_return")
+        position = _validated_returns(frame["position"], label="position")
+        asset_returns = _validated_returns(frame["asset_return"], label="asset_return")
+        expected_gross = position * asset_returns
+        if not np.allclose(
+            gross_returns.to_numpy(),
+            expected_gross.to_numpy(),
+            rtol=0.0,
+            atol=1e-12,
+        ):
+            raise ValueError(
+                "gross_strategy_return must equal position multiplied by asset_return"
+            )
+        if "trading_cost" not in frame:
+            raise ValueError("gross_strategy_return requires trading_cost")
+        trading_cost = _validated_returns(frame["trading_cost"], label="trading_cost")
+        if (trading_cost < 0.0).any():
+            raise ValueError("trading_cost must be non-negative")
+        expected_net = gross_returns - trading_cost
+        if not np.allclose(
+            returns.to_numpy(),
+            expected_net.to_numpy(),
+            rtol=0.0,
+            atol=1e-12,
+        ):
+            raise ValueError(
+                "strategy_return must equal gross_strategy_return minus trading_cost"
+            )
+
+    total_growth, _ = _compounded_return(returns)
+    years = len(returns) / annualization
+    cagr = total_growth ** (1.0 / years) - 1.0 if total_growth > 0 else -1.0
+    daily_mean = float(returns.mean())
+    daily_std = float(returns.std(ddof=0))
+    sharpe = (
+        daily_mean / daily_std * math.sqrt(annualization) if daily_std > 0 else 0.0
+    )
+    max_drawdown = max_drawdown_from_returns(returns)
+    calmar = cagr / abs(max_drawdown) if max_drawdown < 0 else 0.0
+    turnover = (
+        float(pd.to_numeric(frame["turnover"], errors="coerce").fillna(0.0).mean())
+        * annualization
+        if "turnover" in frame
+        else 0.0
+    )
+    return _score(
+        {
+            "sharpe": sharpe,
+            "calmar": calmar,
+            "max_drawdown": max_drawdown,
+            "annualized_turnover": turnover,
+        }
+    )
+
+
 def _longer_lookbacks(config: StrategyConfig) -> tuple[int, int]:
     return (
         max(2, round(config.momentum_lookback * 1.2)),
@@ -534,7 +612,7 @@ def run_walk_forward_research(
         test_end = clean.index[test_end_index]
         selection_history = clean.iloc[: selection_end_index + 1]
 
-        ranked: list[tuple[float, StrategyConfig, dict[str, float | int]]] = []
+        ranked: list[tuple[float, StrategyConfig]] = []
         for candidate in candidates:
             selection_frame = _run_cached_candidate_window(
                 selection_history,
@@ -545,17 +623,29 @@ def run_walk_forward_research(
                 selection_end,
                 previous_position=0.0,
             )
-            metrics = performance_metrics(
+            score = _selection_score(
                 selection_frame,
                 annualization=candidate.annualization,
             )
-            score = _score(metrics)
             if np.isfinite(score):
-                ranked.append((score, candidate, metrics))
+                ranked.append((score, candidate))
         if not ranked:
             raise RuntimeError(f"fold {fold_number} produced no finite candidate scores")
         ranked.sort(key=lambda item: item[0], reverse=True)
-        best_score, best, selection_metrics = ranked[0]
+        best_score, best = ranked[0]
+        selection_frame = _run_cached_candidate_window(
+            selection_history,
+            clean,
+            candidate_frame_cache,
+            best,
+            selection_start,
+            selection_end,
+            previous_position=0.0,
+        )
+        selection_metrics = performance_metrics(
+            selection_frame,
+            annualization=best.annualization,
+        )
         parameters = best.to_dict()
         selected.append(parameters)
 
