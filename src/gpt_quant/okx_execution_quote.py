@@ -183,9 +183,6 @@ class OKXTopOfBookObservation:
         object.__setattr__(self, "server_round_trip_seconds", server_round_trip)
         object.__setattr__(self, "midpoint_clock_skew_seconds", midpoint_clock_skew)
         exchange_observed = validated_exchange_observed.to_pydatetime()
-        exchange_clock_response_received = response_received + timedelta(
-            seconds=midpoint_clock_skew
-        )
 
         maximum_quote_age_ms = _required_nonnegative_integer(
             self.maximum_quote_age_ms,
@@ -203,21 +200,20 @@ class OKXTopOfBookObservation:
             raise ValueError("OKX books response hash does not match the execution quote")
         if self.quote.provider != "okx":
             raise ValueError("OKX books observation must contain an OKX execution quote")
-        if self.quote.received_at_utc != exchange_clock_response_received:
-            raise ValueError(
-                "OKX exchange-adjusted books receipt does not match the execution quote"
-            )
+        if self.quote.received_at_utc != response_received:
+            raise ValueError("OKX local books receipt does not match the execution quote")
 
-        replayed = _quote_from_raw_response(
+        replayed, exchange_book_observed = _quote_from_raw_response(
             raw_response,
             instrument_id=self.quote.instrument_id,
             instrument_snapshot_sha256=self.quote.instrument_snapshot_sha256,
-            response_received_utc=exchange_clock_response_received,
+            response_received_utc=response_received,
+            midpoint_clock_skew_seconds=midpoint_clock_skew,
         )
         if replayed != self.quote:
             raise ValueError("OKX books response does not reproduce the execution quote")
 
-        quote_age_ms = _milliseconds_between(self.quote.observed_at_utc, exchange_observed)
+        quote_age_ms = _milliseconds_between(exchange_book_observed, exchange_observed)
         if quote_age_ms < 0:
             raise ValueError("OKX books timestamp is after the bounded exchange-time observation")
         if quote_age_ms > maximum_quote_age_ms:
@@ -444,7 +440,8 @@ def _quote_from_raw_response(
     instrument_id: str,
     instrument_snapshot_sha256: str,
     response_received_utc: datetime,
-) -> ExecutionQuoteSnapshot:
+    midpoint_clock_skew_seconds: float,
+) -> tuple[ExecutionQuoteSnapshot, datetime]:
     payload = _parse_response(raw_response_json)
     if payload["code"] != "0":
         raise RuntimeError(f"OKX API error code={payload['code']!r} message={payload['msg']!r}")
@@ -469,19 +466,27 @@ def _quote_from_raw_response(
     sequence_id = book["seqId"]
     if isinstance(sequence_id, bool) or not isinstance(sequence_id, int) or sequence_id < 0:
         raise ValueError("OKX books sequence ID must be a non-negative integer")
-    observed_at = _unix_milliseconds_to_datetime(book["ts"], field="OKX books timestamp")
+    exchange_observed_at = _unix_milliseconds_to_datetime(
+        book["ts"], field="OKX books timestamp"
+    )
+    local_observed_at = exchange_observed_at - timedelta(
+        seconds=midpoint_clock_skew_seconds
+    )
 
-    return ExecutionQuoteSnapshot(
-        provider="okx",
-        instrument_id=instrument_id,
-        observed_at_utc=observed_at,
-        received_at_utc=response_received_utc,
-        bid_price=bid_price,
-        bid_quantity=bid_quantity,
-        ask_price=ask_price,
-        ask_quantity=ask_quantity,
-        source_response_sha256=hashlib.sha256(raw_response_json).hexdigest(),
-        instrument_snapshot_sha256=instrument_snapshot_sha256,
+    return (
+        ExecutionQuoteSnapshot(
+            provider="okx",
+            instrument_id=instrument_id,
+            observed_at_utc=local_observed_at,
+            received_at_utc=response_received_utc,
+            bid_price=bid_price,
+            bid_quantity=bid_quantity,
+            ask_price=ask_price,
+            ask_quantity=ask_quantity,
+            source_response_sha256=hashlib.sha256(raw_response_json).hexdigest(),
+            instrument_snapshot_sha256=instrument_snapshot_sha256,
+        ),
+        exchange_observed_at,
     )
 
 
@@ -596,14 +601,12 @@ def fetch_okx_top_of_book(
         max_abs_clock_skew_seconds=clock_skew_bound,
     )
 
-    exchange_clock_response_received = response_received + timedelta(
-        seconds=validated_midpoint_clock_skew
-    )
-    quote = _quote_from_raw_response(
+    quote, _ = _quote_from_raw_response(
         raw_response,
         instrument_id=instrument_id,
         instrument_snapshot_sha256=instrument_snapshot_sha256,
-        response_received_utc=exchange_clock_response_received,
+        response_received_utc=response_received,
+        midpoint_clock_skew_seconds=validated_midpoint_clock_skew,
     )
 
     return OKXTopOfBookObservation(
