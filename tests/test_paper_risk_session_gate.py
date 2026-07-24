@@ -49,6 +49,7 @@ def _snapshot(
     session_start_equity: float,
     peak_equity: float,
     current_equity: float,
+    daily_underlying_turnover: float,
     state_name: str,
 ) -> PaperRiskStateSnapshot:
     return PaperRiskStateSnapshot(
@@ -58,7 +59,7 @@ def _snapshot(
         session_start_equity=session_start_equity,
         peak_equity=peak_equity,
         current_equity=current_equity,
-        daily_underlying_turnover=0.25,
+        daily_underlying_turnover=daily_underlying_turnover,
         instrument_exposures=(InstrumentExposure("BTC-USDT", 0.50),),
         portfolio_state_sha256=hashlib.sha256(state_name.encode()).hexdigest(),
         market_data_source_sha256=_EXPECTED_FIXTURE_SHA256,
@@ -79,6 +80,7 @@ def _session_path() -> tuple[
         session_start_equity=session_start_equity,
         peak_equity=session_start_equity,
         current_equity=session_start_equity,
+        daily_underlying_turnover=0.0,
         state_name="paper-state-initial",
     )
     breached = _snapshot(
@@ -87,6 +89,7 @@ def _session_path() -> tuple[
         session_start_equity=session_start_equity,
         peak_equity=session_start_equity,
         current_equity=session_start_equity * 0.88,
+        daily_underlying_turnover=0.25,
         state_name="paper-state-breached",
     )
     recovered = _snapshot(
@@ -95,6 +98,7 @@ def _session_path() -> tuple[
         session_start_equity=session_start_equity,
         peak_equity=session_start_equity * 1.02,
         current_equity=session_start_equity,
+        daily_underlying_turnover=0.25,
         state_name="paper-state-recovered",
     )
     return initial, breached, recovered, market_observed_at + timedelta(seconds=3)
@@ -127,6 +131,7 @@ def test_recovered_equity_cannot_clear_append_only_session_stops() -> None:
     assert recovered_watermarks.previous_high_watermark_id == breached_watermarks.high_watermark_id
     assert recovered_watermarks.maximum_daily_loss_fraction == pytest.approx(0.12)
     assert recovered_watermarks.maximum_drawdown_fraction == pytest.approx(0.12)
+    assert recovered_watermarks.maximum_daily_underlying_turnover == pytest.approx(0.25)
 
     blocked = evaluate_paper_risk_session_gate(
         (ProposedInstrumentExposure("BTC-USDT", 0.60),),
@@ -186,3 +191,75 @@ def test_session_watermark_transition_fails_closed_on_restart_and_ordering() -> 
         previous=breached_watermarks,
     )
     assert replayed is breached_watermarks
+
+
+def test_daily_turnover_cannot_reset_or_clear_session_stop() -> None:
+    market_observed_at, real_mark, _ = _real_okx_anchor()
+    session_start_equity = real_mark * 0.2
+    initial = _snapshot(
+        observed_at=market_observed_at,
+        session_start=market_observed_at,
+        session_start_equity=session_start_equity,
+        peak_equity=session_start_equity,
+        current_equity=session_start_equity,
+        daily_underlying_turnover=0.0,
+        state_name="turnover-initial",
+    )
+    triggered = _snapshot(
+        observed_at=market_observed_at + timedelta(seconds=1),
+        session_start=market_observed_at,
+        session_start_equity=session_start_equity,
+        peak_equity=session_start_equity,
+        current_equity=session_start_equity,
+        daily_underlying_turnover=1.25,
+        state_name="turnover-triggered",
+    )
+    reset = _snapshot(
+        observed_at=market_observed_at + timedelta(seconds=2),
+        session_start=market_observed_at,
+        session_start_equity=session_start_equity,
+        peak_equity=session_start_equity,
+        current_equity=session_start_equity,
+        daily_underlying_turnover=0.25,
+        state_name="turnover-reset",
+    )
+    continued = _snapshot(
+        observed_at=market_observed_at + timedelta(seconds=2),
+        session_start=market_observed_at,
+        session_start_equity=session_start_equity,
+        peak_equity=session_start_equity,
+        current_equity=session_start_equity,
+        daily_underlying_turnover=1.25,
+        state_name="turnover-continued",
+    )
+
+    initial_watermarks = advance_paper_risk_session_high_watermarks(initial)
+    triggered_watermarks = advance_paper_risk_session_high_watermarks(
+        triggered,
+        previous=initial_watermarks,
+    )
+
+    with pytest.raises(ValueError, match="cannot decrease within one session"):
+        advance_paper_risk_session_high_watermarks(
+            reset,
+            previous=triggered_watermarks,
+        )
+
+    continued_watermarks = advance_paper_risk_session_high_watermarks(
+        continued,
+        previous=triggered_watermarks,
+    )
+    assert continued_watermarks.maximum_daily_underlying_turnover == pytest.approx(1.25)
+
+    blocked = evaluate_paper_risk_session_gate(
+        (ProposedInstrumentExposure("BTC-USDT", 0.60),),
+        snapshot=continued,
+        policy=_policy(),
+        high_watermarks=continued_watermarks,
+        evaluated_at_utc=market_observed_at + timedelta(seconds=3),
+    )
+    assert blocked.active_triggers == ("abnormal_turnover_limit",)
+    assert blocked.maximum_daily_underlying_turnover == pytest.approx(1.25)
+    assert blocked.allowed is False
+    assert blocked.blockers == ("kill_switch_exposure_increase:BTC-USDT",)
+
