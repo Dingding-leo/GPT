@@ -1,0 +1,17 @@
+{
+  "artifact_archive_sha256": "fd8e0cf375f216767a6ad1864fbe454dd2a36604ffd3669bd1f0eaa46d1d528f",
+  "artifact_id": 8586031004,
+  "bar": "1H",
+  "confirm_values": [
+    "1"
+  ],
+  "endpoint": "/api/v5/market/history-candles",
+  "fetched_at_utc": "2026-07-24T03:53:30.243757+00:00",
+  "fixture_rows_sha256": "228828e32a5a43f0010a326ab65c368dbdc6202a158738b0e9956ad7c6393137",
+  "instrument_id": "BTC-USDT",
+  "provider": "OKX",
+  "purpose": "Structural paper-risk restart tests; not executable fill or performance evidence.",
+  "row_count": 3,
+  "source_normalized_csv_sha256": "d6a5c1ac848a505f8d50b755a2dcd51fff21743c74d4ef68cc772ebd2512d28d",
+  "source_raw_pages_sha256": "42aa11a9aabb16128c2235133dd5f8e2cc13da71bba1ce243d9e31395c17381c"
+}
