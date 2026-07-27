@@ -56,7 +56,7 @@ def _crash_during_intent_publication(path: str) -> None:
     def crash_publish(*args: object, **kwargs: object) -> None:
         os._exit(_CRASH_EXIT_CODE)
 
-    journal_module.publish_payloads_atomically = crash_publish
+    journal_module._publish_journal_payload = crash_publish
     record_target_position_intent(Path(path), _intent(day=23, target_position=0.75))
 
 
@@ -83,7 +83,7 @@ def test_target_intent_journal_is_deterministic_and_idempotent(
     def fail_publish(*args: object, **kwargs: object) -> None:
         raise AssertionError("an identical intent must not rewrite the journal")
 
-    monkeypatch.setattr(journal_module, "publish_payloads_atomically", fail_publish)
+    monkeypatch.setattr(journal_module, "_publish_journal_payload", fail_publish)
     assert record_target_position_intent(path, earlier) == journal
     assert path.read_bytes() == expected
     assert not _lock_path(path).exists()
@@ -193,18 +193,22 @@ def test_target_intent_journal_rejects_ambiguous_persisted_state(tmp_path: Path)
     later = _intent(day=23, target_position=0.75)
 
     path.write_bytes(earlier.to_json_bytes() + earlier.to_json_bytes())
+    path.chmod(0o600)
     with pytest.raises(ValueError, match="duplicate intent ID"):
         load_target_position_intent_journal(path)
 
     path.write_bytes(later.to_json_bytes() + earlier.to_json_bytes())
+    path.chmod(0o600)
     with pytest.raises(ValueError, match="chronological ordering"):
         load_target_position_intent_journal(path)
 
     path.write_bytes(earlier.to_json_bytes().removesuffix(b"\n"))
+    path.chmod(0o600)
     with pytest.raises(ValueError, match="newline-terminated"):
         load_target_position_intent_journal(path)
 
     path.write_bytes(earlier.to_json_bytes().replace(b"\n", b"\r\n"))
+    path.chmod(0o600)
     with pytest.raises(ValueError, match="canonical encoding"):
         load_target_position_intent_journal(path)
 
@@ -225,7 +229,7 @@ def test_target_intent_journal_preserves_old_state_when_publication_fails(
         assert stat.S_IMODE(lock_path.stat().st_mode) == 0o600
         raise OSError("simulated publication failure")
 
-    monkeypatch.setattr(journal_module, "publish_payloads_atomically", fail_publish)
+    monkeypatch.setattr(journal_module, "_publish_journal_payload", fail_publish)
     with pytest.raises(OSError, match="simulated publication failure"):
         record_target_position_intent(path, second)
 

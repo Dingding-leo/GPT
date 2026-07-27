@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import stat
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
@@ -13,11 +13,15 @@ try:
 except ImportError:  # pragma: no cover - exercised only on non-POSIX platforms
     _fcntl = None
 
-from ._atomic_publish import publish_payloads_atomically
+from ._atomic_publish import publish_staged_paths_atomically
 from .execution_intent import TargetPositionIntent
 
 _STAGING_PREFIX = ".target-intent-journal-"
 _ERROR_LABEL = "target-position intent journal"
+_MAX_JOURNAL_BYTES = 64 * 1024 * 1024
+_MAX_JOURNAL_RECORDS = 65_536
+_MAX_INTENT_RECORD_BYTES = 16 * 1024
+_READ_CHUNK_BYTES = 1024 * 1024
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,9 +62,14 @@ def _sort_key(intent: TargetPositionIntent) -> tuple[object, ...]:
 def _journal_from_intents(
     intents: tuple[TargetPositionIntent, ...],
 ) -> TargetPositionIntentJournal:
+    if len(intents) > _MAX_JOURNAL_RECORDS:
+        raise ValueError(f"{_ERROR_LABEL} exceeds the maximum record count")
+
     ordered = tuple(sorted(intents, key=_sort_key))
     seen_ids: set[str] = set()
     decisions: dict[tuple[object, ...], str] = {}
+    digest = hashlib.sha256()
+    total_bytes = 0
     for intent in ordered:
         if intent.intent_id in seen_ids:
             raise ValueError(f"{_ERROR_LABEL} contains duplicate intent ID {intent.intent_id}")
@@ -72,27 +81,128 @@ def _journal_from_intents(
             raise ValueError(f"{_ERROR_LABEL} contains conflicting intents for one signal decision")
         decisions[decision] = intent.intent_id
 
-    payload = b"".join(intent.to_json_bytes() for intent in ordered)
+        serialized = intent.to_json_bytes()
+        if len(serialized) > _MAX_INTENT_RECORD_BYTES:
+            raise ValueError(f"{_ERROR_LABEL} exceeds the maximum record byte size")
+        total_bytes += len(serialized)
+        if total_bytes > _MAX_JOURNAL_BYTES:
+            raise ValueError(f"{_ERROR_LABEL} exceeds the maximum byte size")
+        digest.update(serialized)
+
     return TargetPositionIntentJournal(
         intents=ordered,
-        sha256=hashlib.sha256(payload).hexdigest(),
+        sha256=digest.hexdigest(),
     )
+
+
+def _parse_journal_chunks(chunks: Iterable[bytes]) -> TargetPositionIntentJournal:
+    intents: list[TargetPositionIntent] = []
+    pending = bytearray()
+    total_bytes = 0
+
+    for chunk in chunks:
+        if not chunk:
+            continue
+        total_bytes += len(chunk)
+        if total_bytes > _MAX_JOURNAL_BYTES:
+            raise ValueError(f"{_ERROR_LABEL} exceeds the maximum byte size")
+        pending.extend(chunk)
+
+        while True:
+            newline_index = pending.find(b"\n")
+            if newline_index < 0:
+                break
+            line_size = newline_index + 1
+            if line_size > _MAX_INTENT_RECORD_BYTES:
+                raise ValueError(f"{_ERROR_LABEL} exceeds the maximum record byte size")
+            line = bytes(pending[:line_size])
+            del pending[:line_size]
+            if line == b"\n":
+                raise ValueError(
+                    f"{_ERROR_LABEL} must contain canonical newline-terminated intents"
+                )
+            if len(intents) >= _MAX_JOURNAL_RECORDS:
+                raise ValueError(f"{_ERROR_LABEL} exceeds the maximum record count")
+            intents.append(TargetPositionIntent.from_json_bytes(line))
+
+        if len(pending) > _MAX_INTENT_RECORD_BYTES:
+            raise ValueError(f"{_ERROR_LABEL} exceeds the maximum record byte size")
+
+    if pending:
+        raise ValueError(f"{_ERROR_LABEL} must contain canonical newline-terminated intents")
+    if not intents:
+        raise ValueError(f"{_ERROR_LABEL} must not be empty")
+
+    persisted = tuple(intents)
+    journal = _journal_from_intents(persisted)
+    if journal.intents != persisted:
+        raise ValueError(f"{_ERROR_LABEL} entries must use canonical chronological ordering")
+    return journal
 
 
 def _parse_journal_bytes(value: bytes) -> TargetPositionIntentJournal:
-    if not value:
-        raise ValueError(f"{_ERROR_LABEL} must not be empty")
+    return _parse_journal_chunks((value,))
 
-    lines = value.splitlines(keepends=True)
-    if any(not line.endswith(b"\n") or line == b"\n" for line in lines):
-        raise ValueError(f"{_ERROR_LABEL} must contain canonical newline-terminated intents")
 
-    journal = _journal_from_intents(
-        tuple(TargetPositionIntent.from_json_bytes(line) for line in lines)
+def _validate_private_parent_directory(parent: Path, *, create: bool) -> None:
+    if parent.is_symlink():
+        raise ValueError(f"{_ERROR_LABEL} parent directory must not be a symbolic link")
+    if create:
+        parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+
+    flags = (
+        os.O_RDONLY
+        | getattr(os, "O_DIRECTORY", 0)
+        | getattr(os, "O_NOFOLLOW", 0)
     )
-    if journal.to_bytes() != value:
-        raise ValueError(f"{_ERROR_LABEL} entries must use canonical chronological ordering")
-    return journal
+    descriptor = os.open(parent, flags)
+    try:
+        parent_stat = os.fstat(descriptor)
+        if not stat.S_ISDIR(parent_stat.st_mode):
+            raise ValueError(f"{_ERROR_LABEL} parent must be a directory")
+        if hasattr(os, "geteuid") and parent_stat.st_uid != os.geteuid():
+            raise ValueError(
+                f"{_ERROR_LABEL} parent directory must be owned by the current user"
+            )
+        if stat.S_IMODE(parent_stat.st_mode) & 0o022:
+            raise ValueError(
+                f"{_ERROR_LABEL} parent directory must not be group/world writable"
+            )
+
+        current_stat = os.stat(parent, follow_symlinks=False)
+        if (
+            current_stat.st_dev != parent_stat.st_dev
+            or current_stat.st_ino != parent_stat.st_ino
+        ):
+            raise RuntimeError(f"{_ERROR_LABEL} parent directory changed during validation")
+    finally:
+        os.close(descriptor)
+
+
+def _validate_journal_descriptor(descriptor: int) -> os.stat_result:
+    journal_stat = os.fstat(descriptor)
+    if not stat.S_ISREG(journal_stat.st_mode) or journal_stat.st_nlink != 1:
+        raise ValueError(f"{_ERROR_LABEL} must be a regular single-link file")
+    if hasattr(os, "geteuid") and journal_stat.st_uid != os.geteuid():
+        raise ValueError(f"{_ERROR_LABEL} must be owned by the current user")
+    if stat.S_IMODE(journal_stat.st_mode) != 0o600:
+        raise ValueError(f"{_ERROR_LABEL} must use owner-only 0600 permissions")
+    if journal_stat.st_size > _MAX_JOURNAL_BYTES:
+        raise ValueError(f"{_ERROR_LABEL} exceeds the maximum byte size")
+    return journal_stat
+
+
+def _read_journal_descriptor(descriptor: int) -> TargetPositionIntentJournal:
+    _validate_journal_descriptor(descriptor)
+
+    def chunks() -> Iterator[bytes]:
+        while True:
+            chunk = os.read(descriptor, _READ_CHUNK_BYTES)
+            if not chunk:
+                return
+            yield chunk
+
+    return _parse_journal_chunks(chunks())
 
 
 def _validate_lock_descriptor(descriptor: int) -> os.stat_result:
@@ -109,9 +219,7 @@ def _validate_lock_descriptor(descriptor: int) -> os.stat_result:
 def _exclusive_writer_lock(journal_path: Path) -> Iterator[None]:
     output = journal_path.parent
     output_preexisted = output.exists()
-    if output.is_symlink():
-        raise ValueError(f"{_ERROR_LABEL} output directory must not be a symbolic link")
-    output.mkdir(parents=True, exist_ok=True)
+    _validate_private_parent_directory(output, create=True)
 
     lock_path = output / f".{journal_path.name}.lock"
     no_follow = getattr(os, "O_NOFOLLOW", 0)
@@ -164,13 +272,57 @@ def _exclusive_writer_lock(journal_path: Path) -> Iterator[None]:
                 output.rmdir()
 
 
+def _publish_journal_payload(journal_path: Path, payload: bytes) -> None:
+    def stage_payload(staging: Path) -> dict[str, Path]:
+        staged_path = staging / journal_path.name
+        staged_path.write_bytes(payload)
+        staged_path.chmod(0o600)
+        return {"journal": staged_path}
+
+    publish_staged_paths_atomically(
+        journal_path.parent,
+        {"journal": journal_path},
+        stage_paths=stage_payload,
+        commit_order=("journal",),
+        staging_prefix=_STAGING_PREFIX,
+        error_label=_ERROR_LABEL,
+    )
+
+
 def load_target_position_intent_journal(
     path: str | Path,
 ) -> TargetPositionIntentJournal:
     """Load and fully replay-verify one persisted target-position intent journal."""
 
     journal_path = Path(path)
-    return _parse_journal_bytes(journal_path.read_bytes())
+    _validate_private_parent_directory(journal_path.parent, create=False)
+    descriptor = os.open(
+        journal_path,
+        os.O_RDONLY
+        | getattr(os, "O_NOFOLLOW", 0)
+        | getattr(os, "O_NONBLOCK", 0),
+    )
+    try:
+        opened_stat = _validate_journal_descriptor(descriptor)
+        journal = _read_journal_descriptor(descriptor)
+        current_stat = os.stat(journal_path, follow_symlinks=False)
+        if (
+            current_stat.st_dev != opened_stat.st_dev
+            or current_stat.st_ino != opened_stat.st_ino
+        ):
+            raise RuntimeError(f"{_ERROR_LABEL} path changed during replay")
+        final_stat = _validate_journal_descriptor(descriptor)
+        if (
+            final_stat.st_dev != opened_stat.st_dev
+            or final_stat.st_ino != opened_stat.st_ino
+            or final_stat.st_size != opened_stat.st_size
+            or final_stat.st_mtime_ns != opened_stat.st_mtime_ns
+            or final_stat.st_ctime_ns != opened_stat.st_ctime_ns
+        ):
+            raise RuntimeError(f"{_ERROR_LABEL} contents changed during replay")
+        return journal
+    finally:
+        os.close(descriptor)
 
 
 def record_target_position_intent(
@@ -207,12 +359,5 @@ def record_target_position_intent(
             intents = (intent,)
 
         updated = _journal_from_intents(tuple(intents))
-        publish_payloads_atomically(
-            journal_path.parent,
-            {"journal": journal_path},
-            {"journal": updated.to_bytes()},
-            commit_order=("journal",),
-            staging_prefix=_STAGING_PREFIX,
-            error_label=_ERROR_LABEL,
-        )
+        _publish_journal_payload(journal_path, updated.to_bytes())
         return updated
