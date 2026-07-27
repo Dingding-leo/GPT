@@ -115,7 +115,20 @@ def _load_paper_order_decision_at(
         current = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
         if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
             raise RuntimeError(f"{_ERROR} path changed during replay")
-        return PaperOrderDecision.from_json_bytes(payload)
+        decision = PaperOrderDecision.from_json_bytes(payload)
+        final = _validate_private_file(descriptor, _ERROR)
+        current = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+        if (final.st_dev, final.st_ino) != (current.st_dev, current.st_ino):
+            raise RuntimeError(f"{_ERROR} path changed during replay")
+        if (
+            final.st_dev != opened.st_dev
+            or final.st_ino != opened.st_ino
+            or final.st_size != opened.st_size
+            or final.st_mtime_ns != opened.st_mtime_ns
+            or final.st_ctime_ns != opened.st_ctime_ns
+        ):
+            raise RuntimeError(f"{_ERROR} contents changed during replay")
+        return decision
     finally:
         os.close(descriptor)
 
@@ -393,15 +406,3 @@ def _replay_paper_order_decision_store_unlocked(
         target_journal_sha256=target_journal_sha256,
         store_sha256=store_sha256,
     )
-
-
-def pending_target_position_intents(
-    target_journal_path: str | Path,
-    directory_descriptor: int,
-) -> tuple[TargetPositionIntent, ...]:
-    """Return target intents without a replay-validated durable paper decision file."""
-
-    return replay_paper_order_decision_store(
-        target_journal_path,
-        directory_descriptor,
-    ).pending_target_intents
