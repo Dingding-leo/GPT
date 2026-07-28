@@ -214,7 +214,9 @@ def _volatility_regime_report(
             "hours": int(mask.sum()),
             "H0_annualized_arithmetic_mean": float(h0_returns[mask].mean() * ANNUAL_HOURS),
             "H1_annualized_arithmetic_mean": float(h1_returns[mask].mean() * ANNUAL_HOURS),
-            "H1_minus_H0": float((h1_returns[mask] - h0_returns[mask]).mean() * ANNUAL_HOURS),
+            "H1_minus_H0": float(
+                (h1_returns[mask] - h0_returns[mask]).mean() * ANNUAL_HOURS
+            ),
         }
     return output
 
@@ -249,10 +251,18 @@ def _bootstrap(
         h1_sharpe = h1_mean / (h1_return.std(ddof=0) * math.sqrt(ANNUAL_HOURS))
         h0_edge = h0_mean / (h0_turnover.mean() * ANNUAL_HOURS)
         h1_edge = h1_mean / (h1_turnover.mean() * ANNUAL_HOURS)
-        samples[sample_index] = (h1_mean - h0_mean, h1_sharpe - h0_sharpe, h1_edge - h0_edge)
+        samples[sample_index] = (
+            h1_mean - h0_mean,
+            h1_sharpe - h0_sharpe,
+            h1_edge - h0_edge,
+        )
     output = {}
     for index, name in enumerate(
-        ("annualized_mean_difference", "sharpe_difference", "edge_per_turnover_difference")
+        (
+            "annualized_mean_difference",
+            "sharpe_difference",
+            "edge_per_turnover_difference",
+        )
     ):
         vector = samples[:, index]
         output[name] = {
@@ -315,7 +325,13 @@ def analyze_market(market: str, csv_path: Path, baseline_path: Path) -> dict[str
     h1 = apply_hysteresis(frame)
     baseline = json.loads(baseline_path.read_text(encoding="utf-8"))["aggregate_metrics"]
     reconstructed = performance_metrics(h0["strategy_return"], h0["turnover"], h0["position"])
-    for key in ("total_return", "sharpe", "cagr", "max_drawdown", "annualized_turnover"):
+    for key in (
+        "total_return",
+        "sharpe",
+        "cagr",
+        "max_drawdown",
+        "annualized_turnover",
+    ):
         if not math.isclose(float(reconstructed[key]), float(baseline[key]), abs_tol=1e-12):
             raise ValueError(f"{market}: baseline reconstruction failed for {key}")
     h0_metrics = reconstructed
@@ -324,16 +340,27 @@ def analyze_market(market: str, csv_path: Path, baseline_path: Path) -> dict[str
     )
     trend = frame["benchmark_simple_trend_long_cash_return"].to_numpy(dtype=float)
     residual = {}
-    for label, returns in (("H0", h0["strategy_return"]), ("H1", h1["strategy_return"])):
+    for label, returns in (
+        ("H0", h0["strategy_return"]),
+        ("H1", h1["strategy_return"]),
+    ):
         difference = returns - trend
         residual[label] = {
             "residual_sharpe": float(
                 difference.mean() / difference.std(ddof=0) * math.sqrt(ANNUAL_HOURS)
             )
         }
-    folds_h0 = _fold_report(frame, h0["strategy_return"], h0["turnover"], h0["position"])
+    folds_h0 = _fold_report(
+        frame,
+        h0["strategy_return"],
+        h0["turnover"],
+        h0["position"],
+    )
     folds_h1 = _fold_report(
-        frame, h1["strategy_return"], h1["turnover"], h1["position"]
+        frame,
+        h1["strategy_return"],
+        h1["turnover"],
+        h1["position"],
     )
     eligible = len(frame) - (LOOKBACK + 1)
     suppression_rate = float(h1["suppressed"].sum() / eligible)
@@ -355,7 +382,8 @@ def analyze_market(market: str, csv_path: Path, baseline_path: Path) -> dict[str
             folds_h1["profitable_folds"] >= folds_h0["profitable_folds"]
         ),
         "bootstrap_mean_lower_bound_positive": (
-            bootstrap["annualized_mean_difference"]["percentile_95_interval"][0] > 0.0
+            bootstrap["annualized_mean_difference"]["percentile_95_interval"][0]
+            > 0.0
         ),
     }
     return {
@@ -375,16 +403,14 @@ def analyze_market(market: str, csv_path: Path, baseline_path: Path) -> dict[str
             "sharpe": h1_metrics["sharpe"] - h0_metrics["sharpe"],
             "cagr": h1_metrics["cagr"] - h0_metrics["cagr"],
             "calmar": h1_metrics["calmar"] - h0_metrics["calmar"],
-            "max_drawdown": h1_metrics["max_drawdown"] - h0_metrics["max_drawdown"],
-            "annualized_turnover": (
-                h1_metrics["annualized_turnover"] - h0_metrics["annualized_turnover"]
-            ),
-            "exchange_fee_sum": (
-                h1_metrics["exchange_fee_sum"] - h0_metrics["exchange_fee_sum"]
-            ),
-            "net_edge_per_turnover": (
-                h1_metrics["net_edge_per_turnover"] - h0_metrics["net_edge_per_turnover"]
-            ),
+            "max_drawdown": h1_metrics["max_drawdown"]
+            - h0_metrics["max_drawdown"],
+            "annualized_turnover": h1_metrics["annualized_turnover"]
+            - h0_metrics["annualized_turnover"],
+            "exchange_fee_sum": h1_metrics["exchange_fee_sum"]
+            - h0_metrics["exchange_fee_sum"],
+            "net_edge_per_turnover": h1_metrics["net_edge_per_turnover"]
+            - h0_metrics["net_edge_per_turnover"],
         },
         "target_diagnostics": {
             "eligible_decisions": eligible,
@@ -396,7 +422,9 @@ def analyze_market(market: str, csv_path: Path, baseline_path: Path) -> dict[str
         "folds": {"H0": folds_h0, "H1": folds_h1},
         "years": _year_report(frame, h0, h1),
         "volatility_regimes": _volatility_regime_report(
-            frame, h0["strategy_return"], h1["strategy_return"]
+            frame,
+            h0["strategy_return"],
+            h1["strategy_return"],
         ),
         "benchmark_residual": residual,
         "bootstrap": bootstrap,
