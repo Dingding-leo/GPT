@@ -22,20 +22,24 @@ def _tables(shift: timedelta = timedelta(0)) -> list[dict[str, object]]:
     return tables
 
 
-def test_canonical_selector_calendar_is_accepted(monkeypatch: pytest.MonkeyPatch):
+def test_canonical_selector_calendar_is_accepted(
+    monkeypatch: pytest.MonkeyPatch,
+):
     monkeypatch.setattr(
         selector_protocol,
         "validate_training_candidate_table_sequence",
-        lambda tables, require_complete: None,
+        lambda *_args, **_kwargs: None,
     )
     selector_protocol.validate_canonical_training_candidate_table_sequence(_tables())
 
 
-def test_globally_shifted_selector_calendar_is_rejected(monkeypatch: pytest.MonkeyPatch):
+def test_globally_shifted_selector_calendar_is_rejected(
+    monkeypatch: pytest.MonkeyPatch,
+):
     monkeypatch.setattr(
         selector_protocol,
         "validate_training_candidate_table_sequence",
-        lambda tables, require_complete: None,
+        lambda *_args, **_kwargs: None,
     )
     with pytest.raises(ValueError, match="frozen development calendar"):
         selector_protocol.validate_canonical_training_candidate_table_sequence(
