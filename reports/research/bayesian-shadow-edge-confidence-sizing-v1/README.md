@@ -1,10 +1,16 @@
-# Bayesian shadow-edge confidence sizing v1
+# Bayesian shadow-edge confidence sizing v1 — independent replication
+
+## Classification
+
+`independent_replication_of_rejection`
+
+This branch is an evidence-only independent replay of the primary experiment recorded in Issue #559 comment `5104185668` and branch `auto/research/20260728-22-bayesian-shadow-edge-sizing-result`. It introduces no additional candidate, parameter, OOS comparison, or implementation PR. The independently reconstructed point estimates and confirmatory endpoints matched the primary result to reported precision.
 
 ## Verdict
 
 `rejected_exact_family_cooldown`
 
-This development-only experiment compared the unchanged canonical walk-forward strategy (`B0`) with one frozen sizing overlay (`B1`). `B1` multiplies the canonical target by
+The development-only comparison used the unchanged canonical walk-forward strategy (`B0`) and one frozen sizing overlay (`B1`). `B1` multiplies the canonical target by
 
 ```text
 max(0, 2 * Phi(sqrt(720) * mean(B0_net_720) / sample_std(B0_net_720)) - 1)
@@ -19,7 +25,7 @@ using exactly the preceding 720 completed hourly net returns of the non-recursiv
 - BTC artifact: `8683465243`, ZIP SHA-256 `e9bdc2cee531f0b71539a6f4c2b306f2ae702e64bbbe8443ec16bf69c558147a`
 - ETH artifact: `8683462187`, ZIP SHA-256 `1f865024ae9d3ce7aa51bfe72bbab054b0377eef01780c75f60f6e8aa2cdc51e`
 - Sample: 25,920 confirmed 1H OOS observations and 12 non-overlapping 2,160H folds per market, 2023-07-24 through 2026-07-07 UTC
-- Candidate budget: one architecture family, one alternative, 48 policy-fold evaluations
+- Candidate accounting for this replay: zero new candidates; one previously frozen alternative independently replayed
 - Fee: exactly 5 bps one-way
 - Untouched evidence consumed: false
 
@@ -38,7 +44,7 @@ The multiplier was zero in 60.32% of BTC hours and 64.46% of ETH hours. Confiden
 
 ## Adjusted uncertainty
 
-The confirmatory family used 5,000 paired, non-circular 168H moving-block resamples within folds, preserving each fold-boundary row exactly once and using identical time indices across markets. A methodological flaw was repaired before publication: raw percentile-bootstrap frequencies were not called p-values. Inference uses centered bootstrap errors, basic intervals, one-sided lower bounds and Holm familywise adjustment.
+The confirmatory family used 5,000 paired, non-circular 168H moving-block resamples within folds, preserving each fold-boundary row exactly once and using identical time indices across markets. This replay used centered bootstrap errors, basic intervals, one-sided lower bounds and Holm familywise adjustment rather than treating raw percentile frequencies as null p-values.
 
 | Endpoint | Observed B1-B0 | One-sided 95% lower bound | Holm-adjusted p |
 |---|---:|---:|---:|
