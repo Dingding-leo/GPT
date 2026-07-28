@@ -199,15 +199,27 @@ def test_candidate_cache_is_invariant_to_unavailable_future_suffix(
     start = complete_history.index[300]
     end = complete_history.index[499]
     point_in_time_history = complete_history.loc[:end]
+    original_suffix = complete_history.iloc[500:]
 
-    altered_future = complete_history.copy()
-    altered_future.iloc[500:] = altered_future.iloc[500:].iloc[::-1].to_numpy()
-    assert not altered_future.iloc[500:].equals(complete_history.iloc[500:])
-    pd.testing.assert_series_equal(
-        altered_future.loc[:end],
-        point_in_time_history,
-        check_exact=True,
-    )
+    reordered_future = complete_history.copy()
+    reordered_future.iloc[500:] = original_suffix.iloc[::-1].to_numpy()
+
+    distribution_changed_future = complete_history.copy()
+    distribution_changed_future.iloc[500:] = (
+        original_suffix * 1.5 + original_suffix.median()
+    ).to_numpy()
+
+    assert not reordered_future.iloc[500:].equals(original_suffix)
+    assert not distribution_changed_future.iloc[500:].equals(original_suffix)
+    assert distribution_changed_future.iloc[500:].mean() > original_suffix.mean()
+    assert distribution_changed_future.iloc[500:].std() > original_suffix.std()
+
+    for altered_future in (reordered_future, distribution_changed_future):
+        pd.testing.assert_series_equal(
+            altered_future.loc[:end],
+            point_in_time_history,
+            check_exact=True,
+        )
 
     baseline = walk_forward._run_cached_candidate_window(
         point_in_time_history,
@@ -218,14 +230,15 @@ def test_candidate_cache_is_invariant_to_unavailable_future_suffix(
         end,
         0.0,
     )
-    modified = walk_forward._run_cached_candidate_window(
-        point_in_time_history,
-        altered_future,
-        {},
-        config,
-        start,
-        end,
-        0.0,
-    )
 
-    pd.testing.assert_frame_equal(baseline, modified, check_exact=True)
+    for altered_future in (reordered_future, distribution_changed_future):
+        modified = walk_forward._run_cached_candidate_window(
+            point_in_time_history,
+            altered_future,
+            {},
+            config,
+            start,
+            end,
+            0.0,
+        )
+        pd.testing.assert_frame_equal(baseline, modified, check_exact=True)
