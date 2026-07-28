@@ -1,0 +1,80 @@
+name: Funding Basis Short-Window Statistics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/funding-basis-short-window.yml"
+      - "reports/research/funding-basis-crowding-unwind-v2/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: funding-basis-short-window-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  funding-basis-statistics:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OKX_BASE_URL: https://www.okx.com
+    steps:
+      - name: Check out exact strategy head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip check
+
+      - name: Acquire immutable public spot 1H coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/run_okx_1h_coverage.py \
+            --start 2025-01-01T00:00:00Z \
+            --output-dir reports/okx/1h-coverage
+
+      - name: Run frozen F0/F1 statistical diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python reports/research/funding-basis-crowding-unwind-v2/run_short_window_diagnostic.py.txt \
+            --reports-root reports/okx/1h-coverage \
+            --output-dir reports/funding-basis-short-window
+          test -s reports/funding-basis-short-window/result.json
+          test -s reports/funding-basis-short-window/result.sha256
+          sha256sum -c <(awk '{print $1 "  reports/funding-basis-short-window/result.json"}' reports/funding-basis-short-window/result.sha256)
+
+      - name: Upload immutable diagnostic evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: funding-basis-short-window-${{ env.EXPECTED_TESTED_SHA }}
+          path: |
+            reports/funding-basis-short-window/
+            reports/okx/1h-coverage/coverage-manifest.json
+          if-no-files-found: error
+          retention-days: 14

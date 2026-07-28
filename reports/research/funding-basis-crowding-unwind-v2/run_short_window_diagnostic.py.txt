@@ -1,0 +1,684 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import time
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
+from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+
+import numpy as np
+import pandas as pd
+
+BASE_URL = "https://www.okx.com"
+HOUR_MS = 3_600_000
+ALLOWED_INTERVALS = {1, 2, 4, 6, 8}
+FEE = 0.0005
+ANNUAL_HOURS = 8760.0
+BLOCK_HOURS = 168
+BOOTSTRAPS = 5000
+SEED = 20260728
+DIAGNOSTIC_FOLD_HOURS = 720
+
+
+@dataclass(frozen=True)
+class RawResponse:
+    url: str
+    body: bytes
+    sha256: str
+
+
+@dataclass
+class Event:
+    market: str
+    funding_time: int
+    interval_hours: int | None
+    episode_id: int
+    formula_type: str | None
+    method: str | None
+    realized_rate: float | None
+    funding_8h: float | None
+    basis: float | None
+    recovery: float | None
+    z_funding: float | None
+    z_basis: float | None
+    z_recovery: float | None
+    warmup_complete: bool
+    target_f0: float
+    target_f1: float
+    valid: bool
+    invalid_reason: str | None
+
+
+def canonical_json(value: Any) -> bytes:
+    return (json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n").encode()
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def request_json(path: str, params: list[tuple[str, str]], raw_dir: Path) -> tuple[dict[str, Any], RawResponse]:
+    url = f"{BASE_URL}{path}?{urlencode(params)}"
+    req = Request(url, headers={"Accept": "application/json", "User-Agent": "gpt-quant-lab/0.2 (+https://github.com/Dingding-leo/GPT)"})
+    last: Exception | None = None
+    for attempt in range(4):
+        try:
+            with urlopen(req, timeout=30) as response:  # noqa: S310
+                body = response.read()
+            payload = json.loads(body.decode("utf-8"))
+            if not isinstance(payload, dict) or payload.get("code") != "0" or not isinstance(payload.get("data"), list):
+                raise RuntimeError(f"invalid OKX response for {url}")
+            digest = sha256(body)
+            raw_dir.mkdir(parents=True, exist_ok=True)
+            (raw_dir / f"{digest}.json").write_bytes(body)
+            return payload, RawResponse(url=url, body=body, sha256=digest)
+        except (HTTPError, URLError, TimeoutError, UnicodeDecodeError, json.JSONDecodeError, RuntimeError) as exc:
+            last = exc
+            if attempt == 3:
+                raise RuntimeError(f"OKX request failed: {url}") from exc
+            time.sleep(0.75 * (2**attempt))
+    raise RuntimeError("unreachable") from last
+
+
+def bind_instruments(market: str, raw_dir: Path, manifest: list[dict[str, Any]]) -> tuple[str, str]:
+    swap = f"{market}-SWAP"
+    for inst_type, inst_id in (("SPOT", market), ("SWAP", swap)):
+        payload, raw = request_json("/api/v5/public/instruments", [("instType", inst_type), ("instId", inst_id)], raw_dir)
+        manifest.append({"url": raw.url, "sha256": raw.sha256, "bytes": len(raw.body)})
+        rows = payload["data"]
+        exact = [row for row in rows if isinstance(row, dict) and row.get("instId") == inst_id]
+        if len(exact) != 1 or exact[0].get("state") != "live":
+            raise RuntimeError(f"instrument binding failed for {inst_id}")
+        if inst_type == "SWAP":
+            index_id = exact[0].get("uly")
+            if not isinstance(index_id, str) or not index_id:
+                raise RuntimeError(f"missing index binding for {inst_id}")
+    return swap, index_id
+
+
+def fetch_funding(swap: str, raw_dir: Path, manifest: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    payload, raw = request_json(
+        "/api/v5/public/funding-rate-history",
+        [("instId", swap), ("limit", "400")],
+        raw_dir,
+    )
+    manifest.append({"url": raw.url, "sha256": raw.sha256, "bytes": len(raw.body)})
+    dedup: dict[int, dict[str, Any]] = {}
+    for row in payload["data"]:
+        if not isinstance(row, dict) or row.get("instId") != swap:
+            raise RuntimeError("funding instrument mismatch")
+        ts_text = row.get("fundingTime")
+        if not isinstance(ts_text, str) or not ts_text.isdecimal():
+            raise RuntimeError("invalid funding timestamp")
+        ts = int(ts_text)
+        if ts % HOUR_MS:
+            raise RuntimeError("off-hour funding timestamp")
+        prior = dedup.get(ts)
+        if prior is not None and prior != row:
+            raise RuntimeError("conflicting funding duplicate")
+        dedup[ts] = row
+    return [dedup[key] for key in sorted(dedup)]
+
+
+def parse_candle_row(row: Any) -> tuple[int, float, str]:
+    if not isinstance(row, list) or len(row) not in {6, 9}:
+        raise RuntimeError("unexpected candle schema")
+    ts_text = row[0]
+    if not isinstance(ts_text, str) or not ts_text.isdecimal():
+        raise RuntimeError("invalid candle timestamp")
+    ts = int(ts_text)
+    if ts % HOUR_MS:
+        raise RuntimeError("off-hour candle timestamp")
+    close = float(row[4])
+    confirm = str(row[-1])
+    if not math.isfinite(close) or close <= 0:
+        raise RuntimeError("invalid candle close")
+    return ts, close, confirm
+
+
+def fetch_candles(
+    endpoint: str,
+    inst_id: str,
+    min_open_ms: int,
+    raw_dir: Path,
+    manifest: list[dict[str, Any]],
+    max_pages: int = 40,
+) -> dict[int, float]:
+    rows_by_ts: dict[int, tuple[Any, ...]] = {}
+    after: int | None = None
+    for _ in range(max_pages):
+        params = [("instId", inst_id), ("bar", "1H"), ("limit", "100")]
+        if after is not None:
+            params.append(("after", str(after)))
+        payload, raw = request_json(endpoint, params, raw_dir)
+        manifest.append({"url": raw.url, "sha256": raw.sha256, "bytes": len(raw.body)})
+        rows = payload["data"]
+        if not rows:
+            break
+        oldest: int | None = None
+        for row in rows:
+            ts, _, _ = parse_candle_row(row)
+            normalized = tuple(row)
+            prior = rows_by_ts.get(ts)
+            if prior is not None and prior != normalized:
+                raise RuntimeError(f"conflicting candle duplicate {endpoint} {inst_id} {ts}")
+            rows_by_ts[ts] = normalized
+            oldest = ts if oldest is None else min(oldest, ts)
+        if oldest is None or oldest <= min_open_ms:
+            break
+        if after == oldest:
+            raise RuntimeError("repeated candle cursor")
+        after = oldest
+        time.sleep(0.12)
+    if not rows_by_ts:
+        raise RuntimeError(f"empty candle coverage: {endpoint} {inst_id}")
+    result: dict[int, float] = {}
+    for ts, row in rows_by_ts.items():
+        _, close, confirm = parse_candle_row(list(row))
+        if confirm == "1":
+            result[ts] = close
+    return result
+
+
+def weighted_median(values: list[float], weights: list[int], times: list[int]) -> float:
+    ordered = sorted(zip(values, weights, times, strict=True), key=lambda x: (x[0], x[2]))
+    total = sum(weight for _, weight, _ in ordered)
+    threshold = total / 2.0
+    cumulative = 0
+    for value, weight, _ in ordered:
+        cumulative += weight
+        if cumulative >= threshold:
+            return float(value)
+    raise RuntimeError("weighted median failed")
+
+
+def robust_z(value: float, values: list[float], weights: list[int], times: list[int]) -> float | None:
+    median = weighted_median(values, weights, times)
+    deviations = [abs(v - median) for v in values]
+    mad = weighted_median(deviations, weights, times)
+    if not math.isfinite(mad) or mad <= 0:
+        return None
+    return float(np.clip((value - median) / mad, -6.0, 6.0))
+
+
+def build_events(market: str, funding: list[dict[str, Any]], mark: dict[int, float], index: dict[int, float]) -> list[Event]:
+    events: list[Event] = []
+    previous_ts: int | None = None
+    previous_regime: tuple[str, str] | None = None
+    episode_id = -1
+    histories: dict[int, list[tuple[int, int, float, float, float]]] = {}
+    for row in funding:
+        ts = int(row["fundingTime"])
+        formula = row.get("formulaType") if isinstance(row.get("formulaType"), str) and row.get("formulaType") else None
+        method = row.get("method") if isinstance(row.get("method"), str) and row.get("method") else None
+        regime = (formula or "<missing>", method or "<missing>")
+        if previous_regime != regime:
+            episode_id += 1
+            histories[episode_id] = []
+            previous_regime = regime
+        interval: int | None = None
+        if previous_ts is not None:
+            delta = ts - previous_ts
+            if delta > 0 and delta % HOUR_MS == 0 and delta // HOUR_MS in ALLOWED_INTERVALS:
+                interval = delta // HOUR_MS
+        previous_ts = ts
+
+        realized: float | None
+        try:
+            realized = float(row.get("realizedRate"))
+            if not math.isfinite(realized):
+                realized = None
+        except (TypeError, ValueError):
+            realized = None
+        funding8 = realized * 8.0 / interval if realized is not None and interval else None
+        current_open = ts - HOUR_MS
+        previous_open = ts - 25 * HOUR_MS
+        basis = None
+        recovery = None
+        if current_open in mark and current_open in index:
+            basis = math.log(mark[current_open] / index[current_open])
+        if previous_open in mark and previous_open in index and basis is not None:
+            recovery = basis - math.log(mark[previous_open] / index[previous_open])
+
+        reasons: list[str] = []
+        if interval is None:
+            reasons.append("invalid_interval")
+        if formula is None or method is None:
+            reasons.append("missing_regime")
+        if funding8 is None:
+            reasons.append("missing_funding")
+        if basis is None:
+            reasons.append("missing_basis")
+        if recovery is None:
+            reasons.append("missing_recovery")
+
+        history = histories[episode_id]
+        warm = len(history) >= 30 and sum(item[1] for item in history) >= 240
+        zf = zb = zr = None
+        if not reasons and warm:
+            times = [item[0] for item in history]
+            weights = [item[1] for item in history]
+            zf = robust_z(float(funding8), [item[2] for item in history], weights, times)
+            zb = robust_z(float(basis), [item[3] for item in history], weights, times)
+            zr = robust_z(float(recovery), [item[4] for item in history], weights, times)
+            if zf is None or zb is None or zr is None:
+                reasons.append("zero_or_nonfinite_mad")
+
+        target0 = target1 = 0.0
+        valid = not reasons and warm and zf is not None and zb is not None and zr is not None
+        if valid:
+            if float(funding8) < 0:
+                target0 = max(0.0, math.tanh(-zf))
+            if float(funding8) < 0 and float(basis) < 0 and float(recovery) > 0:
+                target1 = max(0.0, math.tanh(min(-zf, -zb, zr)))
+
+        events.append(
+            Event(
+                market=market,
+                funding_time=ts,
+                interval_hours=interval,
+                episode_id=episode_id,
+                formula_type=formula,
+                method=method,
+                realized_rate=realized,
+                funding_8h=funding8,
+                basis=basis,
+                recovery=recovery,
+                z_funding=zf,
+                z_basis=zb,
+                z_recovery=zr,
+                warmup_complete=warm,
+                target_f0=target0,
+                target_f1=target1,
+                valid=valid,
+                invalid_reason="|".join(reasons) if reasons else None,
+            )
+        )
+        if not reasons and interval is not None and funding8 is not None and basis is not None and recovery is not None:
+            history.append((ts, interval, funding8, basis, recovery))
+    return events
+
+
+def load_spot_snapshot(path: Path) -> pd.DataFrame:
+    frame = pd.read_csv(path)
+    if "timestamp" not in frame or "open" not in frame or "close" not in frame:
+        raise RuntimeError(f"invalid canonical spot snapshot: {path}")
+    frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True)
+    frame = frame.set_index("timestamp").sort_index()
+    if frame.index.has_duplicates or not frame.index.is_monotonic_increasing:
+        raise RuntimeError("invalid spot chronology")
+    diffs = frame.index.to_series().diff().dropna()
+    if not (diffs == pd.Timedelta(hours=1)).all():
+        raise RuntimeError("gapped spot snapshot")
+    frame["open"] = pd.to_numeric(frame["open"], errors="raise")
+    frame["close"] = pd.to_numeric(frame["close"], errors="raise")
+    if not np.isfinite(frame[["open", "close"]].to_numpy()).all() or (frame[["open", "close"]] <= 0).any().any():
+        raise RuntimeError("invalid spot prices")
+    return frame
+
+
+def positions_from_events(frame: pd.DataFrame, events: list[Event]) -> pd.DataFrame:
+    opens_ms = (frame.index.view("int64") // 1_000_000).astype(np.int64)
+    event_index = -1
+    position0 = np.zeros(len(frame))
+    position1 = np.zeros(len(frame))
+    episode = np.full(len(frame), -1, dtype=int)
+    valid_feature = np.zeros(len(frame), dtype=bool)
+    for i, open_ms in enumerate(opens_ms):
+        while event_index + 1 < len(events) and events[event_index + 1].funding_time < open_ms:
+            event_index += 1
+        if event_index < 0:
+            continue
+        event = events[event_index]
+        episode[i] = event.episode_id
+        if event.interval_hours is None:
+            continue
+        deadline = event.funding_time + event.interval_hours * HOUR_MS
+        if open_ms <= deadline:
+            position0[i] = event.target_f0
+            position1[i] = event.target_f1
+            valid_feature[i] = event.warmup_complete
+    result = frame.copy()
+    result["position_f0"] = position0
+    result["position_f1"] = position1
+    result["episode_id"] = episode
+    result["feature_warm"] = valid_feature
+    result["open_return"] = result["open"].shift(-1) / result["open"] - 1.0
+    result["turnover_f0"] = pd.Series(position0, index=result.index).diff().abs().fillna(abs(position0[0]))
+    result["turnover_f1"] = pd.Series(position1, index=result.index).diff().abs().fillna(abs(position1[0]))
+    result["gross_f0"] = result["position_f0"] * result["open_return"]
+    result["gross_f1"] = result["position_f1"] * result["open_return"]
+    result["net_f0"] = result["gross_f0"] - FEE * result["turnover_f0"]
+    result["net_f1"] = result["gross_f1"] - FEE * result["turnover_f1"]
+    return result
+
+
+def add_simple_trend(frame: pd.DataFrame, lookback: int = 2160) -> pd.DataFrame:
+    target = (frame["close"] / frame["close"].shift(lookback) - 1.0 > 0).astype(float)
+    position = target.shift(1).fillna(0.0)
+    turnover = position.diff().abs().fillna(abs(position.iloc[0]))
+    frame = frame.copy()
+    frame["position_trend"] = position
+    frame["turnover_trend"] = turnover
+    frame["gross_trend"] = position * frame["open_return"]
+    frame["net_trend"] = frame["gross_trend"] - FEE * turnover
+    return frame
+
+
+def compounded_return(values: np.ndarray) -> float:
+    return float(np.prod(1.0 + values) - 1.0)
+
+
+def sharpe(values: np.ndarray) -> float:
+    if len(values) < 2:
+        return float("nan")
+    std = float(np.std(values, ddof=1))
+    return float(np.mean(values) / std * math.sqrt(ANNUAL_HOURS)) if std > 0 else 0.0
+
+
+def max_drawdown(values: np.ndarray) -> float:
+    equity = np.cumprod(1.0 + values)
+    peaks = np.maximum.accumulate(equity)
+    return float(np.min(equity / peaks - 1.0)) if len(values) else 0.0
+
+
+def edge_per_turnover(net: np.ndarray, turnover: np.ndarray) -> float | None:
+    mean_turn = float(np.mean(turnover))
+    if mean_turn <= 0:
+        return None
+    return float(np.mean(net) / mean_turn * 10000.0)
+
+
+def median_holding_hours(position: np.ndarray) -> float | None:
+    lengths: list[int] = []
+    run = 0
+    for value in position:
+        if value > 0:
+            run += 1
+        elif run:
+            lengths.append(run)
+            run = 0
+    if run:
+        lengths.append(run)
+    return float(np.median(lengths)) if lengths else None
+
+
+def rolling_worst(values: np.ndarray, window: int) -> float | None:
+    if len(values) < window:
+        return None
+    return min(compounded_return(values[i : i + window]) for i in range(len(values) - window + 1))
+
+
+def policy_metrics(frame: pd.DataFrame, policy: str) -> dict[str, Any]:
+    net = frame[f"net_{policy}"].to_numpy(float)
+    gross = frame[f"gross_{policy}"].to_numpy(float)
+    turnover = frame[f"turnover_{policy}"].to_numpy(float)
+    position = frame[f"position_{policy}"].to_numpy(float)
+    annual_mean = float(np.mean(net) * ANNUAL_HOURS)
+    mdd = max_drawdown(net)
+    fold_returns: list[float] = []
+    complete_folds = int(frame["diagnostic_fold_complete"].max() + 1) if len(frame) and frame["diagnostic_fold_complete"].max() >= 0 else 0
+    for fold in range(complete_folds):
+        fold_values = frame.loc[frame["diagnostic_fold_complete"] == fold, f"net_{policy}"].to_numpy(float)
+        fold_returns.append(compounded_return(fold_values))
+    positive = [x for x in fold_returns if x > 0]
+    concentration = max(positive) / sum(positive) if positive else None
+    years = {}
+    for year, group in frame.groupby(frame.index.year):
+        years[str(int(year))] = {"net_return": compounded_return(group[f"net_{policy}"].to_numpy(float)), "sharpe": sharpe(group[f"net_{policy}"].to_numpy(float))}
+    return {
+        "observations": len(frame),
+        "net_return": compounded_return(net),
+        "gross_return": compounded_return(gross),
+        "annualized_arithmetic_mean": annual_mean,
+        "sharpe": sharpe(net),
+        "max_drawdown": mdd,
+        "calmar": annual_mean / abs(mdd) if mdd < 0 else None,
+        "annualized_turnover": float(np.mean(turnover) * ANNUAL_HOURS),
+        "fee_sum": float(FEE * np.sum(turnover)),
+        "edge_per_turnover_bps": edge_per_turnover(net, turnover),
+        "time_in_market": float(np.mean(position > 0)),
+        "adjustments": int(np.count_nonzero(turnover > 0)),
+        "median_holding_hours": median_holding_hours(position),
+        "worst_24h_return": rolling_worst(net, 24),
+        "worst_168h_return": rolling_worst(net, 168),
+        "profitable_complete_folds": int(sum(x > 0 for x in fold_returns)),
+        "complete_folds": complete_folds,
+        "positive_fold_concentration": concentration,
+        "fold_returns": fold_returns,
+        "years": years,
+    }
+
+
+def resample_segment_indices(length: int, rng: np.random.Generator) -> np.ndarray:
+    if length <= BLOCK_HOURS:
+        return np.arange(length)
+    output: list[int] = []
+    max_start = length - BLOCK_HOURS
+    while len(output) < length:
+        start = int(rng.integers(0, max_start + 1))
+        output.extend(range(start, start + BLOCK_HOURS))
+    return np.asarray(output[:length], dtype=int)
+
+
+def bootstrap_market(frame: pd.DataFrame, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
+    columns = ["net_f0", "net_f1", "turnover_f0", "turnover_f1"]
+    arrays = frame[columns].to_numpy(float)
+    groups: list[np.ndarray] = []
+    group_keys = list(zip(frame["diagnostic_fold_all"].to_numpy(int), frame["episode_id"].to_numpy(int), strict=True))
+    start = 0
+    for i in range(1, len(frame) + 1):
+        if i == len(frame) or group_keys[i] != group_keys[start]:
+            groups.append(np.arange(start, i, dtype=int))
+            start = i
+    sr_deltas = np.empty(BOOTSTRAPS)
+    edge_deltas = np.empty(BOOTSTRAPS)
+    for b in range(BOOTSTRAPS):
+        sampled: list[np.ndarray] = []
+        for group in groups:
+            local = resample_segment_indices(len(group), rng)
+            sampled.append(group[local])
+        idx = np.concatenate(sampled)
+        sample = arrays[idx]
+        sr_deltas[b] = sharpe(sample[:, 1]) - sharpe(sample[:, 0])
+        e0 = edge_per_turnover(sample[:, 0], sample[:, 2])
+        e1 = edge_per_turnover(sample[:, 1], sample[:, 3])
+        edge_deltas[b] = np.nan if e0 is None or e1 is None else e1 - e0
+    return sr_deltas, edge_deltas
+
+
+def inference(observed: float, boot: np.ndarray) -> dict[str, Any]:
+    boot = boot[np.isfinite(boot)]
+    if len(boot) != BOOTSTRAPS:
+        return {"available": False, "reason": "undefined_bootstrap_endpoint"}
+    errors = boot - observed
+    lower = observed - float(np.quantile(errors, 0.95))
+    interval = [observed - float(np.quantile(errors, 0.975)), observed - float(np.quantile(errors, 0.025))]
+    p = (1.0 + float(np.count_nonzero(errors >= observed))) / (len(errors) + 1.0)
+    return {"available": True, "observed": observed, "one_sided_95_lower": lower, "basic_95_interval": interval, "one_sided_p": p}
+
+
+def holm(pvalues: list[float]) -> list[float]:
+    order = np.argsort(pvalues)
+    adjusted = [1.0] * len(pvalues)
+    running = 0.0
+    m = len(pvalues)
+    for rank, idx in enumerate(order):
+        value = min(1.0, (m - rank) * pvalues[int(idx)])
+        running = max(running, value)
+        adjusted[int(idx)] = running
+    return adjusted
+
+
+def process_market(market: str, reports_root: Path, raw_root: Path, source_manifest: list[dict[str, Any]]) -> tuple[pd.DataFrame, list[Event], dict[str, Any]]:
+    swap, index_id = bind_instruments(market, raw_root / market, source_manifest)
+    funding = fetch_funding(swap, raw_root / market, source_manifest)
+    if len(funding) < 32:
+        raise RuntimeError(f"insufficient settled funding rows for {market}")
+    oldest = int(funding[0]["fundingTime"])
+    newest = int(funding[-1]["fundingTime"])
+    min_open = oldest - 26 * HOUR_MS
+    mark = fetch_candles("/api/v5/market/history-mark-price-candles", swap, min_open, raw_root / market, source_manifest)
+    index = fetch_candles("/api/v5/market/history-index-candles", index_id, min_open, raw_root / market, source_manifest)
+    events = build_events(market, funding, mark, index)
+    snapshot = reports_root / market / "snapshot" / f"okx-{market}-1H.csv"
+    spot = load_spot_snapshot(snapshot)
+    frame = add_simple_trend(positions_from_events(spot, events))
+    valid_events = [event for event in events if event.warmup_complete and event.z_funding is not None and event.z_basis is not None and event.z_recovery is not None]
+    if not valid_events:
+        raise RuntimeError(f"no causally normalized events for {market}")
+    first_open_ms = valid_events[0].funding_time + HOUR_MS
+    last_event = events[-1]
+    if last_event.interval_hours is None:
+        prior_valid_interval = next((event.interval_hours for event in reversed(events[:-1]) if event.interval_hours is not None), None)
+        if prior_valid_interval is None:
+            raise RuntimeError("no valid final interval")
+        last_deadline_ms = last_event.funding_time + prior_valid_interval * HOUR_MS
+    else:
+        last_deadline_ms = last_event.funding_time + last_event.interval_hours * HOUR_MS
+    metadata = {
+        "swap_inst_id": swap,
+        "index_id": index_id,
+        "funding_rows": len(funding),
+        "funding_start_ms": oldest,
+        "funding_end_ms": newest,
+        "mark_complete_rows": len(mark),
+        "index_complete_rows": len(index),
+        "first_eligible_open_ms": first_open_ms,
+        "last_deadline_open_ms": last_deadline_ms,
+        "event_invalid_counts": {str(key): int(value) for key, value in pd.Series([event.invalid_reason or "valid" for event in events]).value_counts().to_dict().items()},
+        "episode_count": len({event.episode_id for event in events}),
+    }
+    frame["open_ms"] = (frame.index.view("int64") // 1_000_000).astype(np.int64)
+    frame = frame.loc[(frame["open_ms"] >= first_open_ms) & (frame["open_ms"] <= last_deadline_ms) & frame["open_return"].notna()].copy()
+    return frame, events, metadata
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--reports-root", default="reports/okx")
+    parser.add_argument("--output-dir", default="reports/funding-basis-short-window")
+    args = parser.parse_args()
+    reports_root = Path(args.reports_root)
+    output_dir = Path(args.output_dir)
+    raw_root = output_dir / "raw"
+    source_manifest: list[dict[str, Any]] = []
+
+    market_frames: dict[str, pd.DataFrame] = {}
+    market_events: dict[str, list[Event]] = {}
+    market_meta: dict[str, dict[str, Any]] = {}
+    for market in ("BTC-USDT", "ETH-USDT"):
+        frame, events, metadata = process_market(market, reports_root, raw_root, source_manifest)
+        market_frames[market] = frame
+        market_events[market] = events
+        market_meta[market] = metadata
+
+    common_start = max(frame.index[0] for frame in market_frames.values())
+    common_end = min(frame.index[-1] for frame in market_frames.values())
+    for market, frame in market_frames.items():
+        sliced = frame.loc[common_start:common_end].copy()
+        n = len(sliced)
+        sliced["diagnostic_fold_all"] = np.arange(n) // DIAGNOSTIC_FOLD_HOURS
+        complete_count = n // DIAGNOSTIC_FOLD_HOURS
+        sliced["diagnostic_fold_complete"] = np.where(sliced["diagnostic_fold_all"] < complete_count, sliced["diagnostic_fold_all"], -1)
+        market_frames[market] = sliced
+
+    metrics: dict[str, Any] = {}
+    for market, frame in market_frames.items():
+        metrics[market] = {policy: policy_metrics(frame, policy) for policy in ("f0", "f1", "trend")}
+        for policy in ("f0", "f1"):
+            metrics[market][policy]["residual_sharpe_vs_trend"] = sharpe((frame[f"net_{policy}"] - frame["net_trend"]).to_numpy(float))
+
+    rng_btc = np.random.default_rng(SEED)
+    rng_eth = np.random.default_rng(SEED + 1)
+    btc_sr, btc_edge = bootstrap_market(market_frames["BTC-USDT"], rng_btc)
+    eth_sr, eth_edge = bootstrap_market(market_frames["ETH-USDT"], rng_eth)
+    observed_sr = min(
+        metrics["BTC-USDT"]["f1"]["sharpe"] - metrics["BTC-USDT"]["f0"]["sharpe"],
+        metrics["ETH-USDT"]["f1"]["sharpe"] - metrics["ETH-USDT"]["f0"]["sharpe"],
+    )
+    edge_deltas = []
+    for market in ("BTC-USDT", "ETH-USDT"):
+        e0 = metrics[market]["f0"]["edge_per_turnover_bps"]
+        e1 = metrics[market]["f1"]["edge_per_turnover_bps"]
+        edge_deltas.append(float("nan") if e0 is None or e1 is None else e1 - e0)
+    observed_edge = min(edge_deltas) if all(math.isfinite(x) for x in edge_deltas) else float("nan")
+    sr_inf = inference(observed_sr, np.minimum(btc_sr, eth_sr))
+    edge_inf = inference(observed_edge, np.minimum(btc_edge, eth_edge)) if math.isfinite(observed_edge) else {"available": False, "reason": "undefined_observed_edge"}
+    if sr_inf.get("available") and edge_inf.get("available"):
+        adjusted = holm([sr_inf["one_sided_p"], edge_inf["one_sided_p"]])
+        sr_inf["holm_adjusted_p"] = adjusted[0]
+        edge_inf["holm_adjusted_p"] = adjusted[1]
+
+    complete_folds = min(metrics[m]["f1"]["complete_folds"] for m in metrics)
+    deterministic_failures: list[str] = []
+    for market in ("BTC-USDT", "ETH-USDT"):
+        f0 = metrics[market]["f0"]
+        f1 = metrics[market]["f1"]
+        if f1["net_return"] <= 0 or f1["sharpe"] <= 0:
+            deterministic_failures.append(f"{market}:nonpositive_F1_return_or_sharpe")
+        if f1["sharpe"] <= f0["sharpe"]:
+            deterministic_failures.append(f"{market}:F1_sharpe_not_above_F0")
+        if f1["edge_per_turnover_bps"] is None or f0["edge_per_turnover_bps"] is None or f1["edge_per_turnover_bps"] <= f0["edge_per_turnover_bps"]:
+            deterministic_failures.append(f"{market}:F1_edge_not_above_F0")
+        if f1["residual_sharpe_vs_trend"] <= 0:
+            deterministic_failures.append(f"{market}:nonpositive_residual_sharpe")
+        if f1["complete_folds"] >= 2 and f1["profitable_complete_folds"] * 2 < f1["complete_folds"]:
+            deterministic_failures.append(f"{market}:insufficient_profitable_fold_breadth")
+        concentration = f1["positive_fold_concentration"]
+        if concentration is not None and concentration > 0.5:
+            deterministic_failures.append(f"{market}:positive_fold_concentration_above_50pct")
+    if complete_folds < 2 or not sr_inf.get("available") or not edge_inf.get("available"):
+        verdict = "insufficient_history"
+    elif deterministic_failures:
+        verdict = "rejected_short_window_diagnostic"
+    elif sr_inf["one_sided_95_lower"] <= 0 or edge_inf["one_sided_95_lower"] <= 0 or sr_inf.get("holm_adjusted_p", 1.0) > 0.05 or edge_inf.get("holm_adjusted_p", 1.0) > 0.05:
+        verdict = "short_window_directional_only_insufficient_history"
+    else:
+        verdict = "short_window_directional_only_insufficient_history"
+
+    result = {
+        "schema_version": 1,
+        "family_id": "funding-basis-crowding-unwind-v2",
+        "classification": "activated_retention_limited_short_window_diagnostic",
+        "candidate_count": 2,
+        "policies": ["F0", "F1"],
+        "markets": ["BTC-USDT", "ETH-USDT"],
+        "bar": "1H",
+        "execution": "next_open_to_next_open",
+        "fee_one_way": FEE,
+        "common_sample": {"start": common_start.isoformat(), "end": common_end.isoformat(), "observations_per_market": len(next(iter(market_frames.values()))), "diagnostic_fold_hours": DIAGNOSTIC_FOLD_HOURS, "complete_folds_per_market": complete_folds},
+        "source_manifest": sorted(source_manifest, key=lambda x: x["url"]),
+        "source_manifest_sha256": sha256(canonical_json(sorted(source_manifest, key=lambda x: x["url"]))),
+        "coverage": market_meta,
+        "metrics": metrics,
+        "confirmatory": {
+            "bootstrap": {"resamples": BOOTSTRAPS, "block_hours": BLOCK_HOURS, "seed": SEED, "boundaries": "diagnostic_fold_and_contiguous_regime_episode"},
+            "worst_market_sharpe_delta_F1_minus_F0": sr_inf,
+            "worst_market_edge_per_turnover_delta_bps_F1_minus_F0": edge_inf,
+        },
+        "deterministic_failures": deterministic_failures,
+        "dsr": {"reported": False, "reason": "no defensible de-duplicated repository-wide independent-family count"},
+        "pbo": {"reported": False, "reason": "retention-limited two-policy sample does not supply a valid CSCV matrix"},
+        "verdict": verdict,
+        "promotion_authorized": False,
+        "new_untouched_oos_consumed": False,
+    }
+    output_dir.mkdir(parents=True, exist_ok=True)
+    result_path = output_dir / "result.json"
+    result_path.write_bytes(canonical_json(result))
+    result_sha = sha256(result_path.read_bytes())
+    (output_dir / "result.sha256").write_text(result_sha + "\n", encoding="utf-8")
+    print(json.dumps({"verdict": verdict, "result_sha256": result_sha, "sample": result["common_sample"], "deterministic_failures": deterministic_failures, "metrics": metrics, "confirmatory": result["confirmatory"]}, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
