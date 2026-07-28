@@ -23,104 +23,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  format-sources:
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    env:
-      EXPECTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
-
-    steps:
-      - name: Check out exact candidate head
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ env.EXPECTED_SHA }}
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Verify exact revision
-        shell: bash
-        run: |
-          set -euo pipefail
-          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
-          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-
-      - name: Set up Python
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-        with:
-          python-version: "3.12"
-          cache: pip
-
-      - name: Install formatter
-        shell: bash
-        run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
-          python -m pip check
-
-      - name: Materialize reviewable formatted sources
-        shell: bash
-        run: |
-          set -euo pipefail
-          ruff check --fix --exit-zero \
-            scripts/run_trade_flow_research.py \
-            scripts/run_trade_flow_research_exact.py \
-            scripts/run_trade_flow_research_boundary.py
-          ruff format \
-            scripts/run_trade_flow_research.py \
-            scripts/run_trade_flow_research_exact.py \
-            scripts/run_trade_flow_research_boundary.py
-          ruff check \
-            scripts/run_trade_flow_research.py \
-            scripts/run_trade_flow_research_exact.py \
-            scripts/run_trade_flow_research_boundary.py
-          ruff format --check \
-            scripts/run_trade_flow_research.py \
-            scripts/run_trade_flow_research_exact.py \
-            scripts/run_trade_flow_research_boundary.py
-          mkdir -p reports/research/trade-flow-formatted-sources
-          cp scripts/run_trade_flow_research.py \
-            scripts/run_trade_flow_research_exact.py \
-            scripts/run_trade_flow_research_boundary.py \
-            reports/research/trade-flow-formatted-sources/
-          printf '%s\n' "$EXPECTED_SHA" \
-            > reports/research/trade-flow-formatted-sources/source-head-sha.txt
-          find reports/research/trade-flow-formatted-sources -type f -print0 \
-            | sort -z \
-            | xargs -0 sha256sum \
-            > reports/research/trade-flow-formatted-sources/file-sha256.txt
-
-      - name: Commit exact formatting repair to the canonical PR branch
-        if: ${{ github.event_name == 'pull_request' }}
-        shell: bash
-        env:
-          HEAD_BRANCH: ${{ github.head_ref }}
-        run: |
-          set -euo pipefail
-          if git diff --quiet -- \
-            scripts/run_trade_flow_research.py \
-            scripts/run_trade_flow_research_exact.py \
-            scripts/run_trade_flow_research_boundary.py; then
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            scripts/run_trade_flow_research.py \
-            scripts/run_trade_flow_research_exact.py \
-            scripts/run_trade_flow_research_boundary.py
-          git commit -m "style: format trade-flow research sources"
-          git push origin "HEAD:${HEAD_BRANCH}"
-
-      - name: Upload formatted source candidates
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: trade-flow-formatted-sources-${{ github.run_number }}-attempt-${{ github.run_attempt }}
-          path: reports/research/trade-flow-formatted-sources/
-          if-no-files-found: error
-          retention-days: 7
-
   development:
     runs-on: ubuntu-24.04
     timeout-minutes: 350
@@ -161,7 +63,7 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Validate entry points and capture lint debt
+      - name: Validate exact strategy sources
         shell: bash
         run: |
           set -euo pipefail
@@ -170,15 +72,16 @@ jobs:
             scripts/run_trade_flow_research.py \
             scripts/run_trade_flow_research_exact.py \
             scripts/run_trade_flow_research_boundary.py
-          set +e
           ruff check \
             scripts/run_trade_flow_research.py \
             scripts/run_trade_flow_research_exact.py \
             scripts/run_trade_flow_research_boundary.py \
             2>&1 | tee "$OUTPUT_DIR/ruff-check.txt"
-          ruff_status="${PIPESTATUS[0]}"
-          set -e
-          printf '%s\n' "$ruff_status" > "$OUTPUT_DIR/ruff-exit-code.txt"
+          ruff format --check \
+            scripts/run_trade_flow_research.py \
+            scripts/run_trade_flow_research_exact.py \
+            scripts/run_trade_flow_research_boundary.py \
+            2>&1 | tee "$OUTPUT_DIR/ruff-format-check.txt"
 
       - name: Execute frozen V1/V2 development comparison
         id: execute
