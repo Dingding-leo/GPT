@@ -9,8 +9,10 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
-
 import run_trade_flow_research as base
+
+
+ORIGINAL_FETCH_CANDLES = base.fetch_okx_one_hour_candles
 
 
 def acquire_trade_features(
@@ -74,7 +76,10 @@ def acquire_trade_features(
         lineterminator="\n",
         float_format="%.18g",
     ).encode()
-    feature_record = base.persist(output_dir / "hourly-trade-features.csv", csv_bytes)
+    feature_record = base.persist(
+        output_dir / "hourly-trade-features.csv",
+        csv_bytes,
+    )
     metadata = {
         "instrument": inst_id,
         "manifest_queries": manifests,
@@ -85,9 +90,14 @@ def acquire_trade_features(
         "missing_hours": 0,
         "feature_record": feature_record,
         "raw_archive_bytes_retained": False,
-        "flow6_accounting": "exact signed quote notional divided by exact total quote notional",
+        "flow6_accounting": (
+            "exact signed quote notional divided by exact total quote notional"
+        ),
     }
-    base.persist(output_dir / "archive-inventory.json", base.canonical_json(metadata))
+    base.persist(
+        output_dir / "archive-inventory.json",
+        base.canonical_json(metadata),
+    )
     return frame, metadata
 
 
@@ -142,9 +152,149 @@ def build_targets(features: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, int]]
     return targets.fillna(0.0), invalid
 
 
+def fetch_candles_with_benchmark_prehistory(
+    *,
+    inst_id: str,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    base_url: str,
+    pause_seconds: float,
+    timeout: float,
+) -> Any:
+    benchmark_start = start - pd.Timedelta(hours=base.TREND_LOOKBACK)
+    return ORIGINAL_FETCH_CANDLES(
+        inst_id=inst_id,
+        start=benchmark_start,
+        end=end,
+        base_url=base_url,
+        pause_seconds=pause_seconds,
+        timeout=timeout,
+    )
+
+
+def evaluate_market_with_benchmark_prehistory(
+    inst_id: str,
+    features: pd.DataFrame,
+    close: pd.Series,
+    development_start: pd.Timestamp,
+    development_end: pd.Timestamp,
+    output_dir: Path,
+) -> tuple[dict[str, Any], dict[str, pd.DataFrame]]:
+    development_close = close.reindex(features.index)
+    if development_close.isna().any():
+        raise ValueError(f"feature/candle development index mismatch for {inst_id}")
+    prehistory = close.loc[close.index < development_start]
+    if len(prehistory) != base.TREND_LOOKBACK:
+        raise ValueError(
+            f"benchmark prehistory mismatch for {inst_id}: "
+            f"expected={base.TREND_LOOKBACK} observed={len(prehistory)}"
+        )
+
+    targets, invalid = build_targets(features)
+    frames = {
+        variant: base.strategy_frame(targets[variant], development_close)
+        for variant in ("V1", "V2")
+    }
+    trend_full = base.trend_frame(close)
+    evaluation_start = development_start + pd.Timedelta(hours=base.WARMUP_HOURS)
+    evaluation_end = development_end - pd.Timedelta(hours=1)
+    evaluation_frames = {
+        name: frame.loc[evaluation_start:evaluation_end].copy()
+        for name, frame in frames.items()
+    }
+    evaluation_frames["trend"] = trend_full.loc[
+        evaluation_start:evaluation_end
+    ].copy()
+    if any(
+        len(frame) != base.EVALUATION_HOURS
+        for frame in evaluation_frames.values()
+    ):
+        raise ValueError("evaluation window is not exactly twelve 90-day folds")
+
+    per_policy: dict[str, Any] = {}
+    for name, frame in evaluation_frames.items():
+        fold_rows: list[dict[str, Any]] = []
+        for fold in range(base.FOLDS):
+            fold_frame = frame.iloc[
+                fold * base.FOLD_HOURS : (fold + 1) * base.FOLD_HOURS
+            ]
+            fold_rows.append({"fold": fold + 1, **base.metrics(fold_frame)})
+        positive = [
+            row["net_return"]
+            for row in fold_rows
+            if row["net_return"] > 0
+        ]
+        blocks = [
+            base.metrics(frame.iloc[index * 8640 : (index + 1) * 8640])
+            for index in range(3)
+        ]
+        aggregate = base.metrics(frame)
+        aggregate.update(
+            {
+                "invalid_feature_hours_in_full_development": invalid.get(name, 0),
+                "profitable_folds": sum(
+                    row["net_return"] > 0 for row in fold_rows
+                ),
+                "positive_fold_concentration": (
+                    None if not positive else max(positive) / sum(positive)
+                ),
+                "folds": fold_rows,
+                "blocks_360d": blocks,
+            }
+        )
+        per_policy[name] = aggregate
+
+    for variant in ("V1", "V2"):
+        residual = (
+            evaluation_frames[variant]["net_return"]
+            - evaluation_frames["trend"]["net_return"]
+        )
+        per_policy[variant]["residual_return_vs_trend_arithmetic"] = float(
+            residual.sum()
+        )
+        per_policy[variant]["residual_sharpe_vs_trend"] = base.sharpe(
+            residual
+        )
+        trend_edge = per_policy["trend"]["edge_per_turnover_bps"]
+        variant_edge = per_policy[variant]["edge_per_turnover_bps"]
+        per_policy[variant]["edge_per_turnover_delta_vs_trend_bps"] = (
+            None
+            if variant_edge is None or trend_edge is None
+            else variant_edge - trend_edge
+        )
+
+    output = pd.concat(evaluation_frames, axis=1)
+    base.persist(
+        output_dir / "evaluation-paths.csv",
+        output.to_csv(
+            lineterminator="\n",
+            float_format="%.18g",
+        ).encode(),
+    )
+    return {
+        "instrument": inst_id,
+        "development_start": development_start.isoformat(),
+        "development_end_exclusive": development_end.isoformat(),
+        "evaluation_start": evaluation_start.isoformat(),
+        "evaluation_end_inclusive": evaluation_end.isoformat(),
+        "candidate_fold_evaluations": 2 * base.FOLDS,
+        "benchmark": {
+            "policy": "simple_trend_long_cash_2160h",
+            "lookback_hours": base.TREND_LOOKBACK,
+            "prehistory_hours": len(prehistory),
+            "evaluation_window_identical": True,
+        },
+        "policies": per_policy,
+    }, evaluation_frames
+
+
 def main() -> None:
+    if base.TREND_LOOKBACK != 2160:
+        raise ValueError("frozen simple-trend benchmark lookback changed")
     base.acquire_trade_features = acquire_trade_features
     base.build_targets = build_targets
+    base.fetch_okx_one_hour_candles = fetch_candles_with_benchmark_prehistory
+    base.evaluate_market = evaluate_market_with_benchmark_prehistory
     args = base.parse_args()
     result = base.run(args.base_url, args.output_dir)
     executed = {
