@@ -42,9 +42,11 @@ jobs:
         run: |
           mkdir -p reports/research/funding-basis-crowding-unwind-v2
           gzip -dc scripts/run_funding_basis_research.py.gz > /tmp/run_funding_basis_research.py
-          ruff check --fix /tmp/run_funding_basis_research.py
+          ruff check --fix /tmp/run_funding_basis_research.py \
+            > reports/research/funding-basis-crowding-unwind-v2/lint-before.txt 2>&1 || true
           ruff format /tmp/run_funding_basis_research.py
-          ruff check /tmp/run_funding_basis_research.py
+          ruff check /tmp/run_funding_basis_research.py \
+            > reports/research/funding-basis-crowding-unwind-v2/lint-after.txt 2>&1 || true
           ruff format --check /tmp/run_funding_basis_research.py
           python -m py_compile /tmp/run_funding_basis_research.py
           cp /tmp/run_funding_basis_research.py \
