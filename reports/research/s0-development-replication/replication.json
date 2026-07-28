@@ -1,0 +1,264 @@
+{
+  "bootstrap": {
+    "block_hours": 168,
+    "resamples": 5000,
+    "seed": 20260728,
+    "worst_market_sharpe": {
+      "lower_95": -0.9297318476569005,
+      "median": 0.2707675919040444,
+      "probability_positive": 0.6684,
+      "upper_95": 1.4420693221623309
+    },
+    "worst_market_sharpe_one_extra_hour_latency": {
+      "lower_95": -0.9420484993529048,
+      "median": 0.2601894385776949,
+      "probability_positive": 0.6616,
+      "upper_95": 1.4352334631222978
+    },
+    "worst_market_simple_trend_residual_sharpe": {
+      "lower_95": -2.0561659468274884,
+      "median": -0.9797832131195685,
+      "probability_positive": 0.0328,
+      "upper_95": 0.051077142813306976
+    }
+  },
+  "classification": "development_replication_diagnostic_only",
+  "cross_market": {
+    "both_markets_fold_breadth_pass": false,
+    "pooled_equal_weight_inference_only": {
+      "max_drawdown": -0.26305615174411634,
+      "observations": 25920,
+      "sharpe": 0.5416480340098133,
+      "total_return": 0.30888740911302937
+    },
+    "pooled_equal_weight_one_extra_hour_latency_inference_only": {
+      "max_drawdown": -0.2636500879153505,
+      "observations": 25920,
+      "sharpe": 0.5347035261169412,
+      "total_return": 0.30335689574421654
+    },
+    "profitable_market_fraction": 1.0,
+    "worst_market_net_edge_per_turnover_bps": 12.046777039152659,
+    "worst_market_sharpe": 0.3424656437679542,
+    "worst_market_total_return": 0.16312612296541795
+  },
+  "global_multiplicity": {
+    "deflated_sharpe": "not_computable_fail_closed",
+    "pbo": "not_computable_fail_closed",
+    "pbo_reason": "complete candidate-by-fold return matrix is absent",
+    "reason": "repository-wide architecture-family experiment count is incomplete"
+  },
+  "market_metrics": {
+    "BTC-USDT": {
+      "accounting_max_abs_error": 9.8879238130678e-17,
+      "artifact_files_verified": 13,
+      "canonical": {
+        "annualized_turnover": 45.22565511177244,
+        "fee_sum": 0.06690918838454035,
+        "fold_count": 12,
+        "gross_edge_per_turnover_bps": 38.17806635194685,
+        "gross_total_return": 0.535260817391993,
+        "max_drawdown": -0.2684281921951267,
+        "max_positive_fold_share": 0.5954880659896421,
+        "net_edge_per_turnover_bps": 33.178066351947635,
+        "observations": 25920,
+        "profitable_folds": 4,
+        "sharpe": 0.6368727576080379,
+        "simple_trend_residual": {
+          "max_drawdown": -0.5510405427078597,
+          "observations": 25920,
+          "sharpe": -0.8179571040027336,
+          "total_return": -0.4135061265898716
+        },
+        "total_return": 0.43589800625970354,
+        "turnover_sum": 133.8183767690801
+      },
+      "evaluation_end": "2026-07-07T23:00:00+00:00",
+      "evaluation_start": "2023-07-24T00:00:00+00:00",
+      "one_extra_hour_latency": {
+        "annualized_turnover": 45.22565511177271,
+        "fee_sum": 0.06690918838454044,
+        "gross_edge_per_turnover_bps": 38.45083638914516,
+        "max_drawdown": -0.2694458397608185,
+        "net_edge_per_turnover_bps": 33.45083638914517,
+        "observations": 25920,
+        "sharpe": 0.6416702375998057,
+        "total_return": 0.440986876530175
+      },
+      "returns_sha256": "986956a9df9b358488e6c8e847630fe532996a0438c3b112e2d602a4c6ac3958",
+      "thirty_day_blocks": {
+        "blocks": 36,
+        "max_positive_block_share": 0.2185599027694532,
+        "profitable_blocks": 16
+      },
+      "walk_forward_sha256": "71bef26733f371c8fb912be1657ee102eef23150e61e26429d72acf2401d6538",
+      "years": {
+        "2023": {
+          "edge_per_turnover_bps": 34.92583898356027,
+          "max_drawdown": -0.08652136667762855,
+          "observations": 3864,
+          "sharpe": 0.7876741958691557,
+          "total_return": 0.0657293501956433,
+          "turnover": 21.058401859755925
+        },
+        "2024": {
+          "edge_per_turnover_bps": 131.0514653728868,
+          "max_drawdown": -0.2684281921951229,
+          "observations": 8784,
+          "sharpe": 1.2112565931187558,
+          "total_return": 0.439312317415681,
+          "turnover": 32.49623913249722
+        },
+        "2025": {
+          "edge_per_turnover_bps": 6.011867133129166,
+          "max_drawdown": -0.1123819153899075,
+          "observations": 8760,
+          "sharpe": 0.289118167915915,
+          "total_return": 0.030910290039621646,
+          "turnover": 66.57663328970804
+        },
+        "2026": {
+          "edge_per_turnover_bps": -69.74281086001487,
+          "max_drawdown": -0.09855777744333116,
+          "observations": 4512,
+          "sharpe": -2.948029907013279,
+          "total_return": -0.0919688453309575,
+          "turnover": 13.687102487118906
+        }
+      }
+    },
+    "ETH-USDT": {
+      "accounting_max_abs_error": 9.93129189996722e-17,
+      "artifact_files_verified": 13,
+      "canonical": {
+        "annualized_turnover": 62.381022737372376,
+        "fee_sum": 0.09228973226898907,
+        "fold_count": 12,
+        "gross_edge_per_turnover_bps": 17.046777039152758,
+        "gross_total_return": 0.275580873759913,
+        "max_drawdown": -0.2902909770628198,
+        "max_positive_fold_share": 0.3739510478682162,
+        "net_edge_per_turnover_bps": 12.046777039152659,
+        "observations": 25920,
+        "profitable_folds": 5,
+        "sharpe": 0.3424656437679542,
+        "simple_trend_residual": {
+          "max_drawdown": -0.6871031791317319,
+          "observations": 25920,
+          "sharpe": -0.5867189065061412,
+          "total_return": -0.5308481329457437
+        },
+        "total_return": 0.16312612296541795,
+        "turnover_sum": 184.57946453797854
+      },
+      "evaluation_end": "2026-07-07T23:00:00+00:00",
+      "evaluation_start": "2023-07-24T00:00:00+00:00",
+      "one_extra_hour_latency": {
+        "annualized_turnover": 62.35259367377242,
+        "fee_sum": 0.09224767283243043,
+        "gross_edge_per_turnover_bps": 16.39810497859841,
+        "max_drawdown": -0.2852628288778343,
+        "net_edge_per_turnover_bps": 11.398104978598404,
+        "observations": 25920,
+        "sharpe": 0.32419851100043146,
+        "total_return": 0.14932645373680598
+      },
+      "returns_sha256": "e243fc10586536d83a416d6241ad8b3061d5bb0bb5b2493a1a23e539fcba9d1d",
+      "thirty_day_blocks": {
+        "blocks": 36,
+        "max_positive_block_share": 0.3128520631324755,
+        "profitable_blocks": 14
+      },
+      "walk_forward_sha256": "49f301abcc900647dd247c322d28ea993b5c208285422966d20df44a9f863da2",
+      "years": {
+        "2023": {
+          "edge_per_turnover_bps": 0.21577423389166595,
+          "max_drawdown": -0.0696604597573377,
+          "observations": 3864,
+          "sharpe": 0.016800485997808774,
+          "total_return": -0.0027092582391711195,
+          "turnover": 44.27431917096419
+        },
+        "2024": {
+          "edge_per_turnover_bps": -2.729487054049329,
+          "max_drawdown": -0.2817522922257193,
+          "observations": 8784,
+          "sharpe": -0.05247898517610829,
+          "total_return": -0.05278604740538795,
+          "turnover": 54.08579979375337
+        },
+        "2025": {
+          "edge_per_turnover_bps": 85.89500081879527,
+          "max_drawdown": -0.11010683320282955,
+          "observations": 8760,
+          "sharpe": 1.5891700562658604,
+          "total_return": 0.39325910462661007,
+          "turnover": 41.54501185772965
+        },
+        "2026": {
+          "edge_per_turnover_bps": -27.014346691353147,
+          "max_drawdown": -0.131499297533757,
+          "observations": 4512,
+          "sharpe": -2.20755993218917,
+          "total_return": -0.11625891440770941,
+          "turnover": 44.67433371553133
+        }
+      }
+    }
+  },
+  "markets_deleted_after_results": [],
+  "markets_predeclared": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "policy_hash": "26da7a4b8039265cb98626352db3ec18c5987cd4325607e230b4e1a533961bf7",
+  "policy_material": {
+    "bar": "1H",
+    "code_commit": "8387124b64d3ca4b9f196258a6928cc8d653e2ad",
+    "fee_bps": 5.0,
+    "grid": {
+      "momentum": [
+        720,
+        2160,
+        4320
+      ],
+      "reversal": [
+        48,
+        120,
+        240
+      ],
+      "trend_weight": [
+        0.55,
+        0.7,
+        0.85
+      ]
+    },
+    "selection_bars": 17520,
+    "selector": "fold_local_argmax_score_v1",
+    "test_bars": 2160
+  },
+  "schema_version": 1,
+  "source": {
+    "artifact_zip_sha256": {
+      "BTC-USDT": "58c48dfb9128bc05eaae05ae94c333fc7ad5e5e5dcce8befcccb7dad9bde7b9d",
+      "ETH-USDT": "7d41955af3448cbc4ec20f7867d8254a0c448f2b0ae887b5384fb0f013a028cd",
+      "cross_market": "3de7d726197aeaa2d399d3437271f138aad25712aace2b93adf1f80df3c6f094"
+    },
+    "workflow_run": 30094766694
+  },
+  "verdict": {
+    "new_market_performance_inspected": false,
+    "next_action": "complete issue #536 training-only candidate evidence and the single frozen S0-S5 comparison before starting prospective cohort replication",
+    "reasons": [
+      "BTC-USDT: fewer than 6/12 profitable folds",
+      "BTC-USDT: positive fold concentration exceeds 50%",
+      "BTC-USDT: simple-trend residual Sharpe is non-positive",
+      "ETH-USDT: fewer than 6/12 profitable folds",
+      "ETH-USDT: simple-trend residual Sharpe is non-positive",
+      "worst-market canonical Sharpe 95% lower bound is non-positive",
+      "worst-market simple-trend residual Sharpe 95% lower bound is non-positive"
+    ],
+    "status": "reject_current_s0_as_replication_nominee",
+    "untouched_replication_consumed": false
+  }
+}
