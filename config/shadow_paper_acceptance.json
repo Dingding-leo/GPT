@@ -1,0 +1,135 @@
+{
+  "schema_version": 1,
+  "mode": "shadow_paper_only",
+  "bar": "1H",
+  "strategy_boundary": {
+    "causal_time_series_only": true,
+    "per_instrument_rule_required": true,
+    "allowed_inputs": [
+      "target_instrument_lagged_history",
+      "frozen_lagged_exogenous_market_time_series"
+    ],
+    "forbidden_methods": [
+      "cross_sectional_ranking",
+      "contemporaneous_asset_selection",
+      "top_n_rotation",
+      "pairs_or_spread_trading",
+      "cointegration_or_statistical_arbitrage",
+      "market_neutral_long_short",
+      "post_hoc_asset_filtering"
+    ],
+    "multiple_assets_use": "independent_replication_under_identical_frozen_rule"
+  },
+  "observation": {
+    "minimum_elapsed_hours": 720,
+    "minimum_completed_decision_cycles": 720,
+    "minimum_nonzero_target_changes": 20,
+    "maximum_collection_hours_before_insufficient_activity": 2160
+  },
+  "public_data": {
+    "public_unauthenticated_only": true,
+    "confirmed_bars_only": true,
+    "minimum_completeness_ratio": 0.995,
+    "maximum_consecutive_missing_bars": 1,
+    "stale_after_seconds": 5400,
+    "immutable_raw_bytes_required": true,
+    "source_and_config_hashes_required": true
+  },
+  "runtime": {
+    "deterministic_schedule_required": true,
+    "heartbeat_interval_seconds": 60,
+    "maximum_heartbeat_gap_seconds": 180,
+    "bounded_queue_capacity": 256,
+    "maximum_dropped_events": 0,
+    "maximum_unreconciled_events": 0,
+    "maximum_p99_decision_persist_latency_ms": 2000,
+    "graceful_shutdown_required": true,
+    "restart_handoff_required": true,
+    "idempotent_event_processing_required": true
+  },
+  "required_failure_drills": {
+    "restart_stages": [
+      "before_decision_persist",
+      "after_decision_before_execution_attempt",
+      "after_execution_attempt_before_reconciliation"
+    ],
+    "stale_data_halt_count": 1,
+    "duplicate_delivery_count": 1,
+    "queue_saturation_count": 1,
+    "graceful_shutdown_restart_count": 1,
+    "zero_duplicate_decisions_required": true,
+    "zero_duplicate_fills_required": true,
+    "zero_reconciliation_drift_required": true
+  },
+  "execution_diagnostics": {
+    "required_outcome_categories": [
+      "rejected",
+      "expired",
+      "no_fill",
+      "partial_fill",
+      "filled"
+    ],
+    "natural_outcome_minimum_counts": 0,
+    "complete_submission_to_exclusive_expiry_coverage_required": true,
+    "touch_is_fill": false,
+    "incomplete_public_coverage_may_authorize_terminal_outcome": false
+  },
+  "risk": {
+    "stale_data_halt_required": true,
+    "loss_drawdown_turnover_latches_required": true,
+    "policy_identity_immutable": true,
+    "kill_switch_breach_must_abort_collection": true,
+    "zero_reconciliation_drift_required": true
+  },
+  "economics": {
+    "exchange_fee_one_way_bps": 5.0,
+    "fee_applied_to": "filled_notional",
+    "separate_diagnostics": [
+      "spread",
+      "slippage",
+      "impact",
+      "latency",
+      "no_fill",
+      "partial_fill",
+      "adverse_selection"
+    ]
+  },
+  "required_evidence": {
+    "strategy_id": true,
+    "strategy_revision": true,
+    "source_data_sha256": true,
+    "config_sha256": true,
+    "event_chain_root_sha256": true,
+    "decision_count": true,
+    "execution_attempt_count": true,
+    "outcome_counts": true,
+    "heartbeat_summary": true,
+    "latency_summary": true,
+    "restart_drill_results": true,
+    "risk_latch_summary": true,
+    "reconciliation_summary": true
+  },
+  "classification": {
+    "allowed_statuses": [
+      "collecting",
+      "operational_pass",
+      "operational_fail",
+      "insufficient_activity",
+      "aborted"
+    ],
+    "operational_pass_may_imply_live_ready": false,
+    "limited_capital_authorization": false,
+    "human_approval_required_for_any_live_stage": true
+  },
+  "forbidden_capabilities": {
+    "credentials": true,
+    "private_endpoints": true,
+    "accounts": true,
+    "balances": true,
+    "order_submission": true,
+    "enabled_adapters": true,
+    "leverage_or_fund_movement": true,
+    "synthetic_price_performance_evidence": true,
+    "fifteen_minute_mode": true
+  }
+}
