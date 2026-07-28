@@ -1,0 +1,77 @@
+name: Aggregate Taker Flow Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/run_aggregate_taker_flow_research.py
+      - .github/workflows/aggregate-taker-flow-research.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aggregate-taker-flow-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Lint focused implementation
+        run: |
+          ruff check scripts/run_aggregate_taker_flow_research.py
+          ruff format --check scripts/run_aggregate_taker_flow_research.py
+
+      - name: Run frozen real-data diagnostic
+        env:
+          PYTHONPATH: src
+        run: |
+          python scripts/run_aggregate_taker_flow_research.py \
+            --output-dir reports/research/aggregate-taker-flow-v1
+
+      - name: Verify strict machine-readable result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("reports/research/aggregate-taker-flow-v1/result-summary.json")
+          result = json.loads(path.read_text())
+          assert result["candidate_count"] == 2
+          assert result["fee_one_way_bps"] == 5.0
+          assert result["verdict"] in {
+              "diagnostic_supported_for_archive_attribution_only",
+              "aggregate_taker_flow_family_rejected_exact_window",
+          }
+          assert set(result["markets"]) == {"BTC-USDT", "ETH-USDT"}
+          PY
+          sha256sum -c reports/research/aggregate-taker-flow-v1/result-summary.sha256
+
+      - name: Upload immutable diagnostic evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: aggregate-taker-flow-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/research/aggregate-taker-flow-v1/
+          if-no-files-found: error
+          retention-days: 30
