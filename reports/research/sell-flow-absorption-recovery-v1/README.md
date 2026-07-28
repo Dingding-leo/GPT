@@ -18,6 +18,7 @@ The target formed from hour `h` is applied at the open of `h+1`; PnL is observed
 ## Immutable data
 
 - Trade-flow checkpoint workflow `30367844773`, artifact `8691619707`, ZIP SHA-256 `275dd35af6ab74c42b8aac2e272af274dbe9256cca3609345ee8dfa76d524932`.
+- Repaired source-checkpoint workflow `30369985594`, artifact `8692496533`, ZIP SHA-256 `f14b9f75f27d149364eb099932f9a74391fcad9eda1e72eeda399a0c80b6730b`. Its BTC and ETH archive CSV bytes are identical to the primary diagnostic input, so the strategy metrics are unchanged.
 - Canonical BTC artifact `8685574446`, ZIP SHA-256 `d36b151d0279e552f0f561403647ca8495febf6bd7c87c0b85cf0e7ad3df6119`.
 - Canonical ETH artifact `8685572234`, ZIP SHA-256 `e32884abe83663b36bc52ce4f4b3cc60b03bb2f4f2948853134dc6831706a9bb`.
 - Feature window: 2026-07-23 16:00 through 2026-07-24 15:00 UTC.
