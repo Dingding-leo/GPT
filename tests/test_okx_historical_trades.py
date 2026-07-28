@@ -67,7 +67,10 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
     assert result["adversarial_stress"]["verdict"] == stress["verdict"]
     assert result["verdict"] == stress["verdict"]
 
-    if stress["verdict"] == "trade_flow_source_schema_checkpoint_blocked_by_adversarial_stress":
+    if (
+        stress["verdict"]
+        == "trade_flow_source_schema_checkpoint_blocked_by_adversarial_stress"
+    ):
         assert stress["defects"]
         assert any(market["status"] == "blocked" for market in stress["markets"])
 
