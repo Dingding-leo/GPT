@@ -53,10 +53,8 @@ jobs:
         run: python -m py_compile scripts/run_funding_basis_crowding_research.py
 
       - name: Run real public-data F0/F1 experiment
-        env:
-          GITHUB_SHA: ${{ env.EXPECTED_SHA }}
         run: |
-          python scripts/run_funding_basis_crowding_research.py \
+          GITHUB_SHA="$EXPECTED_SHA" python scripts/run_funding_basis_crowding_research.py \
             --output-dir "$OUTPUT_DIR"
 
       - name: Verify machine-readable evidence
@@ -66,6 +64,17 @@ jobs:
           python -m json.tool "$OUTPUT_DIR/result-summary.json" >/dev/null
           python -m json.tool "$OUTPUT_DIR/source-manifest.json" >/dev/null
           (cd "$OUTPUT_DIR" && sha256sum -c result-summary.sha256)
+          python - "$OUTPUT_DIR/result-summary.json" "$EXPECTED_SHA" <<'PY'
+          import json
+          import sys
+
+          with open(sys.argv[1], encoding="utf-8") as handle:
+              result = json.load(handle)
+          if result["generated_from_commit"] != sys.argv[2]:
+              raise SystemExit(
+                  f"artifact head mismatch: {result['generated_from_commit']} != {sys.argv[2]}"
+              )
+          PY
           test -d "$OUTPUT_DIR/raw"
           test "$(find "$OUTPUT_DIR/raw" -type f | wc -l)" -gt 0
 
