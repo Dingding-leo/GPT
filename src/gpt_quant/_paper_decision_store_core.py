@@ -206,9 +206,7 @@ def _validate_decision_target(
 
 def _find_target(path: str | Path, decision: PaperOrderDecision) -> TargetPositionIntent:
     intents = load_target_position_intent_journal(path).intents
-    target = next(
-        (item for item in intents if item.intent_id == decision.target_intent_id), None
-    )
+    target = next((item for item in intents if item.intent_id == decision.target_intent_id), None)
     if target is None:
         raise ValueError(f"{_ERROR} references an unknown target intent")
     _validate_decision_target(target, decision)
