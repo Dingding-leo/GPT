@@ -54,31 +54,23 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Materialize one review-driven Ruff repair candidate
-        shell: bash
+      - name: Verify strategy script quality
         run: |
-          set -euo pipefail
-          mkdir -p "$OUTPUT_DIR"
-          ruff check --fix --unsafe-fixes scripts/run_prospective_simple_trend_shadow.py
-          ruff format scripts/run_prospective_simple_trend_shadow.py
           ruff check scripts/run_prospective_simple_trend_shadow.py
           ruff format --check scripts/run_prospective_simple_trend_shadow.py
-          cp scripts/run_prospective_simple_trend_shadow.py "$OUTPUT_DIR/formatted-script.py"
-          git diff -- scripts/run_prospective_simple_trend_shadow.py > "$OUTPUT_DIR/ruff-repair.patch"
 
-      - name: Execute provisional repaired prospective update
+      - name: Execute frozen prospective strategy update
         run: |
           python scripts/run_prospective_simple_trend_shadow.py \
             --output-dir "$OUTPUT_DIR"
 
-      - name: Verify provisional machine-readable strategy evidence
+      - name: Verify machine-readable strategy evidence
         shell: bash
         run: |
           set -euo pipefail
           test -s "$OUTPUT_DIR/result.json"
           test -s "$OUTPUT_DIR/result.sha256"
           test -s "$OUTPUT_DIR/report.md"
-          test -s "$OUTPUT_DIR/formatted-script.py"
           expected="$(cat "$OUTPUT_DIR/result.sha256")"
           actual="$(sha256sum "$OUTPUT_DIR/result.json" | awk '{print $1}')"
           test "$actual" = "$expected"
@@ -103,7 +95,7 @@ jobs:
           }
           PY
 
-      - name: Upload provisional repair and prospective evidence
+      - name: Upload immutable prospective evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ env.ARTIFACT_NAME }}
