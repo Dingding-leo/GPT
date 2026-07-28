@@ -52,6 +52,8 @@ def acquire_trade_features(
                     ),
                 }
             )
+            archive_path.unlink(missing_ok=True)
+            csv_path.unlink(missing_ok=True)
     merged = base.merge_hours(parsed_files, start_ms, end_ms)
     rows: list[dict[str, Any]] = []
     for hour in sorted(merged):
@@ -92,6 +94,9 @@ def acquire_trade_features(
         "raw_archive_bytes_retained": False,
         "flow6_accounting": (
             "exact signed quote notional divided by exact total quote notional"
+        ),
+        "streaming_disk_policy": (
+            "each compressed and decompressed archive is deleted after hashing and parsing"
         ),
     }
     base.persist(
