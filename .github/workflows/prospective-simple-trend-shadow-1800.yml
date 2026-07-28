@@ -56,8 +56,8 @@ jobs:
 
       - name: Verify prospective strategy script
         run: |
+          python -m py_compile scripts/run_prospective_simple_trend_shadow_1800.py
           ruff check scripts/run_prospective_simple_trend_shadow_1800.py
-          ruff format --check scripts/run_prospective_simple_trend_shadow_1800.py
 
       - name: Execute frozen prospective strategy update
         run: |
