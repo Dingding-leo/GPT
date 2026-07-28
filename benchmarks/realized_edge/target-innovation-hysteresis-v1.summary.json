@@ -1,0 +1,118 @@
+{
+  "bar": "1H",
+  "candidate_count": 1,
+  "development_period": {
+    "end": "2026-07-07T23:00:00+00:00",
+    "observations_per_market": 25920,
+    "start": "2023-07-24T00:00:00+00:00"
+  },
+  "execution_diagnostics": {
+    "adverse_selection": "not_measured",
+    "impact": "not_measured",
+    "latency": "not_measured",
+    "no_fill": "not_modeled",
+    "partial_fill": "not_modeled",
+    "slippage": "not_measured",
+    "spread": "not_measured"
+  },
+  "family_id": "target-innovation-hysteresis-v1",
+  "fee_one_way_bps": 5.0,
+  "issue": 542,
+  "markets": {
+    "BTC-USDT": {
+      "artifact_digest": "sha256:e9bdc2cee531f0b71539a6f4c2b306f2ae702e64bbbe8443ec16bf69c558147a",
+      "artifact_id": 8683465243,
+      "baseline": {
+        "annualized_turnover": 45.22565511177244,
+        "average_holding_hours": 1.6209117628666125,
+        "exchange_fee_sum": 0.06690918838454003,
+        "max_drawdown": -0.26842819219512637,
+        "net_edge_per_turnover_bps": 33.178066351947635,
+        "net_total_return": 0.43589800625970354,
+        "profitable_folds": 4,
+        "sharpe": 0.6368850433176486,
+        "trade_count": 15991
+      },
+      "candidate": {
+        "annualized_turnover": 30.650319666239145,
+        "average_holding_hours": 5.699208443271768,
+        "exchange_fee_sum": 0.045345678410326405,
+        "max_drawdown": -0.2682559266698882,
+        "net_edge_per_turnover_bps": 51.08542875901666,
+        "net_total_return": 0.46393821125733203,
+        "no_trade_frequency": 0.4503858024691358,
+        "profitable_folds": 4,
+        "sharpe": 0.6646879803551989,
+        "suppression_rate": 0.7196399950684256,
+        "trade_count": 4548
+      },
+      "input_sha256": "72b34a405914057a71d6d47fa60251a591060d9d5220c717fbcf179b7073f1a6",
+      "paired_bootstrap": {
+        "annualized_mean_difference": 0.006528493564206154,
+        "block_hours": 168,
+        "confidence_interval_95": [
+          0.004581286226146954,
+          0.009409764994070903
+        ],
+        "resamples": 5000,
+        "seed": 20260728
+      },
+      "passes_frozen_overlay_gate": true
+    },
+    "ETH-USDT": {
+      "artifact_digest": "sha256:1f865024ae9d3ce7aa51bfe72bbab054b0377eef01780c75f60f6e8aa2cdc51e",
+      "artifact_id": 8683462187,
+      "baseline": {
+        "annualized_turnover": 62.381022737372376,
+        "average_holding_hours": 1.798376465690696,
+        "exchange_fee_sum": 0.09228973226898927,
+        "max_drawdown": -0.2902909770628198,
+        "net_edge_per_turnover_bps": 12.04677703915266,
+        "net_total_return": 0.16312612296541795,
+        "profitable_folds": 5,
+        "sharpe": 0.3424722501636601,
+        "trade_count": 14413
+      },
+      "candidate": {
+        "annualized_turnover": 45.68871562755347,
+        "average_holding_hours": 5.358693405003101,
+        "exchange_fee_sum": 0.0675942642161065,
+        "max_drawdown": -0.2829623515483122,
+        "net_edge_per_turnover_bps": 19.197225865382286,
+        "net_total_return": 0.20709788903657622,
+        "no_trade_frequency": 0.3818672839506173,
+        "profitable_folds": 5,
+        "sharpe": 0.3995510209566738,
+        "suppression_rate": 0.6717339667458432,
+        "trade_count": 4837
+      },
+      "input_sha256": "e243fc10586536d83a416d6241ad8b3061d5bb0bb5b2493a1a23e539fcba9d1d",
+      "paired_bootstrap": {
+        "annualized_mean_difference": 0.01256063210099272,
+        "block_hours": 168,
+        "confidence_interval_95": [
+          0.00832025655605077,
+          0.01685915128789093
+        ],
+        "resamples": 5000,
+        "seed": 20260728
+      },
+      "passes_frozen_overlay_gate": true
+    }
+  },
+  "policy": {
+    "equality_action": "no_trade",
+    "fold_state_reset": false,
+    "incomplete_history_action": "canonical_target",
+    "innovation_lookback_hours": 168,
+    "mad_to_sigma": 1.4826,
+    "uncertainty_z": 1.645
+  },
+  "prospective_shadow_evidence_consumed": false,
+  "result_file_sha256": "b14d2c93d8740142b42deeddfa369dcca9a413549d033f2c55fbdafdd1732d4d",
+  "result_id": "7d11deb598a55574ebab1e9e342c77cf86b7b582fa3370771abd740ed47122fb",
+  "untouched_replication_consumed": false,
+  "verdict": "overlay_supported_development_only_underlying_strategy_rejected",
+  "workflow_head": "d7cc15839755484b682d6e9094298b8a32f70230",
+  "workflow_run_id": 30347175588
+}
