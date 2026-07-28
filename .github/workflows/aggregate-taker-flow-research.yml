@@ -38,10 +38,15 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Lint focused implementation
+      - name: Materialize focused lint repair
         run: |
+          mkdir -p reports/research/aggregate-taker-flow-v1
+          ruff check --fix scripts/run_aggregate_taker_flow_research.py
+          ruff format scripts/run_aggregate_taker_flow_research.py
           ruff check scripts/run_aggregate_taker_flow_research.py
           ruff format --check scripts/run_aggregate_taker_flow_research.py
+          git diff -- scripts/run_aggregate_taker_flow_research.py \
+            > reports/research/aggregate-taker-flow-v1/lint-repair.patch
 
       - name: Run frozen real-data diagnostic
         env:
