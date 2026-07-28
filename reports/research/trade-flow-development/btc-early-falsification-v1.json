@@ -1,0 +1,112 @@
+{
+  "architecture_family_id": "okx-spot-causal-trade-flow-resilience-v2",
+  "bar": "1H",
+  "candidate_count": 2,
+  "canonical_fee_bps_one_way": 5.0,
+  "instrument": "BTC-USDT",
+  "next_experiment": "activate a materially orthogonal low-turnover architecture; do not rescue-tune V1/V2 on this development interval",
+  "policies": {
+    "V1": {
+      "block_360d_net_returns": [-0.3868800388697856, -0.46663603775067986, -0.49411653362282904],
+      "decisions": 15036,
+      "edge_per_turnover_bps": -4.771933060071921,
+      "edge_per_turnover_delta_vs_trend_bps": -62.31467331428402,
+      "exposure": 0.33603366792061196,
+      "fee_drag_arithmetic": 1.7922201490226797,
+      "fold_net_returns": [-0.051318246641915866, -0.17465252544203036, -0.003476900963353402, -0.21422046953411322, -0.18172606410640535, -0.10557386771476951, -0.13365899659485614, -0.15881484226957032, -0.2587008808952985, -0.06356959794590555, -0.05131252109721063, -0.23182825644635296],
+      "gross_edge_per_turnover_bps": 0.22806693992807822,
+      "gross_return": -0.0066937892196529125,
+      "max_drawdown": -0.8498783047156264,
+      "median_holding_run_hours": 5.0,
+      "net_return": -0.8345679659178068,
+      "one_hour_signal_return_correlation": -0.009710699781838793,
+      "positive_fold_concentration": null,
+      "profitable_folds": 0,
+      "residual_sharpe_vs_trend": -3.0279802929248714,
+      "sharpe": -2.3605193820130337,
+      "target_positive_frequency": 0.4998070987654321,
+      "turnover": 3584.440298045359
+    },
+    "V2": {
+      "block_360d_net_returns": [-0.18118508490108365, -0.3250564341334893, -0.43959138734165704],
+      "decisions": 15504,
+      "edge_per_turnover_bps": -3.627952447884457,
+      "edge_per_turnover_delta_vs_trend_bps": -61.17069270209656,
+      "exposure": 0.2323792464393308,
+      "fee_drag_arithmetic": 1.5282396142005286,
+      "fold_net_returns": [0.048922920592084695, -0.08323994751911623, -0.1370587811458196, -0.013254226599478058, 0.010135186894920656, -0.11075329651733556, -0.15984333436369746, -0.10565430488176719, -0.09732949174061134, -0.1056877010792524, -0.13054441952072993, -0.20156614245306637],
+      "gross_edge_per_turnover_bps": 1.372047552115543,
+      "gross_return": 0.4279475189547639,
+      "max_drawdown": -0.7368116718469024,
+      "median_holding_run_hours": 4.0,
+      "net_return": -0.6902880178320328,
+      "one_hour_signal_return_correlation": 0.0004392786448801713,
+      "positive_fold_concentration": 0.8283861890232308,
+      "profitable_folds": 2,
+      "residual_sharpe_vs_trend": -2.4403088029779063,
+      "sharpe": -1.81178706489453,
+      "target_positive_frequency": 0.5061728395061729,
+      "turnover": 3056.4792284010573
+    },
+    "trend": {
+      "block_360d_net_returns": [0.29658837403549243, 1.2282821137442848, -0.014727896859505929],
+      "decisions": 219,
+      "edge_per_turnover_bps": 57.5427402542121,
+      "exposure": 0.6883487654320988,
+      "fee_drag_arithmetic": 0.1095,
+      "fold_net_returns": [0.2662904335856864, -0.11816503914213616, -0.04450774442660155, 0.21521833413225044, 0.5002136651796221, -0.022989913796612305, 0.030311937595077332, 0.47553419380901407, -0.14992249870101393, 0.17774239226621713, -0.01588158870594014, 0.0],
+      "gross_return": 2.1761164897120477,
+      "max_drawdown": -0.3620472026857404,
+      "net_return": 1.846613363294384,
+      "positive_fold_concentration": 0.30037252995112723,
+      "profitable_folds": 6,
+      "sharpe": 1.120270150109594,
+      "turnover": 219.0
+    }
+  },
+  "qualification_failures": [
+    "BTC-USDT: non-positive aggregate return or Sharpe",
+    "BTC-USDT: profitable-fold breadth below 7/12",
+    "BTC-USDT: profitable 360-day block breadth below 2/3",
+    "BTC-USDT: exceptional-fold concentration",
+    "BTC-USDT: non-positive edge per turnover",
+    "BTC-USDT: non-positive residual Sharpe versus trend",
+    "BTC-USDT: edge per turnover not above trend"
+  ],
+  "reserved_oos_consumed": false,
+  "sample": {
+    "candle_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+    "evaluation_end": "2026-01-24T23:00:00+00:00",
+    "evaluation_hours": 25920,
+    "evaluation_start": "2023-02-10T00:00:00+00:00",
+    "feature_end": "2026-01-24T23:00:00+00:00",
+    "feature_hours": 26640,
+    "feature_sha256": "ffe94da2b8f7ae2357882398e1ed85d787d4a9fb4898ac98fa2604290b9c22c9",
+    "feature_start": "2023-01-11T00:00:00+00:00"
+  },
+  "schema_version": "btc-trade-flow-early-falsification-v1",
+  "source_artifacts": {
+    "canonical_candles": {
+      "artifact_id": 8704977298,
+      "artifact_sha256": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c",
+      "candle_csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "workflow_run": 30401519824
+    },
+    "trade_features": {
+      "artifact_id": 8704648783,
+      "artifact_sha256": "43788fcfe89f8a5153305ce9420d092fc800dfefc89b531756a90485e09e0afe",
+      "feature_csv_sha256": "ffe94da2b8f7ae2357882398e1ed85d787d4a9fb4898ac98fa2604290b9c22c9",
+      "workflow_run": 30397211283
+    }
+  },
+  "source_head": "cc8c4749497fbf91d9cc042afefb2ad9a048e8e9",
+  "turnover_diagnosis": {
+    "break_even_one_way_fee_bps": 1.372047552115543,
+    "gross_arithmetic_return": 0.4193634843419674,
+    "max_turnover_at_5bps_for_zero_arithmetic_edge": 838.7269686839348,
+    "required_turnover_reduction_fraction_at_unchanged_gross_edge": 0.7255904895768914
+  },
+  "uncertainty": "cross-market Holm inference not required for rejection after deterministic BTC gate failure",
+  "verdict": "trade_flow_resilience_family_rejected",
+  "verdict_basis": "predeclared any-market failure; BTC alone fails every frozen market-level gate"
+}
