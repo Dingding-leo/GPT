@@ -1,0 +1,92 @@
+{
+  "schema_version": "trade-flow-source-schema-checkpoint-summary-v2",
+  "architecture_family_id": "okx-spot-causal-trade-flow-resilience-v2",
+  "candidate_count": 2,
+  "canonical_fee_bps_one_way": 5.0,
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "bar": "1H",
+  "performance_inspected": false,
+  "oos_consumed": false,
+  "source_execution": {
+    "main_base_sha": "4acef60ed95020de52f196e3910487bb2b480f02",
+    "head_sha": "4d9605a1d1a57b92422de6628b5227c48a2e4396",
+    "workflow_run": 30369985594,
+    "workflow_artifact_id": 8692496533,
+    "workflow_artifact_sha256": "f14b9f75f27d149364eb099932f9a74391fcad9eda1e72eeda399a0c80b6730b",
+    "result_json_sha256": "4cddaf1e8673bfec0746dd30082763ae8cb1374ee98db6064ff8e047e78e23ee",
+    "stress_result_sha256": "e00a6f03d5e92cf44cbd9f4b4897caf3329b0ac692d3235b20ab2b1701b5d821"
+  },
+  "archive_day_contract": {
+    "manifest_query_day": "2026-07-24 UTC",
+    "observed_exchange_day_start_utc": "2026-07-23T16:00:00Z",
+    "observed_exchange_day_end_exclusive_utc": "2026-07-24T16:00:00Z",
+    "archive_timezone": "UTC+8",
+    "feature_bucket_timezone": "UTC",
+    "complete_hours_required": 24
+  },
+  "markets_result": {
+    "BTC-USDT": {
+      "archive_rows": 367392,
+      "archive_zip_sha256": "09ca88871f6827baf3691d428fa1ce61c9b84c078c298ae81303a5c77cdf9002",
+      "archive_csv_sha256": "c894d275ebf77a693c91f998a2ed6d25feb332b096106dafe5dde1bf648fceae",
+      "complete_utc_feature_hours": 24,
+      "older_rest_rows": 100,
+      "newer_rest_rows": 100,
+      "archive_matched_trade_ids": 200,
+      "economic_field_mismatches": 0,
+      "cross_page_unique_rows": 200,
+      "equal_millisecond_groups_in_overlap": 46,
+      "maximum_equal_millisecond_group_in_overlap": 9,
+      "archive_equal_millisecond_groups": 51508,
+      "archive_maximum_equal_millisecond_group": 621,
+      "naive_file_order_changed_hours": 10,
+      "feature_sha256": "2f3651f8be6c51a21561383681b52a615085caa77176a2ea9a5bb1c9ebbbce9a",
+      "trade_id_time_inversions": 0,
+      "permutation_invariant": true,
+      "future_suffix_invariant": true,
+      "exact_byte_replay_passed": true,
+      "adversarial_defects": []
+    },
+    "ETH-USDT": {
+      "archive_rows": 261544,
+      "archive_zip_sha256": "6ac04ebbc58b7b544cad0541db2659cfe509bbee05123c148059fdb6804c41a9",
+      "archive_csv_sha256": "149767fd07c421c78903af0734d7c70408fcd57be7e4901ac0c3fcfa5d0d8da0",
+      "complete_utc_feature_hours": 24,
+      "older_rest_rows": 100,
+      "newer_rest_rows": 100,
+      "archive_matched_trade_ids": 200,
+      "economic_field_mismatches": 0,
+      "cross_page_unique_rows": 200,
+      "equal_millisecond_groups_in_overlap": 36,
+      "maximum_equal_millisecond_group_in_overlap": 7,
+      "archive_equal_millisecond_groups": 44858,
+      "archive_maximum_equal_millisecond_group": 1212,
+      "naive_file_order_changed_hours": 18,
+      "feature_sha256": "acac8993252a57c3db3cc47605eb7dfec297d6f2bf6a834de2bbf7e58d8c917c",
+      "trade_id_time_inversions": 0,
+      "permutation_invariant": true,
+      "future_suffix_invariant": true,
+      "exact_byte_replay_passed": true,
+      "adversarial_defects": []
+    }
+  },
+  "review_driven_repair": {
+    "reproduced_false_pass": "The v1 checkpoint combined two REST pages although only the after page overlapped the archive, accepted archive instrument-column mutation, and did not reject a deleted complete hour.",
+    "repair": [
+      "require archive instrument identity",
+      "validate the complete declared UTC+8 exchange day and all 24 UTC feature hours",
+      "preserve separate 100-row older and bounded newer REST pages",
+      "require exact archive-adjacent ID sets and 200 economically identical archive matches",
+      "require cross-page uniqueness and cursor-direction validity",
+      "require an equal-millisecond collision inside the matched overlap",
+      "canonicalize by timestamp_ms and arbitrary-precision numeric trade_id",
+      "reject conflicting duplicates and future-sensitive feature construction",
+      "reconstruct result and stress SHA-256 values"
+    ]
+  },
+  "verdict": "trade_flow_source_schema_checkpoint_survived_adversarial_stress",
+  "strategy_consequence": "The two frozen trade-flow variants are source-feasible, but no return, Sharpe, drawdown, turnover, benchmark residual or fee result has been calculated. Full development acquisition remains gated by exact-head review and explicit issue-14 authorization."
+}
