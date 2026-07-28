@@ -27,20 +27,16 @@ jobs:
 
           path = Path("scripts/acquire_okx_historical_trades.py")
           text = path.read_text()
-          text = text.replace(
-              "from decimal import Decimal\n",
-              "from decimal import Decimal\nfrom itertools import pairwise\n",
-              1,
-          )
-          old = '''    inversions = sum(
-              left[5] > right[5]
-              for left, right in zip(trade_id_order, trade_id_order[1:], strict=True)
-          )'''
-          new = '''    inversions = sum(
-              left[5] > right[5] for left, right in pairwise(trade_id_order)
-          )'''
+          if "from itertools import pairwise\n" not in text:
+              text = text.replace(
+                  "from decimal import Decimal\n",
+                  "from decimal import Decimal\nfrom itertools import pairwise\n",
+                  1,
+              )
+          old = "left[5] > right[5] for left, right in zip(trade_id_order, trade_id_order[1:], strict=True)"
+          new = "left[5] > right[5] for left, right in pairwise(trade_id_order)"
           if old not in text:
-              raise SystemExit("expected inversion block not found")
+              raise SystemExit("expected inversion expression not found")
           path.write_text(text.replace(old, new, 1))
           PY
       - run: ruff check --fix scripts/acquire_okx_historical_trades.py
