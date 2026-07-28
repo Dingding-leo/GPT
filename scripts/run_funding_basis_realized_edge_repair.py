@@ -85,7 +85,9 @@ def build_hourly_next_open(events: pd.DataFrame, spot: pd.DataFrame) -> pd.DataF
         turnover = frame[f"position_{policy}"].diff().abs()
         turnover.iloc[0] = abs(float(frame[f"position_{policy}"].iloc[0]))
         frame[f"turnover_{policy}"] = turnover
-        frame[f"gross_return_{policy}"] = frame[f"position_{policy}"] * frame["spot_return"]
+        frame[f"gross_return_{policy}"] = (
+            frame[f"position_{policy}"] * frame["spot_return"]
+        )
         frame[f"net_return_{policy}"] = (
             frame[f"gross_return_{policy}"] - CORE.FEE * turnover
         )
@@ -100,7 +102,9 @@ def build_hourly_next_open(events: pd.DataFrame, spot: pd.DataFrame) -> pd.DataF
     trend_turnover.iloc[0] = abs(float(frame["position_trend"].iloc[0]))
     frame["turnover_trend"] = trend_turnover
     frame["gross_return_trend"] = frame["position_trend"] * frame["spot_return"]
-    frame["net_return_trend"] = frame["gross_return_trend"] - CORE.FEE * trend_turnover
+    frame["net_return_trend"] = (
+        frame["gross_return_trend"] - CORE.FEE * trend_turnover
+    )
     return frame.reset_index()
 
 
@@ -119,7 +123,9 @@ def metrics_with_realized_edge(
     trade_gaps = trade_gaps[np.isfinite(trade_gaps)]
     result.update(
         {
-            "mean_holding_hours": None if not len(holding) else float(np.mean(holding)),
+            "mean_holding_hours": (
+                None if not len(holding) else float(np.mean(holding))
+            ),
             "no_trade_frequency": float(np.mean(turnover == 0.0)),
             "mean_abs_prior_close_to_execution_open_gap_bps_on_adjustments": (
                 None if not len(trade_gaps) else float(np.mean(trade_gaps))
@@ -143,12 +149,14 @@ def main() -> None:
     result["availability"] = (
         "funding event T uses the completed mark/index candle ending at T; "
         "the target is formed when the first completed spot bar after T ends, "
-        "then evaluated from the observed open at that boundary to the next observed hourly open"
+        "then evaluated from the observed open at that boundary to the next "
+        "observed hourly open"
     )
     result["execution_semantics"] = "observed_next_open_to_next_open"
     result["methodological_repair"] = (
         "replaced close-to-close return attribution with observed next-open-to-next-open "
-        "accounting without changing F0/F1 targets, fees, folds, thresholds, or candidate count"
+        "accounting without changing F0/F1 targets, fees, folds, thresholds, "
+        "or candidate count"
     )
     result["fill_diagnostics"] = {
         "available": False,
@@ -162,7 +170,10 @@ def main() -> None:
             "partial fills",
             "adverse selection",
         ],
-        "interpretation": "the observed next open is a deterministic stress endpoint, not an assumed executable fill",
+        "interpretation": (
+            "the observed next open is a deterministic stress endpoint, not an "
+            "assumed executable fill"
+        ),
     }
     result_bytes = CORE.canonical_bytes(CORE.finite(result))
     (args.output_dir / "result-summary.json").write_bytes(result_bytes)
