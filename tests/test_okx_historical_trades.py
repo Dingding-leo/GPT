@@ -13,8 +13,8 @@ import pytest
     not os.environ.get("OKX_BASE_URL"),
     reason="live public OKX checkpoint runs only when OKX_BASE_URL is provided",
 )
-def test_live_trade_flow_source_schema_checkpoint(tmp_path: Path) -> None:
-    output_dir = tmp_path / "trade-flow-schema-checkpoint"
+def test_live_trade_flow_source_schema_checkpoint() -> None:
+    output_dir = Path("reports/okx/trade-flow-schema-checkpoint")
     subprocess.run(
         [
             sys.executable,
