@@ -78,22 +78,33 @@ def test_serialized_decision_rejects_rehashed_noncanonical_exchange_fee(
         PaperOrderDecision.from_json_bytes(serialized)
 
 
-def test_serialized_decision_enforces_record_byte_limit_before_json_parsing() -> None:
+def test_every_constructible_decision_fits_and_round_trips_at_the_record_limit() -> None:
     decision = _decision()
     exact_instrument_size = len(decision.instrument_id) + (
         _MAX_SERIALIZED_BYTES - len(decision.to_json_bytes())
     )
-    exact = replace(decision, instrument_id="X" * exact_instrument_size).to_json_bytes()
-    oversized = replace(
-        decision,
-        instrument_id="X" * (exact_instrument_size + 1),
-    ).to_json_bytes()
+    exact = replace(decision, instrument_id="X" * exact_instrument_size)
+    serialized = exact.to_json_bytes()
 
-    assert len(exact) == _MAX_SERIALIZED_BYTES
+    assert len(serialized) == _MAX_SERIALIZED_BYTES
+    assert PaperOrderDecision.from_json_bytes(serialized) == exact
+    with pytest.raises(ValueError, match="exceeds the maximum record size"):
+        replace(decision, instrument_id="X" * (exact_instrument_size + 1))
+
+
+def test_serialized_decision_enforces_record_byte_limit_before_json_parsing() -> None:
+    oversized = _decision().to_json_bytes().ljust(_MAX_SERIALIZED_BYTES + 1, b" ")
+
     assert len(oversized) == _MAX_SERIALIZED_BYTES + 1
-    assert PaperOrderDecision.from_json_bytes(exact).to_json_bytes() == exact
     with pytest.raises(ValueError, match="exceeds the maximum record size"):
         PaperOrderDecision.from_json_bytes(oversized)
+
+
+def test_domain_decision_rejects_unbounded_scalars_before_serialization() -> None:
+    with pytest.raises(ValueError, match="base_quantity exceeds the maximum length"):
+        replace(_decision(), base_quantity="1" * 257)
+    with pytest.raises(ValueError, match="latency_ms is outside the supported range"):
+        replace(_decision(), latency_ms=2**63)
 
 
 def test_legacy_store_pickle_global_resolves_to_stable_domain_class() -> None:
