@@ -16,6 +16,7 @@ _SHA256 = re.compile(r"[0-9a-f]{64}")
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 _DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 _CANONICAL_EXCHANGE_FEE_BPS = "5"
+_MAX_SERIALIZED_BYTES = 16 * 1024
 _ERROR = "paper order decision"
 _FIELDS = {
     "schema_version",
@@ -228,6 +229,8 @@ class PaperOrderDecision:
 
     @classmethod
     def from_json_bytes(cls, value: bytes) -> PaperOrderDecision:
+        if len(value) > _MAX_SERIALIZED_BYTES:
+            raise ValueError(f"{_ERROR} exceeds the maximum record size")
         try:
             serialized = value.decode("utf-8")
             payload = json.loads(serialized, object_pairs_hook=_reject_duplicates)
