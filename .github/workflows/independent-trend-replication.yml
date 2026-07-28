@@ -9,6 +9,7 @@ on:
     paths:
       - scripts/run_independent_trend_replication.py
       - scripts/run_independent_trend_replication_bounded.py
+      - scripts/run_independent_trend_replication_execution.py
       - .github/workflows/independent-trend-replication.yml
 
 permissions:
@@ -59,8 +60,8 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p "$OUTPUT_DIR"
-          python scripts/run_independent_trend_replication_bounded.py --output-dir "$OUTPUT_DIR" \
-            2>&1 | tee "$OUTPUT_DIR/execution.log"
+          python scripts/run_independent_trend_replication_execution.py \
+            --output-dir "$OUTPUT_DIR" 2>&1 | tee "$OUTPUT_DIR/execution.log"
 
       - name: Verify machine-readable evidence and build manifest
         shell: bash
@@ -87,10 +88,27 @@ jobs:
           assert result["policy"]["execution_delay_hours"] == 1
           assert result["policy"]["fee_bps_one_way"] == 5.0
           assert result["sample"]["observations_per_complete_market"] == 25920
+          assert result["sample"]["extra_open_timestamp"] == "2026-07-08T00:00:00+00:00"
           assert result["candidate_count"] == 1
+          assert result["stress_path_count"] == 3
+          assert set(result["paths"]) == {
+              "C0_close_to_close_attribution",
+              "C1_next_open",
+              "C2_extra_hour_latency",
+          }
+          assert result["paths"]["C0_close_to_close_attribution"][
+              "specification"
+          ]["qualification_path"] is False
+          assert result["paths"]["C1_next_open"]["specification"][
+              "qualification_path"
+          ] is True
+          assert result["paths"]["C2_extra_hour_latency"]["specification"][
+              "qualification_path"
+          ] is True
           assert result["verdict"] in {
               "replication_supported_survivorship_blocked",
-              "rejected_as_next_active_architecture",
+              "rejected_under_executable_next_open_replication",
+              "rejected_under_one_extra_hour_latency",
           }
           PY
           (
