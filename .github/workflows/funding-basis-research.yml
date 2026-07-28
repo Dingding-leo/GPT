@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/run_funding_basis_crowding_research.py"
+      - "scripts/run_funding_basis_realized_edge_repair.py"
       - ".github/workflows/funding-basis-research.yml"
   workflow_dispatch:
 
@@ -50,11 +51,13 @@ jobs:
           python -m pip check
 
       - name: Compile strategy implementation
-        run: python -m py_compile scripts/run_funding_basis_crowding_research.py
+        run: |
+          python -m py_compile scripts/run_funding_basis_crowding_research.py
+          python -m py_compile scripts/run_funding_basis_realized_edge_repair.py
 
       - name: Run real public-data F0/F1 experiment
         run: |
-          GITHUB_SHA="$EXPECTED_SHA" python scripts/run_funding_basis_crowding_research.py \
+          GITHUB_SHA="$EXPECTED_SHA" python scripts/run_funding_basis_realized_edge_repair.py \
             --output-dir "$OUTPUT_DIR"
 
       - name: Verify machine-readable evidence
@@ -74,6 +77,8 @@ jobs:
               raise SystemExit(
                   f"artifact head mismatch: {result['generated_from_commit']} != {sys.argv[2]}"
               )
+          if result.get("execution_semantics") != "observed_next_open_to_next_open":
+              raise SystemExit("funding strategy did not use frozen next-open execution semantics")
           PY
           test -d "$OUTPUT_DIR/raw"
           test "$(find "$OUTPUT_DIR/raw" -type f | wc -l)" -gt 0
