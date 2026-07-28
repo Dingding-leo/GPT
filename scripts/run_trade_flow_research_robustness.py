@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-
 import run_trade_flow_research as base
 import run_trade_flow_research_boundary as boundary
 
