@@ -32,9 +32,7 @@ def overlap_aware_candle_fetch(**kwargs: Any) -> Any:
     else:
         if limit <= 1:
             raise ValueError("inclusive cursor pagination needs limit > 1 for multi-page coverage")
-        overlap_aware_pages = 1 + math.ceil(
-            (expected_observations - limit) / (limit - 1)
-        )
+        overlap_aware_pages = 1 + math.ceil((expected_observations - limit) / (limit - 1))
     nonoverlap_pages = math.ceil(expected_observations / limit)
     kwargs["safety_pages"] = safety_pages + overlap_aware_pages - nonoverlap_pages
     return ORIGINAL_CANDLE_FETCH(**kwargs)
@@ -42,9 +40,7 @@ def overlap_aware_candle_fetch(**kwargs: Any) -> Any:
 
 def assert_frozen_candle_budget() -> None:
     """Prove the 1,200-day candle request cannot repeat the failed 290-page cap."""
-    observations = (
-        (base.DEVELOPMENT_DAYS - base.RESERVED_DAYS) * 24 + base.TREND_LOOKBACK
-    )
+    observations = (base.DEVELOPMENT_DAYS - base.RESERVED_DAYS) * 24 + base.TREND_LOOKBACK
     nonoverlap_pages = math.ceil(observations / 100)
     overlap_aware_pages = 1 + math.ceil((observations - 100) / 99)
     corrected_budget = overlap_aware_pages + 2
