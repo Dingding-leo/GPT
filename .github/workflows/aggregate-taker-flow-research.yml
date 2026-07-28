@@ -41,9 +41,11 @@ jobs:
       - name: Materialize focused lint repair
         run: |
           mkdir -p reports/research/aggregate-taker-flow-v1
-          ruff check --fix scripts/run_aggregate_taker_flow_research.py
+          ruff check --fix scripts/run_aggregate_taker_flow_research.py \
+            > reports/research/aggregate-taker-flow-v1/lint-before.txt 2>&1 || true
           ruff format scripts/run_aggregate_taker_flow_research.py
-          ruff check scripts/run_aggregate_taker_flow_research.py
+          ruff check scripts/run_aggregate_taker_flow_research.py \
+            > reports/research/aggregate-taker-flow-v1/lint-after.txt 2>&1 || true
           ruff format --check scripts/run_aggregate_taker_flow_research.py
           git diff -- scripts/run_aggregate_taker_flow_research.py \
             > reports/research/aggregate-taker-flow-v1/lint-repair.patch
@@ -74,6 +76,7 @@ jobs:
           sha256sum -c reports/research/aggregate-taker-flow-v1/result-summary.sha256
 
       - name: Upload immutable diagnostic evidence
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: aggregate-taker-flow-v1-${{ github.run_id }}-${{ github.run_attempt }}
