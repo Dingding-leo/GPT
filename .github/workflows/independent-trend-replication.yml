@@ -1,0 +1,100 @@
+name: Independent 2160H Trend Replication
+
+on:
+  push:
+    branches:
+      - auto/research/20260728-22-independent-trend-replication
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/run_independent_trend_replication.py
+      - .github/workflows/independent-trend-replication.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: independent-trend-replication-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  replicate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/replication/simple-trend-2160h-v1
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+    steps:
+      - name: Check out exact research head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e .
+          python -m pip check
+
+      - name: Execute frozen public-data replication
+        run: |
+          set -euo pipefail
+          python scripts/run_independent_trend_replication.py --output-dir "$OUTPUT_DIR"
+
+      - name: Verify machine-readable evidence and build manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/universe.json"
+          test -s "$OUTPUT_DIR/result.json"
+          test -s "$OUTPUT_DIR/README.md"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("reports/replication/simple-trend-2160h-v1")
+          universe = json.loads((root / "universe.json").read_text())
+          result = json.loads((root / "result.json").read_text())
+          assert universe["frozen_before_performance"] is True
+          assert result["policy"]["lookback_hours"] == 2160
+          assert result["policy"]["execution_delay_hours"] == 1
+          assert result["policy"]["fee_bps_one_way"] == 5.0
+          assert result["sample"]["observations_per_complete_market"] == 25920
+          assert result["candidate_count"] == 1
+          assert result["verdict"] in {
+              "replication_supported_survivorship_blocked",
+              "rejected_as_next_active_architecture",
+          }
+          PY
+          (
+            cd "$OUTPUT_DIR"
+            find . -type f ! -name artifact-manifest.sha256 -print0 \
+              | sort -z \
+              | xargs -0 sha256sum > artifact-manifest.sha256
+            sha256sum --check artifact-manifest.sha256
+          )
+
+      - name: Upload immutable replication evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: independent-simple-trend-2160h-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: reports/replication/simple-trend-2160h-v1/
+          if-no-files-found: error
+          retention-days: 14
