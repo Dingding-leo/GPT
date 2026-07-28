@@ -61,6 +61,8 @@ jobs:
         env:
           PYTHONPATH: src
         run: |
+          rm -f reports/research/aggregate-taker-flow-v1/result-summary.json
+          rm -f reports/research/aggregate-taker-flow-v1/result-summary.sha256
           set +e
           python scripts/run_aggregate_taker_flow_research.py \
             --output-dir reports/research/aggregate-taker-flow-v1
@@ -89,7 +91,8 @@ jobs:
           }
           assert set(result["markets"]) == {"BTC-USDT", "ETH-USDT"}
           PY
-          sha256sum -c reports/research/aggregate-taker-flow-v1/result-summary.sha256
+          cd reports/research/aggregate-taker-flow-v1
+          sha256sum -c result-summary.sha256
 
       - name: Upload immutable diagnostic evidence
         if: ${{ !cancelled() }}
