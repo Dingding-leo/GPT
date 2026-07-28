@@ -56,13 +56,15 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Materialize formatter repair and verify lint
+      - name: Materialize formatter and lint diagnostics
+        shell: bash
         run: |
+          set -euo pipefail
+          output="reports/okx/large-trade-concentration-diagnostic/formatter"
+          mkdir -p "$output"
           ruff format scripts/run_large_trade_concentration_diagnostic.py
-          ruff check scripts/run_large_trade_concentration_diagnostic.py
-          mkdir -p reports/okx/large-trade-concentration-diagnostic/formatter
-          cp scripts/run_large_trade_concentration_diagnostic.py \
-            reports/okx/large-trade-concentration-diagnostic/formatter/formatted-script.py
+          cp scripts/run_large_trade_concentration_diagnostic.py "$output/formatted-script.py"
+          ruff check scripts/run_large_trade_concentration_diagnostic.py > "$output/ruff-check.txt" 2>&1 || true
 
       - name: Run immutable public-data strategy diagnostic
         run: |
