@@ -12,6 +12,7 @@ import zipfile
 from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -247,9 +248,7 @@ def strategy_diagnostic(rows: list[Trade]) -> dict[str, Any]:
     ]
 
     trade_id_order = sorted(ordered, key=lambda row: row[1])
-    inversions = sum(
-        left[5] > right[5] for left, right in zip(trade_id_order, trade_id_order[1:], strict=True)
-    )
+    inversions = sum(left[5] > right[5] for left, right in pairwise(trade_id_order))
     collision_sizes = [len(group) for group in timestamp_groups.values() if len(group) > 1]
     naive_changes = sum(
         left != right for left, right in zip(naive_base, naive_permuted, strict=True)
