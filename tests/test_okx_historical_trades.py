@@ -127,6 +127,10 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
     assert chronology["architecture_family_id"] == result["architecture_family_id"]
     assert chronology["candidate_count"] == 2
     assert chronology["canonical_fee_bps_one_way"] == 5.0
+    assert chronology["canonical_trade_order"] == [
+        "exchange_timestamp_ms",
+        "numeric_trade_id",
+    ]
     assert chronology["performance_inspected"] is False
     assert chronology["oos_consumed"] is False
     assert chronology["verdict"] == (
