@@ -211,6 +211,10 @@ def test_candidate_cache_is_invariant_to_unavailable_future_suffix(
 
     assert not reordered_future.iloc[500:].equals(original_suffix)
     assert not distribution_changed_future.iloc[500:].equals(original_suffix)
+    assert (reordered_future.iloc[500:] > 0.0).all()
+    assert (distribution_changed_future.iloc[500:] > 0.0).all()
+    assert reordered_future.iloc[500:].mean() == pytest.approx(original_suffix.mean())
+    assert reordered_future.iloc[500:].std() == pytest.approx(original_suffix.std())
     assert distribution_changed_future.iloc[500:].mean() > original_suffix.mean()
     assert distribution_changed_future.iloc[500:].std() > original_suffix.std()
 
