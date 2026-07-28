@@ -7,6 +7,7 @@ on:
       - "scripts/run_trade_flow_research.py"
       - "scripts/run_trade_flow_research_exact.py"
       - "scripts/run_trade_flow_research_boundary.py"
+      - "scripts/run_trade_flow_research_robustness.py"
       - ".github/workflows/trade-flow-development.yml"
   workflow_dispatch:
     inputs:
@@ -71,16 +72,19 @@ jobs:
           python -m py_compile \
             scripts/run_trade_flow_research.py \
             scripts/run_trade_flow_research_exact.py \
-            scripts/run_trade_flow_research_boundary.py
+            scripts/run_trade_flow_research_boundary.py \
+            scripts/run_trade_flow_research_robustness.py
           ruff check \
             scripts/run_trade_flow_research.py \
             scripts/run_trade_flow_research_exact.py \
             scripts/run_trade_flow_research_boundary.py \
+            scripts/run_trade_flow_research_robustness.py \
             2>&1 | tee "$OUTPUT_DIR/ruff-check.txt"
           ruff format --check \
             scripts/run_trade_flow_research.py \
             scripts/run_trade_flow_research_exact.py \
             scripts/run_trade_flow_research_boundary.py \
+            scripts/run_trade_flow_research_robustness.py \
             2>&1 | tee "$OUTPUT_DIR/ruff-format-check.txt"
 
       - name: Execute frozen V1/V2 development comparison
@@ -93,7 +97,7 @@ jobs:
           set -euo pipefail
           mkdir -p "$OUTPUT_DIR"
           df -h
-          python scripts/run_trade_flow_research_boundary.py \
+          python scripts/run_trade_flow_research_robustness.py \
             --base-url "$OKX_BASE_URL" \
             --output-dir "$OUTPUT_DIR" \
             2>&1 | tee "$OUTPUT_DIR/execution.log"
