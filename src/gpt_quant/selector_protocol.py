@@ -18,16 +18,10 @@ CANONICAL_FIRST_SELECTION_START = datetime(2021, 7, 24, tzinfo=UTC)
 def canonical_fold_window(fold: int) -> tuple[datetime, datetime, datetime, datetime]:
     """Return the frozen BTC/ETH development window for one selector fold."""
 
-    valid_fold = (
-        not isinstance(fold, bool)
-        and isinstance(fold, int)
-        and 1 <= fold <= FOLD_COUNT
-    )
+    valid_fold = not isinstance(fold, bool) and isinstance(fold, int) and 1 <= fold <= FOLD_COUNT
     if not valid_fold:
         raise ValueError("fold must be an integer from 1 through 12")
-    selection_start = (
-        CANONICAL_FIRST_SELECTION_START + BAR_DELTA * TEST_BARS * (fold - 1)
-    )
+    selection_start = CANONICAL_FIRST_SELECTION_START + BAR_DELTA * TEST_BARS * (fold - 1)
     selection_end = selection_start + BAR_DELTA * (SELECTION_BARS - 1)
     test_start = selection_end + BAR_DELTA
     test_end = test_start + BAR_DELTA * (TEST_BARS - 1)
