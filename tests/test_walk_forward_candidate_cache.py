@@ -182,3 +182,50 @@ def test_candidate_cache_runs_each_configuration_once_and_ignores_later_real_bar
     assert len(cache) == 1
     pd.testing.assert_frame_equal(first, expected, check_exact=True)
     pd.testing.assert_frame_equal(second, expected, check_exact=True)
+
+
+def test_candidate_cache_is_invariant_to_unavailable_future_suffix(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    config = StrategyConfig(
+        momentum_lookback=63,
+        reversal_lookback=3,
+        volatility_lookback=20,
+        min_position=0.0,
+        transaction_cost_bps=5.0,
+        annualization=252,
+    )
+    complete_history = btc_usdt_prices.iloc[:800].copy()
+    start = complete_history.index[300]
+    end = complete_history.index[499]
+    point_in_time_history = complete_history.loc[:end]
+
+    altered_future = complete_history.copy()
+    altered_future.iloc[500:] = altered_future.iloc[500:].iloc[::-1].to_numpy()
+    assert not altered_future.iloc[500:].equals(complete_history.iloc[500:])
+    pd.testing.assert_series_equal(
+        altered_future.loc[:end],
+        point_in_time_history,
+        check_exact=True,
+    )
+
+    baseline = walk_forward._run_cached_candidate_window(
+        point_in_time_history,
+        complete_history,
+        {},
+        config,
+        start,
+        end,
+        0.0,
+    )
+    modified = walk_forward._run_cached_candidate_window(
+        point_in_time_history,
+        altered_future,
+        {},
+        config,
+        start,
+        end,
+        0.0,
+    )
+
+    pd.testing.assert_frame_equal(baseline, modified, check_exact=True)
