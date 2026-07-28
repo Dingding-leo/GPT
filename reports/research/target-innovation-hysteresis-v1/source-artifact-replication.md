@@ -2,7 +2,7 @@
 
 ## Verdict
 
-`replicated_across_independent_canonical_artifact_builds_development_only`
+`passed_same_base_artifact_replication_but_failed_candidate_neutral_transfer`
 
 The unchanged H1 target-innovation hysteresis rule was independently reconstructed from two
 immutable canonical workflow builds. The builds used different code heads, acquisition times,
@@ -10,8 +10,8 @@ artifact hashes, normalized snapshot hashes, and future source suffix lengths, w
 same frozen BTC/ETH development window.
 
 H1 produced identical discrete suppression decisions and economically identical performance in
-both builds. This strengthens the overlay's development-stage reproducibility, but it does not
-promote the underlying S0 Alpha or consume untouched replication.
+both S0 builds. This proves same-path reproducibility, but a concurrent frozen transfer attack
+shows that H1 is not candidate-neutral and must not be integrated as a general turnover overlay.
 
 ## Frozen policy
 
@@ -128,17 +128,52 @@ A numerical Deflated Sharpe is not reported because the repository-wide independ
 remains incomplete. PBO is not mathematically meaningful for two artifact builds of one unchanged
 policy on the same market-time observations.
 
+## Candidate-neutral transfer falsification
+
+The unchanged H1 policy was also applied to the canonical 2,160H simple-trend long/cash path under
+the same one-bar delay and 5 bps fee.
+
+For both BTC and ETH:
+
+```text
+eligible decisions             25,751
+zero-MAD decisions             25,751
+positive-band decisions             0
+suppressed nonzero revisions        0
+H1-minus-H0 return                  0
+H1-minus-H0 Sharpe                  0
+H1-minus-H0 turnover                0
+```
+
+Sparse binary simple-trend target innovations make the rolling MAD exactly zero. H1 therefore
+collapses to an identity transform rather than suppressing revisions. This falsifies the prior
+candidate-neutral interpretation: H1's development benefit is structurally specific to the noisy
+continuous S0 target path.
+
+The combined verdict is:
+
+```text
+same-base artifact replication  PASS
+candidate-neutral portability   FAIL
+integration                     REJECT
+archive status                  base-specific development diagnostic
+```
+
+H1 must not be retuned on the consumed BTC/ETH window or carried into a future selector by default.
+Any new turnover overlay must be predeclared against the nominated target process using only
+training-authorized information.
+
 ## Qualification boundary
 
-The artifact-build replication supports H1 as a reproducible development-stage turnover overlay.
-It does not change the base strategy verdict:
+The artifact-build replication proves only that H1 is reproducible on the same continuous S0 target
+path. The portability attack rejects H1 for integration:
 
-- BTC still has only 4/12 profitable folds;
-- ETH still has only 5/12 profitable folds;
-- residual Sharpe versus simple trend remains negative:
-  - BTC: `-0.7850`;
-  - ETH: `-0.5464`;
+- BTC still has only 4/12 profitable S0 folds;
+- ETH still has only 5/12 profitable S0 folds;
+- H1 residual Sharpe versus simple trend remains negative on S0;
+- H1 has exactly zero effect when transferred to the simple-trend target process;
 - no untouched market or prospective period was used.
 
-The next strategy-facing step remains the frozen S0-S5 comparison. Only after one selector is
-nominated and hashed may the unchanged H1 policy hash enter the reserved prospective cohort.
+The next strategy-facing step is to repair and independently validate the frozen selector-comparison
+evidence. H1 must remain archived and must not be automatically attached to any future nominated
+policy.
