@@ -26,9 +26,20 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
         ],
         check=True,
     )
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/stress_okx_trade_flow_checkpoint.py",
+            "--output-dir",
+            str(output_dir),
+        ],
+        check=True,
+    )
 
     result_path = output_dir / "result.json"
     result = json.loads(result_path.read_text())
+    stress = json.loads((output_dir / "stress-result.json").read_text())
+
     assert result["schema_version"] == "trade-flow-source-schema-checkpoint-v1"
     assert result["architecture_family_id"] == "okx-spot-causal-trade-flow-resilience-v2"
     assert result["candidate_count"] == 2
@@ -39,12 +50,20 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
         "BTC-USDT",
         "ETH-USDT",
     ]
-    assert result["verdict"] in {
-        "trade_flow_source_schema_checkpoint_passed",
-        "trade_flow_resilience_family_rejected_pre_performance",
-        "trade_flow_source_schema_checkpoint_blocked",
-    }
 
-    checksum = (output_dir / "result.sha256").read_text().strip()
-    assert len(checksum) == 64
-    assert all(character in "0123456789abcdef" for character in checksum)
+    assert stress["schema_version"] == "trade-flow-checkpoint-adversarial-stress-v1"
+    assert stress["architecture_family_id"] == result["architecture_family_id"]
+    assert stress["candidate_count"] == 2
+    assert stress["performance_inspected"] is False
+    assert stress["oos_consumed"] is False
+    assert stress["verdict"] in {
+        "trade_flow_source_schema_checkpoint_blocked_by_adversarial_stress",
+        "trade_flow_source_schema_checkpoint_survived_adversarial_stress",
+    }
+    assert result["adversarial_stress"]["verdict"] == stress["verdict"]
+    assert result["verdict"] == stress["verdict"]
+
+    for name in ("result.sha256", "stress-result.sha256"):
+        checksum = (output_dir / name).read_text().strip()
+        assert len(checksum) == 64
+        assert all(character in "0123456789abcdef" for character in checksum)
