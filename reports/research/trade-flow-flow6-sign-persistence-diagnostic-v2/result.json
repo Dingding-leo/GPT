@@ -1,0 +1,188 @@
+{
+  "canonical_fee_bps_one_way": 5.0,
+  "deterministic_failures": [
+    "BTC-USDT: net return <= 0",
+    "BTC-USDT: edge per turnover <= 0",
+    "BTC-USDT: residual Sharpe <= 0",
+    "worst_market_mean_net_residual: lower bound <= 0",
+    "worst_market_mean_net_residual: Holm p >= 0.05",
+    "worst_market_residual_sharpe: lower bound <= 0",
+    "worst_market_residual_sharpe: Holm p >= 0.05"
+  ],
+  "development_window_read": false,
+  "diagnostic_candidate_count": 1,
+  "family": "okx-spot-causal-trade-flow-resilience-v2",
+  "frozen_family_candidate_count_unchanged": 2,
+  "markets": {
+    "BTC-USDT": {
+      "causal_tests": {
+        "exact_24h_grid": true,
+        "future_suffix_prefix_invariant": true,
+        "one_bar_delay": true
+      },
+      "flow6": {
+        "cash_decisions": 1,
+        "max": 0.18611619533130774,
+        "mean": 0.08229543191512985,
+        "median": 0.056276954338703944,
+        "min": -2.0136407580917735e-05,
+        "positive_decisions": 18
+      },
+      "gross": {
+        "absolute_turnover": 0.0,
+        "annualized_sharpe_diagnostic_only": -18.667512793067342,
+        "edge_per_turnover_bps": null,
+        "gross_or_net_total_return": -0.008941873834236058,
+        "max_drawdown": -0.013980321548053287,
+        "mean_hourly_return": -0.00047000037401532716,
+        "modeled_fee_burden": 0.0,
+        "observations": 19,
+        "position_adjustments_including_terminal_exit": 0,
+        "positive_hours": 9,
+        "time_in_market": 0.9473684210526315
+      },
+      "net": {
+        "absolute_turnover": 4.0,
+        "annualized_sharpe_diagnostic_only": -22.59461663615128,
+        "edge_per_turnover_bps": -27.32501776572804,
+        "gross_or_net_total_return": -0.010924164240086798,
+        "max_drawdown": -0.015460450153513383,
+        "mean_hourly_return": -0.0005752635319100641,
+        "modeled_fee_burden": 0.002,
+        "observations": 19,
+        "position_adjustments_including_terminal_exit": 4,
+        "positive_hours": 8,
+        "time_in_market": 0.9473684210526315
+      },
+      "residual_sharpe_vs_simple_trend_diagnostic_only": -22.59461663615128,
+      "simple_trend_net": {
+        "absolute_turnover": 0.0,
+        "annualized_sharpe_diagnostic_only": 0.0,
+        "edge_per_turnover_bps": null,
+        "gross_or_net_total_return": 0.0,
+        "max_drawdown": 0.0,
+        "mean_hourly_return": 0.0,
+        "modeled_fee_burden": 0.0,
+        "observations": 19,
+        "position_adjustments_including_terminal_exit": 0,
+        "positive_hours": 0,
+        "time_in_market": 0.0
+      },
+      "source": {
+        "archive_csv_sha256": "c894d275ebf77a693c91f998a2ed6d25feb332b096106dafe5dde1bf648fceae",
+        "archive_trade_rows": 367392,
+        "canonical_candle_csv_sha256": "f967995a6acd5c4acd0a17dd030f02cd55441b3f83716e5a4118a58af71ca96e",
+        "complete_hours": 24,
+        "missing_hours": 0
+      }
+    },
+    "ETH-USDT": {
+      "causal_tests": {
+        "exact_24h_grid": true,
+        "future_suffix_prefix_invariant": true,
+        "one_bar_delay": true
+      },
+      "flow6": {
+        "cash_decisions": 13,
+        "max": 0.20042833236064142,
+        "mean": -0.015845255586847823,
+        "median": -0.042533856023613884,
+        "min": -0.1122645832011336,
+        "positive_decisions": 6
+      },
+      "gross": {
+        "absolute_turnover": 0.0,
+        "annualized_sharpe_diagnostic_only": 12.697172101752582,
+        "edge_per_turnover_bps": null,
+        "gross_or_net_total_return": 0.004569528302341697,
+        "max_drawdown": -0.004187631193105834,
+        "mean_hourly_return": 0.00024148249050741878,
+        "modeled_fee_burden": 0.0,
+        "observations": 19,
+        "position_adjustments_including_terminal_exit": 0,
+        "positive_hours": 3,
+        "time_in_market": 0.3157894736842105
+      },
+      "net": {
+        "absolute_turnover": 4.0,
+        "annualized_sharpe_diagnostic_only": 7.1009881569273094,
+        "edge_per_turnover_bps": 6.470418299102391,
+        "gross_or_net_total_return": 0.0025622744214059967,
+        "max_drawdown": -0.004685537377509208,
+        "mean_hourly_return": 0.00013621933261268192,
+        "modeled_fee_burden": 0.002,
+        "observations": 19,
+        "position_adjustments_including_terminal_exit": 4,
+        "positive_hours": 3,
+        "time_in_market": 0.3157894736842105
+      },
+      "residual_sharpe_vs_simple_trend_diagnostic_only": 7.1009881569273094,
+      "simple_trend_net": {
+        "absolute_turnover": 0.0,
+        "annualized_sharpe_diagnostic_only": 0.0,
+        "edge_per_turnover_bps": null,
+        "gross_or_net_total_return": 0.0,
+        "max_drawdown": 0.0,
+        "mean_hourly_return": 0.0,
+        "modeled_fee_burden": 0.0,
+        "observations": 19,
+        "position_adjustments_including_terminal_exit": 0,
+        "positive_hours": 0,
+        "time_in_market": 0.0
+      },
+      "source": {
+        "archive_csv_sha256": "149767fd07c421c78903af0734d7c70408fcd57be7e4901ac0c3fcfa5d0d8da0",
+        "archive_trade_rows": 261544,
+        "canonical_candle_csv_sha256": "ff53337ffbeafd237703ef6ff5f61a2e0b15df1fbd5954c17a8557e80324e907",
+        "complete_hours": 24,
+        "missing_hours": 0
+      }
+    }
+  },
+  "methodological_repair": {
+    "defect": "The first analysis bootstrapped each market separately and emphasized annualized statistics from only 19 hours, understating shared crypto-market dependence and overstating apparent precision.",
+    "repair": "Use identical 6H moving-block indices across BTC and ETH, infer only two worst-market endpoints, Holm-adjust them, and label annualized Sharpe as diagnostic-only."
+  },
+  "payload_sha256": "4cc6c8b74ea98ef2571355e1bbca5f920f7282c92a687e4a95d8d082820f6fec",
+  "performance_classification": "bounded_non_family_prospective_diagnostic",
+  "policy": {
+    "causal_timing": "hour h trades finalize after h closes; target earns canonical close(h)-to-close(h+1) return",
+    "economic_thesis": "net aggressive demand persisting for six completed hours predicts the same instrument next-hour return",
+    "formula": "flow6_h=sum(signed taker quote notional h-5..h)/sum(total quote notional h-5..h); target_h=1 if flow6_h>0 else 0",
+    "initial_state": "cash; first five feature hours ineligible",
+    "name": "flow6_sign_persistence_diagnostic",
+    "terminal_accounting": "forced cash after final evaluated return with 5 bps exit cost"
+  },
+  "sample": {
+    "complete_trade_hours": 24,
+    "eligible_decisions": 19,
+    "trade_end_exclusive_utc": "2026-07-24T16:00:00Z",
+    "trade_start_utc": "2026-07-23T16:00:00Z"
+  },
+  "schema_version": "trade-flow-flow6-sign-persistence-diagnostic-v2",
+  "strategy_consequence": "Reject the unstandardized six-hour directional persistence premise on this bounded real-data epoch. This does not inspect or alter frozen V1/V2 and does not consume development or untouched evidence.",
+  "uncertainty": {
+    "block_hours": 6,
+    "endpoints": [
+      {
+        "holm_p": 1.0,
+        "name": "worst_market_mean_net_residual",
+        "observed": -0.0005752635319100641,
+        "one_sided_95pct_lower_bound": -0.0014175628664797992,
+        "raw_p": 0.8474305138972206
+      },
+      {
+        "holm_p": 1.0,
+        "name": "worst_market_residual_sharpe",
+        "observed": -22.59461663615128,
+        "one_sided_95pct_lower_bound": -56.415046738566616,
+        "raw_p": 0.8342331533693261
+      }
+    ],
+    "method": "paired non-circular moving blocks with identical UTC-hour indices across BTC and ETH",
+    "resamples": 5000,
+    "seed": 20260729
+  },
+  "untouched_window_read": false,
+  "verdict": "flow6_sign_persistence_premise_rejected_on_bounded_diagnostic"
+}
