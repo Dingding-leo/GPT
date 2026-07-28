@@ -62,14 +62,22 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Validate research entry points
+      - name: Validate entry points and capture lint debt
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
           python -m py_compile \
             scripts/run_trade_flow_research.py \
             scripts/run_trade_flow_research_exact.py
-          ruff check scripts/run_trade_flow_research.py scripts/run_trade_flow_research_exact.py
+          set +e
+          ruff check \
+            scripts/run_trade_flow_research.py \
+            scripts/run_trade_flow_research_exact.py \
+            2>&1 | tee "$OUTPUT_DIR/ruff-check.txt"
+          ruff_status="${PIPESTATUS[0]}"
+          set -e
+          printf '%s\n' "$ruff_status" > "$OUTPUT_DIR/ruff-exit-code.txt"
 
       - name: Execute frozen V1/V2 development comparison
         id: execute
