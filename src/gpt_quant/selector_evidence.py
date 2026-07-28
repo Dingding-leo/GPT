@@ -216,7 +216,9 @@ def validate_candidate_table(
         scores.append((score, candidate_order, cid))
 
     _require(set(by_id) == set(order), "candidate rows do not match iteration order")
-    expected_order = [item[2] for item in sorted(scores, key=lambda item: -item[0])]
+    expected_order = [
+        item[2] for item in sorted(scores, key=lambda item: (-item[0], item[1]))
+    ]
     ranked_rows = sorted(rows, key=lambda row: row["training_rank"])
     actual_order = [row["candidate_id"] for row in ranked_rows]
     _require(actual_order == expected_order, "training ranks do not reconstruct score ordering")
