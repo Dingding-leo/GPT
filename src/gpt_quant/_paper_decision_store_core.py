@@ -16,7 +16,7 @@ except ImportError:  # pragma: no cover - non-POSIX only
     _fcntl = None
 
 from .execution_intent import TargetPositionIntent
-from .paper_order_decision import PaperOrderDecision, _MAX_SERIALIZED_BYTES
+from .paper_order_decision import _MAX_SERIALIZED_BYTES, PaperOrderDecision
 from .target_intent_journal import load_target_position_intent_journal
 
 _ERROR = "paper order decision"
