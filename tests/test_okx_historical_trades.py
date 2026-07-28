@@ -35,7 +35,10 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
     assert result["canonical_fee_bps_one_way"] == 5.0
     assert result["performance_inspected"] is False
     assert result["oos_consumed"] is False
-    assert [market["inst_id"] for market in result["markets"]] == ["BTC-USDT", "ETH-USDT"]
+    assert [market["inst_id"] for market in result["markets"]] == [
+        "BTC-USDT",
+        "ETH-USDT",
+    ]
     assert result["verdict"] in {
         "trade_flow_source_schema_checkpoint_passed",
         "trade_flow_resilience_family_rejected_pre_performance",
