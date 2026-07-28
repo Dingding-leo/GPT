@@ -109,9 +109,7 @@ def tie_break_impact(rows: list[source.Trade]) -> dict[str, Any]:
         "mean_absolute_impact_delta_bps": (
             sum(abs(value) for value in deltas) / len(deltas) * 10_000
         ),
-        "maximum_absolute_impact_delta_bps": (
-            max(abs(value) for value in deltas) * 10_000
-        ),
+        "maximum_absolute_impact_delta_bps": max(abs(value) for value in deltas) * 10_000,
         "signed_mean_impact_delta_bps": sum(deltas) / len(deltas) * 10_000,
     }
 
@@ -180,6 +178,7 @@ def run(output_dir: Path) -> dict[str, Any]:
         "architecture_family_id": source_result["architecture_family_id"],
         "candidate_count": source_result["candidate_count"],
         "canonical_fee_bps_one_way": source_result["canonical_fee_bps_one_way"],
+        "canonical_trade_order": ["exchange_timestamp_ms", "numeric_trade_id"],
         "performance_inspected": False,
         "oos_consumed": False,
         "attack": (
