@@ -27,6 +27,37 @@ BOUNDARY_MERGE_DIAGNOSTIC: dict[str, Any] = {
     "canonical_timestamp_numeric_id_order": True,
 }
 
+RESERVED_SUFFIX_DIAGNOSTIC: dict[str, Any] = {
+    "timestamp_parsed_before_economic_fields": True,
+    "economic_rows_at_or_after_end_inspected": 0,
+    "files_stopped_before_reserved_economic_suffix": 0,
+    "real_archive_suffix_mutation_probes": 0,
+    "first_unread_timestamp_ms_by_market": {},
+    "markets_with_unread_boundary": [],
+    "reserved_economic_suffix_unread": False,
+}
+
+
+def timestamp_only(raw: dict[str, str], ts_field: str) -> int:
+    return base.source.exact_integer(raw.get(ts_field), "timestamp")
+
+
+def prove_suffix_row_ignored(
+    raw: dict[str, str],
+    fields: tuple[str, str, str, str, str, str],
+    timestamp_ms: int,
+) -> None:
+    inst_field, id_field, side_field, price_field, size_field, ts_field = fields
+    mutated = dict(raw)
+    mutated[inst_field] = "MUTATED-RESERVED-SUFFIX"
+    mutated[id_field] = "not-a-trade-id"
+    mutated[side_field] = "not-a-side"
+    mutated[price_field] = "not-a-price"
+    mutated[size_field] = "not-a-size"
+    if timestamp_only(mutated, ts_field) != timestamp_ms:
+        raise AssertionError("reserved-suffix timestamp mutation probe changed boundary")
+    RESERVED_SUFFIX_DIAGNOSTIC["real_archive_suffix_mutation_probes"] += 1
+
 
 def parse_csv_file(
     csv_path: Path,
@@ -35,16 +66,19 @@ def parse_csv_file(
     end_ms: int,
 ) -> BoundaryParsedFile:
     hours: dict[int, base.HourAggregate] = {}
-    rows = 0
+    timestamp_rows_inspected = 0
     selected_rows = 0
     duplicate_rows = 0
     min_ts: int | None = None
     max_ts: int | None = None
-    previous: base.source.Trade | None = None
+    previous_timestamp: int | None = None
+    previous_selected: base.source.Trade | None = None
     first_selected_hour: int | None = None
     first_hour_rows: list[base.source.Trade] = []
     last_selected_hour: int | None = None
     last_hour_rows: list[base.source.Trade] = []
+    first_unread_timestamp_ms: int | None = None
+    suffix_mutation_probe_passed = False
 
     with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -52,6 +86,33 @@ def parse_csv_file(
         inst_field, id_field, side_field, price_field, size_field, ts_field = fields
         header = list(reader.fieldnames or [])
         for raw in reader:
+            timestamp_ms = timestamp_only(raw, ts_field)
+            timestamp_rows_inspected += 1
+            if previous_timestamp is not None and timestamp_ms < previous_timestamp:
+                raise ValueError("archive timestamp order is not chronological")
+            previous_timestamp = timestamp_ms
+            min_ts = timestamp_ms if min_ts is None else min(min_ts, timestamp_ms)
+            max_ts = timestamp_ms if max_ts is None else max(max_ts, timestamp_ms)
+
+            if timestamp_ms >= end_ms:
+                first_unread_timestamp_ms = timestamp_ms
+                prove_suffix_row_ignored(raw, fields, timestamp_ms)
+                suffix_mutation_probe_passed = True
+                RESERVED_SUFFIX_DIAGNOSTIC[
+                    "files_stopped_before_reserved_economic_suffix"
+                ] += 1
+                prior = RESERVED_SUFFIX_DIAGNOSTIC[
+                    "first_unread_timestamp_ms_by_market"
+                ].get(inst_id)
+                if prior is None or timestamp_ms < prior:
+                    RESERVED_SUFFIX_DIAGNOSTIC[
+                        "first_unread_timestamp_ms_by_market"
+                    ][inst_id] = timestamp_ms
+                break
+
+            if timestamp_ms < start_ms:
+                continue
+
             observed_inst = str(raw.get(inst_field, "")).strip()
             if observed_inst != inst_id:
                 raise ValueError(f"mixed archive instrument: {observed_inst}")
@@ -63,20 +124,17 @@ def parse_csv_file(
                 raw.get(size_field),
                 raw.get(ts_field),
             )
-            rows += 1
-            if previous is not None:
-                if trade[1] == previous[1]:
-                    if trade != previous:
+            if trade[5] != timestamp_ms:
+                raise ValueError("timestamp-only and normalized timestamps disagree")
+            if previous_selected is not None:
+                if trade[1] == previous_selected[1]:
+                    if trade != previous_selected:
                         raise ValueError("conflicting duplicate trade identity")
                     duplicate_rows += 1
                     continue
-                if trade[1] < previous[1] or trade[5] < previous[5]:
-                    raise ValueError("archive provider order is not chronological")
-            previous = trade
-            min_ts = trade[5] if min_ts is None else min(min_ts, trade[5])
-            max_ts = trade[5] if max_ts is None else max(max_ts, trade[5])
-            if not start_ms <= trade[5] < end_ms:
-                continue
+                if trade[1] < previous_selected[1] or trade[5] < previous_selected[5]:
+                    raise ValueError("selected archive order is not chronological")
+            previous_selected = trade
 
             selected_rows += 1
             hour = trade[5] // base.HOUR_MS * base.HOUR_MS
@@ -100,8 +158,8 @@ def parse_csv_file(
                 last_hour_rows = []
             last_hour_rows.append(trade)
 
-    if rows == 0 or min_ts is None or max_ts is None:
-        raise ValueError("archive CSV contains no trades")
+    if timestamp_rows_inspected == 0 or min_ts is None or max_ts is None:
+        raise ValueError("archive CSV contains no timestamped trade rows")
 
     boundary_rows: dict[int, list[base.source.Trade]] = {}
     if first_selected_hour is not None:
@@ -111,7 +169,7 @@ def parse_csv_file(
     return BoundaryParsedFile(
         metadata={
             "header": header,
-            "rows": rows,
+            "timestamp_rows_inspected": timestamp_rows_inspected,
             "selected_rows": selected_rows,
             "exact_duplicate_rows_removed": duplicate_rows,
             "min_ts_ms": min_ts,
@@ -120,6 +178,12 @@ def parse_csv_file(
             "max_ts": base.utc_timestamp(max_ts),
             "first_selected_hour_ms": first_selected_hour,
             "last_selected_hour_ms": last_selected_hour,
+            "first_unread_timestamp_ms": first_unread_timestamp_ms,
+            "economic_rows_at_or_after_end_inspected": 0,
+            "stopped_before_reserved_economic_normalization": (
+                first_unread_timestamp_ms is not None
+            ),
+            "real_archive_suffix_mutation_probe_passed": suffix_mutation_probe_passed,
             "boundary_hour_rows_retained_for_cross_file_deduplication": True,
         },
         hours=hours,
@@ -221,6 +285,24 @@ def merge_hours(
     return merged
 
 
+def finalize_reserved_suffix_diagnostic() -> dict[str, Any]:
+    markets = sorted(RESERVED_SUFFIX_DIAGNOSTIC["first_unread_timestamp_ms_by_market"])
+    RESERVED_SUFFIX_DIAGNOSTIC["markets_with_unread_boundary"] = markets
+    passed = (
+        markets == sorted(base.MARKETS)
+        and RESERVED_SUFFIX_DIAGNOSTIC[
+            "economic_rows_at_or_after_end_inspected"
+        ]
+        == 0
+        and RESERVED_SUFFIX_DIAGNOSTIC["real_archive_suffix_mutation_probes"]
+        >= len(base.MARKETS)
+    )
+    RESERVED_SUFFIX_DIAGNOSTIC["reserved_economic_suffix_unread"] = passed
+    if not passed:
+        raise ValueError("reserved economic suffix boundary was not proven for every market")
+    return RESERVED_SUFFIX_DIAGNOSTIC
+
+
 def main() -> None:
     if base.TREND_LOOKBACK != 2160:
         raise ValueError("frozen simple-trend benchmark lookback changed")
@@ -236,7 +318,12 @@ def main() -> None:
     base.inference = exact.inference_with_strict_cross_market_undefined
     args = base.parse_args()
     result = base.run(args.base_url, args.output_dir)
+    reserved_guard = finalize_reserved_suffix_diagnostic()
     result["review_driven_month_boundary_repair"] = BOUNDARY_MERGE_DIAGNOSTIC
+    result["review_driven_reserved_suffix_guard"] = reserved_guard
+    result["reserved_oos_consumed"] = not reserved_guard[
+        "reserved_economic_suffix_unread"
+    ]
     result_bytes = base.canonical_json(result)
     base.persist(args.output_dir / "result.json", result_bytes)
     base.persist(
@@ -250,6 +337,7 @@ def main() -> None:
                 "failures": result["qualification_failures"],
                 "result_sha256": hashlib.sha256(result_bytes).hexdigest(),
                 "boundary_repair": BOUNDARY_MERGE_DIAGNOSTIC,
+                "reserved_suffix_guard": reserved_guard,
             },
             indent=2,
             sort_keys=True,
