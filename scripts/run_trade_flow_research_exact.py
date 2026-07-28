@@ -293,13 +293,128 @@ def evaluate_market_with_benchmark_prehistory(
     }, evaluation_frames
 
 
+def strict_cross_market_min(values: list[float]) -> float:
+    """Return the minimum only when every frozen market endpoint is defined."""
+    if not values or not all(math.isfinite(value) for value in values):
+        return float("nan")
+    return min(values)
+
+
+def inference_with_strict_cross_market_undefined(
+    frames: dict[str, dict[str, pd.DataFrame]],
+) -> dict[str, Any]:
+    endpoint_names = (
+        "v2_minus_v1_sharpe",
+        "v2_minus_v1_edge",
+        "v2_residual_sharpe_vs_trend",
+        "v2_minus_trend_edge",
+    )
+    endpoint_samples: dict[str, list[float]] = {
+        name: [] for name in endpoint_names
+    }
+
+    def endpoint_values(indices: np.ndarray | None = None) -> dict[str, float]:
+        per_market: dict[str, dict[str, float]] = {}
+        for market in base.MARKETS:
+            selected: dict[str, tuple[np.ndarray, np.ndarray]] = {}
+            for policy in ("V1", "V2", "trend"):
+                frame = frames[market][policy]
+                net = frame["net_return"].to_numpy(dtype=float)
+                turnover = frame["turnover"].to_numpy(dtype=float)
+                if indices is not None:
+                    net = net[indices]
+                    turnover = turnover[indices]
+                selected[policy] = net, turnover
+            v1_net, v1_turnover = selected["V1"]
+            v2_net, v2_turnover = selected["V2"]
+            trend_net, trend_turnover = selected["trend"]
+            per_market[market] = {
+                "v2_minus_v1_sharpe": (
+                    base.array_sharpe(v2_net) - base.array_sharpe(v1_net)
+                ),
+                "v2_minus_v1_edge": (
+                    base.array_edge(v2_net, v2_turnover)
+                    - base.array_edge(v1_net, v1_turnover)
+                ),
+                "v2_residual_sharpe_vs_trend": base.array_sharpe(
+                    v2_net - trend_net
+                ),
+                "v2_minus_trend_edge": (
+                    base.array_edge(v2_net, v2_turnover)
+                    - base.array_edge(trend_net, trend_turnover)
+                ),
+            }
+        return {
+            endpoint: strict_cross_market_min(
+                [per_market[market][endpoint] for market in base.MARKETS]
+            )
+            for endpoint in endpoint_names
+        }
+
+    observed = endpoint_values()
+    rng = np.random.default_rng(base.SEED)
+    undefined = {name: 0 for name in endpoint_names}
+    for _ in range(base.RESAMPLES):
+        values = endpoint_values(base.resample_indices(rng))
+        for name, value in values.items():
+            if math.isfinite(value):
+                endpoint_samples[name].append(value)
+            else:
+                undefined[name] += 1
+
+    raw_p: dict[str, float] = {}
+    results: dict[str, Any] = {}
+    for name, samples in endpoint_samples.items():
+        array = np.asarray(samples, dtype=float)
+        observed_value = observed[name]
+        if not math.isfinite(observed_value) or len(array) == 0:
+            lower = None
+            p_value = 1.0
+        else:
+            lower = float(np.quantile(array, 0.05))
+            p_value = float(
+                (1 + np.count_nonzero(array <= 0.0)) / (len(array) + 1)
+            )
+        raw_p[name] = p_value
+        results[name] = {
+            "observed": observed_value,
+            "one_sided_95pct_lower_bound": lower,
+            "raw_one_sided_p": p_value,
+            "defined_resamples": len(samples),
+            "undefined_resamples": undefined[name],
+        }
+
+    ordered = sorted(raw_p, key=raw_p.get)
+    running = 0.0
+    for rank, name in enumerate(ordered):
+        adjusted = min(1.0, raw_p[name] * (len(ordered) - rank))
+        running = max(running, adjusted)
+        results[name]["holm_adjusted_p"] = running
+    return {
+        "block_hours": base.BLOCK_HOURS,
+        "resamples": base.RESAMPLES,
+        "seed": base.SEED,
+        "within_fold_only": True,
+        "common_calendar_indices": True,
+        "holm_family_size": 4,
+        "undefined_market_policy": (
+            "any non-finite frozen-market endpoint makes the cross-market "
+            "endpoint undefined"
+        ),
+        "endpoints": results,
+    }
+
+
 def main() -> None:
     if base.TREND_LOOKBACK != 2160:
         raise ValueError("frozen simple-trend benchmark lookback changed")
+    if math.isfinite(strict_cross_market_min([1.0, float("nan")])):
+        raise AssertionError("undefined-market fail-closed diagnostic failed")
     base.acquire_trade_features = acquire_trade_features
     base.build_targets = build_targets
     base.fetch_okx_one_hour_candles = fetch_candles_with_benchmark_prehistory
     base.evaluate_market = evaluate_market_with_benchmark_prehistory
+    base.inference = inference_with_strict_cross_market_undefined
     args = base.parse_args()
     result = base.run(args.base_url, args.output_dir)
     executed = {
