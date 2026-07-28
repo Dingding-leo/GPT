@@ -1,0 +1,102 @@
+name: Large Trade Concentration Diagnostic
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/run_large_trade_concentration_diagnostic.py"
+      - ".github/workflows/large-trade-concentration-diagnostic.yml"
+      - "scripts/acquire_okx_historical_trades.py"
+      - "src/gpt_quant/okx_1h.py"
+      - "src/gpt_quant/okx.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: large-trade-concentration-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OKX_BASE_URL: https://www.okx.com
+      ARTIFACT_NAME: large-trade-concentration-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==26.1.2"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Verify formatting and imports
+        run: |
+          ruff check scripts/run_large_trade_concentration_diagnostic.py
+          ruff format --check scripts/run_large_trade_concentration_diagnostic.py
+
+      - name: Run immutable public-data strategy diagnostic
+        run: |
+          python scripts/run_large_trade_concentration_diagnostic.py \
+            --output-dir reports/okx/large-trade-concentration-diagnostic
+
+      - name: Verify machine-readable verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s reports/okx/large-trade-concentration-diagnostic/result.json
+          test -s reports/okx/large-trade-concentration-diagnostic/result.sha256
+          expected="$(cat reports/okx/large-trade-concentration-diagnostic/result.sha256)"
+          actual="$(sha256sum reports/okx/large-trade-concentration-diagnostic/result.json | awk '{print $1}')"
+          test "$actual" = "$expected"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("reports/okx/large-trade-concentration-diagnostic/result.json")
+          result = json.loads(path.read_text())
+          assert result["candidate_count"] == 1
+          assert result["canonical_fee_bps_one_way"] == 5.0
+          assert result["bar"] == "1H"
+          assert result["cross_sectional_selection"] is False
+          assert result["reserved_trade_flow_oos_consumed"] is False
+          assert len(result["markets"]) == 2
+          assert result["verdict"] in {
+              "large_trade_concentration_pressure_promising_for_training_only_followup",
+              "large_trade_concentration_pressure_rejected_by_bounded_diagnostic",
+          }
+          PY
+
+      - name: Upload immutable diagnostic artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: reports/okx/large-trade-concentration-diagnostic/
+          if-no-files-found: error
+          retention-days: 14
