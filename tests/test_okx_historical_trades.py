@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -37,8 +38,11 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
     )
 
     result_path = output_dir / "result.json"
-    result = json.loads(result_path.read_text())
-    stress = json.loads((output_dir / "stress-result.json").read_text())
+    stress_path = output_dir / "stress-result.json"
+    result_bytes = result_path.read_bytes()
+    stress_bytes = stress_path.read_bytes()
+    result = json.loads(result_bytes)
+    stress = json.loads(stress_bytes)
 
     assert result["schema_version"] == "trade-flow-source-schema-checkpoint-v1"
     assert result["architecture_family_id"] == "okx-spot-causal-trade-flow-resilience-v2"
@@ -63,7 +67,14 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
     assert result["adversarial_stress"]["verdict"] == stress["verdict"]
     assert result["verdict"] == stress["verdict"]
 
-    for name in ("result.sha256", "stress-result.sha256"):
+    if stress["verdict"] == "trade_flow_source_schema_checkpoint_blocked_by_adversarial_stress":
+        assert stress["defects"]
+        assert any(market["status"] == "blocked" for market in stress["markets"])
+
+    expected_checksums = {
+        "result.sha256": hashlib.sha256(result_bytes).hexdigest(),
+        "stress-result.sha256": hashlib.sha256(stress_bytes).hexdigest(),
+    }
+    for name, expected in expected_checksums.items():
         checksum = (output_dir / name).read_text().strip()
-        assert len(checksum) == 64
-        assert all(character in "0123456789abcdef" for character in checksum)
+        assert checksum == expected
