@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 import pytest
 
 from gpt_quant.paper_decision_store import PaperOrderDecision as StoreDecision
-from gpt_quant.paper_order_decision import PaperOrderDecision
+from gpt_quant.paper_order_decision import PaperOrderDecision, _MAX_SERIALIZED_BYTES
 
 
 def _decision() -> PaperOrderDecision:
@@ -76,6 +76,24 @@ def test_serialized_decision_rejects_rehashed_noncanonical_exchange_fee(
 
     with pytest.raises(ValueError, match="exchange_fee_bps must be exactly 5"):
         PaperOrderDecision.from_json_bytes(serialized)
+
+
+def test_serialized_decision_enforces_record_byte_limit_before_json_parsing() -> None:
+    decision = _decision()
+    exact_instrument_size = len(decision.instrument_id) + (
+        _MAX_SERIALIZED_BYTES - len(decision.to_json_bytes())
+    )
+    exact = replace(decision, instrument_id="X" * exact_instrument_size).to_json_bytes()
+    oversized = replace(
+        decision,
+        instrument_id="X" * (exact_instrument_size + 1),
+    ).to_json_bytes()
+
+    assert len(exact) == _MAX_SERIALIZED_BYTES
+    assert len(oversized) == _MAX_SERIALIZED_BYTES + 1
+    assert PaperOrderDecision.from_json_bytes(exact).to_json_bytes() == exact
+    with pytest.raises(ValueError, match="exceeds the maximum record size"):
+        PaperOrderDecision.from_json_bytes(oversized)
 
 
 def test_legacy_store_pickle_global_resolves_to_stable_domain_class() -> None:
