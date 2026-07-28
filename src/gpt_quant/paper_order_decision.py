@@ -17,6 +17,9 @@ _TOKEN = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}")
 _DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]+)?")
 _CANONICAL_EXCHANGE_FEE_BPS = "5"
 _MAX_SERIALIZED_BYTES = 16 * 1024
+_MAX_DECIMAL_CHARACTERS = 256
+_MAX_TIMESTAMP_CHARACTERS = 64
+_MAX_LATENCY_MS = 2**63 - 1
 _ERROR = "paper order decision"
 _FIELDS = {
     "schema_version",
@@ -42,8 +45,12 @@ _FIELDS = {
 _SERIALIZED_FIELDS = _FIELDS | {"decision_id"}
 
 
-def _text(value: object, name: str) -> str:
-    if not isinstance(value, str) or not value or value.strip() != value:
+def _text(value: object, name: str, *, maximum_bytes: int = _MAX_SERIALIZED_BYTES) -> str:
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a non-empty trimmed string")
+    if len(value) > maximum_bytes or len(value.encode("utf-8")) > maximum_bytes:
+        raise ValueError(f"{name} exceeds the maximum length")
+    if not value or value.strip() != value:
         raise ValueError(f"{name} must be a non-empty trimmed string")
     if any(ord(character) < 32 for character in value):
         raise ValueError(f"{name} must not contain control characters")
@@ -51,14 +58,14 @@ def _text(value: object, name: str) -> str:
 
 
 def _digest(value: object, name: str) -> str:
-    parsed = _text(value, name)
+    parsed = _text(value, name, maximum_bytes=64)
     if _SHA256.fullmatch(parsed) is None:
         raise ValueError(f"{name} must be a lowercase SHA-256 digest")
     return parsed
 
 
 def _token(value: object, name: str) -> str:
-    parsed = _text(value, name)
+    parsed = _text(value, name, maximum_bytes=64)
     if _TOKEN.fullmatch(parsed) is None:
         raise ValueError(f"{name} must be a lowercase machine token")
     return parsed
@@ -66,6 +73,8 @@ def _token(value: object, name: str) -> str:
 
 def _utc(value: object, name: str) -> datetime:
     if isinstance(value, str):
+        if len(value) > _MAX_TIMESTAMP_CHARACTERS:
+            raise ValueError(f"{name} exceeds the maximum length")
         try:
             parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         except ValueError as exc:
@@ -80,7 +89,11 @@ def _utc(value: object, name: str) -> datetime:
 
 
 def _decimal(value: object, name: str) -> str:
-    if not isinstance(value, str) or _DECIMAL.fullmatch(value) is None:
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a canonical non-negative ASCII decimal string")
+    if len(value) > _MAX_DECIMAL_CHARACTERS:
+        raise ValueError(f"{name} exceeds the maximum length")
+    if _DECIMAL.fullmatch(value) is None:
         raise ValueError(f"{name} must be a canonical non-negative ASCII decimal string")
     canonical = format(Decimal(value), "f")
     if "." in canonical:
@@ -195,11 +208,14 @@ class PaperOrderDecision:
             object.__setattr__(self, name, _decimal(getattr(self, name), name))
         if isinstance(self.latency_ms, bool) or not isinstance(self.latency_ms, int):
             raise ValueError("latency_ms must be a non-negative integer")
-        if self.latency_ms < 0:
-            raise ValueError("latency_ms must be a non-negative integer")
-        object.__setattr__(
-            self, "decision_id", hashlib.sha256(_json_bytes(self._payload())).hexdigest()
-        )
+        if self.latency_ms < 0 or self.latency_ms > _MAX_LATENCY_MS:
+            raise ValueError("latency_ms is outside the supported range")
+
+        payload = self._payload()
+        serialized = _json_bytes({**payload, "decision_id": "0" * 64}) + b"\n"
+        if len(serialized) > _MAX_SERIALIZED_BYTES:
+            raise ValueError(f"{_ERROR} exceeds the maximum record size")
+        object.__setattr__(self, "decision_id", hashlib.sha256(_json_bytes(payload)).hexdigest())
 
     def _payload(self) -> dict[str, object]:
         return {
@@ -225,7 +241,10 @@ class PaperOrderDecision:
         }
 
     def to_json_bytes(self) -> bytes:
-        return _json_bytes({**self._payload(), "decision_id": self.decision_id}) + b"\n"
+        serialized = _json_bytes({**self._payload(), "decision_id": self.decision_id}) + b"\n"
+        if len(serialized) > _MAX_SERIALIZED_BYTES:
+            raise ValueError(f"{_ERROR} exceeds the maximum record size")
+        return serialized
 
     @classmethod
     def from_json_bytes(cls, value: bytes) -> PaperOrderDecision:
