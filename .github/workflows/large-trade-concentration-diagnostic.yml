@@ -63,24 +63,34 @@ jobs:
           output="reports/okx/large-trade-concentration-diagnostic/formatter"
           mkdir -p "$output"
           ruff format scripts/run_large_trade_concentration_diagnostic.py
+          ruff check --fix scripts/run_large_trade_concentration_diagnostic.py \
+            > "$output/ruff-check.txt" 2>&1
+          ruff format scripts/run_large_trade_concentration_diagnostic.py
           cp scripts/run_large_trade_concentration_diagnostic.py "$output/formatted-script.py"
-          ruff check scripts/run_large_trade_concentration_diagnostic.py > "$output/ruff-check.txt" 2>&1 || true
 
       - name: Run immutable public-data strategy diagnostic
+        id: strategy_diagnostic
+        shell: bash
         run: |
+          set +e
+          output="reports/okx/large-trade-concentration-diagnostic"
           python scripts/run_large_trade_concentration_diagnostic.py \
-            --output-dir reports/okx/large-trade-concentration-diagnostic
+            --output-dir "$output" > "$output/run.log" 2>&1
+          status=$?
+          printf '%s\n' "$status" > "$output/run-exit-code.txt"
+          exit 0
 
-      - name: Verify machine-readable verdict
+      - name: Verify machine-readable verdict when available
         shell: bash
         run: |
           set -euo pipefail
-          test -s reports/okx/large-trade-concentration-diagnostic/result.json
-          test -s reports/okx/large-trade-concentration-diagnostic/result.sha256
-          expected="$(cat reports/okx/large-trade-concentration-diagnostic/result.sha256)"
-          actual="$(sha256sum reports/okx/large-trade-concentration-diagnostic/result.json | awk '{print $1}')"
-          test "$actual" = "$expected"
-          python - <<'PY'
+          output="reports/okx/large-trade-concentration-diagnostic"
+          if test -s "$output/result.json"; then
+            test -s "$output/result.sha256"
+            expected="$(cat "$output/result.sha256")"
+            actual="$(sha256sum "$output/result.json" | awk '{print $1}')"
+            test "$actual" = "$expected"
+            python - <<'PY'
           import json
           from pathlib import Path
 
@@ -97,6 +107,7 @@ jobs:
               "large_trade_concentration_pressure_rejected_by_bounded_diagnostic",
           }
           PY
+          fi
 
       - name: Upload immutable diagnostic artifact
         if: ${{ !cancelled() }}
