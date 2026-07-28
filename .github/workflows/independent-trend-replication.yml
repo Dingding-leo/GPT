@@ -55,9 +55,12 @@ jobs:
           python -m pip check
 
       - name: Execute frozen public-data replication
+        shell: bash
         run: |
-          set -euo pipefail
-          python scripts/run_independent_trend_replication_bounded.py --output-dir "$OUTPUT_DIR"
+          set -o pipefail
+          mkdir -p "$OUTPUT_DIR"
+          python scripts/run_independent_trend_replication_bounded.py --output-dir "$OUTPUT_DIR" \
+            2>&1 | tee "$OUTPUT_DIR/execution.log"
 
       - name: Verify machine-readable evidence and build manifest
         shell: bash
@@ -99,6 +102,7 @@ jobs:
           )
 
       - name: Upload immutable replication evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: independent-simple-trend-2160h-${{ github.run_number }}-attempt-${{ github.run_attempt }}
