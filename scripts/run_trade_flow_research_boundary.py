@@ -98,16 +98,14 @@ def parse_csv_file(
                 first_unread_timestamp_ms = timestamp_ms
                 prove_suffix_row_ignored(raw, fields, timestamp_ms)
                 suffix_mutation_probe_passed = True
-                RESERVED_SUFFIX_DIAGNOSTIC[
-                    "files_stopped_before_reserved_economic_suffix"
-                ] += 1
-                prior = RESERVED_SUFFIX_DIAGNOSTIC[
-                    "first_unread_timestamp_ms_by_market"
-                ].get(inst_id)
+                RESERVED_SUFFIX_DIAGNOSTIC["files_stopped_before_reserved_economic_suffix"] += 1
+                prior = RESERVED_SUFFIX_DIAGNOSTIC["first_unread_timestamp_ms_by_market"].get(
+                    inst_id
+                )
                 if prior is None or timestamp_ms < prior:
-                    RESERVED_SUFFIX_DIAGNOSTIC[
-                        "first_unread_timestamp_ms_by_market"
-                    ][inst_id] = timestamp_ms
+                    RESERVED_SUFFIX_DIAGNOSTIC["first_unread_timestamp_ms_by_market"][inst_id] = (
+                        timestamp_ms
+                    )
                 break
 
             if timestamp_ms < start_ms:
@@ -255,9 +253,7 @@ def merge_hours(
             existing_rows = boundary_rows.get(hour)
             incoming_rows = parsed.boundary_rows.get(hour)
             if existing_rows is None or incoming_rows is None:
-                BOUNDARY_MERGE_DIAGNOSTIC[
-                    "all_overlaps_limited_to_boundary_hours"
-                ] = False
+                BOUNDARY_MERGE_DIAGNOSTIC["all_overlaps_limited_to_boundary_hours"] = False
                 raise ValueError("monthly archives overlap outside retained boundary hours")
             combined = existing_rows + incoming_rows
             merged[hour] = aggregate_rows(combined, hour)
@@ -275,9 +271,7 @@ def merge_hours(
             "hourly trade coverage mismatch after boundary repair: "
             f"missing={len(missing)} extra={len(extra)}"
         )
-    BOUNDARY_MERGE_DIAGNOSTIC["overlapping_boundary_hours"] = len(
-        overlap_file_counts
-    )
+    BOUNDARY_MERGE_DIAGNOSTIC["overlapping_boundary_hours"] = len(overlap_file_counts)
     BOUNDARY_MERGE_DIAGNOSTIC["maximum_files_per_boundary_hour"] = max(
         overlap_file_counts.values(),
         default=1,
@@ -290,12 +284,8 @@ def finalize_reserved_suffix_diagnostic() -> dict[str, Any]:
     RESERVED_SUFFIX_DIAGNOSTIC["markets_with_unread_boundary"] = markets
     passed = (
         markets == sorted(base.MARKETS)
-        and RESERVED_SUFFIX_DIAGNOSTIC[
-            "economic_rows_at_or_after_end_inspected"
-        ]
-        == 0
-        and RESERVED_SUFFIX_DIAGNOSTIC["real_archive_suffix_mutation_probes"]
-        >= len(base.MARKETS)
+        and RESERVED_SUFFIX_DIAGNOSTIC["economic_rows_at_or_after_end_inspected"] == 0
+        and RESERVED_SUFFIX_DIAGNOSTIC["real_archive_suffix_mutation_probes"] >= len(base.MARKETS)
     )
     RESERVED_SUFFIX_DIAGNOSTIC["reserved_economic_suffix_unread"] = passed
     if not passed:
@@ -321,9 +311,7 @@ def main() -> None:
     reserved_guard = finalize_reserved_suffix_diagnostic()
     result["review_driven_month_boundary_repair"] = BOUNDARY_MERGE_DIAGNOSTIC
     result["review_driven_reserved_suffix_guard"] = reserved_guard
-    result["reserved_oos_consumed"] = not reserved_guard[
-        "reserved_economic_suffix_unread"
-    ]
+    result["reserved_oos_consumed"] = not reserved_guard["reserved_economic_suffix_unread"]
     result_bytes = base.canonical_json(result)
     base.persist(args.output_dir / "result.json", result_bytes)
     base.persist(

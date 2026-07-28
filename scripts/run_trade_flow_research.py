@@ -4,25 +4,25 @@ import argparse
 import csv
 import gzip
 import hashlib
-import io
 import json
 import math
 import os
 import tempfile
 import time
 import zipfile
+from collections.abc import Iterable
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, BinaryIO, Iterable
+from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+import acquire_okx_historical_trades as source
 import numpy as np
 import pandas as pd
 
-import acquire_okx_historical_trades as source
 from gpt_quant.okx_1h import fetch_okx_one_hour_candles
 
 ARCHITECTURE = "okx-spot-causal-trade-flow-resilience-v2"
@@ -87,7 +87,9 @@ def persist(path: Path, data: bytes) -> dict[str, Any]:
     return {"path": str(path), "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest()}
 
 
-def request_manifest(base_url: str, inst_id: str, begin_ms: int, end_ms: int, aggregation: str) -> tuple[dict[str, Any], bytes, str]:
+def request_manifest(
+    base_url: str, inst_id: str, begin_ms: int, end_ms: int, aggregation: str
+) -> tuple[dict[str, Any], bytes, str]:
     query = urlencode(
         {
             "module": "1",
@@ -105,7 +107,9 @@ def request_manifest(base_url: str, inst_id: str, begin_ms: int, end_ms: int, ag
     return payload, raw, final_url
 
 
-def one_daily_record(base_url: str, inst_id: str, requested_day_ms: int, root: Path) -> dict[str, Any] | None:
+def one_daily_record(
+    base_url: str, inst_id: str, requested_day_ms: int, root: Path
+) -> dict[str, Any] | None:
     payload, raw, final_url = request_manifest(
         base_url,
         inst_id,
@@ -173,7 +177,9 @@ def determine_common_t_end(base_url: str, now_ms: int, root: Path) -> tuple[int,
 
 
 def month_starts(start_ms: int, end_ms: int) -> Iterable[tuple[int, int]]:
-    start = datetime.fromtimestamp(start_ms / 1000, UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    start = datetime.fromtimestamp(start_ms / 1000, UTC).replace(
+        day=1, hour=0, minute=0, second=0, microsecond=0
+    )
     end = datetime.fromtimestamp(end_ms / 1000, UTC)
     cursor = start
     while cursor < end:
@@ -185,7 +191,9 @@ def month_starts(start_ms: int, end_ms: int) -> Iterable[tuple[int, int]]:
         cursor = nxt
 
 
-def collect_monthly_records(base_url: str, inst_id: str, start_ms: int, end_ms: int, root: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def collect_monthly_records(
+    base_url: str, inst_id: str, start_ms: int, end_ms: int, root: Path
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     records_by_url: dict[str, dict[str, Any]] = {}
     manifests: list[dict[str, Any]] = []
     query_start = start_ms - DAY_MS
@@ -260,7 +268,11 @@ def extract_member(archive_path: Path, csv_path: Path) -> dict[str, Any]:
     size = 0
     if zipfile.is_zipfile(archive_path):
         with zipfile.ZipFile(archive_path) as archive:
-            members = [member for member in archive.infolist() if not member.is_dir() and member.filename.lower().endswith(".csv")]
+            members = [
+                member
+                for member in archive.infolist()
+                if not member.is_dir() and member.filename.lower().endswith(".csv")
+            ]
             if len(members) != 1:
                 raise ValueError("archive must contain exactly one CSV member")
             member = members[0]
@@ -283,10 +295,18 @@ def extract_member(archive_path: Path, csv_path: Path) -> dict[str, Any]:
                 output.write(chunk)
                 digest.update(chunk)
                 size += len(chunk)
-        return {"compression": "gzip", "observed_member_bytes": size, "member_sha256": digest.hexdigest()}
+        return {
+            "compression": "gzip",
+            "observed_member_bytes": size,
+            "member_sha256": digest.hexdigest(),
+        }
     raw = archive_path.read_bytes()
     csv_path.write_bytes(raw)
-    return {"compression": "none", "observed_member_bytes": len(raw), "member_sha256": hashlib.sha256(raw).hexdigest()}
+    return {
+        "compression": "none",
+        "observed_member_bytes": len(raw),
+        "member_sha256": hashlib.sha256(raw).hexdigest(),
+    }
 
 
 def archive_fields(fieldnames: list[str] | None) -> tuple[str, str, str, str, str, str]:
@@ -320,7 +340,9 @@ def parse_csv_file(csv_path: Path, inst_id: str, start_ms: int, end_ms: int) -> 
     previous: source.Trade | None = None
     with csv_path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        inst_field, id_field, side_field, price_field, size_field, ts_field = archive_fields(reader.fieldnames)
+        inst_field, id_field, side_field, price_field, size_field, ts_field = archive_fields(
+            reader.fieldnames
+        )
         header = list(reader.fieldnames or [])
         for raw in reader:
             observed_inst = str(raw.get(inst_field, "")).strip()
@@ -377,7 +399,9 @@ def parse_csv_file(csv_path: Path, inst_id: str, start_ms: int, end_ms: int) -> 
     )
 
 
-def merge_hours(parsed_files: list[ParsedFile], start_ms: int, end_ms: int) -> dict[int, HourAggregate]:
+def merge_hours(
+    parsed_files: list[ParsedFile], start_ms: int, end_ms: int
+) -> dict[int, HourAggregate]:
     ordered = sorted(parsed_files, key=lambda item: item.metadata["min_ts_ms"])
     for left, right in zip(ordered, ordered[1:], strict=False):
         if left.metadata["max_ts_ms"] >= right.metadata["min_ts_ms"]:
@@ -392,11 +416,15 @@ def merge_hours(parsed_files: list[ParsedFile], start_ms: int, end_ms: int) -> d
     if sorted(merged) != expected:
         missing = sorted(set(expected) - set(merged))
         extra = sorted(set(merged) - set(expected))
-        raise ValueError(f"hourly trade coverage mismatch: missing={len(missing)} extra={len(extra)}")
+        raise ValueError(
+            f"hourly trade coverage mismatch: missing={len(missing)} extra={len(extra)}"
+        )
     return merged
 
 
-def acquire_trade_features(base_url: str, inst_id: str, start_ms: int, end_ms: int, output_dir: Path) -> tuple[pd.DataFrame, dict[str, Any]]:
+def acquire_trade_features(
+    base_url: str, inst_id: str, start_ms: int, end_ms: int, output_dir: Path
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     records, manifests = collect_monthly_records(base_url, inst_id, start_ms, end_ms, output_dir)
     parsed_files: list[ParsedFile] = []
     file_inventory: list[dict[str, Any]] = []
@@ -453,7 +481,9 @@ def acquire_trade_features(base_url: str, inst_id: str, start_ms: int, end_ms: i
     return frame, metadata
 
 
-def persist_candles(snapshot: Any, output_dir: Path, inst_id: str) -> tuple[pd.Series, dict[str, Any]]:
+def persist_candles(
+    snapshot: Any, output_dir: Path, inst_id: str
+) -> tuple[pd.Series, dict[str, Any]]:
     output_dir.mkdir(parents=True, exist_ok=True)
     candles = snapshot.candles.copy()
     csv_bytes = candles.to_csv(index=True, lineterminator="\n", float_format="%.18g").encode()
@@ -489,7 +519,10 @@ def build_targets(features: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, Any]]
     impact = features["impact_return"].astype(float)
     signed_quote_proxy = flow * features["trade_count"].astype(float)
     total_quote_proxy = features["trade_count"].astype(float)
-    flow6 = signed_quote_proxy.rolling(6, min_periods=6).sum() / total_quote_proxy.rolling(6, min_periods=6).sum()
+    flow6 = (
+        signed_quote_proxy.rolling(6, min_periods=6).sum()
+        / total_quote_proxy.rolling(6, min_periods=6).sum()
+    )
     prior_flow6 = flow6.shift(1)
     median_flow = prior_flow6.rolling(WARMUP_HOURS, min_periods=WARMUP_HOURS).median()
     mad_flow = rolling_mad(prior_flow6, WARMUP_HOURS)
@@ -605,7 +638,14 @@ def metrics(frame: pd.DataFrame) -> dict[str, Any]:
     }
 
 
-def evaluate_market(inst_id: str, features: pd.DataFrame, close: pd.Series, development_start: pd.Timestamp, development_end: pd.Timestamp, output_dir: Path) -> tuple[dict[str, Any], dict[str, pd.DataFrame]]:
+def evaluate_market(
+    inst_id: str,
+    features: pd.DataFrame,
+    close: pd.Series,
+    development_start: pd.Timestamp,
+    development_end: pd.Timestamp,
+    output_dir: Path,
+) -> tuple[dict[str, Any], dict[str, pd.DataFrame]]:
     if not features.index.equals(close.index):
         raise ValueError(f"feature/candle index mismatch for {inst_id}")
     targets, invalid = build_targets(features)
@@ -613,7 +653,9 @@ def evaluate_market(inst_id: str, features: pd.DataFrame, close: pd.Series, deve
     frames["trend"] = trend_frame(close)
     evaluation_start = development_start + pd.Timedelta(hours=WARMUP_HOURS)
     evaluation_end = development_end - pd.Timedelta(hours=1)
-    evaluation_frames = {name: frame.loc[evaluation_start:evaluation_end].copy() for name, frame in frames.items()}
+    evaluation_frames = {
+        name: frame.loc[evaluation_start:evaluation_end].copy() for name, frame in frames.items()
+    }
     if any(len(frame) != EVALUATION_HOURS for frame in evaluation_frames.values()):
         raise ValueError("evaluation window is not exactly twelve 90-day folds")
     per_policy: dict[str, Any] = {}
@@ -623,23 +665,24 @@ def evaluate_market(inst_id: str, features: pd.DataFrame, close: pd.Series, deve
             fold_frame = frame.iloc[fold * FOLD_HOURS : (fold + 1) * FOLD_HOURS]
             fold_rows.append({"fold": fold + 1, **metrics(fold_frame)})
         positive = [row["net_return"] for row in fold_rows if row["net_return"] > 0]
-        blocks = [
-            metrics(frame.iloc[index * 8640 : (index + 1) * 8640])
-            for index in range(3)
-        ]
+        blocks = [metrics(frame.iloc[index * 8640 : (index + 1) * 8640]) for index in range(3)]
         aggregate = metrics(frame)
         aggregate.update(
             {
                 "invalid_feature_hours_in_full_development": invalid.get(name, 0),
                 "profitable_folds": sum(row["net_return"] > 0 for row in fold_rows),
-                "positive_fold_concentration": None if not positive else max(positive) / sum(positive),
+                "positive_fold_concentration": None
+                if not positive
+                else max(positive) / sum(positive),
                 "folds": fold_rows,
                 "blocks_360d": blocks,
             }
         )
         per_policy[name] = aggregate
     for variant in ("V1", "V2"):
-        residual = evaluation_frames[variant]["net_return"] - evaluation_frames["trend"]["net_return"]
+        residual = (
+            evaluation_frames[variant]["net_return"] - evaluation_frames["trend"]["net_return"]
+        )
         per_policy[variant]["residual_return_vs_trend_arithmetic"] = float(residual.sum())
         per_policy[variant]["residual_sharpe_vs_trend"] = sharpe(residual)
         trend_edge = per_policy["trend"]["edge_per_turnover_bps"]
@@ -651,7 +694,10 @@ def evaluate_market(inst_id: str, features: pd.DataFrame, close: pd.Series, deve
         {name: frame for name, frame in evaluation_frames.items()},
         axis=1,
     )
-    persist(output_dir / "evaluation-paths.csv", output.to_csv(lineterminator="\n", float_format="%.18g").encode())
+    persist(
+        output_dir / "evaluation-paths.csv",
+        output.to_csv(lineterminator="\n", float_format="%.18g").encode(),
+    )
     return {
         "instrument": inst_id,
         "development_start": development_start.isoformat(),
@@ -667,8 +713,12 @@ def resample_indices(rng: np.random.Generator) -> np.ndarray:
     pieces: list[np.ndarray] = []
     for fold in range(FOLDS):
         base = fold * FOLD_HOURS
-        starts = rng.integers(0, FOLD_HOURS - BLOCK_HOURS + 1, size=math.ceil(FOLD_HOURS / BLOCK_HOURS))
-        indices = np.concatenate([np.arange(start, start + BLOCK_HOURS) for start in starts])[:FOLD_HOURS]
+        starts = rng.integers(
+            0, FOLD_HOURS - BLOCK_HOURS + 1, size=math.ceil(FOLD_HOURS / BLOCK_HOURS)
+        )
+        indices = np.concatenate([np.arange(start, start + BLOCK_HOURS) for start in starts])[
+            :FOLD_HOURS
+        ]
         pieces.append(base + indices)
     return np.concatenate(pieces)
 
@@ -686,7 +736,15 @@ def array_edge(net: np.ndarray, turnover: np.ndarray) -> float:
 def inference(frames: dict[str, dict[str, pd.DataFrame]]) -> dict[str, Any]:
     market_names = list(MARKETS)
     observed: dict[str, float] = {}
-    endpoint_samples: dict[str, list[float]] = {name: [] for name in ("v2_minus_v1_sharpe", "v2_minus_v1_edge", "v2_residual_sharpe_vs_trend", "v2_minus_trend_edge")}
+    endpoint_samples: dict[str, list[float]] = {
+        name: []
+        for name in (
+            "v2_minus_v1_sharpe",
+            "v2_minus_v1_edge",
+            "v2_residual_sharpe_vs_trend",
+            "v2_minus_trend_edge",
+        )
+    }
 
     def endpoint_values(indices: np.ndarray | None = None) -> dict[str, float]:
         per_market: dict[str, dict[str, float]] = {}
@@ -705,9 +763,11 @@ def inference(frames: dict[str, dict[str, pd.DataFrame]]) -> dict[str, Any]:
             trend_net, trend_turnover = selected["trend"]
             per_market[market] = {
                 "v2_minus_v1_sharpe": array_sharpe(v2_net) - array_sharpe(v1_net),
-                "v2_minus_v1_edge": array_edge(v2_net, v2_turnover) - array_edge(v1_net, v1_turnover),
+                "v2_minus_v1_edge": array_edge(v2_net, v2_turnover)
+                - array_edge(v1_net, v1_turnover),
                 "v2_residual_sharpe_vs_trend": array_sharpe(v2_net - trend_net),
-                "v2_minus_trend_edge": array_edge(v2_net, v2_turnover) - array_edge(trend_net, trend_turnover),
+                "v2_minus_trend_edge": array_edge(v2_net, v2_turnover)
+                - array_edge(trend_net, trend_turnover),
             }
         return {
             endpoint: min(per_market[market][endpoint] for market in market_names)
@@ -759,7 +819,9 @@ def inference(frames: dict[str, dict[str, pd.DataFrame]]) -> dict[str, Any]:
     }
 
 
-def qualification(markets: dict[str, Any], statistical: dict[str, Any], provenance_complete: bool) -> tuple[str, list[str]]:
+def qualification(
+    markets: dict[str, Any], statistical: dict[str, Any], provenance_complete: bool
+) -> tuple[str, list[str]]:
     failures: list[str] = []
     for market, result in markets.items():
         v2 = result["policies"]["V2"]
@@ -784,7 +846,9 @@ def qualification(markets: dict[str, Any], statistical: dict[str, Any], provenan
         if lower is None or lower <= 0 or endpoint["holm_adjusted_p"] >= 0.05:
             failures.append(f"inference:{name} lacks positive Holm-adjusted evidence")
     if not provenance_complete:
-        failures.append("raw archive bytes were streamed and hashed but not retained in the workflow artifact")
+        failures.append(
+            "raw archive bytes were streamed and hashed but not retained in the workflow artifact"
+        )
     verdict = (
         "trade_flow_resilience_nominated_for_untouched_archive_replication"
         if not failures
@@ -885,21 +949,29 @@ def run(base_url: str, output_dir: Path) -> dict[str, Any]:
     }
     result_bytes = canonical_json(result)
     persist(output_dir / "result.json", result_bytes)
-    persist(output_dir / "result.sha256", (hashlib.sha256(result_bytes).hexdigest() + "\n").encode())
+    persist(
+        output_dir / "result.sha256", (hashlib.sha256(result_bytes).hexdigest() + "\n").encode()
+    )
     return result
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default=os.environ.get("OKX_BASE_URL", "https://www.okx.com"))
-    parser.add_argument("--output-dir", type=Path, default=Path("reports/research/trade-flow-development"))
+    parser.add_argument(
+        "--output-dir", type=Path, default=Path("reports/research/trade-flow-development")
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
     result = run(args.base_url, args.output_dir)
-    print(json.dumps({"verdict": result["verdict"], "failures": result["qualification_failures"]}, indent=2))
+    print(
+        json.dumps(
+            {"verdict": result["verdict"], "failures": result["qualification_failures"]}, indent=2
+        )
+    )
 
 
 if __name__ == "__main__":

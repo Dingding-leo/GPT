@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 import run_trade_flow_research as base
 
-
 ORIGINAL_FETCH_CANDLES = base.fetch_okx_one_hour_candles
 
 
@@ -92,9 +91,7 @@ def acquire_trade_features(
         "missing_hours": 0,
         "feature_record": feature_record,
         "raw_archive_bytes_retained": False,
-        "flow6_accounting": (
-            "exact signed quote notional divided by exact total quote notional"
-        ),
+        "flow6_accounting": ("exact signed quote notional divided by exact total quote notional"),
         "streaming_disk_policy": (
             "each compressed and decompressed archive is deleted after hashing and parsing"
         ),
@@ -111,10 +108,13 @@ def build_targets(features: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, int]]
     impact = features["impact_return"].astype(float)
     signed = features["signed_quote_notional"].astype(float)
     total = features["total_quote_notional"].astype(float)
-    flow6 = signed.rolling(6, min_periods=6).sum() / total.rolling(
-        6,
-        min_periods=6,
-    ).sum()
+    flow6 = (
+        signed.rolling(6, min_periods=6).sum()
+        / total.rolling(
+            6,
+            min_periods=6,
+        ).sum()
+    )
     prior_flow6 = flow6.shift(1)
     median_flow = prior_flow6.rolling(
         base.WARMUP_HOURS,
@@ -137,9 +137,7 @@ def build_targets(features: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, int]]
         denominator = float(np.square(train_x - x_mean).sum())
         if denominator <= 0:
             continue
-        beta = float(
-            ((train_x - x_mean) * (train_y - y_mean)).sum() / denominator
-        )
+        beta = float(((train_x - x_mean) * (train_y - y_mean)).sum() / denominator)
         alpha = y_mean - beta * x_mean
         residuals = train_y - (alpha + beta * train_x)
         scale = float(np.median(np.abs(residuals - np.median(residuals))))
@@ -204,42 +202,25 @@ def evaluate_market_with_benchmark_prehistory(
     evaluation_start = development_start + pd.Timedelta(hours=base.WARMUP_HOURS)
     evaluation_end = development_end - pd.Timedelta(hours=1)
     evaluation_frames = {
-        name: frame.loc[evaluation_start:evaluation_end].copy()
-        for name, frame in frames.items()
+        name: frame.loc[evaluation_start:evaluation_end].copy() for name, frame in frames.items()
     }
-    evaluation_frames["trend"] = trend_full.loc[
-        evaluation_start:evaluation_end
-    ].copy()
-    if any(
-        len(frame) != base.EVALUATION_HOURS
-        for frame in evaluation_frames.values()
-    ):
+    evaluation_frames["trend"] = trend_full.loc[evaluation_start:evaluation_end].copy()
+    if any(len(frame) != base.EVALUATION_HOURS for frame in evaluation_frames.values()):
         raise ValueError("evaluation window is not exactly twelve 90-day folds")
 
     per_policy: dict[str, Any] = {}
     for name, frame in evaluation_frames.items():
         fold_rows: list[dict[str, Any]] = []
         for fold in range(base.FOLDS):
-            fold_frame = frame.iloc[
-                fold * base.FOLD_HOURS : (fold + 1) * base.FOLD_HOURS
-            ]
+            fold_frame = frame.iloc[fold * base.FOLD_HOURS : (fold + 1) * base.FOLD_HOURS]
             fold_rows.append({"fold": fold + 1, **base.metrics(fold_frame)})
-        positive = [
-            row["net_return"]
-            for row in fold_rows
-            if row["net_return"] > 0
-        ]
-        blocks = [
-            base.metrics(frame.iloc[index * 8640 : (index + 1) * 8640])
-            for index in range(3)
-        ]
+        positive = [row["net_return"] for row in fold_rows if row["net_return"] > 0]
+        blocks = [base.metrics(frame.iloc[index * 8640 : (index + 1) * 8640]) for index in range(3)]
         aggregate = base.metrics(frame)
         aggregate.update(
             {
                 "invalid_feature_hours_in_full_development": invalid.get(name, 0),
-                "profitable_folds": sum(
-                    row["net_return"] > 0 for row in fold_rows
-                ),
+                "profitable_folds": sum(row["net_return"] > 0 for row in fold_rows),
                 "positive_fold_concentration": (
                     None if not positive else max(positive) / sum(positive)
                 ),
@@ -251,21 +232,14 @@ def evaluate_market_with_benchmark_prehistory(
 
     for variant in ("V1", "V2"):
         residual = (
-            evaluation_frames[variant]["net_return"]
-            - evaluation_frames["trend"]["net_return"]
+            evaluation_frames[variant]["net_return"] - evaluation_frames["trend"]["net_return"]
         )
-        per_policy[variant]["residual_return_vs_trend_arithmetic"] = float(
-            residual.sum()
-        )
-        per_policy[variant]["residual_sharpe_vs_trend"] = base.sharpe(
-            residual
-        )
+        per_policy[variant]["residual_return_vs_trend_arithmetic"] = float(residual.sum())
+        per_policy[variant]["residual_sharpe_vs_trend"] = base.sharpe(residual)
         trend_edge = per_policy["trend"]["edge_per_turnover_bps"]
         variant_edge = per_policy[variant]["edge_per_turnover_bps"]
         per_policy[variant]["edge_per_turnover_delta_vs_trend_bps"] = (
-            None
-            if variant_edge is None or trend_edge is None
-            else variant_edge - trend_edge
+            None if variant_edge is None or trend_edge is None else variant_edge - trend_edge
         )
 
     output = pd.concat(evaluation_frames, axis=1)
@@ -309,9 +283,7 @@ def inference_with_strict_cross_market_undefined(
         "v2_residual_sharpe_vs_trend",
         "v2_minus_trend_edge",
     )
-    endpoint_samples: dict[str, list[float]] = {
-        name: [] for name in endpoint_names
-    }
+    endpoint_samples: dict[str, list[float]] = {name: [] for name in endpoint_names}
 
     def endpoint_values(indices: np.ndarray | None = None) -> dict[str, float]:
         per_market: dict[str, dict[str, float]] = {}
@@ -329,16 +301,11 @@ def inference_with_strict_cross_market_undefined(
             v2_net, v2_turnover = selected["V2"]
             trend_net, trend_turnover = selected["trend"]
             per_market[market] = {
-                "v2_minus_v1_sharpe": (
-                    base.array_sharpe(v2_net) - base.array_sharpe(v1_net)
-                ),
+                "v2_minus_v1_sharpe": (base.array_sharpe(v2_net) - base.array_sharpe(v1_net)),
                 "v2_minus_v1_edge": (
-                    base.array_edge(v2_net, v2_turnover)
-                    - base.array_edge(v1_net, v1_turnover)
+                    base.array_edge(v2_net, v2_turnover) - base.array_edge(v1_net, v1_turnover)
                 ),
-                "v2_residual_sharpe_vs_trend": base.array_sharpe(
-                    v2_net - trend_net
-                ),
+                "v2_residual_sharpe_vs_trend": base.array_sharpe(v2_net - trend_net),
                 "v2_minus_trend_edge": (
                     base.array_edge(v2_net, v2_turnover)
                     - base.array_edge(trend_net, trend_turnover)
@@ -372,9 +339,7 @@ def inference_with_strict_cross_market_undefined(
             p_value = 1.0
         else:
             lower = float(np.quantile(array, 0.05))
-            p_value = float(
-                (1 + np.count_nonzero(array <= 0.0)) / (len(array) + 1)
-            )
+            p_value = float((1 + np.count_nonzero(array <= 0.0)) / (len(array) + 1))
         raw_p[name] = p_value
         results[name] = {
             "observed": observed_value,
@@ -398,8 +363,7 @@ def inference_with_strict_cross_market_undefined(
         "common_calendar_indices": True,
         "holm_family_size": 4,
         "undefined_market_policy": (
-            "any non-finite frozen-market endpoint makes the cross-market "
-            "endpoint undefined"
+            "any non-finite frozen-market endpoint makes the cross-market endpoint undefined"
         ),
         "endpoints": results,
     }
@@ -420,9 +384,7 @@ def main() -> None:
     executed = {
         "verdict": result["verdict"],
         "failures": result["qualification_failures"],
-        "result_sha256": hashlib.sha256(
-            (args.output_dir / "result.json").read_bytes()
-        ).hexdigest(),
+        "result_sha256": hashlib.sha256((args.output_dir / "result.json").read_bytes()).hexdigest(),
     }
     print(json.dumps(executed, indent=2, sort_keys=True))
 
