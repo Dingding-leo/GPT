@@ -43,7 +43,7 @@
     "pbo": "not_computed_two_artifact_builds_are_not_independent_strategy_trials_and_only_one_policy_is_replicated",
     "seed": 20260728
   },
-  "payload_sha256": "ced01a3aa6b3fa05b438f70c7534adb2a9daca77b949389a3a5373c3f573b951",
+  "payload_sha256": "7c6a3725c5cba6ad2ccf5f8a667db7a99168c6a95212d7f3f903402b98696eb3",
   "policy_contract": {
     "band_multiplier": 1.645,
     "bar": "1H",
@@ -57,6 +57,30 @@
     "one_way_fee_bps": 5.0,
     "policy_name": "H1_target_innovation_hysteresis",
     "policy_sha256": "437868cc0b2a166cf9b9a3f7dd28848a25664b567a9a6857c333108a3eb7fcf1"
+  },
+  "portability_stress": {
+    "BTC-USDT": {
+      "eligible_decisions": 25751,
+      "h1_minus_h0_annualized_turnover": 0.0,
+      "h1_minus_h0_net_total_return": 0.0,
+      "h1_minus_h0_sharpe": 0.0,
+      "suppressed_nonzero_revisions": 0,
+      "zero_mad_decisions": 25751
+    },
+    "ETH-USDT": {
+      "eligible_decisions": 25751,
+      "h1_minus_h0_annualized_turnover": 0.0,
+      "h1_minus_h0_net_total_return": 0.0,
+      "h1_minus_h0_sharpe": 0.0,
+      "suppressed_nonzero_revisions": 0,
+      "zero_mad_decisions": 25751
+    },
+    "artifact": "simple-trend-transfer-stress.json",
+    "artifact_blob_sha": "b434c9939820d4a430300d689d9132bef21b53b1",
+    "comparator": "canonical simple_trend_long_cash, 2160H, one-bar delay",
+    "interpretation": "H1 is reproducible on S0 but not candidate-neutral; sparse binary target innovations collapse MAD to zero, so H1 becomes an identity transform on simple trend.",
+    "policy_sha256": "437868cc0b2a166cf9b9a3f7dd28848a25664b567a9a6857c333108a3eb7fcf1",
+    "verdict": "reject_H1_for_integration_retain_as_archived_base_specific_development_diagnostic"
   },
   "preperformance_universe": [
     "BTC-USDT",
@@ -494,14 +518,17 @@
   },
   "verdict": {
     "base_strategy": "rejected_for_promotion",
-    "next_strategy_facing_step": "complete the frozen S0-S5 selector comparison, nominate and hash one policy, then apply this unchanged H1 hash to the reserved prospective cohort",
-    "overlay": "replicated_across_independent_canonical_artifact_builds_development_only",
+    "next_strategy_facing_step": "do not deploy or retune H1; repair and independently validate the frozen selector comparison evidence, then predeclare any new turnover rule against the nominated path from training-only information",
+    "overlay": "archive_as_base_specific_development_diagnostic",
+    "portability": "failed_candidate_neutral_transfer",
     "reason": [
-      "H1 improvement signs and uncertainty are invariant across both canonical artifact builds",
+      "H1 improvement signs and uncertainty are invariant across both canonical S0 artifact builds",
       "no H1 discrete decision changes despite a later 93-hour source suffix and sub-ulp BTC arithmetic drift",
+      "the unchanged policy has exactly zero effect on canonical simple trend in both markets because every eligible MAD is zero",
+      "H1 therefore does not constitute a portable selector-independent turnover architecture",
       "base S0 retains only 4/12 BTC and 5/12 ETH profitable folds",
-      "H1 residual Sharpe versus simple trend remains negative in both markets",
       "no untouched market or prospective period was used"
-    ]
+    ],
+    "source_artifact_replication": "passed_on_same_base_path"
   }
 }
