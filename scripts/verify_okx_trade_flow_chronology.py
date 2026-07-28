@@ -4,7 +4,6 @@ import argparse
 import json
 import math
 from collections import defaultdict
-from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
@@ -46,9 +45,7 @@ def ordered_hourly_impact(
                 "hour_start_ms": hour * source.HOUR_MS,
                 "first_trade_id": str(hour_rows[0][1]),
                 "last_trade_id": str(hour_rows[-1][1]),
-                "impact_return": format(
-                    math.log(float(last_price / first_price)), ".18g"
-                ),
+                "impact_return": format(math.log(float(last_price / first_price)), ".18g"),
             }
         )
     return features
@@ -68,17 +65,13 @@ def validate_page_sequence(
         raise ValueError("REST response timestamp order is not newest-first")
 
     canonical_archive = source.canonicalize(archive_rows)
-    archive_index = {
-        (row[0], row[1]): index for index, row in enumerate(canonical_archive)
-    }
+    archive_index = {(row[0], row[1]): index for index, row in enumerate(canonical_archive)}
     chronological = list(reversed(rest_rows))
     try:
         indices = [archive_index[(row[0], row[1])] for row in chronological]
     except KeyError as exc:
         raise ValueError("REST sequence contains an identity absent from archive") from exc
-    if any(
-        right - left != 1 for left, right in zip(indices, indices[1:], strict=False)
-    ):
+    if any(right - left != 1 for left, right in zip(indices, indices[1:], strict=False)):
         raise ValueError("REST page does not map to one contiguous archive sequence")
     archive_slice = canonical_archive[indices[0] : indices[-1] + 1]
     if chronological != archive_slice:
@@ -111,13 +104,10 @@ def legacy_set_only_accepts(
     mutated_rows: list[source.Trade],
 ) -> bool:
     archive_by_id = {(row[0], row[1]): row for row in archive_rows}
-    if {(row[0], row[1]) for row in original_rows} != {
-        (row[0], row[1]) for row in mutated_rows
-    }:
+    if {(row[0], row[1]) for row in original_rows} != {(row[0], row[1]) for row in mutated_rows}:
         return False
     return all(
-        (row[0], row[1]) in archive_by_id
-        and archive_by_id[(row[0], row[1])][2:] == row[2:]
+        (row[0], row[1]) in archive_by_id and archive_by_id[(row[0], row[1])][2:] == row[2:]
         for row in mutated_rows
     )
 
@@ -164,8 +154,7 @@ def tie_break_impact(rows: list[source.Trade]) -> dict[str, Any]:
         "mean_absolute_impact_delta_bps": (
             sum(abs(value) for value in deltas) / len(deltas) * 10_000
         ),
-        "maximum_absolute_impact_delta_bps": max(abs(value) for value in deltas)
-        * 10_000,
+        "maximum_absolute_impact_delta_bps": max(abs(value) for value in deltas) * 10_000,
         "signed_mean_impact_delta_bps": sum(deltas) / len(deltas) * 10_000,
         "ascending_feature_sha256": source.sha256(source.canonical_json(ascending)),
         "descending_feature_sha256": source.sha256(source.canonical_json(descending)),
@@ -174,26 +163,21 @@ def tie_break_impact(rows: list[source.Trade]) -> dict[str, Any]:
 
 def market_result(output_dir: Path, inst_id: str) -> dict[str, Any]:
     market_root = output_dir / inst_id
-    archive_rows = source.parse_archive_csv(
-        (market_root / "archive.csv").read_bytes(), inst_id
-    )
+    archive_rows = source.parse_archive_csv((market_root / "archive.csv").read_bytes(), inst_id)
     canonical_archive = source.canonicalize(archive_rows)
     raw_ids = [row[1] for row in archive_rows]
     raw_timestamps = [row[5] for row in archive_rows]
     if not all(left < right for left, right in zip(raw_ids, raw_ids[1:], strict=False)):
         raise ValueError("archive file order is not strict ascending trade-ID order")
     if not all(
-        left <= right
-        for left, right in zip(raw_timestamps, raw_timestamps[1:], strict=False)
+        left <= right for left, right in zip(raw_timestamps, raw_timestamps[1:], strict=False)
     ):
         raise ValueError("archive file order is not nondecreasing event time")
     if archive_rows != canonical_archive:
         raise ValueError("archive file order does not equal canonical chronology")
 
     older = source.parse_rest((market_root / "rest-older.json").read_bytes(), inst_id)
-    newer = source.parse_rest(
-        (market_root / "rest-newer-bounded.json").read_bytes(), inst_id
-    )
+    newer = source.parse_rest((market_root / "rest-newer-bounded.json").read_bytes(), inst_id)
     older_result = validate_page_sequence(archive_rows, older)
     newer_result = validate_page_sequence(archive_rows, newer)
     if older_result["archive_end_index"] >= newer_result["archive_start_index"]:
@@ -259,9 +243,7 @@ def run(output_dir: Path) -> dict[str, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--output-dir", default="reports/okx/trade-flow-schema-checkpoint"
-    )
+    parser.add_argument("--output-dir", default="reports/okx/trade-flow-schema-checkpoint")
     args = parser.parse_args()
     print(json.dumps(run(Path(args.output_dir)), indent=2))
 

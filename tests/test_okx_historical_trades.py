@@ -69,9 +69,7 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
         "timezone": "UTC+8",
         "hourly_feature_buckets": "UTC",
     }
-    assert result["verdict"] == (
-        "trade_flow_source_schema_checkpoint_survived_adversarial_stress"
-    )
+    assert result["verdict"] == ("trade_flow_source_schema_checkpoint_survived_adversarial_stress")
     assert [market["inst_id"] for market in result["markets"]] == [
         "BTC-USDT",
         "ETH-USDT",
@@ -82,8 +80,7 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
         assert market["archive"]["complete_24h_passed"] is True
         assert market["archive"]["hour_count"] == 24
         assert (
-            market["archive"]["expected_end_exclusive_ms"]
-            - market["archive"]["expected_start_ms"]
+            market["archive"]["expected_end_exclusive_ms"] - market["archive"]["expected_start_ms"]
             == 24 * 3_600_000
         )
 
@@ -116,9 +113,7 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
     assert stress["performance_inspected"] is False
     assert stress["oos_consumed"] is False
     assert stress["defects"] == []
-    assert stress["verdict"] == (
-        "trade_flow_source_schema_checkpoint_survived_adversarial_stress"
-    )
+    assert stress["verdict"] == ("trade_flow_source_schema_checkpoint_survived_adversarial_stress")
     assert result["adversarial_stress"]["verdict"] == stress["verdict"]
     assert result["adversarial_stress"]["defects"] == []
     assert all(market["status"] == "passed" for market in stress["markets"])
@@ -129,9 +124,7 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
     assert chronology["canonical_fee_bps_one_way"] == 5.0
     assert chronology["performance_inspected"] is False
     assert chronology["oos_consumed"] is False
-    assert chronology["verdict"] == (
-        "numeric_trade_id_chronology_proven_and_strategy_material"
-    )
+    assert chronology["verdict"] == ("numeric_trade_id_chronology_proven_and_strategy_material")
     assert [market["inst_id"] for market in chronology["markets"]] == [
         "BTC-USDT",
         "ETH-USDT",
@@ -160,6 +153,4 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
 
     assert (output_dir / "result.sha256").read_text().strip() == sha256(result_bytes)
     assert (output_dir / "stress-result.sha256").read_text().strip() == sha256(stress_bytes)
-    assert (output_dir / "chronology-stress.sha256").read_text().strip() == sha256(
-        chronology_bytes
-    )
+    assert (output_dir / "chronology-stress.sha256").read_text().strip() == sha256(chronology_bytes)
