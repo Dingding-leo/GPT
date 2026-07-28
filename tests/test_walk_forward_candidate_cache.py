@@ -182,3 +182,67 @@ def test_candidate_cache_runs_each_configuration_once_and_ignores_later_real_bar
     assert len(cache) == 1
     pd.testing.assert_frame_equal(first, expected, check_exact=True)
     pd.testing.assert_frame_equal(second, expected, check_exact=True)
+
+
+def test_candidate_cache_is_invariant_to_unavailable_future_suffix(
+    btc_usdt_prices: pd.Series,
+) -> None:
+    config = StrategyConfig(
+        momentum_lookback=63,
+        reversal_lookback=3,
+        volatility_lookback=20,
+        min_position=0.0,
+        transaction_cost_bps=5.0,
+        annualization=252,
+    )
+    complete_history = btc_usdt_prices.iloc[:800].copy()
+    start = complete_history.index[300]
+    end = complete_history.index[499]
+    point_in_time_history = complete_history.loc[:end]
+    original_suffix = complete_history.iloc[500:]
+
+    reordered_future = complete_history.copy()
+    reordered_future.iloc[500:] = original_suffix.iloc[::-1].to_numpy()
+
+    distribution_changed_future = complete_history.copy()
+    distribution_changed_future.iloc[500:] = (
+        original_suffix * 1.5 + original_suffix.median()
+    ).to_numpy()
+
+    assert not reordered_future.iloc[500:].equals(original_suffix)
+    assert not distribution_changed_future.iloc[500:].equals(original_suffix)
+    assert (reordered_future.iloc[500:] > 0.0).all()
+    assert (distribution_changed_future.iloc[500:] > 0.0).all()
+    assert reordered_future.iloc[500:].mean() == pytest.approx(original_suffix.mean())
+    assert reordered_future.iloc[500:].std() == pytest.approx(original_suffix.std())
+    assert distribution_changed_future.iloc[500:].mean() > original_suffix.mean()
+    assert distribution_changed_future.iloc[500:].std() > original_suffix.std()
+
+    for altered_future in (reordered_future, distribution_changed_future):
+        pd.testing.assert_series_equal(
+            altered_future.loc[:end],
+            point_in_time_history,
+            check_exact=True,
+        )
+
+    baseline = walk_forward._run_cached_candidate_window(
+        point_in_time_history,
+        complete_history,
+        {},
+        config,
+        start,
+        end,
+        0.0,
+    )
+
+    for altered_future in (reordered_future, distribution_changed_future):
+        modified = walk_forward._run_cached_candidate_window(
+            point_in_time_history,
+            altered_future,
+            {},
+            config,
+            start,
+            end,
+            0.0,
+        )
+        pd.testing.assert_frame_equal(baseline, modified, check_exact=True)
