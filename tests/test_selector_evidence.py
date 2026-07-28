@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# ruff: noqa: I001
+
 import hashlib
 from copy import deepcopy
 from datetime import UTC, datetime, timedelta
