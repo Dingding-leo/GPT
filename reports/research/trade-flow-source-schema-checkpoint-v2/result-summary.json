@@ -12,12 +12,12 @@
   "oos_consumed": false,
   "source_execution": {
     "main_base_sha": "4acef60ed95020de52f196e3910487bb2b480f02",
-    "head_sha": "4d9605a1d1a57b92422de6628b5227c48a2e4396",
-    "workflow_run": 30369985594,
-    "workflow_artifact_id": 8692496533,
-    "workflow_artifact_sha256": "f14b9f75f27d149364eb099932f9a74391fcad9eda1e72eeda399a0c80b6730b",
-    "result_json_sha256": "4cddaf1e8673bfec0746dd30082763ae8cb1374ee98db6064ff8e047e78e23ee",
-    "stress_result_sha256": "e00a6f03d5e92cf44cbd9f4b4897caf3329b0ac692d3235b20ab2b1701b5d821"
+    "head_sha": "8644d936c7cea9f8872a79833c7319308c4c2739",
+    "workflow_run": 30370706298,
+    "workflow_artifact_id": 8692787216,
+    "workflow_artifact_sha256": "7b4548df64f88c310e418ae4c9711f7cca0c6dd1b5bf76253210b1da79947acd",
+    "result_json_sha256": "bb60a6a27ff3f3b76fa3167f783403dc43d3152188c764fd4af4b4046189b939",
+    "stress_result_sha256": "c0d8fc7273c23266a7bb9f3d2c28cac1456f0b8f400857abeda2edbc9d8bede7"
   },
   "archive_day_contract": {
     "manifest_query_day": "2026-07-24 UTC",
