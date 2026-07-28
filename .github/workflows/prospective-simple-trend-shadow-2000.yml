@@ -1,0 +1,131 @@
+name: Prospective Simple Trend Shadow 2000
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/run_prospective_simple_trend_shadow_1800.py"
+      - "scripts/run_prospective_simple_trend_shadow_1900.py"
+      - "scripts/run_prospective_simple_trend_shadow_2000.py"
+      - ".github/workflows/prospective-simple-trend-shadow-2000.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prospective-simple-trend-2000-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  prospective-shadow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OKX_BASE_URL: https://www.okx.com
+      OUTPUT_DIR: reports/prospective/simple-trend-20260728T2000Z
+      ARTIFACT_NAME: prospective-simple-trend-2000-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==26.1.2"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Verify prospective strategy scripts
+        run: |
+          python -m py_compile \
+            scripts/run_prospective_simple_trend_shadow_1800.py \
+            scripts/run_prospective_simple_trend_shadow_1900.py \
+            scripts/run_prospective_simple_trend_shadow_2000.py
+          ruff check \
+            scripts/run_prospective_simple_trend_shadow_1800.py \
+            scripts/run_prospective_simple_trend_shadow_1900.py \
+            scripts/run_prospective_simple_trend_shadow_2000.py
+          ruff format --check \
+            scripts/run_prospective_simple_trend_shadow_1800.py \
+            scripts/run_prospective_simple_trend_shadow_1900.py \
+            scripts/run_prospective_simple_trend_shadow_2000.py
+
+      - name: Execute frozen prospective strategy update
+        run: |
+          python scripts/run_prospective_simple_trend_shadow_2000.py \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify machine-readable strategy evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/result.json"
+          test -s "$OUTPUT_DIR/result.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          expected="$(cat "$OUTPUT_DIR/result.sha256")"
+          actual="$(sha256sum "$OUTPUT_DIR/result.json" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          output_dir = Path(os.environ["OUTPUT_DIR"])
+          result = json.loads((output_dir / "result.json").read_text())
+          assert result["policy_name"] == "simple_trend_long_cash_2160h_next_open"
+          assert result["bar"] == "1H"
+          assert result["canonical_fee_bps_one_way"] == 5.0
+          assert result["cross_sectional_selection"] is False
+          assert result["actual_orders"] is False
+          assert result["reserved_trade_flow_oos_consumed"] is False
+          assert result["window"]["prior_last_signal_bar_start"] == (
+              "2026-07-28T19:00:00Z"
+          )
+          assert result["window"]["latest_complete_signal_bar_start"] == (
+              "2026-07-28T20:00:00Z"
+          )
+          assert result["window"]["new_signal_bar_count"] == 1
+          assert result["window"]["new_realized_payoff_intervals"] == 1
+          assert result["window"]["prior_cumulative_realized_hours"] == 498
+          assert result["window"]["updated_cumulative_realized_hours"] == 499
+          assert result["prospective_lineage"]["policy_unchanged"] is True
+          assert len(result["markets"]) == 2
+          assert all("drift_attribution" in market for market in result["markets"])
+          assert result["abort_conditions"]["triggered"] is False
+          assert result["verdict"] in {
+              "prospective_simple_trend_no_trade_continues",
+              "prospective_simple_trend_exposure_observed_continue_shadow_only",
+          }
+          PY
+
+      - name: Upload immutable prospective evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
