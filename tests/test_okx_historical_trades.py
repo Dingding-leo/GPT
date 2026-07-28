@@ -58,9 +58,7 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
         "timezone": "UTC+8",
         "hourly_feature_buckets": "UTC",
     }
-    assert result["verdict"] == (
-        "trade_flow_source_schema_checkpoint_survived_adversarial_stress"
-    )
+    assert result["verdict"] == ("trade_flow_source_schema_checkpoint_survived_adversarial_stress")
     assert [market["inst_id"] for market in result["markets"]] == [
         "BTC-USDT",
         "ETH-USDT",
@@ -70,9 +68,10 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
         assert market["status"] == "checkpoint_passed"
         assert market["archive"]["complete_24h_passed"] is True
         assert market["archive"]["hour_count"] == 24
-        assert market["archive"]["expected_end_exclusive_ms"] - market["archive"][
-            "expected_start_ms"
-        ] == 24 * 3_600_000
+        assert (
+            market["archive"]["expected_end_exclusive_ms"] - market["archive"]["expected_start_ms"]
+            == 24 * 3_600_000
+        )
 
         overlap = market["rest_overlap"]
         assert overlap["older_page_rows"] == 100
@@ -103,9 +102,7 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
     assert stress["performance_inspected"] is False
     assert stress["oos_consumed"] is False
     assert stress["defects"] == []
-    assert stress["verdict"] == (
-        "trade_flow_source_schema_checkpoint_survived_adversarial_stress"
-    )
+    assert stress["verdict"] == ("trade_flow_source_schema_checkpoint_survived_adversarial_stress")
     assert result["adversarial_stress"]["verdict"] == stress["verdict"]
     assert result["adversarial_stress"]["defects"] == []
     assert all(market["status"] == "passed" for market in stress["markets"])

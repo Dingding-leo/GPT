@@ -156,12 +156,8 @@ def audit_market(root: Path, inst_id: str) -> dict[str, Any]:
         "archive_maximum_trade_id": ordered_ids[-1],
         "archive_minimum_ts_ms": minimum_ts_ms,
         "archive_maximum_ts_ms": maximum_ts_ms,
-        "archive_minimum_utc": datetime.fromtimestamp(
-            minimum_ts_ms / 1000, UTC
-        ).isoformat(),
-        "archive_maximum_utc": datetime.fromtimestamp(
-            maximum_ts_ms / 1000, UTC
-        ).isoformat(),
+        "archive_minimum_utc": datetime.fromtimestamp(minimum_ts_ms / 1000, UTC).isoformat(),
+        "archive_maximum_utc": datetime.fromtimestamp(maximum_ts_ms / 1000, UTC).isoformat(),
         "anchor_trade_id": anchor,
         "anchor_ts_ms": archive_by_id[anchor]["ts_ms"],
         "after_page": after,
@@ -169,9 +165,7 @@ def audit_market(root: Path, inst_id: str) -> dict[str, Any]:
         "combined_archive_overlap_rows": combined_overlap,
         "legacy_aggregate_overlap_gate_passed": old_aggregate_gate_passed,
         "frozen_two_sided_overlap_gate_passed": frozen_two_sided_gate_passed,
-        "false_pass_reproduced": (
-            old_aggregate_gate_passed and not frozen_two_sided_gate_passed
-        ),
+        "false_pass_reproduced": (old_aggregate_gate_passed and not frozen_two_sided_gate_passed),
     }
 
 

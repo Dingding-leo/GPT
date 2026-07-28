@@ -304,13 +304,9 @@ def strategy_diagnostic(rows: list[Trade]) -> dict[str, Any]:
     changed_suffix[-1] = tuple(changed_last)  # type: ignore[assignment]
 
     cutoff_ms = cutoff * HOUR_MS
-    original_prefix = [
-        row for row in hourly_features(ordered) if row["hour_start_ms"] <= cutoff_ms
-    ]
+    original_prefix = [row for row in hourly_features(ordered) if row["hour_start_ms"] <= cutoff_ms]
     changed_prefix = [
-        row
-        for row in hourly_features(prefix + changed_suffix)
-        if row["hour_start_ms"] <= cutoff_ms
+        row for row in hourly_features(prefix + changed_suffix) if row["hour_start_ms"] <= cutoff_ms
     ]
 
     trade_id_order = sorted(ordered, key=lambda row: row[1])
@@ -576,8 +572,7 @@ def validate_rest_pages(
     mismatches = [
         row
         for row in combined
-        if (row[0], row[1]) in archive_by_id
-        and archive_by_id[(row[0], row[1])][2:] != row[2:]
+        if (row[0], row[1]) in archive_by_id and archive_by_id[(row[0], row[1])][2:] != row[2:]
     ]
     timestamp_counts: dict[int, int] = defaultdict(int)
     for row in combined:
