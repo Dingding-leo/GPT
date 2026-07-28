@@ -38,10 +38,20 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Materialize frozen reproducer
+      - name: Materialize frozen reproducer and causal repair
         run: |
           mkdir -p reports/research/funding-basis-crowding-unwind-v2
           gzip -dc scripts/run_funding_basis_research.py.gz > /tmp/run_funding_basis_research.py
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("/tmp/run_funding_basis_research.py")
+          source = path.read_text()
+          old = "evaluation_end = SOURCE_END - pd.Timedelta(hours=1)"
+          new = "evaluation_end = SOURCE_END - pd.Timedelta(hours=2)"
+          assert source.count(old) == 1, "causal evaluation-boundary repair no longer applies exactly once"
+          path.write_text(source.replace(old, new))
+          PY
           ruff check --fix /tmp/run_funding_basis_research.py \
             > reports/research/funding-basis-crowding-unwind-v2/lint-before.txt 2>&1 || true
           ruff format /tmp/run_funding_basis_research.py
