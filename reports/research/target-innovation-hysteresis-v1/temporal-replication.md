@@ -6,9 +6,9 @@
 
 This is a development-only temporal replication of the already-frozen H1 policy. It does not inspect any untouched market, nominate a selector, or promote the rejected base Alpha.
 
-Policy SHA-256: `4a2b398ce9f8b46b2d72d63eea0dcf0a5040b10f3e0d458a03dfef971f312c56`
+Policy SHA-256: `437868cc0b2a166cf9b9a3f7dd28848a25664b567a9a6857c333108a3eb7fcf1`
 
-Payload SHA-256: `73d5ccacc5aba75efb7ed203da35a022bc23a09debce7ea8f6660f5d01acbf32`
+Payload SHA-256: `6aa14ddcea71d0ffd5e1647e1d7e2e313aa67ae1b3f9f1848beb894c483d10ee`
 
 ## Fixed universe and sample
 
