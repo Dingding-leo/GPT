@@ -1,0 +1,78 @@
+{
+  "schema_version": "trade-flow-equal-ms-chronology-audit-v1",
+  "architecture_family_id": "okx-spot-causal-trade-flow-resilience-v2",
+  "candidate_count": 2,
+  "canonical_fee_bps_one_way": 5.0,
+  "bar": "1H",
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "performance_inspected": false,
+  "oos_consumed": false,
+  "merged_checkpoint_main_sha": "d35173d232f3cd0e0fd40bec70cef06fe55a8e14",
+  "immutable_input": {
+    "workflow_run": 30371603542,
+    "workflow_artifact_id": 8693185668,
+    "workflow_artifact_sha256": "e7319825a721a29c4e0eed8c27c2bfc201971a3c1e8613d1cb370cfbdef2fce6"
+  },
+  "attack": "A set-only archive/REST parity check can accept a shuffled equal-millisecond REST sequence even though V2 uses the first and last trade prices inside each hour.",
+  "repair": [
+    "require strict newest-first REST trade-ID order and nonincreasing timestamps",
+    "reverse each REST page and require equality to one contiguous archive chronology slice",
+    "require equal-millisecond collisions inside both matched pages",
+    "require descending numeric trade IDs within each equal-millisecond REST group",
+    "mutate one equal-millisecond pair to reproduce the old set-only false pass and require the strengthened sequence gate to reject it",
+    "compare the canonical ascending numeric-ID tie break with the opposite tie break and require a strategy-feature change"
+  ],
+  "results": {
+    "BTC-USDT": {
+      "archive_rows": 367392,
+      "hour_count": 24,
+      "older_page": {
+        "rows": 100,
+        "archive_start_index": 2,
+        "archive_end_index": 101,
+        "equal_millisecond_groups": 23,
+        "maximum_equal_millisecond_group_size": 6
+      },
+      "newer_page": {
+        "rows": 100,
+        "archive_start_index": 103,
+        "archive_end_index": 202,
+        "equal_millisecond_groups": 23,
+        "maximum_equal_millisecond_group_size": 9
+      },
+      "alternative_tie_break_changed_hours": 10,
+      "canonical_chronology_feature_sha256": "38396b10db1e341b0586ffa06cf6730e9962cec325135fcba4cb8a0333f8fce1",
+      "opposite_tie_break_feature_sha256": "ae38e325d6449f5b23bf552d8acbd0f8e98f692bcef360fb11c68121a1d5ae1",
+      "legacy_set_only_false_pass_reproduced": true,
+      "strengthened_sequence_gate_rejected_mutation": true
+    },
+    "ETH-USDT": {
+      "archive_rows": 261544,
+      "hour_count": 24,
+      "older_page": {
+        "rows": 100,
+        "archive_start_index": 1,
+        "archive_end_index": 100,
+        "equal_millisecond_groups": 19,
+        "maximum_equal_millisecond_group_size": 7
+      },
+      "newer_page": {
+        "rows": 100,
+        "archive_start_index": 102,
+        "archive_end_index": 201,
+        "equal_millisecond_groups": 17,
+        "maximum_equal_millisecond_group_size": 5
+      },
+      "alternative_tie_break_changed_hours": 18,
+      "canonical_chronology_feature_sha256": "d1b5e5947ee01bcda72044a54153ce626f5662ca584e3b921d5ce4bf6fa3a0cc",
+      "opposite_tie_break_feature_sha256": "9973f5c6c02c9c491878bd867685e2f09b00a11dc8f90612f0281155c9e9fca3",
+      "legacy_set_only_false_pass_reproduced": true,
+      "strengthened_sequence_gate_rejected_mutation": true
+    }
+  },
+  "verdict": "trade_flow_numeric_id_chronology_proven_by_public_rest_sequence",
+  "strategy_consequence": "The source checkpoint remains accepted, but numeric trade-ID chronology is now proven by ordered public responses rather than inferred from set parity. V1 and V2 profitability remain untested and full development acquisition remains gated."
+}
