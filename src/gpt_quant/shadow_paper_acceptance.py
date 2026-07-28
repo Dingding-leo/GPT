@@ -236,6 +236,8 @@ def build_shadow_paper_acceptance_evidence(path: str | Path) -> dict[str, Any]:
         "bar": contract["bar"],
         "contract_schema_version": contract["schema_version"],
         "contract_sha256": contract_sha256,
+        "exchange_fee_one_way_bps": contract["economics"]["exchange_fee_one_way_bps"],
+        "fee_applied_to": contract["economics"]["fee_applied_to"],
         "forbidden_capabilities": forbidden,
         "limited_capital_authorization": False,
         "live_ready": False,
