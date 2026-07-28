@@ -76,9 +76,7 @@ def parse_response(payload: bytes) -> list[list[str]]:
     parsed: list[list[str]] = []
     for row in rows:
         valid_row = (
-            isinstance(row, list)
-            and len(row) == 9
-            and all(isinstance(item, str) for item in row)
+            isinstance(row, list) and len(row) == 9 and all(isinstance(item, str) for item in row)
         )
         if not valid_row:
             raise ValueError("unexpected OKX candle row schema")
@@ -118,11 +116,7 @@ def fetch_candles(
     cursor: int | None = None
 
     for page_index in range(20):
-        endpoint = (
-            "/api/v5/market/candles"
-            if page_index == 0
-            else "/api/v5/market/history-candles"
-        )
+        endpoint = "/api/v5/market/candles" if page_index == 0 else "/api/v5/market/history-candles"
         query = {"instId": instrument, "bar": BAR, "limit": "300"}
         if cursor is not None:
             query["after"] = str(cursor)
@@ -151,9 +145,7 @@ def fetch_candles(
             }
             prior = candles.get(timestamp_ms)
             if prior is not None and prior != record:
-                raise ValueError(
-                    f"conflicting duplicate at {iso_utc(timestamp_ms)}: {instrument}"
-                )
+                raise ValueError(f"conflicting duplicate at {iso_utc(timestamp_ms)}: {instrument}")
             candles[timestamp_ms] = record
 
         oldest = min(timestamps)
@@ -315,24 +307,16 @@ def calculate_market(
             "net_strategy_return": net_return,
             "strategy_residual_vs_buy_and_hold": net_return - asset_return,
             "maximum_drawdown": min(0.0, net_return),
-            "edge_per_turnover_bps": (
-                net_return / turnover * 10_000.0 if turnover > 0.0 else None
-            ),
+            "edge_per_turnover_bps": (net_return / turnover * 10_000.0 if turnover > 0.0 else None),
         },
         "signal_drift": {
-            "margin_at_prior_reported_signal_hour": margins[
-                PRIOR_LAST_SIGNAL_HOUR_MS
-            ],
-            "margin_at_latest_complete_signal_hour": margins[
-                LAST_COMPLETE_SIGNAL_HOUR_MS
-            ],
+            "margin_at_prior_reported_signal_hour": margins[PRIOR_LAST_SIGNAL_HOUR_MS],
+            "margin_at_latest_complete_signal_hour": margins[LAST_COMPLETE_SIGNAL_HOUR_MS],
             "margin_change": (
-                margins[LAST_COMPLETE_SIGNAL_HOUR_MS]
-                - margins[PRIOR_LAST_SIGNAL_HOUR_MS]
+                margins[LAST_COMPLETE_SIGNAL_HOUR_MS] - margins[PRIOR_LAST_SIGNAL_HOUR_MS]
             ),
             "target_changed_since_prior_reported_signal_hour": (
-                targets[LAST_COMPLETE_SIGNAL_HOUR_MS]
-                != targets[PRIOR_LAST_SIGNAL_HOUR_MS]
+                targets[LAST_COMPLETE_SIGNAL_HOUR_MS] != targets[PRIOR_LAST_SIGNAL_HOUR_MS]
             ),
         },
         "sharpe": None,
@@ -448,9 +432,7 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
             "prior_last_signal_bar_start_ms": PRIOR_LAST_SIGNAL_HOUR_MS,
             "prior_last_signal_bar_start": iso_utc(PRIOR_LAST_SIGNAL_HOUR_MS),
             "latest_complete_signal_bar_start_ms": LAST_COMPLETE_SIGNAL_HOUR_MS,
-            "latest_complete_signal_bar_start": iso_utc(
-                LAST_COMPLETE_SIGNAL_HOUR_MS
-            ),
+            "latest_complete_signal_bar_start": iso_utc(LAST_COMPLETE_SIGNAL_HOUR_MS),
             "new_signal_bar_count": 2,
             "new_realized_payoff_intervals": 1,
             "prior_cumulative_realized_hours": 494,
