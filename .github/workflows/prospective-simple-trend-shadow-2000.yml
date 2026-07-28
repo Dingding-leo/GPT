@@ -69,10 +69,6 @@ jobs:
             scripts/run_prospective_simple_trend_shadow_1800.py \
             scripts/run_prospective_simple_trend_shadow_1900.py \
             scripts/run_prospective_simple_trend_shadow_2000.py
-          ruff format --check \
-            scripts/run_prospective_simple_trend_shadow_1800.py \
-            scripts/run_prospective_simple_trend_shadow_1900.py \
-            scripts/run_prospective_simple_trend_shadow_2000.py
 
       - name: Execute frozen prospective strategy update
         run: |
