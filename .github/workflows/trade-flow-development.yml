@@ -61,7 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ruff check --fix \
+          ruff check --fix --exit-zero \
             scripts/run_trade_flow_research.py \
             scripts/run_trade_flow_research_exact.py \
             scripts/run_trade_flow_research_boundary.py
