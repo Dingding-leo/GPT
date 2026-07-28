@@ -25,7 +25,14 @@ def parse_archive(path: Path, inst_id: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
-        required = {"instrument_name", "trade_id", "side", "price", "size", "created_time"}
+        required = {
+            "instrument_name",
+            "trade_id",
+            "side",
+            "price",
+            "size",
+            "created_time",
+        }
         if reader.fieldnames is None or not required.issubset(reader.fieldnames):
             raise ValueError(f"{inst_id}: incomplete archive schema")
         for raw in reader:
@@ -149,8 +156,12 @@ def audit_market(root: Path, inst_id: str) -> dict[str, Any]:
         "archive_maximum_trade_id": ordered_ids[-1],
         "archive_minimum_ts_ms": minimum_ts_ms,
         "archive_maximum_ts_ms": maximum_ts_ms,
-        "archive_minimum_utc": datetime.fromtimestamp(minimum_ts_ms / 1000, UTC).isoformat(),
-        "archive_maximum_utc": datetime.fromtimestamp(maximum_ts_ms / 1000, UTC).isoformat(),
+        "archive_minimum_utc": datetime.fromtimestamp(
+            minimum_ts_ms / 1000, UTC
+        ).isoformat(),
+        "archive_maximum_utc": datetime.fromtimestamp(
+            maximum_ts_ms / 1000, UTC
+        ).isoformat(),
         "anchor_trade_id": anchor,
         "anchor_ts_ms": archive_by_id[anchor]["ts_ms"],
         "after_page": after,
@@ -158,7 +169,9 @@ def audit_market(root: Path, inst_id: str) -> dict[str, Any]:
         "combined_archive_overlap_rows": combined_overlap,
         "legacy_aggregate_overlap_gate_passed": old_aggregate_gate_passed,
         "frozen_two_sided_overlap_gate_passed": frozen_two_sided_gate_passed,
-        "false_pass_reproduced": old_aggregate_gate_passed and not frozen_two_sided_gate_passed,
+        "false_pass_reproduced": (
+            old_aggregate_gate_passed and not frozen_two_sided_gate_passed
+        ),
     }
 
 
@@ -176,7 +189,10 @@ def run(artifact_root: Path, artifact_sha256: str) -> dict[str, Any]:
         "source_execution_head": "554df30de28da4b6600b61e37d793c60f911da69",
         "performance_inspected": False,
         "oos_consumed": False,
-        "attack": "separate each REST cursor page before archive overlap qualification; require the frozen 100-row overlap on both sides of the archive anchor",
+        "attack": (
+            "separate each REST cursor page before archive overlap qualification; "
+            "require the frozen 100-row overlap on both sides of the archive anchor"
+        ),
         "markets": markets,
         "false_pass_reproduced": false_pass,
         "verdict": (
