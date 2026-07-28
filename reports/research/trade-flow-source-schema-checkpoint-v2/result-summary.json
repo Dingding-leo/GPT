@@ -12,7 +12,7 @@
   "oos_consumed": false,
   "source_execution": {
     "main_base_sha": "4acef60ed95020de52f196e3910487bb2b480f02",
-    "head_sha": "8644d936c7cea9f8872a79833c7319308c4c2739",
+    "artifact_producing_head_sha": "8644d936c7cea9f8872a79833c7319308c4c2739",
     "workflow_run": 30370706298,
     "workflow_artifact_id": 8692787216,
     "workflow_artifact_sha256": "7b4548df64f88c310e418ae4c9711f7cca0c6dd1b5bf76253210b1da79947acd",
@@ -26,6 +26,14 @@
     "archive_timezone": "UTC+8",
     "feature_bucket_timezone": "UTC",
     "complete_hours_required": 24
+  },
+  "causal_performance_gate": {
+    "available_complete_hours_per_market": 24,
+    "required_prior_complete_hours_per_candidate": 720,
+    "v1_eligible_decisions": 0,
+    "v2_eligible_decisions": 0,
+    "return_sharpe_drawdown_turnover_permitted": false,
+    "reason": "The bounded checkpoint is intentionally shorter than the frozen estimator warm-up and therefore cannot generate any strategy decision or performance observation."
   },
   "markets_result": {
     "BTC-USDT": {
@@ -74,19 +82,20 @@
     }
   },
   "review_driven_repair": {
-    "reproduced_false_pass": "The v1 checkpoint combined two REST pages although only the after page overlapped the archive, accepted archive instrument-column mutation, and did not reject a deleted complete hour.",
+    "reproduced_false_pass": "The v1 checkpoint combined two REST pages although only the after page overlapped the archive, accepted archive instrument-column mutation, did not reject a deleted complete hour, and used set parity that could accept an equal-millisecond row-order mutation.",
     "repair": [
       "require archive instrument identity",
       "validate the complete declared UTC+8 exchange day and all 24 UTC feature hours",
       "preserve separate 100-row older and bounded newer REST pages",
       "require exact archive-adjacent ID sets and 200 economically identical archive matches",
       "require cross-page uniqueness and cursor-direction validity",
-      "require an equal-millisecond collision inside the matched overlap",
+      "require an equal-millisecond collision inside each sequence-validated REST page",
+      "prove public REST newest-first sequence reverses to one contiguous archive chronology",
       "canonicalize by timestamp_ms and arbitrary-precision numeric trade_id",
-      "reject conflicting duplicates and future-sensitive feature construction",
-      "reconstruct result and stress SHA-256 values"
+      "reject equal-millisecond order mutation, conflicting duplicates and future-sensitive feature construction",
+      "reconstruct result, adversarial-stress and chronology-stress SHA-256 values"
     ]
   },
   "verdict": "trade_flow_source_schema_checkpoint_survived_adversarial_stress",
-  "strategy_consequence": "The two frozen trade-flow variants are source-feasible, but no return, Sharpe, drawdown, turnover, benchmark residual or fee result has been calculated. Full development acquisition remains gated by exact-head review and explicit issue-14 authorization."
+  "strategy_consequence": "The two frozen trade-flow variants are causally reconstructable from bounded public data, but no return, Sharpe, drawdown, turnover, benchmark residual or fee result exists. Full development acquisition remains gated by exact-head review, a pre-run experiment inventory, and explicit issue-14 authorization."
 }
