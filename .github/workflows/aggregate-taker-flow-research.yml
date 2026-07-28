@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - scripts/run_aggregate_taker_flow_research.py
+      - scripts/write_aggregate_taker_flow_source_rejection.py
       - .github/workflows/aggregate-taker-flow-research.yml
   workflow_dispatch:
 
@@ -41,21 +42,36 @@ jobs:
       - name: Materialize focused lint repair
         run: |
           mkdir -p reports/research/aggregate-taker-flow-v1
-          ruff check --fix scripts/run_aggregate_taker_flow_research.py \
-            > reports/research/aggregate-taker-flow-v1/lint-before.txt 2>&1 || true
-          ruff format scripts/run_aggregate_taker_flow_research.py
-          ruff check scripts/run_aggregate_taker_flow_research.py \
-            > reports/research/aggregate-taker-flow-v1/lint-after.txt 2>&1 || true
-          ruff format --check scripts/run_aggregate_taker_flow_research.py
+          for script in \
+            scripts/run_aggregate_taker_flow_research.py \
+            scripts/write_aggregate_taker_flow_source_rejection.py
+          do
+            ruff check --fix "$script" \
+              >> reports/research/aggregate-taker-flow-v1/lint-before.txt 2>&1 || true
+            ruff format "$script"
+            ruff check "$script" \
+              >> reports/research/aggregate-taker-flow-v1/lint-after.txt 2>&1 || true
+            ruff format --check "$script"
+          done
           git diff -- scripts/run_aggregate_taker_flow_research.py \
+            scripts/write_aggregate_taker_flow_source_rejection.py \
             > reports/research/aggregate-taker-flow-v1/lint-repair.patch
 
       - name: Run frozen real-data diagnostic
         env:
           PYTHONPATH: src
         run: |
+          set +e
           python scripts/run_aggregate_taker_flow_research.py \
             --output-dir reports/research/aggregate-taker-flow-v1
+          primary_status=$?
+          set -e
+          if [[ ! -s reports/research/aggregate-taker-flow-v1/result-summary.json ]]; then
+            printf 'primary_status=%s\n' "$primary_status" \
+              > reports/research/aggregate-taker-flow-v1/primary-status.txt
+            python scripts/write_aggregate_taker_flow_source_rejection.py \
+              --output-dir reports/research/aggregate-taker-flow-v1
+          fi
 
       - name: Verify strict machine-readable result
         run: |
@@ -77,7 +93,7 @@ jobs:
 
       - name: Upload immutable diagnostic evidence
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93a7aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: aggregate-taker-flow-v1-${{ github.run_id }}-${{ github.run_attempt }}
           path: reports/research/aggregate-taker-flow-v1/
