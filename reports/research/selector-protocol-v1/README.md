@@ -34,6 +34,7 @@ The complete training evidence was published before the official OOS comparison:
 - BTC evidence publication commit: `ea5dfc91074662dec531ee67ae586fd9ca4b21e6`
 - ETH evidence publication head: `0539cf09ed0b57e77f88cb09a059c4638e6e1dde`
 - Official OOS result commit: `4b98ff134cc00df6bed580e045eb5f190011a5bd`
+- Confirmatory-method repair commit: `823ede521dc7542502f5ae0c5ca139a222a822e8`
 
 The `.b64` evidence files decode as follows:
 
@@ -54,7 +55,10 @@ BTC gzip            ce5f17f2e67d508bc312b6b3b0ffcce1e323309aad8f3cb9b236a8047300
 ETH training JSONL  46a7ba551162498fc1b69a13f85ad0ad4c17d2c9f9413923c89b96dd10129155
 ETH gzip            b1f6e5539970c7ae6f916d55cd7505377eade5b5a364b051efda777040469bf2
 Official result     8ffb4b2e267fa80379e01aade5d68f1ef0395cb876d98d4eb4463eddbe1eeb71
+Method repair       9b3da2df081a953ac502b5017dbe7c9c40840401af6a714ba98983a5beb68cc0
 ```
+
+The strategy metrics and policy definitions in the official result are unchanged. Its original `confirmatory` section is superseded by `confirmatory-method-repair.json` because Issue #536 freezes Holm correction across ten **alternative-market comparisons**, rather than ten worst-market endpoint tests.
 
 ## Results
 
@@ -80,7 +84,7 @@ Official result     8ffb4b2e267fa80379e01aade5d68f1ef0395cb876d98d4eb4463eddbe1e
 | S4 | 7.28% | 0.218 | 64.55 | 7.37 bps | 4/12 | 41.86% | -0.662 |
 | S5 | 16.36% | 0.371 | 55.84 | 12.17 bps | 6/12 | 31.11% | -0.619 |
 
-## Confirmatory uncertainty
+## Confirmatory uncertainty — repaired to the frozen multiplicity contract
 
 Paired bootstrap contract:
 
@@ -89,34 +93,46 @@ Paired bootstrap contract:
 - the fold boundary row is retained exactly once;
 - identical resampling indices across policies and markets;
 - seed `20260728`;
-- Holm correction across ten alternative-policy endpoints.
+- one intersection-union test per alternative-market pair;
+- each comparison requires both Sharpe delta `> 0` and net edge-per-turnover delta `> 0`;
+- Holm correction across the exact ten comparisons frozen in Issue #536: five alternatives × two markets.
 
-Every alternative has a non-positive observed worst-market Sharpe delta and edge-per-turnover delta versus S0. Every Holm-adjusted p-value is `1.0`, and every one-sided 95% lower bound is below zero.
+The first inference pass incorrectly applied Holm correction to ten worst-market endpoint tests. This was detected during review and repaired without changing any policy, position, return, fee, fold, data window, or OOS result. The complete corrected statistics are in `confirmatory-method-repair.json`.
 
-Closest alternative, S2:
-
-```text
-Worst-market Sharpe delta       -0.08323
-Basic 95% interval              [-0.20727, +0.10709]
-One-sided 95% lower bound       -0.19200
-
-Worst-market edge delta         -11.58 bps
-Basic 95% interval              [-24.91, +3.20] bps
-One-sided 95% lower bound       -23.22 bps
-```
-
-S4 demonstrates that the frozen top-two persistence rule does not repair the selector:
+All ten adjusted joint p-values are `1.0`. The only market-policy pair with both observed deltas above zero is ETH S5:
 
 ```text
-Worst-market Sharpe delta       -0.12444
-Worst-market edge delta         -4.67 bps
+ETH S5 Sharpe delta              +0.02892
+Sharpe one-sided 95% lower       -0.44499
+ETH S5 edge delta                +0.12812 bps
+Edge one-sided 95% lower         -16.58812 bps
+Joint raw p                       0.57848
+Holm-adjusted joint p             1.00000
 ```
+
+It therefore fails confirmatory inference, and S5 simultaneously performs materially worse than S0 on BTC.
+
+Closest structurally robust alternative, S2:
+
+```text
+BTC Sharpe delta                 -0.08323
+BTC Sharpe basic 95% interval    [-0.23194, -0.00976]
+BTC edge delta                   -11.58352 bps
+BTC edge basic 95% interval      [-28.14730, +3.17686] bps
+
+ETH Sharpe delta                 -0.04258
+ETH Sharpe basic 95% interval    [-0.31762, +0.18838]
+ETH edge delta                   -2.57132 bps
+ETH edge basic 95% interval      [-12.94175, +8.71643] bps
+```
+
+S4 demonstrates that the frozen top-two persistence rule does not repair the selector: it is identical to S0 on BTC and reduces ETH Sharpe by `0.12444` and edge per turnover by `4.67454 bps`.
 
 ## Statistical limits
 
 - Deflated Sharpe was not computed because the repository-wide count of independent architecture families is incomplete. The gate therefore fails closed.
-- CSCV/PBO was not reported because the predeclared promotion statistic is a paired hourly worst-market Sharpe and edge-per-turnover comparison; a fold-only CSCV ranking would not implement that frozen decision statistic.
+- CSCV/PBO was not reported because the predeclared promotion statistic is a paired hourly market-specific Sharpe and edge-per-turnover comparison; a fold-only CSCV ranking would not implement that frozen decision statistic.
 
 ## Decision
 
-No selector policy is nominated. S0 remains rejected for promotion, and none of S1–S5 improves both worst-market Sharpe and worst-market edge per turnover while meeting breadth and concentration gates. The correct next strategy step is a materially orthogonal temporal architecture or information source, not another selector rescue on this consumed BTC/ETH development window.
+No selector policy is nominated. S0 remains rejected for promotion, and none of S1–S5 improves Sharpe and net edge per turnover in both markets while meeting breadth and concentration gates. The correct next strategy step is a materially orthogonal temporal architecture or information source, not another selector rescue on this consumed BTC/ETH development window.
