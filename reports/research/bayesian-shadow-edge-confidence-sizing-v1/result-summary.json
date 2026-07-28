@@ -1,0 +1,197 @@
+{
+  "DSR": "not_calculated_global_independent_family_count_incomplete",
+  "PBO": "not_calculated_no_valid_complete_candidate_by_split_matrix_for_this_fixed_two-policy_overlay",
+  "bootstrap": {
+    "block_hours": 168,
+    "endpoints": {
+      "BTC_edge": {
+        "basic_95pct_interval": [-50.40948557918186, 25.61712869222261],
+        "centered_bootstrap_one_sided_p": 0.753249350129974,
+        "holm_adjusted_p": 1.0,
+        "observed_delta": -10.546382538334317,
+        "one_sided_95pct_lower_bound": -45.17260066669979
+      },
+      "BTC_sharpe": {
+        "basic_95pct_interval": [-0.7479082539716067, 0.8006288299148728],
+        "centered_bootstrap_one_sided_p": 0.4615076984603079,
+        "holm_adjusted_p": 1.0,
+        "observed_delta": 0.07143334159830039,
+        "one_sided_95pct_lower_bound": -0.610398085844697
+      },
+      "ETH_edge": {
+        "basic_95pct_interval": [-24.43458249295901, 40.703918622759495],
+        "centered_bootstrap_one_sided_p": 0.254749050189962,
+        "holm_adjusted_p": 1.0,
+        "observed_delta": 12.156018517870047,
+        "one_sided_95pct_lower_bound": -18.2059275754642
+      },
+      "ETH_sharpe": {
+        "basic_95pct_interval": [-0.5613380583216971, 0.9906515966835331],
+        "centered_bootstrap_one_sided_p": 0.26654669066186765,
+        "holm_adjusted_p": 1.0,
+        "observed_delta": 0.26394294290870113,
+        "one_sided_95pct_lower_bound": -0.4181895674369285
+      }
+    },
+    "method": "paired non-circular moving blocks within each fold; boundary row fixed once; centered-bootstrap errors; basic intervals; Holm FWER",
+    "resamples": 5000,
+    "seed": 20260728
+  },
+  "family_id": "bayesian-shadow-edge-confidence-sizing-v1",
+  "full_payload_sha256": "82fd1ece64f76ef22398347772863c1f4cd3dc9d1ebef66cb9f6470991533a40",
+  "inventory": {
+    "architecture_families_this_run": 1,
+    "folds_per_market": 12,
+    "global_independent_family_count": "unresolved; numeric DSR/PBO prohibited",
+    "markets": 2,
+    "new_alternatives": 1,
+    "policies_compared": 2,
+    "policy_fold_evaluations": 48
+  },
+  "markets": {
+    "BTC": {
+      "B0": {
+        "adjustment_count": 15991,
+        "annualized_arithmetic_mean": 0.15004997861086858,
+        "annualized_turnover": 45.22565511177244,
+        "calmar": 0.4845287499925324,
+        "edge_per_turnover_bps": 33.178066351947635,
+        "expected_shortfall_1pct": -0.012503248571290457,
+        "gross_annualized_arithmetic_mean": 0.17266280616675123,
+        "gross_total_return": 0.535260817391993,
+        "max_drawdown": -0.26842819219512637,
+        "mean_adjustment_interval_hours": 1.6209117628666125,
+        "modeled_fee_sum": 0.06690918838454035,
+        "net_total_return": 0.43589800625970354,
+        "no_trade_frequency": 0.38306327160493825,
+        "sharpe": 0.6368850433176486,
+        "time_in_market": 0.6123456790123457
+      },
+      "B1": {
+        "adjustment_count": 8567,
+        "annualized_arithmetic_mean": 0.09873432496480082,
+        "annualized_turnover": 43.62659260262843,
+        "calmar": 0.5592044618872856,
+        "edge_per_turnover_bps": 22.631683813613318,
+        "expected_shortfall_1pct": -0.0079194678154991,
+        "gross_annualized_arithmetic_mean": 0.12054762126611504,
+        "gross_total_return": 0.3880799312587413,
+        "max_drawdown": -0.16647584288606243,
+        "mean_adjustment_interval_hours": 3.0255632076572896,
+        "modeled_fee_sum": 0.06454345206964206,
+        "net_total_return": 0.30131940730355855,
+        "no_trade_frequency": 0.669483024691358,
+        "sharpe": 0.708318384915949,
+        "time_in_market": 0.3217206790123457
+      },
+      "B1_positive_fold_concentration": 0.7275419048813497,
+      "confidence": {
+        "mean": 0.21845125692113873,
+        "median": 0.0,
+        "p95": 0.9432528824055049,
+        "zero_frequency": 0.6031635802469136
+      },
+      "confidence_next_return_spearman": 0.004709679542273975,
+      "profitable_folds": [4, 6],
+      "profitable_years": [3, 2],
+      "residual_sharpe_vs_simple_trend": [-0.8179728829528203, -0.7792454635433707],
+      "validations": {
+        "B1_fee_reconstruction_error": 0.0,
+        "B1_net_reconstruction_error": 0.0,
+        "artifact_manifest_files_verified": 13,
+        "byte_identical_rerun_pass": true,
+        "fold_boundary_position_max_error": 0.0,
+        "future_suffix_confidence_prefix_max_error": 0.0,
+        "future_suffix_target_prefix_max_error": 0.0,
+        "hourly_grid_pass": true,
+        "position_bounds_pass": true
+      },
+      "worst168": [-0.21090386032257014, -0.11772938062798344],
+      "worst24": [-0.12867398029362243, -0.08554836372742025]
+    },
+    "ETH": {
+      "B0": {
+        "adjustment_count": 14413,
+        "annualized_arithmetic_mean": 0.07514902723914375,
+        "annualized_turnover": 62.381022737372376,
+        "calmar": 0.18049678225278934,
+        "edge_per_turnover_bps": 12.04677703915266,
+        "expected_shortfall_1pct": -0.01172071437396364,
+        "gross_annualized_arithmetic_mean": 0.10633953860783056,
+        "gross_total_return": 0.275580873759913,
+        "max_drawdown": -0.2902909770628198,
+        "mean_adjustment_interval_hours": 1.798376465690696,
+        "modeled_fee_sum": 0.09228973226898907,
+        "net_total_return": 0.16312612296541795,
+        "no_trade_frequency": 0.4439429012345679,
+        "sharpe": 0.3424722501636601,
+        "time_in_market": 0.5496141975308642
+      },
+      "B1": {
+        "adjustment_count": 7713,
+        "annualized_arithmetic_mean": 0.08383408772806154,
+        "annualized_turnover": 34.63818364723416,
+        "calmar": 0.5015776556938708,
+        "edge_per_turnover_bps": 24.202795557022707,
+        "expected_shortfall_1pct": -0.008037371363583961,
+        "gross_annualized_arithmetic_mean": 0.10115317955167863,
+        "gross_total_return": 0.31129121753700106,
+        "max_drawdown": -0.15371898791200356,
+        "mean_adjustment_interval_hours": 3.3605600933488913,
+        "modeled_fee_sum": 0.05124553197125054,
+        "net_total_return": 0.24579012809816847,
+        "no_trade_frequency": 0.7024305555555556,
+        "sharpe": 0.6064151930723612,
+        "time_in_market": 0.29085648148148147
+      },
+      "B1_positive_fold_concentration": 0.47433644394626634,
+      "confidence": {
+        "mean": 0.1991123500030584,
+        "median": 0.0,
+        "p95": 0.8999219929351805,
+        "zero_frequency": 0.6446373456790123
+      },
+      "confidence_next_return_spearman": 0.009275956766074761,
+      "profitable_folds": [5, 5],
+      "profitable_years": [1, 1],
+      "residual_sharpe_vs_simple_trend": [-0.5867302247137777, -0.48282171811053776],
+      "validations": {
+        "B1_fee_reconstruction_error": 0.0,
+        "B1_net_reconstruction_error": 0.0,
+        "artifact_manifest_files_verified": 13,
+        "byte_identical_rerun_pass": true,
+        "fold_boundary_position_max_error": 0.0,
+        "future_suffix_confidence_prefix_max_error": 0.0,
+        "future_suffix_target_prefix_max_error": 0.0,
+        "hourly_grid_pass": true,
+        "position_bounds_pass": true
+      },
+      "worst168": [-0.16600959771149115, -0.11355227266993051],
+      "worst24": [-0.09833773095831932, -0.04642672585034202]
+    }
+  },
+  "policy": {
+    "B0": "unchanged canonical target",
+    "B1": "B0 target multiplied by max(0, 2*Phi(sqrt(720)*mean(B0_net_720)/sample_sd(B0_net_720))-1)",
+    "one_bar_delay": true,
+    "shadow_path_non_recursive": true,
+    "window_hours": 720
+  },
+  "rejection_reasons": ["confirmatory_adjusted_lower_bounds_not_all_positive"],
+  "sample": {
+    "bar": "1H",
+    "development_markets": ["BTC-USDT", "ETH-USDT"],
+    "evaluation_end": "2026-07-07T23:00:00+00:00",
+    "evaluation_start": "2023-07-24T00:00:00+00:00",
+    "fee_one_way_bps": 5.0,
+    "observations_per_market": 25920,
+    "untouched_evidence_consumed": false
+  },
+  "source_artifacts": {
+    "BTC": {"id": 8683465243, "zip_sha256": "e9bdc2cee531f0b71539a6f4c2b306f2ae702e64bbbe8443ec16bf69c558147a"},
+    "ETH": {"id": 8683462187, "zip_sha256": "1f865024ae9d3ce7aa51bfe72bbab054b0377eef01780c75f60f6e8aa2cdc51e"}
+  },
+  "source_main": "fda3c8cc5fe8c1902ce7fbaf3fe51edd5c337791",
+  "source_workflow_run": 30347175588,
+  "verdict": "rejected_exact_family_cooldown"
+}
