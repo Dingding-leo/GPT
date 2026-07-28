@@ -1,0 +1,140 @@
+name: Trade Flow Development Comparison
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/run_trade_flow_research.py"
+      - "scripts/run_trade_flow_research_exact.py"
+      - ".github/workflows/trade-flow-development.yml"
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Exact 40-character commit SHA to evaluate
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: trade-flow-development-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  development:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    env:
+      EXPECTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      OKX_BASE_URL: https://www.okx.com
+      OUTPUT_DIR: reports/research/trade-flow-development
+
+    steps:
+      - name: Check out exact candidate head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact revision and public-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Validate research entry points
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            scripts/run_trade_flow_research.py \
+            scripts/run_trade_flow_research_exact.py
+          ruff check scripts/run_trade_flow_research.py scripts/run_trade_flow_research_exact.py
+
+      - name: Execute frozen V1/V2 development comparison
+        id: execute
+        continue-on-error: true
+        shell: bash
+        env:
+          PYTHONPATH: src:scripts
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          df -h
+          python scripts/run_trade_flow_research_exact.py \
+            --base-url "$OKX_BASE_URL" \
+            --output-dir "$OUTPUT_DIR" \
+            2>&1 | tee "$OUTPUT_DIR/execution.log"
+          df -h
+
+      - name: Write exact-head provenance
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$OUTPUT_DIR"
+          printf '%s\n' "$EXPECTED_SHA" > "$OUTPUT_DIR/tested-head-sha.txt"
+          printf '%s\n' "$GITHUB_RUN_ID" > "$OUTPUT_DIR/workflow-run-id.txt"
+          printf '%s\n' "${{ steps.execute.outcome }}" > "$OUTPUT_DIR/execution-outcome.txt"
+          find "$OUTPUT_DIR" -type f -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            > "$OUTPUT_DIR/file-sha256.txt" || true
+
+      - name: Upload immutable development evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: trade-flow-development-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: reports/research/trade-flow-development/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Enforce strategy execution result
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.execute.outcome }}" = "success"
+          test -s "$OUTPUT_DIR/result.json"
+          test -s "$OUTPUT_DIR/result.sha256"
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("reports/research/trade-flow-development")
+          raw = (root / "result.json").read_bytes()
+          expected = (root / "result.sha256").read_text().strip()
+          assert hashlib.sha256(raw).hexdigest() == expected
+          result = json.loads(raw)
+          assert result["architecture_family_id"] == "okx-spot-causal-trade-flow-resilience-v2"
+          assert result["candidate_count"] == 2
+          assert result["candidate_fold_evaluations"] == 48
+          assert result["canonical_fee_bps_one_way"] == 5.0
+          assert result["reserved_oos_consumed"] is False
+          assert result["verdict"] in {
+              "trade_flow_resilience_family_rejected",
+              "trade_flow_resilience_nominated_for_untouched_archive_replication",
+          }
+          PY
