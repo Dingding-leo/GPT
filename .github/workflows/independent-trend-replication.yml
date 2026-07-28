@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - scripts/run_independent_trend_replication.py
+      - scripts/run_independent_trend_replication_bounded.py
       - .github/workflows/independent-trend-replication.yml
 
 permissions:
@@ -56,7 +57,7 @@ jobs:
       - name: Execute frozen public-data replication
         run: |
           set -euo pipefail
-          python scripts/run_independent_trend_replication.py --output-dir "$OUTPUT_DIR"
+          python scripts/run_independent_trend_replication_bounded.py --output-dir "$OUTPUT_DIR"
 
       - name: Verify machine-readable evidence and build manifest
         shell: bash
@@ -73,6 +74,12 @@ jobs:
           universe = json.loads((root / "universe.json").read_text())
           result = json.loads((root / "result.json").read_text())
           assert universe["frozen_before_performance"] is True
+          qualifications = universe["qualification_results"]
+          assert qualifications
+          assert not all(
+              item.get("reason") == "qualification_acquisition_failure"
+              for item in qualifications
+          ), "all markets failed acquisition; no strategy verdict is authorized"
           assert result["policy"]["lookback_hours"] == 2160
           assert result["policy"]["execution_delay_hours"] == 1
           assert result["policy"]["fee_bps_one_way"] == 5.0
