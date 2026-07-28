@@ -13,7 +13,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
-import math
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -25,6 +25,7 @@ SPEC = importlib.util.spec_from_file_location("funding_basis_core", MODULE_PATH)
 if SPEC is None or SPEC.loader is None:
     raise RuntimeError(f"cannot load {MODULE_PATH}")
 CORE = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = CORE
 SPEC.loader.exec_module(CORE)
 
 
