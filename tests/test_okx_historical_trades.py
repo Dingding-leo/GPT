@@ -40,12 +40,23 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
         ],
         check=True,
     )
+    subprocess.run(
+        [
+            sys.executable,
+            "scripts/verify_okx_trade_flow_chronology.py",
+            "--output-dir",
+            str(output_dir),
+        ],
+        check=True,
+    )
 
     result_path = output_dir / "result.json"
     result_bytes = result_path.read_bytes()
     result = json.loads(result_bytes)
     stress_bytes = (output_dir / "stress-result.json").read_bytes()
     stress = json.loads(stress_bytes)
+    chronology_bytes = (output_dir / "chronology-stress.json").read_bytes()
+    chronology = json.loads(chronology_bytes)
 
     assert result["schema_version"] == "trade-flow-source-schema-checkpoint-v2"
     assert result["architecture_family_id"] == "okx-spot-causal-trade-flow-resilience-v2"
@@ -58,7 +69,9 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
         "timezone": "UTC+8",
         "hourly_feature_buckets": "UTC",
     }
-    assert result["verdict"] == ("trade_flow_source_schema_checkpoint_survived_adversarial_stress")
+    assert result["verdict"] == (
+        "trade_flow_source_schema_checkpoint_survived_adversarial_stress"
+    )
     assert [market["inst_id"] for market in result["markets"]] == [
         "BTC-USDT",
         "ETH-USDT",
@@ -69,7 +82,8 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
         assert market["archive"]["complete_24h_passed"] is True
         assert market["archive"]["hour_count"] == 24
         assert (
-            market["archive"]["expected_end_exclusive_ms"] - market["archive"]["expected_start_ms"]
+            market["archive"]["expected_end_exclusive_ms"]
+            - market["archive"]["expected_start_ms"]
             == 24 * 3_600_000
         )
 
@@ -102,10 +116,50 @@ def test_live_trade_flow_source_schema_checkpoint() -> None:
     assert stress["performance_inspected"] is False
     assert stress["oos_consumed"] is False
     assert stress["defects"] == []
-    assert stress["verdict"] == ("trade_flow_source_schema_checkpoint_survived_adversarial_stress")
+    assert stress["verdict"] == (
+        "trade_flow_source_schema_checkpoint_survived_adversarial_stress"
+    )
     assert result["adversarial_stress"]["verdict"] == stress["verdict"]
     assert result["adversarial_stress"]["defects"] == []
     assert all(market["status"] == "passed" for market in stress["markets"])
 
+    assert chronology["schema_version"] == "trade-flow-equal-ms-chronology-stress-v1"
+    assert chronology["architecture_family_id"] == result["architecture_family_id"]
+    assert chronology["candidate_count"] == 2
+    assert chronology["canonical_fee_bps_one_way"] == 5.0
+    assert chronology["performance_inspected"] is False
+    assert chronology["oos_consumed"] is False
+    assert chronology["verdict"] == (
+        "numeric_trade_id_chronology_proven_and_strategy_material"
+    )
+    assert [market["inst_id"] for market in chronology["markets"]] == [
+        "BTC-USDT",
+        "ETH-USDT",
+    ]
+    for market in chronology["markets"]:
+        assert market["status"] == "passed"
+        assert market["archive_file_trade_ids_strictly_ascending"] is True
+        assert market["archive_file_timestamps_nondecreasing"] is True
+        assert market["archive_file_equals_canonical_chronology"] is True
+        assert market["numeric_id_tie_break_matches_public_rest_sequence"] is True
+        assert market["legacy_set_only_false_pass_reproduced"] is True
+        assert market["equal_ms_order_mutation_rejected"] is True
+        for page_name in ("older_page", "newer_page"):
+            page = market[page_name]
+            assert page["rows"] == 100
+            assert page["response_trade_ids_strictly_descending"] is True
+            assert page["response_timestamps_nonincreasing"] is True
+            assert page["reversed_response_matches_contiguous_archive_sequence"] is True
+            assert page["equal_millisecond_groups"] > 0
+            assert page["maximum_equal_millisecond_group_size"] >= 2
+        impact = market["v2_tie_break_impact"]
+        assert impact["complete_hours"] == 24
+        assert impact["impact_return_changed_hours"] > 0
+        assert impact["mean_absolute_impact_delta_bps"] > 0
+        assert impact["maximum_absolute_impact_delta_bps"] > 0
+
     assert (output_dir / "result.sha256").read_text().strip() == sha256(result_bytes)
     assert (output_dir / "stress-result.sha256").read_text().strip() == sha256(stress_bytes)
+    assert (output_dir / "chronology-stress.sha256").read_text().strip() == sha256(
+        chronology_bytes
+    )
