@@ -109,8 +109,9 @@ def tie_break_impact(rows: list[source.Trade]) -> dict[str, Any]:
         "mean_absolute_impact_delta_bps": (
             sum(abs(value) for value in deltas) / len(deltas) * 10_000
         ),
-        "maximum_absolute_impact_delta_bps": max(abs(value) for value in deltas)
-        * 10_000,
+        "maximum_absolute_impact_delta_bps": (
+            max(abs(value) for value in deltas) * 10_000
+        ),
         "signed_mean_impact_delta_bps": sum(deltas) / len(deltas) * 10_000,
     }
 
