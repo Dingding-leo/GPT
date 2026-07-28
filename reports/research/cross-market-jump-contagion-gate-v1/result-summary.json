@@ -1,0 +1,142 @@
+{
+  "schema_version": 1,
+  "family_id": "cross-market-jump-contagion-gate-v1",
+  "issue": 548,
+  "verdict": "rejected_exact_family_cooldown",
+  "candidate_count": 1,
+  "policies": [
+    "J0_canonical",
+    "J1_exogenous_jump_cash_1h"
+  ],
+  "parameters": {
+    "bar": "1H",
+    "lookback_hours": 720,
+    "causal_quantile": 0.01,
+    "cash_hold_hours": 1,
+    "one_way_fee": 0.0005,
+    "bootstrap_block_hours": 168,
+    "bootstrap_resamples": 5000,
+    "bootstrap_seed": 20260728
+  },
+  "sample": {
+    "markets": ["BTC-USDT", "ETH-USDT"],
+    "oos_start": "2023-07-24T00:00:00Z",
+    "oos_end": "2026-07-07T23:00:00Z",
+    "oos_hours_per_market": 25920,
+    "folds_per_market": 12,
+    "workflow_run_id": 30347175588,
+    "workflow_head": "d7cc15839755484b682d6e9094298b8a32f70230",
+    "new_untouched_oos_consumed": false
+  },
+  "provenance": {
+    "BTC-USDT_artifact_zip_sha256": "e9bdc2cee531f0b71539a6f4c2b306f2ae702e64bbbe8443ec16bf69c558147a",
+    "ETH-USDT_artifact_zip_sha256": "1f865024ae9d3ce7aa51bfe72bbab054b0377eef01780c75f60f6e8aa2cdc51e",
+    "manifest_files_verified_per_market": 13,
+    "snapshot_return_max_error": {
+      "BTC-USDT": 1.1102230246251565e-16,
+      "ETH-USDT": 1.1102230246251565e-16
+    },
+    "causal_suffix_invariance": true,
+    "deterministic_replay": true
+  },
+  "results": {
+    "BTC-USDT": {
+      "exogenous_market": "ETH-USDT",
+      "feature_missing_hours": 0,
+      "event_count": 329,
+      "event_occupancy": 0.012692901234567901,
+      "event_minus_non_event_next_hour_bps": 8.060067342838352,
+      "baseline": {
+        "net_total_return": 0.43589800625970354,
+        "sharpe": 0.6368850433176486,
+        "max_drawdown": -0.26842819219512637,
+        "annualized_turnover": 45.22565511177244,
+        "edge_per_turnover_bps": 33.178066351947635,
+        "profitable_folds": 4,
+        "benchmark_residual_sharpe": -0.8179728829528203
+      },
+      "candidate": {
+        "net_total_return": 0.2608468651380369,
+        "sharpe": 0.4576323589687659,
+        "max_drawdown": -0.266815585016832,
+        "annualized_turnover": 124.94761023491917,
+        "edge_per_turnover_bps": 8.35017762613803,
+        "profitable_folds": 4,
+        "benchmark_residual_sharpe": -1.0024014757078263
+      },
+      "delta": {
+        "net_total_return": -0.17505114112166664,
+        "sharpe": -0.1792526843488827,
+        "annualized_turnover": 79.72195512314673,
+        "edge_per_turnover_bps": -24.827888725809604
+      },
+      "bootstrap": {
+        "sharpe_delta_basic_95_ci": [-0.4323808516909233, 0.07703774309427985],
+        "sharpe_delta_one_sided_95_lower": -0.39961339217230535,
+        "sharpe_delta_holm_p": 1.0,
+        "edge_delta_bps_basic_95_ci": [-62.59706027527892, 13.703839204937616],
+        "edge_delta_bps_one_sided_95_lower": -56.13559695460688,
+        "edge_delta_holm_p": 1.0
+      }
+    },
+    "ETH-USDT": {
+      "exogenous_market": "BTC-USDT",
+      "feature_missing_hours": 0,
+      "event_count": 322,
+      "event_occupancy": 0.01242283950617284,
+      "event_minus_non_event_next_hour_bps": -2.6272194344342203,
+      "baseline": {
+        "net_total_return": 0.16312612296541795,
+        "sharpe": 0.3424722501636601,
+        "max_drawdown": -0.2902909770628198,
+        "annualized_turnover": 62.381022737372376,
+        "edge_per_turnover_bps": 12.046777039152659,
+        "profitable_folds": 5,
+        "benchmark_residual_sharpe": -0.5867302247137777
+      },
+      "candidate": {
+        "net_total_return": 0.15456966854328935,
+        "sharpe": 0.3346468275774911,
+        "max_drawdown": -0.32216897292885815,
+        "annualized_turnover": 107.70565127587244,
+        "edge_per_turnover_bps": 6.611649263608221,
+        "profitable_folds": 4,
+        "benchmark_residual_sharpe": -0.5920702958927423
+      },
+      "delta": {
+        "net_total_return": -0.008556454422128601,
+        "sharpe": -0.007825422586169029,
+        "annualized_turnover": 45.324628538500065,
+        "edge_per_turnover_bps": -5.435127775544437
+      },
+      "bootstrap": {
+        "sharpe_delta_basic_95_ci": [-0.23995737334828204, 0.20576986589592042],
+        "sharpe_delta_one_sided_95_lower": -0.19397559956455077,
+        "sharpe_delta_holm_p": 1.0,
+        "edge_delta_bps_basic_95_ci": [-24.960742244689577, 14.475615850775565],
+        "edge_delta_bps_one_sided_95_lower": -21.67331162043657,
+        "edge_delta_holm_p": 1.0
+      }
+    }
+  },
+  "cooldown_signature": {
+    "lookback_hours": 720,
+    "quantile": 0.01,
+    "cash_hold_hours": 1,
+    "exogenous_mapping": {
+      "BTC-USDT": "ETH-USDT",
+      "ETH-USDT": "BTC-USDT"
+    },
+    "rescue_prohibited_on_same_window": [
+      "change quantile",
+      "change lookback",
+      "change hold time",
+      "partial exposure",
+      "add volatility filter",
+      "post-hoc market exclusion"
+    ]
+  },
+  "full_result_payload_content_hash": "5cc1d7860df378c8a78910218c37652cd02c8c227f692bc330fc82138097a2c5",
+  "local_full_result_file_sha256": "9f1d1435075cfdadd252c7f5631bf923198b4dc57160e9ea0d689e14da3107c2",
+  "local_reproducer_sha256": "2723751a2f723e3263d67e7b2d46c037d266e777c81cca6a91b655528661fea0"
+}
