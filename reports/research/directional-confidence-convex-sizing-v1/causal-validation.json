@@ -1,0 +1,19 @@
+{
+  "BTC-USDT": {
+    "cutoff_utc": "2024-02-17T08:00:00+00:00",
+    "future_changed": true,
+    "max_pre_cutoff_direction_error": 0.0,
+    "max_pre_cutoff_sized_target_error": 0.0,
+    "max_pre_cutoff_target_error": 0.0,
+    "mutated_future_rows": 21408
+  },
+  "ETH-USDT": {
+    "cutoff_utc": "2024-02-17T08:00:00+00:00",
+    "future_changed": true,
+    "max_pre_cutoff_direction_error": 0.0,
+    "max_pre_cutoff_sized_target_error": 0.0,
+    "max_pre_cutoff_target_error": 0.0,
+    "mutated_future_rows": 21408
+  },
+  "payload_sha256": "6b06dc01921198e3094fa60706a91572479236e617b9b36cbcb1f05bd709b2bf"
+}
