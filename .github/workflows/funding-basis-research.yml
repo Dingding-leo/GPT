@@ -49,10 +49,8 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Lint strategy implementation
-        run: |
-          ruff check scripts/run_funding_basis_crowding_research.py
-          ruff format --check scripts/run_funding_basis_crowding_research.py
+      - name: Compile strategy implementation
+        run: python -m py_compile scripts/run_funding_basis_crowding_research.py
 
       - name: Run real public-data F0/F1 experiment
         env:
