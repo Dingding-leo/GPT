@@ -1,0 +1,87 @@
+name: Funding Basis Strategy Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/run_funding_basis_research.py.gz
+      - .github/workflows/funding-basis-research.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: funding-basis-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Materialize frozen reproducer
+        run: |
+          mkdir -p reports/research/funding-basis-crowding-unwind-v2
+          gzip -dc scripts/run_funding_basis_research.py.gz > /tmp/run_funding_basis_research.py
+          ruff check --fix /tmp/run_funding_basis_research.py
+          ruff format /tmp/run_funding_basis_research.py
+          ruff check /tmp/run_funding_basis_research.py
+          ruff format --check /tmp/run_funding_basis_research.py
+          python -m py_compile /tmp/run_funding_basis_research.py
+          cp /tmp/run_funding_basis_research.py \
+            reports/research/funding-basis-crowding-unwind-v2/reproduce.py
+
+      - name: Run frozen real-data F0/F1 diagnostic
+        env:
+          PYTHONPATH: src
+        run: |
+          python /tmp/run_funding_basis_research.py \
+            --output-dir reports/research/funding-basis-crowding-unwind-v2
+
+      - name: Verify machine-readable result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("reports/research/funding-basis-crowding-unwind-v2/result-summary.json")
+          result = json.loads(path.read_text())
+          assert result["family_id"] == "funding-basis-crowding-unwind-v2"
+          assert result["candidate_count"] == 2
+          assert result["fee_one_way_bps"] == 5.0
+          assert set(result["markets"]) == {"BTC-USDT", "ETH-USDT"}
+          assert result["verdict"] in {
+              "insufficient_source_coverage",
+              "insufficient_history_positive_diagnostic",
+              "funding_basis_family_rejected_recent_window",
+          }
+          PY
+          sha256sum -c reports/research/funding-basis-crowding-unwind-v2/result-summary.sha256
+
+      - name: Upload immutable strategy evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: funding-basis-crowding-unwind-v2-${{ github.run_id }}-${{ github.run_attempt }}
+          path: reports/research/funding-basis-crowding-unwind-v2/
+          if-no-files-found: error
+          retention-days: 30
