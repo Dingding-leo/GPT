@@ -1,0 +1,101 @@
+{
+  "architecture_family_id": "okx-spot-causal-trade-flow-resilience-v2",
+  "candidate_count": 2,
+  "canonical_fee_bps_one_way": 5.0,
+  "markets": {
+    "BTC-USDT": {
+      "archive_csv_sha256": "c894d275ebf77a693c91f998a2ed6d25feb332b096106dafe5dde1bf648fceae",
+      "archive_rows": 367392,
+      "duplicate_trade_identities": 0,
+      "equal_millisecond_groups": 51508,
+      "equal_ms_trade_ids_strictly_increasing_in_raw_source": true,
+      "feature_hash_reproduced": true,
+      "feature_sha256": "2f3651f8be6c51a21561383681b52a615085caa77176a2ea9a5bb1c9ebbbce9a",
+      "maximum_equal_millisecond_group": 621,
+      "missing_utc_hours": 0,
+      "policy_readiness": {
+        "available_complete_hours": 24,
+        "performance_metrics_permitted": false,
+        "required_prior_complete_hours": 720,
+        "v1_eligible_decisions": 0,
+        "v2_eligible_decisions": 0
+      },
+      "raw_order_equals_canonical_order": true,
+      "raw_timestamp_non_decreasing": true,
+      "raw_trade_id_strictly_increasing": true,
+      "rest_cross_page_unique": true,
+      "rest_cursor_direction_passed": true,
+      "rest_economic_fields_match_archive": true,
+      "rest_exact_archive_adjacent_newer_ids": true,
+      "rest_exact_archive_adjacent_older_ids": true,
+      "rest_newer_rows": 100,
+      "rest_older_rows": 100
+    },
+    "ETH-USDT": {
+      "archive_csv_sha256": "149767fd07c421c78903af0734d7c70408fcd57be7e4901ac0c3fcfa5d0d8da0",
+      "archive_rows": 261544,
+      "duplicate_trade_identities": 0,
+      "equal_millisecond_groups": 44858,
+      "equal_ms_trade_ids_strictly_increasing_in_raw_source": true,
+      "feature_hash_reproduced": true,
+      "feature_sha256": "acac8993252a57c3db3cc47605eb7dfec297d6f2bf6a834de2bbf7e58d8c917c",
+      "maximum_equal_millisecond_group": 1212,
+      "missing_utc_hours": 0,
+      "policy_readiness": {
+        "available_complete_hours": 24,
+        "performance_metrics_permitted": false,
+        "required_prior_complete_hours": 720,
+        "v1_eligible_decisions": 0,
+        "v2_eligible_decisions": 0
+      },
+      "raw_order_equals_canonical_order": true,
+      "raw_timestamp_non_decreasing": true,
+      "raw_trade_id_strictly_increasing": true,
+      "rest_cross_page_unique": true,
+      "rest_cursor_direction_passed": true,
+      "rest_economic_fields_match_archive": true,
+      "rest_exact_archive_adjacent_newer_ids": true,
+      "rest_exact_archive_adjacent_older_ids": true,
+      "rest_newer_rows": 100,
+      "rest_older_rows": 100
+    }
+  },
+  "markets_predeclared": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "markets_removed_after_inspection": [],
+  "methodological_repair": {
+    "defect": "Whole workflow ZIP equality is invalid as a replication endpoint because request RTT, server-time metadata, and unrelated walk-forward provenance legitimately change between runs.",
+    "repair": "Compare an explicit strategy-critical content manifest containing exact archive bytes, exact REST economic-response bytes, frozen feature hashes, candidate count, fee, and source/stress verdicts."
+  },
+  "oos_consumed": false,
+  "performance_blocker": "The frozen source checkpoint contains 24 hours, below both variants' 720-hour causal estimator warm-up, and issue #14 has not authorized development acquisition.",
+  "performance_inspected": false,
+  "performance_metrics": {
+    "drawdown": null,
+    "net_return": null,
+    "sharpe": null,
+    "turnover": null
+  },
+  "sample": {
+    "complete_hours_per_market": 24,
+    "end_exclusive_ms": 1784908800000,
+    "start_ms": 1784822400000
+  },
+  "schema_version": "trade-flow-source-feature-independent-replication-v1",
+  "strategy_consequence": "The exact BTC/ETH public-trade source and hourly feature bytes replicated across two independent workflow executions. This clears only the bounded source-reconstruction question; it neither improves nor validates V1/V2 profitability and does not authorize the reserved development or untouched windows.",
+  "strategy_critical_content_manifest_equal": true,
+  "verdict": "independent_source_feature_replication_passed_performance_still_prohibited",
+  "whole_zip_digest_equal": false,
+  "workflow_artifacts": [
+    {
+      "role": "reviewed_adversarial_repair",
+      "sha256": "f14b9f75f27d149364eb099932f9a74391fcad9eda1e72eeda399a0c80b6730b"
+    },
+    {
+      "role": "independent_exact_head_replay",
+      "sha256": "7b4548df64f88c310e418ae4c9711f7cca0c6dd1b5bf76253210b1da79947acd"
+    }
+  ]
+}
