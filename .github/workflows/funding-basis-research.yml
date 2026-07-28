@@ -87,7 +87,8 @@ jobs:
               "funding_basis_family_rejected_recent_window",
           }
           PY
-          sha256sum -c reports/research/funding-basis-crowding-unwind-v2/result-summary.sha256
+          cd reports/research/funding-basis-crowding-unwind-v2
+          sha256sum -c result-summary.sha256
 
       - name: Upload immutable strategy evidence
         if: ${{ !cancelled() }}
