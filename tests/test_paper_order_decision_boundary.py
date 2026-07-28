@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 import pytest
 
 from gpt_quant.paper_decision_store import PaperOrderDecision as StoreDecision
-from gpt_quant.paper_order_decision import PaperOrderDecision, _MAX_SERIALIZED_BYTES
+from gpt_quant.paper_order_decision import _MAX_SERIALIZED_BYTES, PaperOrderDecision
 
 
 def _decision() -> PaperOrderDecision:
