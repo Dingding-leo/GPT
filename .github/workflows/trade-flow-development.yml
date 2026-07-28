@@ -25,6 +25,8 @@ concurrency:
 jobs:
   format-sources:
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     env:
       EXPECTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
 
@@ -34,7 +36,7 @@ jobs:
         with:
           ref: ${{ env.EXPECTED_SHA }}
           fetch-depth: 0
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Verify exact revision
         shell: bash
@@ -88,6 +90,28 @@ jobs:
             | sort -z \
             | xargs -0 sha256sum \
             > reports/research/trade-flow-formatted-sources/file-sha256.txt
+
+      - name: Commit exact formatting repair to the canonical PR branch
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        env:
+          HEAD_BRANCH: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- \
+            scripts/run_trade_flow_research.py \
+            scripts/run_trade_flow_research_exact.py \
+            scripts/run_trade_flow_research_boundary.py; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            scripts/run_trade_flow_research.py \
+            scripts/run_trade_flow_research_exact.py \
+            scripts/run_trade_flow_research_boundary.py
+          git commit -m "style: format trade-flow research sources"
+          git push origin "HEAD:${HEAD_BRANCH}"
 
       - name: Upload formatted source candidates
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -221,6 +245,13 @@ jobs:
           assert result["review_driven_month_boundary_repair"][
               "all_overlaps_limited_to_boundary_hours"
           ] is True
+          guard = result["review_driven_reserved_suffix_guard"]
+          assert guard["economic_rows_at_or_after_end_inspected"] == 0
+          assert guard["reserved_economic_suffix_unread"] is True
+          assert sorted(guard["markets_with_unread_boundary"]) == [
+              "BTC-USDT",
+              "ETH-USDT",
+          ]
           assert result["verdict"] in {
               "trade_flow_resilience_family_rejected",
               "trade_flow_resilience_nominated_for_untouched_archive_replication",
