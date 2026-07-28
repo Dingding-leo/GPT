@@ -29,9 +29,7 @@ def sha256(data: bytes) -> str:
 
 
 def canonical_json(value: Any) -> bytes:
-    return (
-        json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n"
-    ).encode()
+    return (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode()
 
 
 def request_bytes(url: str, timeout: float = 30.0) -> tuple[bytes, str, float]:
@@ -195,9 +193,7 @@ def hourly_features(rows: list[Trade], *, reorder: bool = True) -> list[dict[str
         total = sum((row[3] * row[4] for row in hour_rows), Decimal())
         signed = sum(
             (
-                row[3]
-                * row[4]
-                * (Decimal(1) if row[2] == "buy" else Decimal(-1))
+                row[3] * row[4] * (Decimal(1) if row[2] == "buy" else Decimal(-1))
                 for row in hour_rows
             ),
             Decimal(),
@@ -245,26 +241,18 @@ def strategy_diagnostic(rows: list[Trade]) -> dict[str, Any]:
     changed_suffix[-1] = tuple(changed_last)  # type: ignore[assignment]
 
     cutoff_ms = cutoff * HOUR_MS
-    original_prefix = [
-        row for row in hourly_features(ordered) if row["hour_start_ms"] <= cutoff_ms
-    ]
+    original_prefix = [row for row in hourly_features(ordered) if row["hour_start_ms"] <= cutoff_ms]
     changed_prefix = [
-        row
-        for row in hourly_features(prefix + changed_suffix)
-        if row["hour_start_ms"] <= cutoff_ms
+        row for row in hourly_features(prefix + changed_suffix) if row["hour_start_ms"] <= cutoff_ms
     ]
 
     trade_id_order = sorted(ordered, key=lambda row: row[1])
     inversions = sum(
-        left[5] > right[5]
-        for left, right in zip(trade_id_order, trade_id_order[1:], strict=True)
+        left[5] > right[5] for left, right in zip(trade_id_order, trade_id_order[1:], strict=True)
     )
-    collision_sizes = [
-        len(group) for group in timestamp_groups.values() if len(group) > 1
-    ]
+    collision_sizes = [len(group) for group in timestamp_groups.values() if len(group) > 1]
     naive_changes = sum(
-        left != right
-        for left, right in zip(naive_base, naive_permuted, strict=True)
+        left != right for left, right in zip(naive_base, naive_permuted, strict=True)
     )
     return {
         "hours": len(base_features),
@@ -455,15 +443,11 @@ def market_checkpoint(
 
     archive_by_id = {(row[0], row[1]): row for row in archive_rows}
     overlap = [row for row in rest_rows if (row[0], row[1]) in archive_by_id]
-    mismatches = [
-        row
-        for row in overlap
-        if archive_by_id[(row[0], row[1])][2:] != row[2:]
-    ]
+    mismatches = [row for row in overlap if archive_by_id[(row[0], row[1])][2:] != row[2:]]
     replay_rows = canonicalize(parse_archive_csv(csv_data, inst_id))
     diagnostic = strategy_diagnostic(archive_rows)
-    diagnostic["exact_byte_replay_passed"] = (
-        hourly_features(replay_rows) == hourly_features(archive_rows)
+    diagnostic["exact_byte_replay_passed"] = hourly_features(replay_rows) == hourly_features(
+        archive_rows
     )
 
     parity_passed = len(overlap) >= 20 and not mismatches
@@ -476,11 +460,7 @@ def market_checkpoint(
             diagnostic["exact_byte_replay_passed"],
         )
     )
-    status = (
-        "checkpoint_passed"
-        if parity_passed and diagnostic_passed
-        else "checkpoint_rejected"
-    )
+    status = "checkpoint_passed" if parity_passed and diagnostic_passed else "checkpoint_rejected"
     return {
         "inst_id": inst_id,
         "status": status,
