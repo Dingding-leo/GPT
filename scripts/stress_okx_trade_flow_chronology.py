@@ -20,7 +20,8 @@ def nonincreasing(values: list[int]) -> bool:
 
 
 def archive_sequence(
-    archive_rows: list[source.Trade], rest_rows: list[source.Trade]
+    archive_rows: list[source.Trade],
+    rest_rows: list[source.Trade],
 ) -> tuple[int, int]:
     if len(rest_rows) != source.REST_PAGE_SIZE:
         raise ValueError("REST page is not exactly 100 rows")
@@ -63,7 +64,8 @@ def legacy_set_gate_accepts(
 
 
 def equal_ms_order_attack(
-    archive_rows: list[source.Trade], rest_rows: list[source.Trade]
+    archive_rows: list[source.Trade],
+    rest_rows: list[source.Trade],
 ) -> dict[str, Any]:
     groups: dict[int, list[int]] = defaultdict(list)
     for index, row in enumerate(rest_rows):
@@ -104,18 +106,16 @@ def tie_break_impact(rows: list[source.Trade]) -> dict[str, Any]:
     return {
         "complete_hours": len(ascending),
         "impact_return_changed_hours": len(deltas),
-        "mean_absolute_impact_delta_bps": sum(abs(value) for value in deltas)
-        / len(deltas)
-        * 10_000,
+        "mean_absolute_impact_delta_bps": (
+            sum(abs(value) for value in deltas) / len(deltas) * 10_000
+        ),
         "maximum_absolute_impact_delta_bps": max(abs(value) for value in deltas)
         * 10_000,
         "signed_mean_impact_delta_bps": sum(deltas) / len(deltas) * 10_000,
     }
 
 
-def page_result(
-    archive_rows: list[source.Trade], rest_rows: list[source.Trade]
-) -> dict[str, Any]:
+def page_result(archive_rows: list[source.Trade], rest_rows: list[source.Trade]) -> dict[str, Any]:
     start, end = archive_sequence(archive_rows, rest_rows)
     collisions = equal_ms_groups(rest_rows)
     if not collisions:
