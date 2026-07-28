@@ -1,1 +1,99 @@
-__PLACEHOLDER__
+{
+  "schema_version": "adaptive-market-state-proxy-training-gate-v1",
+  "repository": "Dingding-leo/GPT",
+  "main_sha_inspected": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "issue": 538,
+  "family_id": "adaptive-market-state-dlm-v2",
+  "classification": "training-only information gate; non-promotional proxy diagnostic",
+  "hard_boundary": {
+    "bar": "1H",
+    "positions": ["cash", "long"],
+    "per_instrument_temporal_rule": true,
+    "cross_sectional_allocation": false,
+    "fee_bps_one_way": 5.0,
+    "private_or_order_endpoints_used": false,
+    "official_development_oos_consumed": false,
+    "untouched_replication_consumed": false,
+    "prospective_observations_consumed": false
+  },
+  "objective": "Test whether a fixed lagged aggregate-market state adds robust low-turnover information beyond static and slow-recursive own-history controls before consuming the single official A2 development comparison.",
+  "policies": {
+    "A0": "static univariate ridge control, penalty 1e-4",
+    "A1": "slow univariate RLS control, lambda 0.995",
+    "A2_proxy": "slow RLS with four lagged robust aggregate-state medians from a six-market immutable survivorship-conditioned proxy",
+    "simple_trend": "fixed 2160H own-instrument long/cash benchmark"
+  },
+  "utility": "U(p)=p*mu-0.5*p^2*predictive_variance-0.0005*abs(p-prev); p in {0,1}",
+  "execution": "completed-hour features at t; position earns open[t+1] to open[t+2]",
+  "training_only_protocol": {
+    "rolling_training_hours": 17520,
+    "canonical_folds": 12,
+    "origins_per_fold": 3,
+    "block_hours": 168,
+    "evaluated_hours_per_target_policy": 6048,
+    "official_oos": "not run"
+  },
+  "source_artifacts": {
+    "canonical_btc_eth_workflow_run": 30401519824,
+    "canonical_btc_artifact_id": 8704977298,
+    "canonical_btc_artifact_sha256": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c",
+    "canonical_eth_artifact_id": 8704978112,
+    "canonical_eth_artifact_sha256": "e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3",
+    "six_market_workflow_run": 30361747798,
+    "six_market_artifact_id": 8689948931,
+    "six_market_artifact_sha256": "dc6da3988a80f7b8854062f23785327848bbf4ff53bb0a12183906bec280b1b4",
+    "candle_csv_sha256": {
+      "BTC-USDT": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "ETH-USDT": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "CFX-USDT": "1834f8dc2263f2e7fe4a018de9b75e7777a73f5f74770f1febf7fd2d28f24098",
+      "DOGE-USDT": "70c324c1f5d857b3c28badb035c3f5d13315bb388b0f45da6112d6b95d45e035",
+      "FIL-USDT": "89956b880a55ca1dd9451b39da2c3270cfb801aebb4b067de0eb70a1fadf15d6",
+      "LTC-USDT": "8aeff99233dbd5b3c5e32282282feacf77d0fb2f298deb9d656db56e41cb86f0",
+      "SOL-USDT": "ef1264bfc54f56240395e79f3ca7dc382d82fd6f94bc0aec4e4e4bf418b9066e",
+      "XRP-USDT": "bddee31e05abfd8304137cd389a6dc1b531e7757adfac69371ef5f3db7325e56"
+    }
+  },
+  "aggregate_proxy": {
+    "markets": ["CFX-USDT", "DOGE-USDT", "FIL-USDT", "LTC-USDT", "SOL-USDT", "XRP-USDT"],
+    "hours_with_at_least_five_members": 12696,
+    "normalized_hours_available": 9696,
+    "first_available_utc": "2023-08-23T00:00:00+00:00",
+    "last_available_utc": "2025-07-06T23:00:00+00:00",
+    "mean_member_count": 3.9410256410256412
+  },
+  "metrics": {
+    "BTC-USDT": {
+      "A0": {"net_return": -0.09734318119501784, "sharpe": -0.5447046408479169, "max_drawdown": -0.20707858615183716, "turnover": 19.0, "annualized_turnover": 27.51984126984127, "fees": 0.0095, "net_edge_per_turnover_bps": -44.65335947977528, "profitable_blocks": 6, "profitable_folds": 3, "median_state_run_hours": 139.0},
+      "A1": {"net_return": -0.09734318119501784, "sharpe": -0.5447046408479169, "max_drawdown": -0.20707858615183716, "turnover": 19.0, "annualized_turnover": 27.51984126984127, "fees": 0.0095, "net_edge_per_turnover_bps": -44.65335947977528, "profitable_blocks": 6, "profitable_folds": 3, "median_state_run_hours": 139.0},
+      "A2_proxy": {"net_return": -0.1288301528718453, "gross_return": -0.1244337877301106, "sharpe": -0.7793465366272848, "max_drawdown": -0.26121758931811445, "turnover": 10.0, "annualized_turnover": 14.484126984126984, "fees": 0.005, "gross_edge_per_turnover_bps": -115.55411852249297, "net_edge_per_turnover_bps": -120.55411852249297, "profitable_blocks": 2, "profitable_folds": 1, "positive_block_concentration": 0.9808558732271228, "median_state_run_hours": 168.0, "forecast_realized_correlation": -0.03596272571429041},
+      "simple_trend": {"net_return": -0.05714250848144742, "sharpe": -0.0803799290529055, "turnover": 67.0, "profitable_blocks": 10}
+    },
+    "ETH-USDT": {
+      "A0": {"net_return": -0.08945428143190659, "sharpe": -0.2599447267065794, "max_drawdown": -0.2834242708285952, "turnover": 15.0, "annualized_turnover": 21.726190476190474, "fees": 0.0075, "net_edge_per_turnover_bps": -38.58527414665296, "profitable_blocks": 5, "median_state_run_hours": 163.5},
+      "A1": {"net_return": -0.10504016350948642, "sharpe": -0.3884859850877834, "max_drawdown": -0.2834242708285952, "turnover": 14.0, "annualized_turnover": 20.27777777777778, "fees": 0.007, "net_edge_per_turnover_bps": -57.27162489957423, "profitable_blocks": 4, "median_state_run_hours": 168.0},
+      "A2_proxy": {"net_return": 0.0873601825211281, "gross_return": 0.09284130061891283, "sharpe": 0.5617892920335354, "max_drawdown": -0.22046185051805367, "turnover": 10.0, "annualized_turnover": 14.484126984126984, "fees": 0.005, "gross_edge_per_turnover_bps": 118.19035266013228, "net_edge_per_turnover_bps": 113.19035266013228, "profitable_blocks": 1, "profitable_folds": 2, "positive_block_concentration": 1.0, "median_state_run_hours": 168.0, "forecast_realized_correlation": -0.025209702868044772},
+      "simple_trend": {"net_return": -0.15025606884896814, "sharpe": -0.3723818841194096, "turnover": 37.0, "profitable_blocks": 8}
+    }
+  },
+  "uncertainty": {
+    "BTC_A2_minus_A1": {"annualized_mean_delta": -0.051726709128531626, "one_sided_95_lower_bound": -0.46781743340015797, "percentile_95_interval": [-0.5540910165903975, 0.4315816895094231], "p_le_zero": 0.5658868226354729},
+    "BTC_A2_minus_simple_trend": {"annualized_mean_delta": -0.14728492510855615, "one_sided_95_lower_bound": -0.7768636297725655, "percentile_95_interval": [-0.8941089829926044, 0.5640223347253847], "p_le_zero": 0.6536692661467707},
+    "ETH_A2_minus_A1": {"annualized_mean_delta": 0.28008056044113283, "one_sided_95_lower_bound": -0.17474091506376843, "percentile_95_interval": [-0.2530565872005186, 0.8746646547866312], "p_le_zero": 0.16036792641471706},
+    "ETH_A2_minus_simple_trend": {"annualized_mean_delta": 0.31613689794608335, "one_sided_95_lower_bound": -0.7693499048631717, "percentile_95_interval": [-0.9636980836971946, 1.661803311166347], "p_le_zero": 0.3277344531093781},
+    "resamples": 5000,
+    "block_hours": 168,
+    "seed": 20260728
+  },
+  "diagnosis": "The proxy aggregate reduces turnover but does not create robust transferable edge. BTC is negative and worse than A0/A1 and simple trend. ETH's entire positive-block return is concentrated in 2025-04-07 through 2025-04-13 UTC; the same week supplies BTC's only material gain. All paired lower confidence bounds are non-positive.",
+  "limitations": [
+    "Only six markets have full immutable history in the available artifact.",
+    "Historical live/trading lifecycle state is unavailable; the proxy is survivorship-conditioned.",
+    "This is not the issue #538 point-in-time all-eligible-market universe and cannot qualify A2.",
+    "No official development OOS, untouched replication, or prospective observation was inspected."
+  ],
+  "verdict": "reject_proxy_promotion_and_block_official_A2",
+  "family_terminally_rejected": false,
+  "official_A2_authorized": false,
+  "remaining_blocker": "Content-addressed historical point-in-time lifecycle plus complete 1H candles for every causally eligible OKX SPOT/USDT member.",
+  "next_strategy_action": "Acquire the exact point-in-time all-member source contract and rerun this unchanged training-only A2 gate. If BTC transfer and temporal breadth still fail, reject adaptive-market-state-dlm-v2 without consuming official OOS."
+}
