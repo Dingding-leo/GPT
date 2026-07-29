@@ -1,0 +1,108 @@
+{
+  "acceptance": "bilateral; all predeclared gates must pass independently in BTC-USDT and ETH-USDT",
+  "bar": "1H",
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "canonical_signature": "robust-distributed-slope-trend-1h-v1|own-history-only|window=2160H|blocks=12x180H-contiguous-nonoverlap|block-slope_j=log(close_end/close_start)/180|aggregate=NumPy-median-12-slopes|long=median>0|cash=median<=0|daily-00UTC|next-open|fee=5bps-one-way|candidate=1|grid=0",
+  "comparators": {
+    "1Dutc": "benchmark only; never strategy input or selector",
+    "b0": "hourly own-history close_t > close_t-2160 trend long/cash, next-open, 5 bps one-way",
+    "b1": "daily 00:00 UTC own-history close_t > close_t-2160 trend long/cash, next-open, 5 bps one-way"
+  },
+  "decision_cadence": "daily 00:00 UTC",
+  "execution": "completed bar t -> target at open[t+1] -> payoff open[t+1] to open[t+2]",
+  "family_id": "robust-distributed-slope-trend-1h-v1",
+  "feature": {
+    "aggregate": "NumPy median of 12 slopes; arithmetic mean of sixth and seventh order statistics",
+    "block_construction": "thirteen trailing boundary closes at t-2160,t-1980,...,t; adjacent 180H return intervals do not overlap",
+    "block_count": 12,
+    "block_hours": 180,
+    "block_slope": "log(close_end/close_start)/180",
+    "window_hours": 2160
+  },
+  "hard_boundary": {
+    "15m": false,
+    "accounts": false,
+    "balances": false,
+    "cointegration": false,
+    "credentials": false,
+    "cross_sectional": false,
+    "current_relative_rank": false,
+    "enabled_adapters": false,
+    "funds": false,
+    "leverage": false,
+    "market_neutral": false,
+    "orders": false,
+    "pairs_spreads": false,
+    "paper_or_live_authorized": false,
+    "post_hoc_asset_filtering": false,
+    "private_endpoints": false,
+    "synthetic_data": false
+  },
+  "issue": 628,
+  "parameter_grid_count": 0,
+  "position_rule": {
+    "cash": "robust_slope_t <= 0",
+    "fitted_thresholds": false,
+    "hysteresis": false,
+    "long": "robust_slope_t > 0",
+    "minimum_hold": null,
+    "post_entry_veto": false
+  },
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "result_sha256": "ea64ade3e5d2944863fea62b252735edda65760be8b895d49a3c53269c2fc452",
+  "sample": {
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "development_oos_last_signal_interval": "2026-07-07T23:00:00Z",
+    "development_oos_start": "2023-07-24T00:00:00Z",
+    "fold_count": 12,
+    "fold_hours": 2160,
+    "full_scored": [
+      2880,
+      43440
+    ],
+    "later_suffix_unread": true,
+    "parsed_prefix_bars": 43441,
+    "source_start": "2021-07-24T00:00:00Z",
+    "source_total_observations": 43941,
+    "training": [
+      2880,
+      17520
+    ],
+    "training_start": "2021-11-21T00:00:00Z",
+    "warmup": [
+      0,
+      2880
+    ]
+  },
+  "sources": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "artifact_zip_sha256": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c",
+      "confirmed_only": true,
+      "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "market": "SPOT",
+      "provider": "OKX",
+      "workflow_run_id": 30401519824
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "artifact_zip_sha256": "e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3",
+      "confirmed_only": true,
+      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "market": "SPOT",
+      "provider": "OKX",
+      "workflow_run_id": 30401519824
+    }
+  },
+  "uncertainty": {
+    "block_hours": 168,
+    "confidence": 0.95,
+    "method": "paired non-circular moving-block bootstrap of observed real hourly candidate and B1 net returns",
+    "resamples": 5000,
+    "seed": 20260729
+  }
+}
