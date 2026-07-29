@@ -1,0 +1,131 @@
+{
+  "accepted": false,
+  "candidate_count": 1,
+  "family_id": "trend-break-path-recovery-1h-v1",
+  "issue": 611,
+  "markets": {
+    "BTC-USDT": {
+      "acceptance_gates": {
+        "bootstrap_mean_delta_lower_bound_positive": false,
+        "bootstrap_sharpe_delta_lower_bound_positive": false,
+        "edge_per_turnover_exceeds_b1": false,
+        "finite_sharpe_and_exceeds_b1": false,
+        "hash_chronology_timing_fee_checks": true,
+        "long_entries_at_least_8": false,
+        "max_drawdown_no_worse_than_b1": true,
+        "positive_fold_concentration_at_most_50pct": false,
+        "positive_net_return": false,
+        "positive_residual_sharpe_vs_b0": false,
+        "positive_residual_sharpe_vs_b1": false,
+        "profitable_folds_at_least_7_of_12": false,
+        "profitable_year_segments_at_least_3": false
+      },
+      "accepted": false,
+      "breadth": {
+        "fold_count": 12,
+        "fold_returns": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],
+        "positive_fold_return_concentration": null,
+        "profitable_folds": 0,
+        "profitable_years": 0,
+        "year_count": 4,
+        "year_returns": {"2023":0.0,"2024":0.0,"2025":0.0,"2026":0.0}
+      },
+      "entry_condition_waterfall": {
+        "development_oos": {"break_and_slow_trend":0,"break_only":7,"break_positive_slope_and_location_without_trend":1,"break_slow_trend_and_positive_slope":0,"daily_decisions":1080,"full_entry_condition":0},
+        "training": {"break_and_slow_trend":0,"break_only":122,"break_positive_slope_and_location_without_trend":27,"break_slow_trend_and_positive_slope":0,"daily_decisions":610,"full_entry_condition":0}
+      },
+      "feature_drift": {
+        "close_location_oos": {"count":1080,"median":0.5466835787207218,"q10":0.1648407890838767,"q90":0.8842786242388423},
+        "close_location_training": {"count":610,"median":0.49691805233489283,"q10":0.13225447713132626,"q90":0.8593022807040864},
+        "recent_break_oos": {"count":1080,"median":-0.14356718691259884,"q10":-0.3070178851931572,"q90":-0.05607533973434764},
+        "recent_break_training": {"count":610,"median":-0.24858225300653308,"q10":-0.4814188746112841,"q90":-0.06206518311286153},
+        "slope_oos": {"count":1080,"median":3.701889501130808e-05,"q10":-0.0007121168398643592,"q90":0.0007380439152479163},
+        "slope_training": {"count":610,"median":-2.0445381712235603e-05,"q10":-0.0008948816764460211,"q90":0.0008516247998266441}
+      },
+      "frozen_training": {"break_quantile":0.2,"break_quantile_method":"numpy-linear","break_threshold":-0.3987752174685961,"daily_feature_anchors":610},
+      "full_metrics": {
+        "b0": {"annualized_arithmetic_mean":0.10423771734638952,"average_exposure":0.5108234714003945,"fee_sum":0.1705,"gross_total_return":0.48891674203724955,"max_drawdown":-0.5555790197814094,"net_edge_per_turnover_bps":14.15351643557613,"net_total_return":0.2554551958898761,"sharpe":0.31417118469508615,"turnover":341.0},
+        "b1": {"annualized_arithmetic_mean":0.1113728238088671,"average_exposure":0.5124260355029586,"fee_sum":0.0365,"gross_total_return":0.34544434996096496,"max_drawdown":-0.5592198563591378,"net_edge_per_turnover_bps":70.63992202551525,"net_total_return":0.29720328370528426,"sharpe":0.33550630270724086,"turnover":73.0},
+        "candidate": {"annualized_arithmetic_mean":0.0,"average_exposure":0.0,"fee_sum":0.0,"gross_total_return":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0}
+      },
+      "grid": {"confirmed_required_prefix":true,"contiguous_1h_required_prefix":true,"first_timestamp":"2021-07-24T00:00:00+00:00","last_required_timestamp":"2026-07-08T01:00:00+00:00","later_suffix_semantically_read":false,"parsed_observations":43442,"source_observations":43941},
+      "instrument": "BTC-USDT",
+      "oos_metrics": {
+        "b0": {"annualized_arithmetic_mean":0.3116479475996573,"average_exposure":0.5724151234567901,"fee_sum":0.1015,"gross_total_return":1.3481791651841406,"max_drawdown":-0.2267892412401934,"net_edge_per_turnover_bps":45.42543807377419,"net_total_return":1.1215044082664245,"sharpe":0.9195842471633541,"turnover":203.0},
+        "b1": {"annualized_arithmetic_mean":0.32437822875045536,"average_exposure":0.5731481481481482,"fee_sum":0.0225,"gross_total_return":1.2522939244273097,"max_drawdown":-0.2654678573881655,"net_edge_per_turnover_bps":213.28979424687475,"net_total_return":1.202156307296331,"sharpe":0.9561877759387446,"turnover":45.0},
+        "candidate": {"annualized_arithmetic_mean":0.0,"average_exposure":0.0,"fee_sum":0.0,"gross_total_return":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0}
+      },
+      "position": {"long_entries":0,"max_completed_holding_hours":null,"mean_completed_holding_hours":null,"median_completed_holding_hours":null},
+      "residual_sharpe_vs_b0": -0.9195842471633541,
+      "residual_sharpe_vs_b1": -0.9561877759387446,
+      "residual_total_return_vs_b0": -0.6644687131061588,
+      "residual_total_return_vs_b1": -0.676978778730784,
+      "source": {"artifact_id":8704977298,"csv_sha256":"92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9","workflow_run":30401519824,"zip_sha256":"22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c"},
+      "train_metrics": {
+        "b0": {"annualized_arithmetic_mean":-0.2629803952331664,"average_exposure":0.401775956284153,"fee_sum":0.069,"gross_total_return":-0.3659271131806937,"max_drawdown":-0.5555790197814094,"net_edge_per_turnover_bps":-31.847933510468835,"net_total_return":-0.4082240927720958,"sharpe":-0.824972930125313,"turnover":138.0},
+        "b1": {"annualized_arithmetic_mean":-0.2657514996942727,"average_exposure":0.40491803278688526,"fee_sum":0.014,"gross_total_return":-0.40263376135374007,"max_drawdown":-0.5592198563591378,"net_edge_per_turnover_bps":-158.6188011873839,"net_total_return":-0.4109395053351551,"sharpe":-0.8340790661802613,"turnover":28.0},
+        "candidate": {"annualized_arithmetic_mean":0.0,"average_exposure":0.0,"fee_sum":0.0,"gross_total_return":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0}
+      },
+      "uncertainty_vs_b1": {"annualized_mean_delta_lower_95":-0.7263869882676455,"annualized_mean_delta_median":-0.3376992657521276,"annualized_mean_delta_upper_95":0.03753032686241184,"sharpe_delta_lower_95":-2.131346086594137,"sharpe_delta_median":-0.9985246620991822,"sharpe_delta_upper_95":0.11109069619637384}
+    },
+    "ETH-USDT": {
+      "acceptance_gates": {
+        "bootstrap_mean_delta_lower_bound_positive": false,
+        "bootstrap_sharpe_delta_lower_bound_positive": false,
+        "edge_per_turnover_exceeds_b1": false,
+        "finite_sharpe_and_exceeds_b1": false,
+        "hash_chronology_timing_fee_checks": true,
+        "long_entries_at_least_8": false,
+        "max_drawdown_no_worse_than_b1": true,
+        "positive_fold_concentration_at_most_50pct": false,
+        "positive_net_return": false,
+        "positive_residual_sharpe_vs_b0": false,
+        "positive_residual_sharpe_vs_b1": false,
+        "profitable_folds_at_least_7_of_12": false,
+        "profitable_year_segments_at_least_3": false
+      },
+      "accepted": false,
+      "breadth": {"fold_count":12,"fold_returns":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"positive_fold_return_concentration":null,"profitable_folds":0,"profitable_years":0,"year_count":4,"year_returns":{"2023":0.0,"2024":0.0,"2025":0.0,"2026":0.0}},
+      "entry_condition_waterfall": {
+        "development_oos": {"break_and_slow_trend":0,"break_only":95,"break_positive_slope_and_location_without_trend":21,"break_slow_trend_and_positive_slope":0,"daily_decisions":1080,"full_entry_condition":0},
+        "training": {"break_and_slow_trend":0,"break_only":124,"break_positive_slope_and_location_without_trend":31,"break_slow_trend_and_positive_slope":0,"daily_decisions":610,"full_entry_condition":0}
+      },
+      "feature_drift": {
+        "close_location_oos": {"count":1080,"median":0.5172477297359626,"q10":0.16870658182551448,"q90":0.8784269119869964},
+        "close_location_training": {"count":610,"median":0.5335018338376234,"q10":0.14214206471903795,"q90":0.8781390375244655},
+        "recent_break_oos": {"count":1080,"median":-0.2321422293649399,"q10":-0.4378322061134755,"q90":-0.08626191801021778},
+        "recent_break_training": {"count":610,"median":-0.2658522447299644,"q10":-0.5193368958797648,"q90":-0.09258193730342763},
+        "slope_oos": {"count":1080,"median":1.394041997759454e-05,"q10":-0.0010233891437864328,"q90":0.0009870713209601647},
+        "slope_training": {"count":610,"median":-2.6702749566731525e-05,"q10":-0.0012743416213612216,"q90":0.0011899875657909098}
+      },
+      "frozen_training": {"break_quantile":0.2,"break_quantile_method":"numpy-linear","break_threshold":-0.45377701578294627,"daily_feature_anchors":610},
+      "full_metrics": {
+        "b0": {"annualized_arithmetic_mean":0.06857850648025421,"average_exposure":0.4802268244575937,"fee_sum":0.1135,"gross_total_return":0.005217348746578532,"max_drawdown":-0.5775445421084999,"net_edge_per_turnover_bps":13.98801230482525,"net_total_return":-0.10266866412966058,"sharpe":0.16006827899724405,"turnover":227.0},
+        "b1": {"annualized_arithmetic_mean":0.1008911378912851,"average_exposure":0.47869822485207103,"fee_sum":0.0265,"gross_total_return":0.06954346592519967,"max_drawdown":-0.5695187578011083,"net_edge_per_turnover_bps":88.1395828566926,"net_total_return":0.04156738613036759,"sharpe":0.23533332009806368,"turnover":53.0},
+        "candidate": {"annualized_arithmetic_mean":0.0,"average_exposure":0.0,"fee_sum":0.0,"gross_total_return":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0}
+      },
+      "grid": {"confirmed_required_prefix":true,"contiguous_1h_required_prefix":true,"first_timestamp":"2021-07-24T00:00:00+00:00","last_required_timestamp":"2026-07-08T01:00:00+00:00","later_suffix_semantically_read":false,"parsed_observations":43442,"source_observations":43941},
+      "instrument": "ETH-USDT",
+      "oos_metrics": {
+        "b0": {"annualized_arithmetic_mean":0.274370759960958,"average_exposure":0.4969521604938272,"fee_sum":0.0695,"gross_total_return":0.8036242149523065,"max_drawdown":-0.4730328076249761,"net_edge_per_turnover_bps":58.405522963996184,"net_total_return":0.6824809073749545,"sharpe":0.6185523708433519,"turnover":139.0},
+        "b1": {"annualized_arithmetic_mean":0.2875224282439177,"average_exposure":0.49722222222222223,"fee_sum":0.015,"gross_total_return":0.7715574620590222,"max_drawdown":-0.4776594160762392,"net_edge_per_turnover_bps":283.5837648433161,"net_total_return":0.7451603410954828,"sharpe":0.6456279607587625,"turnover":30.0},
+        "candidate": {"annualized_arithmetic_mean":0.0,"average_exposure":0.0,"fee_sum":0.0,"gross_total_return":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0}
+      },
+      "position": {"long_entries":0,"max_completed_holding_hours":null,"mean_completed_holding_hours":null,"median_completed_holding_hours":null},
+      "residual_sharpe_vs_b0": -0.6185523708433519,
+      "residual_sharpe_vs_b1": -0.6456279607587625,
+      "residual_total_return_vs_b0": -0.6680337938902858,
+      "residual_total_return_vs_b1": -0.6814428561199544,
+      "source": {"artifact_id":8704978112,"csv_sha256":"2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726","workflow_run":30401519824,"zip_sha256":"e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3"},
+      "train_metrics": {
+        "b0": {"annualized_arithmetic_mean":-0.29577499148558206,"average_exposure":0.45061475409836066,"fee_sum":0.044,"gross_total_return":-0.44266807885301784,"max_drawdown":-0.5775445421084999,"net_edge_per_turnover_bps":-56.17146475909249,"net_total_return":-0.4666618016662184,"sharpe":-0.7390351468171101,"turnover":88.0},
+        "b1": {"annualized_arithmetic_mean":-0.22953803191337602,"average_exposure":0.4459016393442623,"fee_sum":0.0115,"gross_total_return":-0.3962693907302941,"max_drawdown":-0.5695187578011083,"net_edge_per_turnover_bps":-166.78761103890335,"net_total_return":-0.40316808627649825,"sharpe":-0.5773424296223917,"turnover":23.0},
+        "candidate": {"annualized_arithmetic_mean":0.0,"average_exposure":0.0,"fee_sum":0.0,"gross_total_return":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0}
+      },
+      "uncertainty_vs_b1": {"annualized_mean_delta_lower_95":-0.8307067657679191,"annualized_mean_delta_median":-0.29978140400007375,"annualized_mean_delta_upper_95":0.2065881920728337,"sharpe_delta_lower_95":-1.8734806021974435,"sharpe_delta_median":-0.6752636471639486,"sharpe_delta_upper_95":0.4591009945693706}
+    }
+  },
+  "parameter_grid_count": 0,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "verdict": "reject_exact_trend_break_path_recovery_family"
+}
