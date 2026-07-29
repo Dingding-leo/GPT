@@ -1,0 +1,138 @@
+{
+  "bar": "1H",
+  "bootstrap": {
+    "block_hours": 168,
+    "method": "paired_non_circular_moving_block",
+    "resamples": 5000,
+    "seed": 20260729
+  },
+  "candidate_count": 1,
+  "comparators": {
+    "b0": "2160H close-to-close trend, hourly updates",
+    "b1": "2160H close-to-close trend, daily 00:00 UTC updates",
+    "d0": "168H direction, daily 00:00 UTC cadence, 168H minimum hold, no duration gate"
+  },
+  "cross_sectional_selection": false,
+  "execution": "completed confirmed bar t; target at open[t+1]; payoff open[t+1] to open[t+2]",
+  "family_id": "weibull-duration-hazard-continuation-1h-v1",
+  "fee": {
+    "applied_to": "absolute_position_change",
+    "component": "exchange_fee",
+    "one_way_bps": 5.0
+  },
+  "issue": 599,
+  "main": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "markets": [
+    {
+      "acceptance_gates": {
+        "bootstrap_mean_delta_lower_bound_positive": false,
+        "bootstrap_sharpe_delta_lower_bound_positive": false,
+        "edge_per_turnover_exceeds_d0": false,
+        "long_entries_at_least_5": false,
+        "positive_edge_per_turnover": false,
+        "positive_fold_concentration_at_most_50pct": false,
+        "positive_net_return": false,
+        "positive_residual_sharpe_vs_b0": false,
+        "positive_residual_sharpe_vs_d0": false,
+        "positive_sharpe": false,
+        "profitable_folds_at_least_7_of_12": false,
+        "profitable_year_segments_at_least_3": false,
+        "sharpe_exceeds_d0": false
+      },
+      "accepted": false,
+      "breadth": {
+        "fold_count": 12,
+        "fold_returns": [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],
+        "positive_fold_return_concentration": null,
+        "profitable_folds": 0,
+        "profitable_years": 0,
+        "year_count": 4,
+        "year_returns": {"2023":0.0,"2024":0.0,"2025":0.0,"2026":0.0}
+      },
+      "full_metrics": {
+        "b0": {"average_exposure":0.5108234714003945,"fee_sum":0.1705,"max_drawdown":-0.5555790197814094,"net_edge_per_turnover_bps":14.15351643557613,"net_total_return":0.2554551958898761,"sharpe":0.31417118469508615,"turnover":341.0},
+        "b1": {"average_exposure":0.5124260355029586,"fee_sum":0.0365,"max_drawdown":-0.5592198563591378,"net_edge_per_turnover_bps":70.63992202551525,"net_total_return":0.29720328370528426,"sharpe":0.33550630270724086,"turnover":73.0},
+        "candidate": {"average_exposure":0.0,"fee_sum":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0},
+        "d0": {"average_exposure":0.636094674556213,"fee_sum":0.1045,"max_drawdown":-0.6841804700323144,"net_edge_per_turnover_bps":0.453576443958004,"net_total_return":-0.29819961066885736,"sharpe":0.0051670790110801305,"turnover":209.0}
+      },
+      "grid": {"confirmed":true,"contiguous_1h":true,"first_timestamp":"2021-07-24T00:00:00+00:00","last_timestamp":"2026-07-28T20:00:00+00:00","observations":43941},
+      "instrument": "BTC-USDT",
+      "oos_metrics": {
+        "b0": {"average_exposure":0.5724151234567901,"fee_sum":0.1015,"max_drawdown":-0.2267892412401934,"net_edge_per_turnover_bps":45.42543807377419,"net_total_return":1.1215044082664245,"sharpe":0.9195842471633541,"turnover":203.0},
+        "b1": {"average_exposure":0.5731481481481482,"fee_sum":0.0225,"max_drawdown":-0.2654678573881655,"net_edge_per_turnover_bps":213.28979424687475,"net_total_return":1.202156307296331,"sharpe":0.9561877759387446,"turnover":45.0},
+        "candidate": {"average_exposure":0.0,"fee_sum":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0},
+        "d0": {"average_exposure":0.6518518518518519,"fee_sum":0.0635,"max_drawdown":-0.43362612955494084,"net_edge_per_turnover_bps":45.527343111233556,"net_total_return":0.4543713256166686,"sharpe":0.5267355636616344,"turnover":127.0}
+      },
+      "position": {"long_entries_oos":0,"max_completed_holding_hours":null,"mean_completed_holding_hours":null,"median_completed_holding_hours":null},
+      "residual_sharpe_vs_b0": -0.9195842471633541,
+      "residual_sharpe_vs_d0": -0.5267355636616344,
+      "source": {"artifact_id":8704977298,"csv_sha256":"92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9","zip_sha256":"22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c"},
+      "train_metrics": {
+        "b0": {"average_exposure":0.401775956284153,"fee_sum":0.069,"max_drawdown":-0.5555790197814094,"net_edge_per_turnover_bps":-31.847933510468835,"net_total_return":-0.4082240927720958,"sharpe":-0.824972930125313,"turnover":138.0},
+        "b1": {"average_exposure":0.40491803278688526,"fee_sum":0.014,"max_drawdown":-0.5592198563591378,"net_edge_per_turnover_bps":-158.6188011873839,"net_total_return":-0.4109395053351551,"sharpe":-0.8340790661802613,"turnover":28.0},
+        "candidate": {"average_exposure":0.0,"fee_sum":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0},
+        "d0": {"average_exposure":0.6081967213114754,"fee_sum":0.041,"max_drawdown":-0.6841804700323144,"net_edge_per_turnover_bps":-69.35579388218828,"net_total_return":-0.5174544650530832,"sharpe":-0.7780285295150507,"turnover":82.0}
+      },
+      "training_model": {"age_at_max_survival_lcb_scored":584,"bootstrap_requested":1000,"bootstrap_valid":1000,"completed_spell_count":261,"duration_max_hours":584.0,"duration_mean_hours":25.81226053639847,"duration_median_hours":4.0,"eligible_age_count":0,"eligible_age_max":null,"eligible_age_min":null,"max_observed_age_scored":584,"max_survival_lcb_scored":0.20931136503241507,"scale":13.117117419147467,"shape":0.5566981264777684,"survival_lcb_10pct_at_age_1":0.010744147571805461,"survival_lcb_10pct_at_age_168":0.09342161433092831,"survival_lcb_10pct_at_age_336":0.1501150720265359},
+      "uncertainty_vs_d0": {"annualized_mean_delta_lower_95":-0.626912677319512,"annualized_mean_delta_median":-0.19513461665940435,"sharpe_delta_lower_95":-1.6743425321969974,"sharpe_delta_median":-0.5253515212245887}
+    },
+    {
+      "acceptance_gates": {
+        "bootstrap_mean_delta_lower_bound_positive": false,
+        "bootstrap_sharpe_delta_lower_bound_positive": false,
+        "edge_per_turnover_exceeds_d0": false,
+        "long_entries_at_least_5": false,
+        "positive_edge_per_turnover": false,
+        "positive_fold_concentration_at_most_50pct": false,
+        "positive_net_return": false,
+        "positive_residual_sharpe_vs_b0": false,
+        "positive_residual_sharpe_vs_d0": false,
+        "positive_sharpe": false,
+        "profitable_folds_at_least_7_of_12": false,
+        "profitable_year_segments_at_least_3": false,
+        "sharpe_exceeds_d0": false
+      },
+      "accepted": false,
+      "breadth": {"fold_count":12,"fold_returns":[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0],"positive_fold_return_concentration":null,"profitable_folds":0,"profitable_years":0,"year_count":4,"year_returns":{"2023":0.0,"2024":0.0,"2025":0.0,"2026":0.0}},
+      "full_metrics": {
+        "b0": {"average_exposure":0.4802268244575937,"fee_sum":0.1135,"max_drawdown":-0.5775445421084999,"net_edge_per_turnover_bps":13.98801230482525,"net_total_return":-0.10266866412966058,"sharpe":0.16006827899724405,"turnover":227.0},
+        "b1": {"average_exposure":0.47869822485207103,"fee_sum":0.0265,"max_drawdown":-0.5695187578011083,"net_edge_per_turnover_bps":88.1395828566926,"net_total_return":0.04156738613036759,"sharpe":0.23533332009806368,"turnover":53.0},
+        "candidate": {"average_exposure":0.0,"fee_sum":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0},
+        "d0": {"average_exposure":0.6147928994082841,"fee_sum":0.1055,"max_drawdown":-0.6803988364202256,"net_edge_per_turnover_bps":-1.8429569610437364,"net_total_return":-0.4627058866615371,"sharpe":-0.016758933094145053,"turnover":211.0}
+      },
+      "grid": {"confirmed":true,"contiguous_1h":true,"first_timestamp":"2021-07-24T00:00:00+00:00","last_timestamp":"2026-07-28T20:00:00+00:00","observations":43941},
+      "instrument": "ETH-USDT",
+      "oos_metrics": {
+        "b0": {"average_exposure":0.4969521604938272,"fee_sum":0.0695,"max_drawdown":-0.4730328076249761,"net_edge_per_turnover_bps":58.405522963996184,"net_total_return":0.6824809073749545,"sharpe":0.6185523708433519,"turnover":139.0},
+        "b1": {"average_exposure":0.49722222222222223,"fee_sum":0.015,"max_drawdown":-0.4776594160762392,"net_edge_per_turnover_bps":283.5837648433161,"net_total_return":0.7451603410954828,"sharpe":0.6456279607587625,"turnover":30.0},
+        "candidate": {"average_exposure":0.0,"fee_sum":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0},
+        "d0": {"average_exposure":0.6185185185185185,"fee_sum":0.0675,"max_drawdown":-0.5847456385602895,"net_edge_per_turnover_bps":35.60463291412791,"net_total_return":0.14999582598236127,"sharpe":0.3385939636519707,"turnover":135.0}
+      },
+      "position": {"long_entries_oos":0,"max_completed_holding_hours":null,"mean_completed_holding_hours":null,"median_completed_holding_hours":null},
+      "residual_sharpe_vs_b0": -0.6185523708433519,
+      "residual_sharpe_vs_d0": -0.3385939636519707,
+      "source": {"artifact_id":8704978112,"csv_sha256":"2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726","zip_sha256":"e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3"},
+      "train_metrics": {
+        "b0": {"average_exposure":0.45061475409836066,"fee_sum":0.044,"max_drawdown":-0.5775445421084999,"net_edge_per_turnover_bps":-56.17146475909249,"net_total_return":-0.4666618016662184,"sharpe":-0.7390351468171101,"turnover":88.0},
+        "b1": {"average_exposure":0.4459016393442623,"fee_sum":0.0115,"max_drawdown":-0.5695187578011083,"net_edge_per_turnover_bps":-166.78761103890335,"net_total_return":-0.40316808627649825,"sharpe":-0.5773424296223917,"turnover":23.0},
+        "candidate": {"average_exposure":0.0,"fee_sum":0.0,"max_drawdown":0.0,"net_edge_per_turnover_bps":null,"net_total_return":0.0,"sharpe":null,"turnover":0.0},
+        "d0": {"average_exposure":0.6081967213114754,"fee_sum":0.038,"max_drawdown":-0.6803988364202256,"net_edge_per_turnover_bps":-68.361702134046,"net_total_return":-0.5327860317410338,"sharpe":-0.5790284011838116,"turnover":76.0}
+      },
+      "training_model": {"age_at_max_survival_lcb_scored":887,"bootstrap_requested":1000,"bootstrap_valid":1000,"completed_spell_count":250,"duration_max_hours":504.0,"duration_mean_hours":27.704,"duration_median_hours":4.0,"eligible_age_count":0,"eligible_age_max":null,"eligible_age_min":null,"max_observed_age_scored":887,"max_survival_lcb_scored":0.28320742828964135,"scale":13.462225404565519,"shape":0.5487521179379466,"survival_lcb_10pct_at_age_1":0.01214146693274381,"survival_lcb_10pct_at_age_168":0.10479900420879233,"survival_lcb_10pct_at_age_336":0.16435062377010426},
+      "uncertainty_vs_d0": {"annualized_mean_delta_lower_95":-0.7642468143464132,"annualized_mean_delta_median":-0.16291930616549954,"sharpe_delta_lower_95":-1.598296361284421,"sharpe_delta_median":-0.33719958268437367}
+    }
+  ],
+  "paper_or_live_authorized": false,
+  "parameter_grid_count": 0,
+  "per_instrument_only": true,
+  "rescue_tuning_authorized": false,
+  "samples": {"descriptive_training":[2880,17520],"development_oos":[17520,43440],"fold_hours":2160,"later_suffix_unscored":true,"warmup":[0,2880]},
+  "schema_version": 1,
+  "signal": {"decision_hour_utc":0,"direction_hours":168,"duration_distribution":"two_parameter_weibull_completed_training_spells","duration_fit_shape_bracket":[0.05,20.0],"entry_exit_probability":0.5,"minimum_holding_hours":168,"model_bootstrap_seed":20260729,"model_bootstraps":1000,"position_set":[0,1],"survival_horizon_hours":168,"survival_lcb_quantile":0.1},
+  "sources": {
+    "BTC-USDT": {"artifact_id":8704977298,"csv_sha256":"92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9","zip_sha256":"22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c"},
+    "ETH-USDT": {"artifact_id":8704978112,"csv_sha256":"2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726","zip_sha256":"e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3"}
+  },
+  "untouched_oos_consumed": false,
+  "verdict": "reject_exact_weibull_duration_hazard_family"
+}
