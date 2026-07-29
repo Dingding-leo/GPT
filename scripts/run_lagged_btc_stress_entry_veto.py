@@ -181,12 +181,8 @@ def selector_diag(
     start, end = OOS
     market = frame.open.to_numpy(float)[1:] / frame.open.to_numpy(float)[:-1] - 1
     delayed = (b1[start:end] == 1) & (candidate[start:end] == 0)
-    train_daily = [
-        t for t in range(*TRAIN) if frame.index[t].hour == 0 and np.isfinite(stress[t])
-    ]
-    oos_daily = [
-        t for t in range(*OOS) if frame.index[t].hour == 0 and np.isfinite(stress[t])
-    ]
+    train_daily = [t for t in range(*TRAIN) if frame.index[t].hour == 0 and np.isfinite(stress[t])]
+    oos_daily = [t for t in range(*OOS) if frame.index[t].hour == 0 and np.isfinite(stress[t])]
     improved = 0
     for k in range(12):
         a = start + k * FOLD
@@ -196,9 +192,7 @@ def selector_diag(
         "oos_stress_rate": float(np.mean(stress[oos_daily] <= threshold)),
         "b1_only_delayed_hours": int(delayed.sum()),
         "b1_only_arithmetic_gross_sum": float(market[start:end][delayed].sum()),
-        "candidate_minus_b1_arithmetic_net_sum": float(
-            (cnet[start:end] - bnet[start:end]).sum()
-        ),
+        "candidate_minus_b1_arithmetic_net_sum": float((cnet[start:end] - bnet[start:end]).sum()),
         "oos_folds_improved_vs_b1": int(improved),
     }
 
@@ -212,9 +206,7 @@ def main() -> None:
     btc = load(args.btc_csv, "BTC-USDT")
     eth = load(args.eth_csv, "ETH-USDT")
     stress = stress_feature(btc.close.to_numpy(float))
-    daily = [
-        t for t in range(*TRAIN) if btc.index[t].hour == 0 and np.isfinite(stress[t])
-    ]
+    daily = [t for t in range(*TRAIN) if btc.index[t].hour == 0 and np.isfinite(stress[t])]
     threshold = float(np.quantile(stress[daily], 0.20, method="linear"))
     if threshold != -2.2334011815085733:
         raise ValueError("frozen threshold mismatch")
@@ -231,9 +223,7 @@ def main() -> None:
             "full_scored": list(FULL),
             "later_suffix_unread": True,
         },
-        "sources": {
-            name: {"csv_sha256": HASHES[name], "observations": 43941} for name in HASHES
-        },
+        "sources": {name: {"csv_sha256": HASHES[name], "observations": 43941} for name in HASHES},
         "markets": {},
     }
     accepted = True
@@ -246,9 +236,7 @@ def main() -> None:
             ("development_oos", OOS),
             ("full_scored", FULL),
         ):
-            by_span[label] = {
-                policy: metrics(*packed[policy], pos[policy], span) for policy in pos
-            }
+            by_span[label] = {policy: metrics(*packed[policy], pos[policy], span) for policy in pos}
         cnet, b0net, b1net = (
             packed["candidate"][0],
             packed["b0"][0],
@@ -262,28 +250,19 @@ def main() -> None:
         b1 = by_span["development_oos"]["b1"]
         gates = {
             "positive_net_return": c["net_return"] > 0,
-            "finite_sharpe_and_exceeds_b1": c["sharpe"] is not None
-            and c["sharpe"] > b1["sharpe"],
+            "finite_sharpe_and_exceeds_b1": c["sharpe"] is not None and c["sharpe"] > b1["sharpe"],
             "edge_per_turnover_exceeds_b1": c["edge_per_turnover_bps"]
             > b1["edge_per_turnover_bps"],
             "max_drawdown_no_worse_than_b1": c["max_drawdown"] >= b1["max_drawdown"],
             "long_entries_at_least_8": c["long_entries"] >= 8,
             "profitable_folds_at_least_7_of_12": br["profitable_folds"] >= 7,
             "profitable_years_at_least_3": br["profitable_years"] >= 3,
-            "positive_fold_concentration_at_most_50pct": br[
-                "positive_fold_concentration"
-            ]
-            <= 0.5,
+            "positive_fold_concentration_at_most_50pct": br["positive_fold_concentration"] <= 0.5,
             "positive_residual_sharpe_vs_b0": residual_b0 > 0,
             "positive_residual_sharpe_vs_b1": residual_b1 > 0,
-            "bootstrap_mean_delta_lower_bound_positive": boot[
-                "annualized_mean_delta"
-            ]["lower_95"]
+            "bootstrap_mean_delta_lower_bound_positive": boot["annualized_mean_delta"]["lower_95"]
             > 0,
-            "bootstrap_sharpe_delta_lower_bound_positive": boot["sharpe_delta"][
-                "lower_95"
-            ]
-            > 0,
+            "bootstrap_sharpe_delta_lower_bound_positive": boot["sharpe_delta"]["lower_95"] > 0,
             "source_chronology_timing_fee_checks": True,
         }
         market_accepted = all(gates.values())
