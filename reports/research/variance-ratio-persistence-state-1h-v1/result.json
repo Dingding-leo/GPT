@@ -1,0 +1,237 @@
+{
+  "bar": "1H",
+  "bootstrap": {
+    "block_hours": 168,
+    "method": "paired_non_circular_moving_block",
+    "resamples": 5000,
+    "seed": 20260729
+  },
+  "candidate_count": 1,
+  "execution": "completed confirmed bar t; target at open[t+1]; payoff open[t+1] to open[t+2]",
+  "family_id": "variance-ratio-persistence-state-1h-v1",
+  "fee_bps_one_way": 5.0,
+  "issue": 595,
+  "main": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "markets": [
+    {
+      "acceptance_gates": {
+        "bootstrap_mean_delta_lower_bound_positive": false,
+        "bootstrap_sharpe_delta_lower_bound_positive": false,
+        "edge_per_turnover_exceeds_d0": true,
+        "long_entries_at_least_5": true,
+        "positive_edge_per_turnover": true,
+        "positive_fold_concentration_at_most_50pct": false,
+        "positive_net_return": true,
+        "positive_residual_sharpe_vs_b0": false,
+        "positive_residual_sharpe_vs_d0": false,
+        "positive_sharpe": true,
+        "profitable_folds_at_least_7_of_12": false,
+        "profitable_year_segments_at_least_3": true,
+        "sharpe_exceeds_d0": true
+      },
+      "accepted": false,
+      "breadth": {
+        "fold_count": 12,
+        "positive_fold_return_concentration": 0.5448901923256899,
+        "profitable_folds": 3,
+        "profitable_years": 3,
+        "year_count": 4,
+        "year_returns": {
+          "2023": 0.009172389437746009,
+          "2024": 0.1928848476835674,
+          "2025": -0.04491149107995751,
+          "2026": 0.08642705731213662
+        }
+      },
+      "full_candidate": {
+        "fee_sum": 0.031,
+        "max_drawdown": -0.32709158288763973,
+        "net_edge_per_turnover_bps": 10.700743785465702,
+        "net_total_return": -0.04227848759520425,
+        "sharpe": 0.06588430461274816,
+        "turnover": 62.0
+      },
+      "instrument": "BTC-USDT",
+      "oos_b0": {
+        "fee_sum": 0.1015,
+        "max_drawdown": -0.2267892412401934,
+        "net_edge_per_turnover_bps": 45.42543807377419,
+        "net_total_return": 1.1215044082664245,
+        "sharpe": 0.9195842471633541,
+        "turnover": 203.0
+      },
+      "oos_b1": {
+        "fee_sum": 0.0225,
+        "max_drawdown": -0.2654678573881655,
+        "net_edge_per_turnover_bps": 213.28979424687475,
+        "net_total_return": 1.202156307296331,
+        "sharpe": 0.9561877759387446,
+        "turnover": 45.0
+      },
+      "oos_candidate": {
+        "average_exposure": 0.12129629629629629,
+        "fee_sum": 0.013000000000000001,
+        "max_drawdown": -0.14766296844428606,
+        "net_edge_per_turnover_bps": 100.57895012745259,
+        "net_total_return": 0.24913125461331598,
+        "sharpe": 0.5436457495313037,
+        "turnover": 26.0
+      },
+      "oos_d0": {
+        "fee_sum": 0.0635,
+        "max_drawdown": -0.43362612955494084,
+        "net_edge_per_turnover_bps": 45.527343111233556,
+        "net_total_return": 0.4543713256166686,
+        "sharpe": 0.5267355636616344,
+        "turnover": 127.0
+      },
+      "position": {
+        "long_entries_oos": 13,
+        "max_completed_holding_hours": 624,
+        "mean_completed_holding_hours": 241.84615384615384,
+        "median_completed_holding_hours": 168.0
+      },
+      "residual_sharpe_vs_b0": -0.664062089717384,
+      "residual_sharpe_vs_d0": -0.3155997324528735,
+      "thresholds": {
+        "entry_vr": 1.0480619865530814,
+        "exit_vr": 1.0070160930808143,
+        "training_daily_vr_observations": 610
+      },
+      "train_candidate": {
+        "fee_sum": 0.018000000000000002,
+        "max_drawdown": -0.3198450734178673,
+        "net_edge_per_turnover_bps": -54.21129412819149,
+        "net_total_return": -0.23328992940676307,
+        "sharpe": -0.40230873478745893,
+        "turnover": 36.0
+      },
+      "uncertainty_vs_d0": {
+        "annualized_mean_delta_lower_95": -0.503002875230588,
+        "sharpe_delta_lower_95": -1.130433761214176
+      }
+    },
+    {
+      "acceptance_gates": {
+        "bootstrap_mean_delta_lower_bound_positive": false,
+        "bootstrap_sharpe_delta_lower_bound_positive": false,
+        "edge_per_turnover_exceeds_d0": false,
+        "long_entries_at_least_5": true,
+        "positive_edge_per_turnover": false,
+        "positive_fold_concentration_at_most_50pct": false,
+        "positive_net_return": false,
+        "positive_residual_sharpe_vs_b0": false,
+        "positive_residual_sharpe_vs_d0": false,
+        "positive_sharpe": false,
+        "profitable_folds_at_least_7_of_12": false,
+        "profitable_year_segments_at_least_3": false,
+        "sharpe_exceeds_d0": false
+      },
+      "accepted": false,
+      "breadth": {
+        "fold_count": 12,
+        "positive_fold_return_concentration": 0.7273482786165311,
+        "profitable_folds": 2,
+        "profitable_years": 1,
+        "year_count": 4,
+        "year_returns": {
+          "2023": -0.11402392589399746,
+          "2024": -0.26670410321679416,
+          "2025": 0.22896827224576866,
+          "2026": -0.07307246264438472
+        }
+      },
+      "full_candidate": {
+        "fee_sum": 0.048,
+        "max_drawdown": -0.6647867655207134,
+        "net_edge_per_turnover_bps": -46.14583615375986,
+        "net_total_return": -0.494666311025431,
+        "sharpe": -0.2976923720034835,
+        "turnover": 96.0
+      },
+      "instrument": "ETH-USDT",
+      "oos_b0": {
+        "fee_sum": 0.0695,
+        "max_drawdown": -0.4730328076249761,
+        "net_edge_per_turnover_bps": 58.405522963996184,
+        "net_total_return": 0.6824809073749545,
+        "sharpe": 0.6185523708433519,
+        "turnover": 139.0
+      },
+      "oos_b1": {
+        "fee_sum": 0.015,
+        "max_drawdown": -0.4776594160762392,
+        "net_edge_per_turnover_bps": 283.5837648433161,
+        "net_total_return": 0.7451603410954828,
+        "sharpe": 0.6456279607587625,
+        "turnover": 30.0
+      },
+      "oos_candidate": {
+        "average_exposure": 0.25277777777777777,
+        "fee_sum": 0.028,
+        "max_drawdown": -0.5062884130608479,
+        "net_edge_per_turnover_bps": -27.08542480330593,
+        "net_total_return": -0.2599046011263978,
+        "sharpe": -0.16154165718620378,
+        "turnover": 56.0
+      },
+      "oos_d0": {
+        "fee_sum": 0.0675,
+        "max_drawdown": -0.5847456385602895,
+        "net_edge_per_turnover_bps": 35.60463291412791,
+        "net_total_return": 0.14999582598236127,
+        "sharpe": 0.3385939636519707,
+        "turnover": 135.0
+      },
+      "position": {
+        "long_entries_oos": 28,
+        "max_completed_holding_hours": 840,
+        "mean_completed_holding_hours": 234.0,
+        "median_completed_holding_hours": 168.0
+      },
+      "residual_sharpe_vs_b0": -0.6828209650310195,
+      "residual_sharpe_vs_d0": -0.5724548865615783,
+      "thresholds": {
+        "entry_vr": 1.0543614744275136,
+        "exit_vr": 1.0236544166241421,
+        "training_daily_vr_observations": 610
+      },
+      "train_candidate": {
+        "fee_sum": 0.02,
+        "max_drawdown": -0.4800716106560151,
+        "net_edge_per_turnover_bps": -72.83041204439536,
+        "net_total_return": -0.31720466071851094,
+        "sharpe": -0.5306603060743439,
+        "turnover": 40.0
+      },
+      "uncertainty_vs_d0": {
+        "annualized_mean_delta_lower_95": -0.6815277508773231,
+        "sharpe_delta_lower_95": -1.5356500499356363
+      }
+    }
+  ],
+  "paper_or_live_authorized": false,
+  "rescue_tuning_authorized": false,
+  "sample": {
+    "fold_hours": 2160,
+    "folds": 12,
+    "oos_hours": 25920,
+    "train_hours": 14640,
+    "unscored_suffix": true
+  },
+  "schema_version": 1,
+  "sources": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "zip_sha256": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "zip_sha256": "e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3"
+    }
+  },
+  "untouched_oos_consumed": false,
+  "verdict": "reject_exact_variance_ratio_persistence_family"
+}
