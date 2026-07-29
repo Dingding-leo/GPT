@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
+# ruff: noqa: E501
+# fmt: off
 """Reproduce the frozen path-efficiency hysteresis experiment in issue #593."""
 from __future__ import annotations
 
-# ruff: noqa: E501
-# fmt: off
 import argparse
 import hashlib
 import json
