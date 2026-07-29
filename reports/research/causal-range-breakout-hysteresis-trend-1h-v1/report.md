@@ -125,6 +125,6 @@ Before development-performance inspection, preregister one materially orthogonal
 
 ```text
 result SHA-256       93524f285b2b1408e95326f9e7908a6bdc1f6d6ebe6999305647b86a4bd4e3f7
-reproducer SHA-256   1b2b0248f332ae969f479795395d0a107ca5402ce544d87c1924f6fdc47caa70
+verifier SHA-256     4e4fc2990a8dfa19e95a5e99f1daaa19586926abdb5fa0fd3bd800940c6f8625
 ```
 

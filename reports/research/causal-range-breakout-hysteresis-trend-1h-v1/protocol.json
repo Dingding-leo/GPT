@@ -46,7 +46,7 @@
   },
   "issue": 630,
   "parameter_grid_count": 0,
-  "reproducer_sha256": "1b2b0248f332ae969f479795395d0a107ca5402ce544d87c1924f6fdc47caa70",
+  "reproducer_sha256": "4e4fc2990a8dfa19e95a5e99f1daaa19586926abdb5fa0fd3bd800940c6f8625",
   "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
   "result_sha256": "93524f285b2b1408e95326f9e7908a6bdc1f6d6ebe6999305647b86a4bd4e3f7",
   "sample": {
@@ -90,7 +90,7 @@
       "artifact_id": 8704978112,
       "bar": "1H",
       "confirmed_only": true,
-      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "csv_sha2556": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
       "market": "SPOT",
       "provider": "OKX",
       "source_total_observations": 43941,
