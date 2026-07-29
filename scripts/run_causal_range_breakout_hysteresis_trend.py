@@ -1,13 +1,16 @@
 # ruff: noqa: E501
 # fmt: off
 from __future__ import annotations
+
 import argparse
 import hashlib
 import json
 import math
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
+
 FEE, ANN = (0.0005, 8760.0)
 TRAIN, OOS, FULL = ((2880, 17520), (17520, 43440), (2880, 43440))
 ENTRY, EXIT, FOLD, PREFIX = (2160, 720, 2160, 43441)
@@ -48,7 +51,7 @@ def positions(d: pd.DataFrame) -> dict[str, np.ndarray]:
         if j < n - 1:
             out['candidate'][j], out['b0'][j], out['b1'][j] = (q, b0, b1)
     ch = np.flatnonzero(np.r_[out['candidate'][0] != 0, np.diff(out['candidate']) != 0])
-    if any((j <= 0 or d.index[int(j) - 1].hour != 0 for j in ch)):
+    if any(j <= 0 or d.index[int(j) - 1].hour != 0 for j in ch):
         raise ValueError('timing')
     return out
 
@@ -83,7 +86,7 @@ def breadth(n, ts):
     for yr in sorted(set(lab[OOS[0]:OOS[1]])):
         m = lab[OOS[0]:OOS[1]] == yr
         y[str(yr)] = float(np.prod(1 + n[OOS[0]:OOS[1]][m]) - 1)
-    return {'fold_returns': fs, 'profitable_folds': sum((x > 0 for x in fs)), 'year_returns': y, 'profitable_years': sum((x > 0 for x in y.values())), 'positive_fold_concentration': max(pos) / sum(pos) if pos else None}
+    return {'fold_returns': fs, 'profitable_folds': sum(x > 0 for x in fs), 'year_returns': y, 'profitable_years': sum(x > 0 for x in y.values()), 'positive_fold_concentration': max(pos) / sum(pos) if pos else None}
 
 def boot(c, b):
     c, b = (c[OOS[0]:OOS[1]], b[OOS[0]:OOS[1]])
@@ -129,7 +132,7 @@ def diag(d, pos, pk):
 
     def worst(h):
         n = pk['candidate'][0][a:z]
-        return float(min((np.prod(1 + n[i:i + h]) - 1 for i in range(len(n) - h + 1))))
+        return float(min(np.prod(1 + n[i:i + h]) - 1 for i in range(len(n) - h + 1)))
     te, tx = trans(daily_tr)
     oe, ox = trans(daily_o)
     return {'candidate_only_hours': int(co.sum()), 'candidate_only_market_gross_sum': float(m[co].sum()), 'b1_only_hours': int(bo.sum()), 'b1_only_market_gross_sum': float(m[bo].sum()), 'training_daily_decisions': len(daily_tr), 'training_entries': te, 'training_exits': tx, 'oos_daily_decisions': len(daily_o), 'oos_entries': oe, 'oos_exits': ox, 'worst_rolling_168h_candidate_return': worst(168), 'worst_rolling_720h_candidate_return': worst(720), 'episodes': episodes(cp, pk['candidate'][0], d.index)}
