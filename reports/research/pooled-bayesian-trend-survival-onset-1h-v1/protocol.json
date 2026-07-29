@@ -1,0 +1,85 @@
+{
+  "bar": "1H",
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "data": {
+    "artifacts": {
+      "BTC-USDT": 8704977298,
+      "ETH-USDT": 8704978112
+    },
+    "confirmed_only": true,
+    "csv_sha256": {
+      "BTC-USDT": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "ETH-USDT": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726"
+    },
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "fold_hours": 2160,
+    "full_scored": [
+      2880,
+      43440
+    ],
+    "later_suffix_unread": true,
+    "market_type": "SPOT",
+    "oos_folds": 12,
+    "parsed_prefix_bars": 43441,
+    "provider": "OKX",
+    "public_only": true,
+    "source_observations_per_market": 43941,
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "family_id": "pooled-bayesian-trend-survival-onset-1h-v1",
+  "hard_exclusions": [
+    "cross-sectional ranking/selection",
+    "pairs/spreads",
+    "cointegration/statistical arbitrage",
+    "market-neutral long-short",
+    "current relative rank",
+    "post-hoc asset filtering",
+    "credentials/private endpoints/accounts/orders",
+    "leverage/funds/enabled adapters",
+    "synthetic data",
+    "15m"
+  ],
+  "issue": 648,
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "paper_or_live_authorized": false,
+  "parameter_grid_count": 0,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "rule": {
+    "activation": "support >= 8 total and >=3 each market; q10 > max(0.5, unconditional posterior mean)",
+    "base_state": "close_t > close_(t-2160)",
+    "calibration": "pooled BTC+ETH training onsets; Beta(1,1) posterior q10",
+    "decision_cadence": "daily 00:00 UTC",
+    "entry": "onset only when common frozen selector active and score >= 0",
+    "execution": "next hourly open",
+    "exit": "daily base state non-positive",
+    "favourable_cohort": "score >= 0",
+    "features": [
+      "volatility-normalised 2160H trend margin",
+      "volatility-normalised 168H return",
+      "robust 168H quote-volume slope"
+    ],
+    "minimum_hold_hours": 0,
+    "reentry_same_regime": false,
+    "score": "equal-weight mean of three z-scores",
+    "standardisation": "instrument-local training-onset median and 1.4826*MAD; z clipped [-3,3]",
+    "target": "base positive at all next seven daily decisions through 168H"
+  },
+  "status": "completed_rejected",
+  "uncertainty": {
+    "block_hours": 168,
+    "method": "paired non-circular moving-block bootstrap",
+    "resamples": 5000,
+    "seed": 20260730
+  },
+  "verdict": "reject_exact_pooled_bayesian_trend_survival_onset_family"
+}
