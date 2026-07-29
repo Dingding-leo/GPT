@@ -14,7 +14,6 @@ import json
 from pathlib import Path
 
 import numpy as np
-
 import run_weekly_phase_conditioned_trend_carry as base
 
 HASHES = {
