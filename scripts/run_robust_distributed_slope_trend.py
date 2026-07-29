@@ -50,8 +50,7 @@ def feature(close: np.ndarray) -> np.ndarray:
         raise ValueError("invalid feature chronology")
     for t in (WINDOW, TRAIN[0], TRAIN[1] - 1, OOS[0], OOS[1] - 1):
         direct = [
-            (logc[t - WINDOW + (j + 1) * BLOCK] - logc[t - WINDOW + j * BLOCK])
-            / BLOCK
+            (logc[t - WINDOW + (j + 1) * BLOCK] - logc[t - WINDOW + j * BLOCK]) / BLOCK
             for j in range(COUNT)
         ]
         if not math.isclose(out[t], float(np.median(direct)), abs_tol=1e-15):
@@ -71,9 +70,7 @@ def positions(df: pd.DataFrame, f: np.ndarray) -> dict[str, np.ndarray]:
         j = t + 1
         if j < n - 1:
             out["candidate"][j], out["b0"][j], out["b1"][j] = candidate, b0, b1
-    changes = np.flatnonzero(
-        np.r_[out["candidate"][0] != 0, np.diff(out["candidate"]) != 0]
-    )
+    changes = np.flatnonzero(np.r_[out["candidate"][0] != 0, np.diff(out["candidate"]) != 0])
     if any(df.index[int(j) - 1].hour != 0 for j in changes if j > 0):
         raise ValueError("candidate changed outside daily next-open boundary")
     return out
@@ -92,9 +89,7 @@ def sharpe(x: np.ndarray) -> float | None:
     return None if sd <= 0 else float(math.sqrt(ANN) * np.mean(x) / sd)
 
 
-def metrics(
-    pack: tuple[np.ndarray, ...], pos: np.ndarray, span: tuple[int, int]
-) -> dict:
+def metrics(pack: tuple[np.ndarray, ...], pos: np.ndarray, span: tuple[int, int]) -> dict:
     net, fee, turn, gross = pack
     a, z = span
     x, p = net[a:z], pos[a:z]
@@ -110,9 +105,7 @@ def metrics(
         "max_drawdown": float(np.min(path / np.maximum.accumulate(path) - 1)),
         "turnover": turnover,
         "fees": float(fee[a:z].sum()),
-        "edge_per_turnover_bps": (
-            float(x.sum() / turnover * 10000) if turnover else None
-        ),
+        "edge_per_turnover_bps": float(x.sum() / turnover * 10000) if turnover else None,
         "exposure": float(p.mean()),
         "long_entries": int(((p == 1) & (prior == 0)).sum()),
         "position_changes": int((turn[a:z] > 0).sum()),
@@ -121,8 +114,7 @@ def metrics(
 
 def breadth(net: np.ndarray, ts: pd.DatetimeIndex) -> dict:
     folds = [
-        float(np.prod(1 + net[OOS[0] + k * FOLD : OOS[0] + (k + 1) * FOLD]) - 1)
-        for k in range(12)
+        float(np.prod(1 + net[OOS[0] + k * FOLD : OOS[0] + (k + 1) * FOLD]) - 1) for k in range(12)
     ]
     positive = [x for x in folds if x > 0]
     years = {}
@@ -135,9 +127,7 @@ def breadth(net: np.ndarray, ts: pd.DatetimeIndex) -> dict:
         "profitable_folds": sum(x > 0 for x in folds),
         "year_returns": years,
         "profitable_years": sum(x > 0 for x in years.values()),
-        "positive_fold_concentration": (
-            max(positive) / sum(positive) if positive else None
-        ),
+        "positive_fold_concentration": max(positive) / sum(positive) if positive else None,
     }
 
 
@@ -194,12 +184,9 @@ def diagnostics(df: pd.DataFrame, f: np.ndarray, pos: dict, pack: dict) -> dict:
     endpoint_oos = close[daily_oos] > close[daily_oos - WINDOW]
     candidate, b1 = pos["candidate"][a:z], pos["b1"][a:z]
     market = df.open.to_numpy(float)[1:] / df.open.to_numpy(float)[:-1] - 1
-    candidate_only = (candidate == 1) & (b1 == 0)
-    b1_only = (candidate == 0) & (b1 == 1)
+    candidate_only, b1_only = (candidate == 1) & (b1 == 0), (candidate == 0) & (b1 == 1)
 
-    changes = np.flatnonzero(
-        np.r_[pos["candidate"][0] != 0, np.diff(pos["candidate"]) != 0]
-    )
+    changes = np.flatnonzero(np.r_[pos["candidate"][0] != 0, np.diff(pos["candidate"]) != 0])
     entry, exit_, incomplete = [], [], 0
     for j in changes:
         if not (a <= j < z):
@@ -215,9 +202,7 @@ def diagnostics(df: pd.DataFrame, f: np.ndarray, pos: dict, pack: dict) -> dict:
         "oos_feature_median": float(np.median(f[daily_oos])),
         "training_positive_rate": float(np.mean(robust_train)),
         "oos_positive_rate": float(np.mean(robust_oos)),
-        "training_disagreement_rate_vs_b1": float(
-            np.mean(robust_train != endpoint_train)
-        ),
+        "training_disagreement_rate_vs_b1": float(np.mean(robust_train != endpoint_train)),
         "oos_disagreement_rate_vs_b1": float(np.mean(robust_oos != endpoint_oos)),
         "candidate_stability": run_stats(robust_oos.astype(int)),
         "b1_stability": run_stats(endpoint_oos.astype(int)),
@@ -279,56 +264,30 @@ def main() -> None:
         f = feature(df.close.to_numpy(float))
         pos = positions(df, f)
         pack = {policy: returns(df, values) for policy, values in pos.items()}
-        spans = (
-            ("training", TRAIN),
-            ("development_oos", OOS),
-            ("full_scored", FULL),
-        )
-        by_span = {
-            label: {p: metrics(pack[p], pos[p], span) for p in pos}
-            for label, span in spans
-        }
-        cnet, b0net, b1net = (
-            pack["candidate"][0],
-            pack["b0"][0],
-            pack["b1"][0],
-        )
+        spans = (("training", TRAIN), ("development_oos", OOS), ("full_scored", FULL))
+        by_span = {label: {p: metrics(pack[p], pos[p], span) for p in pos} for label, span in spans}
+        cnet, b0net, b1net = pack["candidate"][0], pack["b0"][0], pack["b1"][0]
         br, boot = breadth(cnet, df.index), bootstrap(cnet, b1net)
-        residual_b0 = sharpe(
-            cnet[OOS[0] : OOS[1]] - b0net[OOS[0] : OOS[1]]
-        )
-        residual_b1 = sharpe(
-            cnet[OOS[0] : OOS[1]] - b1net[OOS[0] : OOS[1]]
-        )
-        c = by_span["development_oos"]["candidate"]
-        b1 = by_span["development_oos"]["b1"]
+        residual_b0 = sharpe(cnet[OOS[0] : OOS[1]] - b0net[OOS[0] : OOS[1]])
+        residual_b1 = sharpe(cnet[OOS[0] : OOS[1]] - b1net[OOS[0] : OOS[1]])
+        c, b1 = by_span["development_oos"]["candidate"], by_span["development_oos"]["b1"]
         gates = {
             "positive_net_return": c["net_return"] > 0,
             "positive_sharpe": c["sharpe"] is not None and c["sharpe"] > 0,
             "profitable_folds_at_least_7_of_12": br["profitable_folds"] >= 7,
             "profitable_years_at_least_3": br["profitable_years"] >= 3,
-            "positive_fold_concentration_at_most_50pct": br[
-                "positive_fold_concentration"
-            ]
-            <= 0.5,
-            "max_drawdown_within_2pp_of_b1": c["max_drawdown"]
-            >= b1["max_drawdown"] - 0.02,
+            "positive_fold_concentration_at_most_50pct": br["positive_fold_concentration"] <= 0.5,
+            "max_drawdown_within_2pp_of_b1": c["max_drawdown"] >= b1["max_drawdown"] - 0.02,
             "turnover_no_greater_than_b1": c["turnover"] <= b1["turnover"],
             "positive_edge_per_turnover": c["edge_per_turnover_bps"] > 0,
             "edge_per_turnover_no_worse_than_b1": c["edge_per_turnover_bps"]
             >= b1["edge_per_turnover_bps"],
             "net_return_no_worse_than_b1": c["net_return"] >= b1["net_return"],
             "sharpe_no_worse_than_b1": c["sharpe"] >= b1["sharpe"],
-            "positive_residual_sharpe_vs_b1": residual_b1 is not None
-            and residual_b1 > 0,
-            "bootstrap_mean_delta_lower_bound_positive": boot[
-                "annualized_mean_delta"
-            ]["lower_95"]
+            "positive_residual_sharpe_vs_b1": residual_b1 is not None and residual_b1 > 0,
+            "bootstrap_mean_delta_lower_bound_positive": boot["annualized_mean_delta"]["lower_95"]
             > 0,
-            "bootstrap_sharpe_delta_lower_bound_positive": boot["sharpe_delta"][
-                "lower_95"
-            ]
-            > 0,
+            "bootstrap_sharpe_delta_lower_bound_positive": boot["sharpe_delta"]["lower_95"] > 0,
             "source_chronology_timing_fee_checks": True,
         }
         market_accepted = all(gates.values())
