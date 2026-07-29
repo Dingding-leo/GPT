@@ -1,0 +1,75 @@
+{
+  "bar": "1H",
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "comparators": [
+    "b0_hourly_2160h_trend",
+    "b1_daily_2160h_trend"
+  ],
+  "decision_cadence": "daily 00:00 UTC",
+  "execution": "completed bar t -> target open[t+1] -> payoff open[t+1] to open[t+2]",
+  "family_id": "volatility-compression-trend-acceleration-1h-v1",
+  "features": {
+    "acceleration": "latest_168h_log_return - prior_168h_log_return",
+    "entry_score_training_quantile": 0.7,
+    "exit_score_training_quantile": 0.45,
+    "oos_mapping": "frozen right-continuous training ECDF",
+    "quantile_method": "numpy-linear",
+    "recent_rv_hours": 168,
+    "rv_definition": "sqrt(mean(hourly_log_return_squared))",
+    "score": "equal mean of compression percentile and acceleration percentile",
+    "slow_rv_hours": 2160,
+    "slow_trend_hours": 2160,
+    "training_mapping": "average-rank ECDF"
+  },
+  "hard_boundary": {
+    "15m": false,
+    "accounts": false,
+    "credentials": false,
+    "cross_sectional": false,
+    "leverage": false,
+    "orders": false,
+    "paper_or_live_authorized": false,
+    "private_endpoints": false,
+    "synthetic_data": false
+  },
+  "issue": 614,
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "parameter_grid_count": 0,
+  "position_rule": {
+    "entry": "slow_trend>0 and latest_168h_return>0 and score>=entry_threshold",
+    "exit": "after min hold: slow_trend<=0 or latest_168h_return<=0 or score<exit_threshold",
+    "long_cash_only": true,
+    "minimum_hold_hours": 168
+  },
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "sample": {
+    "development_oos": [17520, 43440],
+    "fold_count": 12,
+    "fold_hours": 2160,
+    "later_suffix_unread": true,
+    "training": [2880, 17520],
+    "warmup": [0, 2880]
+  },
+  "sources": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "zip_sha256": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "zip_sha256": "e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3"
+    }
+  },
+  "uncertainty": {
+    "block_hours": 168,
+    "method": "paired non-circular moving-block bootstrap",
+    "resamples": 5000,
+    "seed": 20260729
+  }
+}
