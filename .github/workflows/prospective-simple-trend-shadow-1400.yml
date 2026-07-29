@@ -3,7 +3,7 @@ name: Prospective Simple Trend Shadow 1400
 on:
   pull_request:
     branches:
-      - auto/research/20260729-23-prospective-simple-trend-shadow-1200
+      - auto/research/20260729-2345-prospective-simple-trend-shadow-1300
     paths:
       - "scripts/run_prospective_simple_trend_shadow_1400.py"
       - ".github/workflows/prospective-simple-trend-shadow-1400.yml"
