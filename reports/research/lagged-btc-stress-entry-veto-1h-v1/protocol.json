@@ -1,0 +1,76 @@
+{
+  "bar": "1H",
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "canonical_signature": "lagged-btc-stress-entry-veto-1h-v1|base=own-2160H-trend|btc-impulse=lagged-24H-return/rms168H|stress-memory=min72H|threshold=train-daily-q20|entry-veto-only|exit=own-trend<=0|daily-00UTC|next-open|fee=5bps-one-way|candidate=1|grid=0",
+  "decision_cadence": "daily 00:00 UTC",
+  "execution": "completed bar t -> target at open[t+1] -> payoff open[t+1] to open[t+2]",
+  "family_id": "lagged-btc-stress-entry-veto-1h-v1",
+  "hard_boundary": {
+    "15m": false,
+    "accounts": false,
+    "credentials": false,
+    "cross_sectional": false,
+    "leverage": false,
+    "market_neutral": false,
+    "orders": false,
+    "pairs_spreads": false,
+    "paper_or_live_authorized": false,
+    "private_endpoints": false,
+    "synthetic_data": false
+  },
+  "issue": 622,
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "parameter_grid_count": 0,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "sample": {
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "fold_count": 12,
+    "fold_hours": 2160,
+    "full_scored": [
+      2880,
+      43440
+    ],
+    "later_suffix_unread": true,
+    "training": [
+      2880,
+      17520
+    ],
+    "warmup": [
+      0,
+      2880
+    ]
+  },
+  "sources": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "zip_sha256": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "zip_sha256": "e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3"
+    }
+  },
+  "stress_feature": {
+    "definition": "minimum over 72H of strictly one-hour-lagged BTC 24H log return divided by sqrt(24) times lagged 168H RMS hourly log-return volatility",
+    "quantile_method": "numpy-linear",
+    "training_quantile": 0.2,
+    "training_valid_daily_observations": 610,
+    "training_stress_observations": 124,
+    "threshold": -2.2334011815085733
+  },
+  "uncertainty": {
+    "block_hours": 168,
+    "method": "paired non-circular moving-block bootstrap of observed real hourly net returns",
+    "resamples": 5000,
+    "seed": 20260729
+  }
+}
