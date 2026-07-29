@@ -204,7 +204,8 @@ def write_report(output_dir: Path, result: dict[str, Any]) -> None:
         f"- Cumulative realized hours: `{result['window']['updated_cumulative_realized_hours']}`",
         "- Canonical fee: `5 bps one-way`",
         "",
-        "| Market | Position | Net return | Asset return | Residual | Turnover | Fee | Latest margin | Margin drift |",
+        "| Market | Position | Net return | Asset return | Residual | Turnover | Fee | "
+        "Latest margin | Margin drift |",
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for market in result["markets"]:
@@ -230,7 +231,8 @@ def write_report(output_dir: Path, result: dict[str, Any]) -> None:
             "",
             "## Five-interval recent forward window",
             "",
-            "| Market | Long decisions | Net return | Benchmark | Residual | Turnover | Fees | Max drawdown | Sharpe |",
+            "| Market | Long decisions | Net return | Benchmark | Residual | Turnover | "
+            "Fees | Max drawdown | Sharpe |",
             "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
