@@ -156,7 +156,7 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
         ),
     }
     result["strategy_facing_discrepancy"] = {
-        "diagnosis": prior.discrepancy_text(result),
+        "diagnosis": prior.prior.discrepancy_text(result),
         "policy_or_accounting_defect_detected": False,
     }
     result["next_strategy_action"] = (
