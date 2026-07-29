@@ -1,0 +1,146 @@
+{
+  "classification": "strategy-source identifiability and terminal family disposition; no new performance window consumed",
+  "cooldown": "Do not reopen this family on consumed proxy intervals. A future architecture may use aggregate market state only under a new preregistration backed by a prospectively accumulated, content-addressed point-in-time lifecycle/member archive.",
+  "evidence_head_before_audit": "1dece878de3c8ae2ff5c7c7437ba13999c70c7bc",
+  "evidence_pr": 590,
+  "existing_strategy_evidence": {
+    "M2": {
+      "BTC-USDT": {
+        "absolute_turnover": 0.0,
+        "fee_drag": 0.0,
+        "forecast_realized_correlation": -0.04621778836537532,
+        "long_hours": 0,
+        "max_drawdown": 0.0,
+        "net_return": 0.0,
+        "net_sharpe": null,
+        "predictive_90pct_coverage": 0.9229497354497355,
+        "profitable_blocks": 0,
+        "simple_trend_net_return": 0.10293209006146076,
+        "simple_trend_sharpe": 0.8051630471645367
+      },
+      "ETH-USDT": {
+        "absolute_turnover": 4.0,
+        "fee_drag": 0.002,
+        "forecast_realized_correlation": -0.02743990149201999,
+        "long_hours": 2,
+        "max_drawdown": -0.016886015179166103,
+        "net_edge_per_turnover_bps": -42.40228819682529,
+        "net_return": -0.016886015179166103,
+        "net_sharpe": -1.7393759920963816,
+        "predictive_90pct_coverage": 0.925760582010582,
+        "profitable_blocks": 0,
+        "simple_trend_net_return": 0.419448,
+        "simple_trend_sharpe": 1.3441
+      }
+    },
+    "candidate_count": {
+      "official": 0,
+      "parameter_grids": 0,
+      "proxy": 1
+    },
+    "sample": {
+      "later_rows_deliberately_unscored": 3049,
+      "proxy_evaluation_blocks_168h": 36,
+      "proxy_evaluation_end_utc": "2026-03-02T22:00:00Z",
+      "proxy_evaluation_rows_per_target": 6048,
+      "proxy_evaluation_start_utc": "2025-06-23T23:00:00Z",
+      "targets": [
+        "BTC-USDT",
+        "ETH-USDT"
+      ],
+      "training_rows_per_target": 17520
+    },
+    "selector_diagnosis": "Predictive intervals were slightly conservative rather than explosively miscalibrated, but forecast-return correlations were negative. BTC never cleared the frozen lower-confidence utility; ETH produced two one-hour false positives. The failure is directional information and actionability, not modeled fee or excess turnover."
+  },
+  "family_id": "adaptive-market-state-dlm-v2",
+  "family_terminally_rejected": true,
+  "hard_boundary": {
+    "bar": "1H",
+    "cross_sectional_allocation": false,
+    "fee_bps_one_way": 5.0,
+    "new_performance_observations_consumed": false,
+    "official_development_oos_consumed": false,
+    "per_instrument_temporal_rule": true,
+    "positions": [
+      "cash",
+      "long"
+    ],
+    "private_or_order_endpoints_used": false,
+    "synthetic_data_used": false,
+    "untouched_replication_consumed": false
+  },
+  "issue": 538,
+  "main_sha_inspected": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "next_strategy_action": "Issue #14 should nominate one materially orthogonal own-history-only 1H architecture whose entire input state is historically reconstructable from immutable public candles, with one predeclared candidate and an inherently low-turnover decision rule.",
+  "objective": "Determine whether the unchanged point-in-time leave-one-target-out aggregate-market state required by the frozen M2 strategy can be reconstructed from permitted public OKX evidence without future-survival, future-liquidity, or post-hoc member information.",
+  "official_public_source_audit": {
+    "delisting_behavior": "the instrument becomes unavailable when the product is going to be delisted; the current endpoint therefore is not a historical lifecycle archive",
+    "documentation_url": "https://www.okx.com/docs-v5/en/",
+    "historical_spot_lifecycle_endpoint_or_repository_archive_found": false,
+    "history_candles_contains_instrument_state_intervals": false,
+    "history_candles_endpoint": "GET /api/v5/market/history-candles",
+    "history_candles_fields": [
+      "timestamp",
+      "open",
+      "high",
+      "low",
+      "close",
+      "volume",
+      "volume_currency",
+      "volume_quote",
+      "confirm"
+    ],
+    "public_instruments_documented_scope": "list of instruments with open contracts",
+    "public_instruments_endpoint": "GET /api/v5/public/instruments",
+    "retrieved_at_utc": "2026-07-29T01:30:00Z"
+  },
+  "predeclared_source_pass_conditions": [
+    "historical instrument lifecycle/state evidence is available at causal effective times",
+    "historically delisted and suspended SPOT/USDT instruments remain enumerable",
+    "ordered leave-one-target-out eligible members are reconstructable for every hour",
+    "complete confirmed public 1H candles and quote volume exist for every eligible member",
+    "all lifecycle, membership and candle bytes are content-addressed and replayable"
+  ],
+  "repository": "Dingding-leo/GPT",
+  "repository_evidence": {
+    "current_public_instrument_snapshot_artifact_id": 8689948931,
+    "current_public_instrument_snapshot_rows": 1332,
+    "current_public_instrument_snapshot_rows_with_exp_time": 0,
+    "current_public_instrument_snapshot_sha256": "e91aab78499e9feb329b11c9feb9bc217766abf3f55a156db20c79ebbaa4af1f",
+    "current_public_instrument_snapshot_spot_usdt_rows": 343,
+    "current_public_instrument_snapshot_states": {
+      "live": 1324,
+      "preopen": 8
+    },
+    "existing_proxy_declares_point_in_time_all_member_contract_satisfied": false,
+    "existing_proxy_result_sha256": "9f3dd77bc80b635be12c2d31b7a2759d55616aa8c92c05c88a4b32f3e8c37e7e",
+    "survivor_universe_candidates_listed_before_cutoff": 106,
+    "survivor_universe_manifest_sha256": "cbf73f83b5ada0716a221504acf620af6d6b2ce21f0a99a39cec0c38494eb152",
+    "survivor_universe_qualified_count": 6,
+    "survivor_universe_qualified_members": [
+      "CFX-USDT",
+      "DOGE-USDT",
+      "FIL-USDT",
+      "LTC-USDT",
+      "SOL-USDT",
+      "XRP-USDT"
+    ],
+    "survivor_universe_rejected_count": 100
+  },
+  "schema_version": "adaptive-market-state-source-identifiability-audit-v1",
+  "source_gate_results": {
+    "complete_confirmed_1h_for_every_historical_member": false,
+    "content_addressed_replay": false,
+    "delisted_and_suspended_instruments_enumerable": false,
+    "historical_lifecycle_state": false,
+    "hourly_ordered_member_reconstruction": false,
+    "source_gate_passes": false
+  },
+  "verdict": "terminal_reject_current_adaptive_market_state_dlm_v2_experiment",
+  "verdict_reasons": [
+    "the exact causal exogenous state required by the frozen strategy is not reconstructable from the permitted public source set or current repository artifacts",
+    "using the current live-instrument snapshot would preserve future-survival and future-availability leakage",
+    "both the aggregate-state proxy and the frozen fast/slow temporal ensemble failed bilateral actionability and benchmark-relative evidence",
+    "official development OOS must remain unread; further proxy changes would be rescue tuning"
+  ]
+}
