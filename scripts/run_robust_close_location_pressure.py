@@ -136,8 +136,29 @@ def run(d,m):
     r['acceptance_checks']=checks(r); r['market_accepts']=all(r['acceptance_checks'].values()); return r
 
 
+
+def compact_market(r):
+    fields=('net_return','arithmetic_net_return','sharpe','max_drawdown','turnover','fees','edge_per_turnover_bps','mean_exposure','exposure_change_count','exposed_hours','loss_hour_rate_when_exposed','longest_exposed_loss_cluster_hours')
+    def slim(z): return {k:z[k] for k in fields}
+    return {
+        'source':r['source'],
+        'training_calibration':r['training_calibration'],
+        'feature_definition':r['feature_definition'],
+        'metrics':{
+            'training':{k:slim(r['metrics']['training'][k]) for k in ('candidate','b1')},
+            'development_oos':{k:slim(r['metrics']['development_oos'][k]) for k in ('candidate','b0','b1')},
+            'full_scored':{k:slim(r['metrics']['full_scored'][k]) for k in ('candidate','b1')},
+        },
+        'breadth':r['breadth'],
+        'residual_sharpe':r['residual_sharpe'],
+        'uncertainty':r['uncertainty'],
+        'selector_diagnostics':r['selector_diagnostics'],
+        'acceptance_checks':r['acceptance_checks'],
+        'market_accepts':r['market_accepts'],
+    }
+
 def main():
-    q=argparse.ArgumentParser(); q.add_argument('--btc-csv',type=Path,required=True); q.add_argument('--eth-csv',type=Path,required=True); q.add_argument('--output',type=Path,required=True); x=q.parse_args(); paths={'BTC-USDT':x.btc_csv,'ETH-USDT':x.eth_csv}; markets={m:run(load(paths[m],m),m) for m in MKTS}; ok=all(v['market_accepts'] for v in markets.values())
-    out={'family_id':'robust-close-location-pressure-entry-1h-v1','issue':ISSUE,'candidate_count':1,'parameter_grid_count':0,'bar':'1H','canonical_fee_one_way':FEE,'research_parent':'5a0fcc97d1a882f8223656c51f5bb8055f534e38','sample':{'warmup':[0,2880],'training':list(TRAIN),'development_oos':list(OOS),'full_scored':list(FULL),'parsed_prefix_bars':N,'later_suffix_unread':True},'markets':markets,'verdict':'nominate_robust_close_location_pressure_entry_for_g1' if ok else 'reject_exact_robust_close_location_pressure_entry_family','paper_or_live_authorized':False,'repaired_discrepancy':'Initial serialization failed on NumPy integer scalars in diagnostics. Native-scalar JSON conversion was added and the full experiment was rerun twice byte-identically; no strategy or metric changed.'}; x.output.parent.mkdir(parents=True,exist_ok=True); x.output.write_text(json.dumps(out,indent=2,sort_keys=True,default=lambda o:o.item() if isinstance(o,np.generic) else str(o))+'\n')
+    q=argparse.ArgumentParser(); q.add_argument('--btc-csv',type=Path,required=True); q.add_argument('--eth-csv',type=Path,required=True); q.add_argument('--output',type=Path,required=True); x=q.parse_args(); paths={'BTC-USDT':x.btc_csv,'ETH-USDT':x.eth_csv}; full_markets={m:run(load(paths[m],m),m) for m in MKTS}; ok=all(v['market_accepts'] for v in full_markets.values()); markets={m:compact_market(v) for m,v in full_markets.items()}
+    out={'family_id':'robust-close-location-pressure-entry-1h-v1','issue':ISSUE,'candidate_count':1,'parameter_grid_count':0,'bar':'1H','canonical_fee_one_way':FEE,'research_parent':'5a0fcc97d1a882f8223656c51f5bb8055f534e38','sample':{'warmup':[0,2880],'training':list(TRAIN),'development_oos':list(OOS),'full_scored':list(FULL),'parsed_prefix_bars':N,'later_suffix_unread':True},'markets':markets,'verdict':'nominate_robust_close_location_pressure_entry_for_g1' if ok else 'reject_exact_robust_close_location_pressure_entry_family','paper_or_live_authorized':False,'repaired_discrepancy':'Initial serialization failed on NumPy integer scalars in diagnostics. Native-scalar JSON conversion was added and the full experiment was rerun twice byte-identically; no strategy or metric changed.'}; x.output.parent.mkdir(parents=True,exist_ok=True); x.output.write_text(json.dumps(out,sort_keys=True,separators=(',',':'),default=lambda o:o.item() if isinstance(o,np.generic) else str(o))+'\n')
 
 if __name__=='__main__': main()
