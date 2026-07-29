@@ -37,11 +37,7 @@ def load(path: Path, instrument: str) -> pd.DataFrame:
     frame = pd.read_csv(path, nrows=PREFIX_BARS)
     ts = pd.DatetimeIndex(pd.to_datetime(frame.timestamp, utc=True))
     expected = pd.date_range(ts[0], periods=len(ts), freq="1h", tz="UTC")
-    valid = (
-        len(frame) == PREFIX_BARS
-        and ts.equals(expected)
-        and (frame.confirm == 1).all()
-    )
+    valid = len(frame) == PREFIX_BARS and ts.equals(expected) and (frame.confirm == 1).all()
     if not valid:
         raise ValueError(f"{instrument} invalid confirmed 1H prefix chronology")
     frame.index = ts
@@ -156,9 +152,7 @@ def metrics(
         "max_drawdown": float(np.min(path / np.maximum.accumulate(path) - 1)),
         "turnover": turnover,
         "fees": float(fees[start:end].sum()),
-        "edge_per_turnover_bps": (
-            float(x.sum() / turnover * 10000) if turnover else None
-        ),
+        "edge_per_turnover_bps": (float(x.sum() / turnover * 10000) if turnover else None),
         "exposure": float(p.mean()),
         "long_entries": int(((p == 1) & (prior == 0)).sum()),
     }
@@ -180,9 +174,7 @@ def breadth(net: np.ndarray, ts: pd.DatetimeIndex) -> dict:
         "profitable_folds": sum(x > 0 for x in folds),
         "profitable_years": sum(x > 0 for x in years.values()),
         "year_returns": years,
-        "positive_fold_concentration": (
-            max(positive) / sum(positive) if positive else None
-        ),
+        "positive_fold_concentration": (max(positive) / sum(positive) if positive else None),
     }
 
 
@@ -232,25 +224,15 @@ def event_diagnostics(
     exit_threshold: float,
 ) -> dict:
     train_daily = np.array(
-        [
-            t
-            for t in range(*TRAIN)
-            if frame.index[t].hour == 0 and np.isfinite(ratio[t])
-        ],
+        [t for t in range(*TRAIN) if frame.index[t].hour == 0 and np.isfinite(ratio[t])],
         dtype=int,
     )
     oos_daily = np.array(
-        [
-            t
-            for t in range(*OOS)
-            if frame.index[t].hour == 0 and np.isfinite(ratio[t])
-        ],
+        [t for t in range(*OOS) if frame.index[t].hour == 0 and np.isfinite(ratio[t])],
         dtype=int,
     )
     start, end = OOS
-    market_gross = (
-        frame.open.to_numpy(float)[1:] / frame.open.to_numpy(float)[:-1] - 1
-    )
+    market_gross = frame.open.to_numpy(float)[1:] / frame.open.to_numpy(float)[:-1] - 1
     c = candidate[start:end]
     b = b1[start:end]
     candidate_only = (c == 1) & (b == 0)
@@ -262,9 +244,7 @@ def event_diagnostics(
         "risk_reentry",
         "trend_exit",
     )
-    event_counts = {
-        kind: sum(e["event"] == kind for e in oos_events) for kind in event_kinds
-    }
+    event_counts = {kind: sum(e["event"] == kind for e in oos_events) for kind in event_kinds}
 
     risk_windows = []
     for e in oos_events:
@@ -281,35 +261,21 @@ def event_diagnostics(
         "ratio_distribution": {
             "training_median": float(np.median(ratio[train_daily])),
             "oos_median": float(np.median(ratio[oos_daily])),
-            "training_q80_exceedance_rate": float(
-                np.mean(ratio[train_daily] >= exit_threshold)
-            ),
-            "oos_q80_exceedance_rate": float(
-                np.mean(ratio[oos_daily] >= exit_threshold)
-            ),
-            "training_q50_or_below_rate": float(
-                np.mean(ratio[train_daily] <= reentry_threshold)
-            ),
-            "oos_q50_or_below_rate": float(
-                np.mean(ratio[oos_daily] <= reentry_threshold)
-            ),
+            "training_q80_exceedance_rate": float(np.mean(ratio[train_daily] >= exit_threshold)),
+            "oos_q80_exceedance_rate": float(np.mean(ratio[oos_daily] >= exit_threshold)),
+            "training_q50_or_below_rate": float(np.mean(ratio[train_daily] <= reentry_threshold)),
+            "oos_q50_or_below_rate": float(np.mean(ratio[oos_daily] <= reentry_threshold)),
         },
         "oos_event_counts": event_counts,
         "candidate_only_hours": int(candidate_only.sum()),
-        "candidate_only_market_gross_sum": float(
-            market_gross[start:end][candidate_only].sum()
-        ),
+        "candidate_only_market_gross_sum": float(market_gross[start:end][candidate_only].sum()),
         "b1_only_hours": int(b1_only.sum()),
         "b1_only_market_gross_sum": float(market_gross[start:end][b1_only].sum()),
-        "candidate_minus_b1_arithmetic_net_sum": float(
-            (cnet[start:end] - bnet[start:end]).sum()
-        ),
+        "candidate_minus_b1_arithmetic_net_sum": float((cnet[start:end] - bnet[start:end]).sum()),
         "risk_exit_next_168h_compounded_market_returns": risk_windows,
         "risk_exit_windows": len(risk_windows),
         "risk_exit_windows_negative": sum(x < 0 for x in risk_windows),
-        "risk_exit_window_median": (
-            float(np.median(risk_windows)) if risk_windows else None
-        ),
+        "risk_exit_window_median": (float(np.median(risk_windows)) if risk_windows else None),
         "risk_exit_window_worst": float(np.min(risk_windows)) if risk_windows else None,
     }
 
@@ -339,8 +305,7 @@ def main() -> None:
             "later_suffix_unread": True,
         },
         "sources": {
-            name: {"csv_sha256": HASHES[name], "total_observations": 43941}
-            for name in HASHES
+            name: {"csv_sha256": HASHES[name], "total_observations": 43941} for name in HASHES
         },
         "markets": {},
     }
@@ -348,21 +313,13 @@ def main() -> None:
     accepted = True
     for name, frame in frames.items():
         ratio = downside_ratio(frame.close.to_numpy(float))
-        daily = [
-            t
-            for t in range(*TRAIN)
-            if frame.index[t].hour == 0 and np.isfinite(ratio[t])
-        ]
+        daily = [t for t in range(*TRAIN) if frame.index[t].hour == 0 and np.isfinite(ratio[t])]
         computed_q50 = float(np.quantile(ratio[daily], 0.50, method="linear"))
         computed_q80 = float(np.quantile(ratio[daily], 0.80, method="linear"))
         frozen = THRESHOLDS[name]
-        if not math.isclose(
-            computed_q50, frozen["reentry_q50"], rel_tol=0, abs_tol=1e-15
-        ):
+        if not math.isclose(computed_q50, frozen["reentry_q50"], rel_tol=0, abs_tol=1e-15):
             raise ValueError(f"{name} frozen q50 mismatch")
-        if not math.isclose(
-            computed_q80, frozen["exit_q80"], rel_tol=0, abs_tol=1e-15
-        ):
+        if not math.isclose(computed_q80, frozen["exit_q80"], rel_tol=0, abs_tol=1e-15):
             raise ValueError(f"{name} frozen q80 mismatch")
 
         pos, events = positions(frame, ratio, computed_q50, computed_q80)
@@ -374,9 +331,7 @@ def main() -> None:
             ("full_scored", FULL),
         )
         for label, span in spans:
-            by_span[label] = {
-                policy: metrics(*packed[policy], pos[policy], span) for policy in pos
-            }
+            by_span[label] = {policy: metrics(*packed[policy], pos[policy], span) for policy in pos}
 
         cnet = packed["candidate"][0]
         b0net = packed["b0"][0]
@@ -403,18 +358,12 @@ def main() -> None:
             "positive_fold_concentration_at_most_50pct": (
                 concentration is not None and concentration <= 0.5
             ),
-            "positive_residual_sharpe_vs_b0": (
-                residual_b0 is not None and residual_b0 > 0
-            ),
-            "positive_residual_sharpe_vs_b1": (
-                residual_b1 is not None and residual_b1 > 0
-            ),
+            "positive_residual_sharpe_vs_b0": (residual_b0 is not None and residual_b0 > 0),
+            "positive_residual_sharpe_vs_b1": (residual_b1 is not None and residual_b1 > 0),
             "bootstrap_mean_delta_lower_bound_positive": (
                 boot["annualized_mean_delta"]["lower_95"] > 0
             ),
-            "bootstrap_sharpe_delta_lower_bound_positive": (
-                boot["sharpe_delta"]["lower_95"] > 0
-            ),
+            "bootstrap_sharpe_delta_lower_bound_positive": (boot["sharpe_delta"]["lower_95"] > 0),
             "source_chronology_timing_fee_checks": True,
         }
         market_accepted = all(gates.values())
