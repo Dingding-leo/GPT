@@ -1,0 +1,393 @@
+{
+  "bar": "1H",
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "family_id": "volume-confirmed-trend-onset-impulse-1h-v1",
+  "issue": 645,
+  "markets": {
+    "BTC-USDT": {
+      "acceptance_checks": {
+        "drawdown_no_worse_b1": false,
+        "edge_per_turnover_at_least_b1": true,
+        "mean_delta_lower_95_positive": false,
+        "net_at_least_b1": false,
+        "positive_fold_concentration_at_most_half": true,
+        "positive_full_scored_net": true,
+        "positive_oos_net": true,
+        "positive_oos_sharpe": true,
+        "positive_residual_sharpe_b1": false,
+        "profitable_folds_at_least_7": false,
+        "profitable_years_at_least_3": true,
+        "sharpe_at_least_b1": false,
+        "sharpe_delta_lower_95_positive": false,
+        "turnover_no_greater_b1": true
+      },
+      "breadth": {
+        "positive_fold_concentration": 0.4240200307448224,
+        "profitable_folds": 6,
+        "profitable_years": 3,
+        "year_returns": {
+          "2023": 0.06420582276715892,
+          "2024": 0.8798145199197915,
+          "2025": 0.09661275078508802,
+          "2026": -0.1746499655295256
+        }
+      },
+      "feature_drift": {
+        "oos_joint_confirmation_rate": 0.14907407407407408,
+        "oos_positive_volume_slope_rate": 0.5092592592592593,
+        "training_joint_confirmation_rate": 0.08032786885245902,
+        "training_positive_volume_slope_rate": 0.4491803278688525
+      },
+      "market_accepts": false,
+      "metrics": {
+        "development_oos": {
+          "b0": {
+            "edge_per_turnover_bps": 45.306063115162424,
+            "exposure": 0.5724537037037037,
+            "fees": 0.1015,
+            "long_entries": 101,
+            "max_drawdown": -0.2267892412401914,
+            "net_return": 1.1163633418975247,
+            "sharpe": 0.9171594854982952,
+            "turnover": 203.0
+          },
+          "b1": {
+            "edge_per_turnover_bps": 212.75128054469278,
+            "exposure": 0.5731867283950617,
+            "fees": 0.0225,
+            "long_entries": 22,
+            "max_drawdown": -0.2654678573881635,
+            "net_return": 1.1968197962400904,
+            "sharpe": 0.953765119416238,
+            "turnover": 45.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 357.1266203015345,
+            "exposure": 0.494483024691358,
+            "fees": 0.0105,
+            "long_entries": 10,
+            "max_drawdown": -0.279012493064109,
+            "net_return": 0.8106399386904244,
+            "sharpe": 0.7802019552576198,
+            "turnover": 21.0
+          }
+        },
+        "full_scored": {
+          "b0": {
+            "edge_per_turnover_bps": 13.984780312354363,
+            "exposure": 0.5108481262327417,
+            "fees": 0.1705,
+            "long_entries": 170,
+            "max_drawdown": -0.5555790197814092,
+            "net_return": 0.24823142997608683,
+            "sharpe": 0.3104155593521776,
+            "turnover": 341.0
+          },
+          "b1": {
+            "edge_per_turnover_bps": 69.85171629923276,
+            "exposure": 0.5124506903353058,
+            "fees": 0.0365,
+            "long_entries": 36,
+            "max_drawdown": -0.5592198563591351,
+            "net_return": 0.2897393033937914,
+            "sharpe": 0.3317518863849881,
+            "turnover": 73.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 164.9782522604211,
+            "exposure": 0.4526627218934911,
+            "fees": 0.018000000000000002,
+            "long_entries": 18,
+            "max_drawdown": -0.41894802116419705,
+            "net_return": 0.4423724391400987,
+            "sharpe": 0.4093742217265324,
+            "turnover": 36.0
+          }
+        },
+        "training": {
+          "b0": {
+            "edge_per_turnover_bps": -32.089280622211106,
+            "exposure": 0.401775956284153,
+            "fees": 0.069,
+            "long_entries": 69,
+            "max_drawdown": -0.5555790197814092,
+            "net_return": -0.4101998436351103,
+            "sharpe": -0.8311585079315998,
+            "turnover": 138.0
+          },
+          "b1": {
+            "edge_per_turnover_bps": -159.80829766668512,
+            "exposure": 0.40491803278688526,
+            "fees": 0.014,
+            "long_entries": 14,
+            "max_drawdown": -0.5592198563591351,
+            "net_return": -0.41290619030236553,
+            "sharpe": -0.8402669561161515,
+            "turnover": 28.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": -104.02946299713763,
+            "exposure": 0.37862021857923495,
+            "fees": 0.0075,
+            "long_entries": 8,
+            "max_drawdown": -0.41894802116419705,
+            "net_return": -0.20339079663551907,
+            "sharpe": -0.31996693038064083,
+            "turnover": 15.0
+          }
+        }
+      },
+      "onset_oos": {
+        "base_regime_onsets": 22,
+        "max_entry_delay_hours": 120,
+        "median_entry_delay_hours": 24.0,
+        "missed_onsets": 12,
+        "qualification_rate": 0.45454545454545453,
+        "qualified_onsets": 10
+      },
+      "residual_sharpe": {
+        "vs_b0": -0.48514337649445133,
+        "vs_b1": -0.6550408178015905
+      },
+      "selector_discrepancy_vs_b1": {
+        "b1_only_hours": 2280,
+        "b1_only_market_arithmetic_return": 0.1820686041933549,
+        "candidate_only_hours": 240,
+        "candidate_only_market_arithmetic_return": -0.03734625562454019,
+        "decomposition_identity_passes": true,
+        "improved_arithmetic_net_folds_vs_b1": 4,
+        "incremental_fee_cost_vs_b1": -0.011999999999999999,
+        "observed_candidate_minus_b1_arithmetic_net": -0.2074148598178951,
+        "reconstructed_candidate_minus_b1_arithmetic_net": -0.2074148598178951,
+        "selector_effect_folds": 10
+      },
+      "source": {
+        "artifact_id": 8704977298,
+        "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+        "observations_in_source": 43941,
+        "parsed_prefix_bars": 43441
+      },
+      "uncertainty": {
+        "annualized_mean_delta": {
+          "lower_95": -0.2250650968463165,
+          "point": -0.07009854058660343,
+          "upper_95": 0.07308398110805489
+        },
+        "block_hours": 168,
+        "no_selector_effect_resample_rate": 0.0,
+        "resamples": 5000,
+        "seed": 20260730,
+        "sharpe_delta": {
+          "lower_95": -0.6190254916602201,
+          "point": -0.17356316415861817,
+          "upper_95": 0.25348764650046507
+        }
+      }
+    },
+    "ETH-USDT": {
+      "acceptance_checks": {
+        "drawdown_no_worse_b1": true,
+        "edge_per_turnover_at_least_b1": true,
+        "mean_delta_lower_95_positive": false,
+        "net_at_least_b1": false,
+        "positive_fold_concentration_at_most_half": true,
+        "positive_full_scored_net": true,
+        "positive_oos_net": true,
+        "positive_oos_sharpe": true,
+        "positive_residual_sharpe_b1": false,
+        "profitable_folds_at_least_7": false,
+        "profitable_years_at_least_3": true,
+        "sharpe_at_least_b1": false,
+        "sharpe_delta_lower_95_positive": false,
+        "turnover_no_greater_b1": true
+      },
+      "breadth": {
+        "positive_fold_concentration": 0.23244591037900736,
+        "profitable_folds": 6,
+        "profitable_years": 3,
+        "year_returns": {
+          "2023": 0.16504415005528372,
+          "2024": 0.5663793671496558,
+          "2025": 0.06258886458395341,
+          "2026": -0.14639366983798585
+        }
+      },
+      "feature_drift": {
+        "oos_joint_confirmation_rate": 0.1259259259259259,
+        "oos_positive_volume_slope_rate": 0.4935185185185185,
+        "training_joint_confirmation_rate": 0.08524590163934426,
+        "training_positive_volume_slope_rate": 0.44754098360655736
+      },
+      "market_accepts": false,
+      "metrics": {
+        "development_oos": {
+          "b0": {
+            "edge_per_turnover_bps": 58.30762446386598,
+            "exposure": 0.49699074074074073,
+            "fees": 0.0695,
+            "long_entries": 69,
+            "max_drawdown": -0.4730328076249738,
+            "net_return": 0.6801914056080769,
+            "sharpe": 0.6175145349430254,
+            "turnover": 139.0
+          },
+          "b1": {
+            "edge_per_turnover_bps": 283.5837648433161,
+            "exposure": 0.49722222222222223,
+            "fees": 0.015000000000000001,
+            "long_entries": 15,
+            "max_drawdown": -0.4776594160762392,
+            "net_return": 0.7451603410954828,
+            "sharpe": 0.6456279607587625,
+            "turnover": 30.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 504.23597044848304,
+            "exposure": 0.4824074074074074,
+            "fees": 0.008,
+            "long_entries": 8,
+            "max_drawdown": -0.4496531231865295,
+            "net_return": 0.6552447718586443,
+            "sharpe": 0.6033586811107642,
+            "turnover": 16.0
+          }
+        },
+        "full_scored": {
+          "b0": {
+            "edge_per_turnover_bps": 13.787263815430185,
+            "exposure": 0.48025147928994083,
+            "fees": 0.1135,
+            "long_entries": 113,
+            "max_drawdown": -0.5775445421085006,
+            "net_return": -0.1067577946903614,
+            "sharpe": 0.1577691303734697,
+            "turnover": 227.0
+          },
+          "b1": {
+            "edge_per_turnover_bps": 87.27977328890617,
+            "exposure": 0.4787228796844181,
+            "fees": 0.0265,
+            "long_entries": 26,
+            "max_drawdown": -0.5695187578011079,
+            "net_return": 0.03682097322871436,
+            "sharpe": 0.23303476477091944,
+            "turnover": 53.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 281.9029929770345,
+            "exposure": 0.4289940828402367,
+            "fees": 0.013000000000000001,
+            "long_entries": 13,
+            "max_drawdown": -0.4496531231865307,
+            "net_return": 0.4069231513546425,
+            "sharpe": 0.38542142662174383,
+            "turnover": 26.0
+          }
+        },
+        "training": {
+          "b0": {
+            "edge_per_turnover_bps": -56.534669481530884,
+            "exposure": 0.45061475409836066,
+            "fees": 0.044000000000000004,
+            "long_entries": 44,
+            "max_drawdown": -0.5775445421085006,
+            "net_return": -0.4683687808851905,
+            "sharpe": -0.7437877705962022,
+            "turnover": 88.0
+          },
+          "b1": {
+            "edge_per_turnover_bps": -168.7689113472807,
+            "exposure": 0.44596994535519124,
+            "fees": 0.0115,
+            "long_entries": 11,
+            "max_drawdown": -0.5695187578011079,
+            "net_return": -0.4058878437623247,
+            "sharpe": -0.5841780885870211,
+            "turnover": 23.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": -73.82977097728327,
+            "exposure": 0.3344262295081967,
+            "fees": 0.005000000000000001,
+            "long_entries": 5,
+            "max_drawdown": -0.3171137835337632,
+            "net_return": -0.15002108734961306,
+            "sharpe": -0.13582467268577247,
+            "turnover": 10.0
+          }
+        }
+      },
+      "onset_oos": {
+        "base_regime_onsets": 15,
+        "max_entry_delay_hours": 144,
+        "median_entry_delay_hours": 36.0,
+        "missed_onsets": 7,
+        "qualification_rate": 0.5333333333333333,
+        "qualified_onsets": 8
+      },
+      "residual_sharpe": {
+        "vs_b0": -0.008293276638595946,
+        "vs_b1": -0.10682712186405818
+      },
+      "selector_discrepancy_vs_b1": {
+        "b1_only_hours": 600,
+        "b1_only_market_arithmetic_return": -0.050653320145129466,
+        "candidate_only_hours": 216,
+        "candidate_only_market_arithmetic_return": -0.10162706195750493,
+        "decomposition_identity_passes": true,
+        "improved_arithmetic_net_folds_vs_b1": 5,
+        "incremental_fee_cost_vs_b1": -0.007000000000000001,
+        "observed_candidate_minus_b1_arithmetic_net": -0.043973741812375344,
+        "reconstructed_candidate_minus_b1_arithmetic_net": -0.04397374181237546,
+        "selector_effect_folds": 7
+      },
+      "source": {
+        "artifact_id": 8704978112,
+        "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+        "observations_in_source": 43941,
+        "parsed_prefix_bars": 43441
+      },
+      "uncertainty": {
+        "annualized_mean_delta": {
+          "lower_95": -0.1966256082735262,
+          "point": -0.014861496075478743,
+          "upper_95": 0.12196462655452235
+        },
+        "block_hours": 168,
+        "no_selector_effect_resample_rate": 0.0,
+        "resamples": 5000,
+        "seed": 20260730,
+        "sharpe_delta": {
+          "lower_95": -0.45075125067466876,
+          "point": -0.042269279647998315,
+          "upper_95": 0.2794058959705496
+        }
+      }
+    }
+  },
+  "paper_or_live_authorized": false,
+  "parameter_grid_count": 0,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "sample": {
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "full_scored": [
+      2880,
+      43440
+    ],
+    "later_suffix_unread": true,
+    "parsed_prefix_bars": 43441,
+    "training": [
+      2880,
+      17520
+    ],
+    "warmup": [
+      0,
+      2880
+    ]
+  },
+  "verdict": "reject_exact_volume_confirmed_trend_onset_impulse_family"
+}
