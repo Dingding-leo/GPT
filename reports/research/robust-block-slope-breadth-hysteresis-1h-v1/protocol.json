@@ -48,7 +48,11 @@
     "state_carries_across_training_folds_and_sample_boundaries": true
   },
   "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
-  "result_sha256": "b77e0e95e2f068de971c7d96fab084107384cb560c411744e71a58c4f45ea6af",
+  "evidence_sha256": {
+    "core": "8ac6fb135bae68d009e2678c44e0e32577f596cee214123788a9ce6163104236",
+    "runner": "4a94beb4ed348f07d9782c199867a6a4392916ed08756a01ae6800ee189ee38a",
+    "result": "fb280dcfd5b990319863831042d6aa45a951ce0cf234135baa0a695a9b869efd"
+  },
   "sample": {
     "development_oos": [17520, 43440],
     "development_oos_last_payoff_start": "2026-07-07T23:00:00Z",
@@ -64,7 +68,6 @@
     "training_start": "2021-11-21T00:00:00Z",
     "warmup": [0, 2880]
   },
-  "script_sha256": "3ff5be80207d243b314f73311b0e8ebb5a04120beb5ce787adde6a6d2be527be",
   "sources": {
     "BTC-USDT": {
       "artifact_id": 8704977298,
