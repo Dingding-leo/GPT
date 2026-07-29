@@ -73,7 +73,7 @@ The candidate materially reduced training losses and drawdown versus B1, but ETH
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|
 | BTC | Candidate | +23.19% | 0.403 | -30.48% | 10 | +0.50% | +305.44 bps | 30.93% | 5 |
 | BTC | B1 daily trend | +119.68% | 0.954 | -26.55% | 45 | +2.25% | +212.75 bps | 57.32% | 22 |
-| ETH | Candidate | **+133.85%** | **0.999** | **-30.99%** | 8 | +0.40% | **+1,285.80 bps** | 31.30% | 4 |
+| ETH | Candidate | **+133.85%** | **0.999** | **-30.99%** | 8 | +0.40% | **+1285.80 bps** | 31.30% | 4 |
 | ETH | B1 daily trend | +74.52% | 0.646 | -47.77% | 30 | +1.50% | +283.58 bps | 49.72% | 15 |
 
 BTC improved turnover efficiency but sacrificed 96.50 percentage points of compounded return, 0.550 Sharpe and 3.94 percentage points of drawdown versus B1. ETH improved every headline point estimate: +59.34 percentage points of return, +0.354 Sharpe, 16.78 percentage points of drawdown, 22 fewer one-way changes and +1,002.22 bps edge per turnover.
@@ -111,7 +111,7 @@ The same selector produced opposite economic effects across markets.
 | Diagnostic | BTC-USDT | ETH-USDT |
 |---|---:|---:|
 | OOS candidate entries / exits | 5 / 5 | 4 / 4 |
-| Median episode duration | 1,992H | 2,004H |
+| Median episode duration | 1992H | 2004H |
 | Profitable episode ratio | 60.0% | 75.0% |
 | Candidate-only hours vs B1 | 24 | 24 |
 | Candidate-only market gross sum | +2.06% | +1.75% |
@@ -139,7 +139,7 @@ No basis-order, coherence-boundary, window, hysteresis, market-specific, cadence
 ```text
 script SHA-256    9066cf6226c03bad8e4e861e430449653937af2199a9091566c59bf38b917e2d
 protocol SHA-256  b0d72067286dfbe0e002f531ea35b6b6042923450c1be6fbb88f1c8e99800f3e
-result SHA-256    4e867c7bc6f02cf0713febf22d134159d6c7cf26f79611e26dba091a24df9182
+result SHA-256    22a1f131e22d514cc0c937a5b256a58598aa6de4121a61f3ce8773dc26559260
 ```
 
 ## Next strategy experiment
