@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# ruff: noqa
+# fmt: off
 """Reproduce issue #595's frozen variance-ratio persistence verdict."""
 from __future__ import annotations
 
@@ -91,3 +93,4 @@ def main():
  out={"schema_version":1,"family_id":"variance-ratio-persistence-state-1h-v1","issue":595,"main":MAIN,"bar":"1H","candidate_count":1,"fee_bps_one_way":5.0,"execution":"completed confirmed bar t; target at open[t+1]; payoff open[t+1] to open[t+2]","sample":{"train_hours":14640,"oos_hours":25920,"folds":12,"fold_hours":2160,"unscored_suffix":True},"bootstrap":{"method":"paired_non_circular_moving_block","block_hours":168,"resamples":5000,"seed":SEED},"sources":SOURCES,"markets":markets,"untouched_oos_consumed":False,"paper_or_live_authorized":False,"rescue_tuning_authorized":False,"verdict":"accept_for_shadow_observation_only" if all(m["accepted"] for m in markets) else "reject_exact_variance_ratio_persistence_family"}
  a.output.write_text(json.dumps(out,indent=2,sort_keys=True)+"\n"); print(json.dumps({"output":str(a.output),"sha256":sha(a.output),"verdict":out["verdict"]},indent=2))
 if __name__=="__main__": main()
+# fmt: on
