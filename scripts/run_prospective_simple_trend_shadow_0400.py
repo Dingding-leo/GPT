@@ -146,9 +146,7 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
             "scoring remains prohibited and cannot be used for rescue tuning"
         ),
     }
-    exposed = any(
-        market["realized_interval"]["position"] == 1 for market in result["markets"]
-    )
+    exposed = any(market["realized_interval"]["position"] == 1 for market in result["markets"])
     result["historical_selection_relationship_status"] = {
         "assessable_in_new_interval": exposed,
         "reason": (
