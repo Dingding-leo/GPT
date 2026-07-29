@@ -141,5 +141,6 @@ The next experiment should be materially orthogonal: preregister one own-history
 
 ## Evidence hashes
 
-- script SHA-256: `3ff5be80207d243b314f73311b0e8ebb5a04120beb5ce787adde6a6d2be527be`
-- result SHA-256: `b77e0e95e2f068de971c7d96fab084107384cb560c411744e71a58c4f45ea6af`
+- core SHA-256: `8ac6fb135bae68d009e2678c44e0e32577f596cee214123788a9ce6163104236`
+- runner SHA-256: `4a94beb4ed348f07d9782c199867a6a4392916ed08756a01ae6800ee189ee38a`
+- result SHA-256: `fb280dcfd5b990319863831042d6aa45a951ce0cf234135baa0a695a9b869efd`
