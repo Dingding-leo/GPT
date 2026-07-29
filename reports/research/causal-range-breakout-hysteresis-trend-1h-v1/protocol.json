@@ -57,7 +57,7 @@
     "training_start": "2021-11-21T00:00:00Z",
     "warmup": [0, 2880]
   },
-  "script_sha256": "76fff9df5dc721ffd20b3539c577940ccdd9f728354fe48bedc37d40cbca86f9",
+  "script_sha256": "b0f45cdc06649be13dbe675b5287407cc60897b4731f800704b372814a1a50a2",
   "sources": {
     "BTC-USDT": {
       "artifact_id": 8704977298,
