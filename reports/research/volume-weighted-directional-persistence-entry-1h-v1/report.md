@@ -106,4 +106,4 @@ Preregister one own-history-only **volume-confirmed trend-onset impulse** archit
 
 - `protocol.json`: `32e611ea1c06f29074a4796537e6e6a871fcea2bb782a44c2f827bb0ad971b5e`
 - `result.json`: `4aefd55d850aaf9f71fce2f751724bebf96614bd1751838be1e899c88d68d4e5`
-- `run_volume_weighted_directional_persistence.py`: `25660fbbbf450c17af7336794f241f034c37fc787c22005989f8d5035f73b069`
+- `run_volume_weighted_directional_persistence.py`: `29dcb5e53655fd50f752102b475bf3e295ac7926f3dc53f96de45f7ed7b395f7`
