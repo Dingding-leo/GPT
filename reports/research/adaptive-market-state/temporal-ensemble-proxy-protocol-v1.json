@@ -1,0 +1,65 @@
+{
+  "schema_version": "adaptive-market-state-temporal-ensemble-proxy-protocol-v1",
+  "repository": "Dingding-leo/GPT",
+  "issue": 538,
+  "objective": "Falsify or support the remaining predeclared temporal innovation: whether the fixed fast/slow predictive-likelihood ensemble converts the six-market lagged aggregate-state proxy into robust, low-turnover BTC/ETH long/cash decisions beyond M0, M1 and the fixed 2160H simple-trend benchmark.",
+  "classification": "training-only proxy diagnostic; no official development OOS, untouched replication or prospective evidence",
+  "data": {
+    "provider": "OKX public confirmed candles",
+    "bar": "1H",
+    "targets": ["BTC-USDT", "ETH-USDT"],
+    "aggregate_proxy_members": ["CFX-USDT", "DOGE-USDT", "FIL-USDT", "LTC-USDT", "SOL-USDT", "XRP-USDT"],
+    "selection": "all six instruments with complete immutable 28080H histories in workflow artifact 8689948931; no post-result exclusion",
+    "sample_rule": "after constructing all causal normalized target and aggregate features, use the first 17520 contiguous valid rows as model training, the immediately following 6048 contiguous rows as proxy evaluation, and do not score any later rows"
+  },
+  "features": {
+    "target": ["r_1h", "r_24h", "rv_ratio", "downside_ratio", "volume_surprise", "drawdown_168h"],
+    "aggregate": ["market_return_24h", "market_rv_ratio", "market_downside_ratio", "market_volume_surprise"],
+    "normalization": "for each feature at t, median and exact MAD over t-720 through t-1; zero or non-finite MAD maps z to zero",
+    "aggregate_formula": "equal-weight cross-instrument median at each completed hour; aggregate is a temporal covariate only, never an allocation rank"
+  },
+  "label_and_execution": {
+    "forecast_label": "simple return from open[t+1] to open[t+2]",
+    "decision_time": "after completed hour t",
+    "position_start": "open[t+1]",
+    "positions": [0, 1],
+    "fee_bps_one_way": 5.0
+  },
+  "models": {
+    "M0": "static target-only ridge; penalty 1e-4; intercept unpenalized",
+    "M1": "target-only RLS; lambda 0.995; initialized from full training ridge",
+    "M2": "target plus aggregate-state fast/slow RLS experts; lambdas 0.995 and 0.980; normalized Gaussian predictive-likelihood weights over latest 168 observed labels",
+    "M2_initialization": "fit both experts on first 17352 training rows, then run exactly 168 prequential training forecasts and updates before first evaluation decision",
+    "predictive_variance": "causal residual variance with expert forgetting factor and floor 1e-12 multiplied by 1 + x'Px; M2 uses mixture second moment"
+  },
+  "decision_rule": "choose p maximizing p*mu - 1.645*p*sigma - 0.0005*abs(p-prev); ties retain previous position",
+  "benchmark": "fixed own-instrument close[t] > close[t-2160] long/cash, same next-open timing and fee",
+  "candidate_accounting": {
+    "official_candidates": 0,
+    "proxy_candidates": 1,
+    "parameter_grids": 0,
+    "controls": ["M0", "M1", "simple_trend_2160H"]
+  },
+  "acceptance": {
+    "both_targets": [
+      "M2 net return > 0",
+      "M2 net Sharpe > 0",
+      "at least 18 of 36 168H blocks profitable",
+      "positive-block concentration <= 0.50",
+      "M2 Sharpe strictly above M0 and M1",
+      "M2 edge per turnover strictly above M0 and M1",
+      "M2 residual Sharpe versus simple trend > 0",
+      "paired moving-block-bootstrap one-sided 95% lower bound for M2 minus M1 net return > 0",
+      "annualized turnover <= 104",
+      "median holding duration >= 12H",
+      "gross edge per turnover lower bound > 7.5 bps"
+    ],
+    "failure_action": "block official M2 and record the exact failing selector/information mechanism; do not rescue-tune on this interval"
+  },
+  "uncertainty": {
+    "resamples": 5000,
+    "block_hours": 168,
+    "seed": 20260729,
+    "comparison": "paired M2-minus-M1 and M2-minus-simple-trend hourly net-return differences"
+  }
+}
