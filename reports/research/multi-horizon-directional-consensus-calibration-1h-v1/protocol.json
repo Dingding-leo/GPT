@@ -1,0 +1,88 @@
+{
+  "bar": "1H",
+  "bootstrap": {
+    "block_hours": 168,
+    "comparison": "candidate_minus_b1",
+    "method": "paired_non_circular_moving_block",
+    "resamples": 5000,
+    "seed": 20260729
+  },
+  "candidate_count": 1,
+  "comparators": {
+    "b0": "2160H close-to-close trend, hourly updates, next-open execution",
+    "b1": "2160H close-to-close trend, daily 00:00 UTC updates, next-open execution"
+  },
+  "cross_sectional_selection": false,
+  "execution": "completed confirmed bar t; target at open[t+1]; payoff open[t+1] to open[t+2]",
+  "family_id": "multi-horizon-directional-consensus-calibration-1h-v1",
+  "fee": {
+    "applied_to": "absolute_position_change",
+    "component": "exchange_fee",
+    "one_way_bps": 5.0
+  },
+  "issue": 608,
+  "main": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "paper_or_live_authorized": false,
+  "parameter_grid_count": 0,
+  "per_instrument_only": true,
+  "rescue_tuning_authorized": false,
+  "samples": {
+    "descriptive_training": [
+      2880,
+      17520
+    ],
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "fold_hours": 2160,
+    "later_suffix_unread_and_unscored": true,
+    "warmup": [
+      0,
+      2880
+    ]
+  },
+  "schema_version": 1,
+  "signal": {
+    "decision_hour_utc": 0,
+    "entry": "cash to long iff 2160H trend positive, exact state eligible, and lower 90% bound > 10 bps",
+    "entry_hurdle_gross": 0.001,
+    "exit": "after minimum hold, exit iff 2160H trend non-positive, state ineligible, or posterior mean non-positive",
+    "horizons_hours": [
+      24,
+      168,
+      720,
+      2160
+    ],
+    "minimum_effective_support": 8,
+    "minimum_holding_hours": 168,
+    "minimum_raw_support": 56,
+    "one_sided_credible_level": 0.9,
+    "position_set": [
+      0,
+      1
+    ],
+    "posterior": "Jeffreys-prior Student-t mean posterior with overlap-adjusted effective support floor(n_raw/7)",
+    "state": "exact four-bit sign of log(close[t]/close[t-h]); bit order 24,168,720,2160",
+    "state_pooling": false,
+    "target": "gross open[t+169]/open[t+1]-1 over next 168H",
+    "training_anchor_boundary": "daily anchors in training with target end open strictly before row 17520"
+  },
+  "sources": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "zip_sha256": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "zip_sha256": "e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3"
+    }
+  },
+  "untouched_oos_consumed": false
+}
