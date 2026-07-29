@@ -1,4 +1,4 @@
-# ruff: noqa: E501
+# ruff: noqa
 # fmt: off
 from __future__ import annotations
 import hashlib, math
