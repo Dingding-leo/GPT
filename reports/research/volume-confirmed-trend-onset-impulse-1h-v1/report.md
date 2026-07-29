@@ -108,5 +108,5 @@ Preregister one own-history-only **trend-state survival calibration** architectu
 ## Artifact hashes
 
 - `protocol.json`: `af8dadede847678d99c5d365c6d4e6d759a00841b3b085ad9c805b8e247ed557`
-- `result.json`: `7f273e54e59d16484e103bf44d786e237812804fe9b09f98fa0ca75e500bfb6b`
-- `run_volume_confirmed_trend_onset.py`: `85556e9b2984baa15a4877c79ef530e7b84fa5f3383ba745c399ff62ba95749d`
+- `result.json`: `4f36d814250701def3ebd9530444a3c80bce68000b3746da7f7e5d471dd6dc00`
+- `run_volume_confirmed_trend_onset.py`: `5de30eda5f0c7d932504030b8f3090d626d23b99130962df90e209fbdbea3541`
