@@ -1,0 +1,95 @@
+{
+  "acceptance": {
+    "both_markets_must_pass_all": true,
+    "development_oos_gates": [
+      "positive compounded net return",
+      "positive annualised Sharpe",
+      "net return at least B1",
+      "Sharpe at least B1",
+      "maximum drawdown no worse than B1",
+      "turnover no greater than B1",
+      "edge per turnover at least B1",
+      "at least 7 of 12 profitable 2160H folds",
+      "at least 3 profitable calendar years",
+      "positive residual Sharpe versus B1",
+      "positive lower 95% bound for annualised mean-return delta versus B1",
+      "positive lower 95% bound for Sharpe delta versus B1",
+      "positive-fold concentration no greater than 50%",
+      "positive full-scored compounded net return"
+    ],
+    "uncertainty": {
+      "block_hours": 168,
+      "paired_non_circular": true,
+      "resamples": 5000,
+      "seed": 20260730
+    }
+  },
+  "bar": "1H",
+  "benchmarks": {
+    "B0": "hourly 2160H endpoint trend long/cash, next-open, 5 bps one way",
+    "B1": "daily 00:00 UTC 2160H endpoint trend long/cash, next-open, 5 bps one way"
+  },
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "family_id": "lagged-btc-downside-shock-absorption-entry-1h-v1",
+  "feature": {
+    "absorption_state": "At a completed daily 00:00 UTC BTC bar t, locate the most recent absorptive shock aged 24-168 completed hours. State is true when log(close_t/close_u)>0 and min(low_(u+1)..low_t)>=low_u.",
+    "absorptive_shock": "robust_shock and lower_wick>=0.50",
+    "exogenous_market": "BTC-USDT",
+    "lower_wick": "(min(open,close)-low)/(high-low), zero for zero range",
+    "robust_shock": "r_u<=-3.0*sigma_u",
+    "sigma": "1.4826*MAD of the 168 completed BTC hourly log returns ending at u-1"
+  },
+  "hard_boundary": {
+    "allowed": "each target instrument's own lagged history plus frozen lagged BTC-USDT exogenous history mapping to that target's future long/cash decision",
+    "prohibited": [
+      "cross-sectional ranking or selection",
+      "pairs or spread trading",
+      "cointegration or statistical arbitrage",
+      "market-neutral long-short portfolios",
+      "current relative-rank signals",
+      "post-hoc asset filtering",
+      "synthetic data",
+      "15m",
+      "credentials or private endpoints",
+      "accounts, orders, leverage or enabled adapters"
+    ]
+  },
+  "issue": 661,
+  "parameter_grid_count": 0,
+  "policy": {
+    "entry": "At daily 00:00 UTC, enter from cash only when target close_t>close_(t-2160), common BTC absorption state is true and training support is enabled.",
+    "execution": "next hourly open",
+    "exit": "At daily 00:00 UTC, exit when target close_t<=close_(t-2160). Ignore BTC state while long.",
+    "exposure": [0, 1],
+    "subset_of_B1": true
+  },
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "sample": {
+    "development_oos": [17520, 43440],
+    "fold_hours": 2160,
+    "folds": 12,
+    "full_scored": [2880, 43440],
+    "later_suffix_unread": true,
+    "parsed_prefix_bars": 43441,
+    "training": [2880, 17520],
+    "warmup": [0, 2880]
+  },
+  "sources": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "provider": "OKX public confirmed SPOT"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "provider": "OKX public confirmed SPOT"
+    }
+  },
+  "support_rule": {
+    "minimum_daily_training_state_decisions": 20,
+    "performance_free": true,
+    "when_failed": "candidate remains cash in both targets"
+  }
+}
