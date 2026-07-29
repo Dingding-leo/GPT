@@ -1,0 +1,201 @@
+{
+  "canonical_fee_one_way": 0.0005,
+  "diagnosis": {
+    "BTC-USDT": "The selector delayed 888 B1-long hours that earned +9.61% arithmetic gross return and created 240 candidate-only hours that lost 2.85%; reduced turnover did not compensate.",
+    "ETH-USDT": "The selector delayed 336 B1-long hours that earned +13.46% arithmetic gross return and retained 672 candidate-only hours that lost 41.02%. Positive arithmetic edge per turnover coexisted with negative compounded return because losses were clustered and volatility drag was large.",
+    "verdict_effect": "No change: the exact family remains rejected. This is a strategy-failure decomposition, not a post-hoc rescue or new candidate."
+  },
+  "diagnostic_only": true,
+  "family_id": "weekly-phase-conditioned-trend-carry-1h-v1",
+  "issue": 617,
+  "markets": {
+    "BTC-USDT": {
+      "b1_oos": {
+        "arithmetic_net_sum": 0.9598040741109364,
+        "compounded_net_return": 1.202156307296331,
+        "fees": 0.0225,
+        "turnover": 45.0
+      },
+      "candidate_oos": {
+        "active_hours": 14208,
+        "arithmetic_minus_log_compounding_gap": 0.16182327290443366,
+        "arithmetic_net_sum": 0.846164838023759,
+        "compounded_net_return": 0.9824660808897092,
+        "fees": 0.0115,
+        "log_net_sum": 0.6843415651193253,
+        "max_consecutive_negative_active_hours": 13,
+        "negative_active_hours": 6978,
+        "trades": {
+          "best_net_return": 0.9986083335822786,
+          "count": 12,
+          "longest_losing_trade_streak": 4,
+          "losses": 7,
+          "mean_net_return": 0.08962027026600089,
+          "median_net_return": -0.018285682926581448,
+          "profitable": 5,
+          "worst_net_return": -0.14868637270051432
+        },
+        "turnover": 23.0,
+        "worst_168h": {
+          "end_index_exclusive": 23286,
+          "execution_end_exclusive": "2024-03-20 07:00:00+00:00",
+          "execution_start": "2024-03-13 07:00:00+00:00",
+          "net_return": -0.15062769562538414,
+          "start_index": 23118,
+          "window_hours": 168
+        },
+        "worst_720h": {
+          "end_index_exclusive": 42659,
+          "execution_end_exclusive": "2026-06-05 12:00:00+00:00",
+          "execution_start": "2026-05-06 12:00:00+00:00",
+          "net_return": -0.18929324674915393,
+          "start_index": 41939,
+          "window_hours": 720
+        }
+      },
+      "position_state_decomposition_vs_b1": {
+        "b1_only": {
+          "annualized_sharpe": 2.014670434612489,
+          "gross_arithmetic_sum": 0.09610016270718902,
+          "gross_compounded_return": 0.08862943192408101,
+          "hours": 888,
+          "mean_gross_bps_per_hour": 1.0822090394953718
+        },
+        "both_cash": {
+          "annualized_sharpe": 0.19869347888238983,
+          "gross_arithmetic_sum": 0.12134147142868168,
+          "gross_compounded_return": -0.02915226372877955,
+          "hours": 10824,
+          "mean_gross_bps_per_hour": 0.11210409407675691
+        },
+        "both_long": {
+          "annualized_sharpe": 1.2444150849372093,
+          "gross_arithmetic_sum": 0.8862039114037472,
+          "gross_compounded_return": 1.0689261730197184,
+          "hours": 13968,
+          "mean_gross_bps_per_hour": 0.6344529720817206
+        },
+        "candidate_only": {
+          "annualized_sharpe": -2.366732147358319,
+          "gross_arithmetic_sum": -0.02853907337998829,
+          "gross_compounded_return": -0.030698879926043254,
+          "hours": 240,
+          "mean_gross_bps_per_hour": -1.189128057499512
+        }
+      },
+      "residual_vs_b1": {
+        "arithmetic_net_delta": -0.1136392360871773,
+        "candidate_only_gross_arithmetic_contribution": -0.02853907337998829,
+        "fee_arithmetic_contribution": 0.011000000000000001,
+        "missed_b1_only_gross_arithmetic_contribution": -0.09610016270718902,
+        "residual_sharpe": -0.396577695862081
+      },
+      "source": {
+        "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+        "later_suffix_unread": true,
+        "rows_loaded": 43442
+      }
+    },
+    "ETH-USDT": {
+      "b1_oos": {
+        "arithmetic_net_sum": 0.8507512945299482,
+        "compounded_net_return": 0.7451603410954828,
+        "fees": 0.015000000000000001,
+        "turnover": 30.0
+      },
+      "candidate_oos": {
+        "active_hours": 13224,
+        "arithmetic_minus_log_compounding_gap": 0.3200236794553859,
+        "arithmetic_net_sum": 0.30950896118732124,
+        "compounded_net_return": -0.010459631859692675,
+        "fees": 0.0115,
+        "log_net_sum": -0.010514718268064632,
+        "max_consecutive_negative_active_hours": 9,
+        "negative_active_hours": 6496,
+        "trades": {
+          "best_net_return": 1.0168520238672132,
+          "count": 12,
+          "longest_losing_trade_streak": 3,
+          "losses": 9,
+          "mean_net_return": 0.03456849756741178,
+          "median_net_return": -0.05495278294861916,
+          "profitable": 3,
+          "worst_net_return": -0.23735168655003824
+        },
+        "turnover": 23.0,
+        "worst_168h": {
+          "end_index_exclusive": 26604,
+          "execution_end_exclusive": "2024-08-05 13:00:00+00:00",
+          "execution_start": "2024-07-29 13:00:00+00:00",
+          "net_return": -0.3309530003916733,
+          "start_index": 26436,
+          "window_hours": 168
+        },
+        "worst_720h": {
+          "end_index_exclusive": 42676,
+          "execution_end_exclusive": "2026-06-06 05:00:00+00:00",
+          "execution_start": "2026-05-07 05:00:00+00:00",
+          "net_return": -0.34032630415348597,
+          "start_index": 41956,
+          "window_hours": 720
+        }
+      },
+      "position_state_decomposition_vs_b1": {
+        "b1_only": {
+          "annualized_sharpe": 6.9265713770990205,
+          "gross_arithmetic_sum": 0.13456831457716933,
+          "gross_compounded_return": 0.13845208286485544,
+          "hours": 336,
+          "mean_gross_bps_per_hour": 4.005009362415754
+        },
+        "both_cash": {
+          "annualized_sharpe": 0.10119536959526652,
+          "gross_arithmetic_sum": 0.08960900257071047,
+          "gross_compounded_return": -0.17164320941044164,
+          "hours": 12360,
+          "mean_gross_bps_per_hour": 0.07249919301837417
+        },
+        "both_long": {
+          "annualized_sharpe": 0.8041822184555837,
+          "gross_arithmetic_sum": 0.731182979952779,
+          "gross_compounded_return": 0.5561106951475785,
+          "hours": 12552,
+          "mean_gross_bps_per_hour": 0.5825230879164907
+        },
+        "candidate_only": {
+          "annualized_sharpe": -5.985100442146586,
+          "gross_arithmetic_sum": -0.4101740187654578,
+          "gross_compounded_return": -0.35672172493493726,
+          "hours": 672,
+          "mean_gross_bps_per_hour": -6.103780041152645
+        }
+      },
+      "residual_vs_b1": {
+        "arithmetic_net_delta": -0.5412423333426271,
+        "candidate_only_gross_arithmetic_contribution": -0.4101740187654578,
+        "fee_arithmetic_contribution": 0.0035,
+        "missed_b1_only_gross_arithmetic_contribution": -0.13456831457716933,
+        "residual_sharpe": -1.1789456671740681
+      },
+      "source": {
+        "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+        "later_suffix_unread": true,
+        "rows_loaded": 43442
+      }
+    }
+  },
+  "pr": 620,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "sample": {
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "later_suffix_unread": true,
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "strategy_outputs_changed": false
+}
