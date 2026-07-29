@@ -1,0 +1,52 @@
+{
+  "bar": "1H",
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "canonical_signature": "three-estimator-slow-trend-consensus-1h-v1|own-history-only|window=2160H|e1=log(close_t/close_t-2160)/2160|e2=OLS-slope-log-close-2161-points|e3=median-12x180H-contiguous-block-slopes|aggregate=median(e1,e2,e3)|long=aggregate>0|cash=aggregate<=0|daily-00UTC|next-open|fee=5bps-one-way|candidate=1|grid=0",
+  "comparators": {
+    "1Dutc": "benchmark only; never strategy input or selector",
+    "b0": "hourly own-history endpoint 2160H trend long/cash, next-open, exactly 5 bps one-way",
+    "b1": "daily 00:00 UTC own-history endpoint 2160H trend long/cash, next-open, exactly 5 bps one-way"
+  },
+  "family_id": "three-estimator-slow-trend-consensus-1h-v1",
+  "issue": 639,
+  "parameter_grid_count": 0,
+  "sample": {
+    "development_oos": [17520, 43440],
+    "fold_count": 12,
+    "fold_hours": 2160,
+    "full_scored": [2880, 43440],
+    "later_suffix_unread": true,
+    "parsed_prefix_bars": 43441,
+    "training": [2880, 17520],
+    "warmup": [0, 2880]
+  },
+  "sources": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "artifact_zip_sha256": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c",
+      "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "loaded_prefix_end": "2026-07-08T00:00:00+00:00",
+      "loaded_prefix_observations": 43441,
+      "source_start": "2021-07-24T00:00:00+00:00",
+      "source_total_observations": 43941
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "artifact_zip_sha256": "e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3",
+      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "loaded_prefix_end": "2026-07-08T00:00:00+00:00",
+      "loaded_prefix_observations": 43441,
+      "source_start": "2021-07-24T00:00:00+00:00",
+      "source_total_observations": 43941
+    }
+  },
+  "uncertainty": {
+    "block_hours": 168,
+    "confidence": 0.95,
+    "method": "paired non-circular moving-block bootstrap of observed real hourly returns",
+    "resamples": 5000,
+    "seed": 20260730
+  },
+  "verdict": "reject_exact_three_estimator_slow_trend_consensus_family"
+}
