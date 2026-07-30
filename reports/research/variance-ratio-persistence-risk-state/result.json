@@ -1,0 +1,139 @@
+{
+  "accepted_bilaterally": false,
+  "bar": "1H",
+  "candidate_count": 1,
+  "family_id": "variance-ratio-persistence-risk-state-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 720,
+  "parameter_grid_count": 0,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "result_full_sha256": "efed0728fda2e35371758a229e14072f9c477e84e08f12570795afb1717ccc81",
+  "samples": {
+    "development_oos": [17520, 43440],
+    "full_scored": [2880, 43440],
+    "training": [2880, 17520]
+  },
+  "markets": {
+    "BTC-USDT": {
+      "provenance": {
+        "artifact_id": 8685574446,
+        "artifact_zip_sha256": "d36b151d0279e552f0f561403647ca8495febf6bd7c87c0b85cf0e7ad3df6119",
+        "full_csv_sha256": "f967995a6acd5c4acd0a17dd030f02cd55441b3f83716e5a4118a58af71ca96e",
+        "prefix_csv_sha256": "4efd9875f8205f2c44c6e26042b24bdfb89f077f7c89b2888a6bac9b645747e0",
+        "source_rows": 43930,
+        "scored_prefix_rows": 43441,
+        "prefix_start": "2021-07-24T00:00:00+00:00",
+        "prefix_end": "2026-07-08T00:00:00+00:00",
+        "all_confirmed": true,
+        "contiguous_1h": true,
+        "future_suffix_position_invariance": true
+      },
+      "training": {
+        "candidate": {"net_return": -0.3648464367542058, "sharpe": -0.8125038797132503, "max_drawdown": -0.5484039283731817, "turnover": 31.0, "fees": 0.0155, "edge_per_turnover_bps": -124.55549134131725},
+        "benchmark_b1": {"net_return": -0.4129061903018599, "sharpe": -0.8402669561226587, "max_drawdown": -0.5592198563591351, "turnover": 28.0, "fees": 0.014, "edge_per_turnover_bps": -159.80829766668512}
+      },
+      "development_oos": {
+        "candidate": {"net_return": 0.9275520163847915, "sharpe": 0.9955687371714068, "max_drawdown": -0.19238423604676347, "turnover": 54.5, "fees": 0.02725, "edge_per_turnover_bps": 138.14937792407372},
+        "benchmark_b1": {"net_return": 1.1968197962400904, "sharpe": 0.953765119416238, "max_drawdown": -0.2654678573881635, "turnover": 45.0, "fees": 0.0225, "edge_per_turnover_bps": 212.75128054469278}
+      },
+      "full_scored": {
+        "candidate": {"net_return": 0.22429153154841974, "sharpe": 0.29743397322123355, "max_drawdown": -0.5484039283731817, "turnover": 85.5, "fees": 0.04275, "edge_per_turnover_bps": 42.89965873839628},
+        "benchmark_b1": {"net_return": 0.2897393033937914, "sharpe": 0.3317518863849881, "max_drawdown": -0.5592198563591351, "turnover": 73.0, "fees": 0.0365, "edge_per_turnover_bps": 69.85171629923276}
+      },
+      "breadth": {
+        "profitable_folds": 5,
+        "profitable_years": 3,
+        "improved_folds_vs_benchmark": 3,
+        "improved_years_vs_benchmark": 1,
+        "positive_fold_concentration": 0.3410433141415138,
+        "residual_sharpe": -0.5365175574526652
+      },
+      "uncertainty": {
+        "block_hours": 168,
+        "resamples": 5000,
+        "seed": 20260731,
+        "mean_return_delta_annualized": {"point": -0.06910215579555021, "ci95": [-0.20002557373113344, 0.08088245517931122]},
+        "sharpe_delta": {"point": 0.04180361775516883, "ci95": [-0.27425912241454425, 0.4039800913452161]}
+      },
+      "failure_diagnostic": {
+        "risk_transitions": 18,
+        "recovery_transitions": 10,
+        "half_state_hours": 8833,
+        "half_state_inherited_boundary_hours": 49,
+        "half_state_new_event_hours": 8784,
+        "full_exposure_equivalent_hours_removed": 4416.5,
+        "half_state_market_arithmetic_return": 0.39943330552983136,
+        "market_carry_removed_arithmetic": 0.19971665276491568,
+        "incremental_fee_vs_b1": 0.00475,
+        "arithmetic_net_delta_vs_b1": -0.20446665276491569,
+        "half_state_market_sharpe": 0.8977918743123907,
+        "full_state_market_sharpe": 1.843307675124692,
+        "next_168h_after_risk_mean": 0.03489526517326608,
+        "next_168h_after_risk_positive_share": 0.6666666666666666,
+        "decomposition_error": 0.0
+      },
+      "acceptance_gates": {"return_no_worse": false, "sharpe_no_worse": true, "drawdown_no_worse": true, "turnover_no_greater": false, "edge_per_turnover_no_worse": false, "profitable_folds_at_least_7": false, "profitable_years_at_least_3": true, "positive_residual_sharpe": false, "mean_delta_lower_bound_positive": false, "sharpe_delta_lower_bound_positive": false, "source_timing_fee_checks": true}
+    },
+    "ETH-USDT": {
+      "provenance": {
+        "artifact_id": 8685572234,
+        "artifact_zip_sha256": "e32884abe83663b36bc52ce4f4b3cc60b03bb2f4f2948853134dc6831706a9bb",
+        "full_csv_sha256": "ff53337ffbeafd237703ef6ff5f61a2e0b15df1fbd5954c17a8557e80324e907",
+        "prefix_csv_sha256": "3c6ce0c424280f1e0b6210501380336190d832359895df9534e5c5a16d9ec6ed",
+        "source_rows": 43930,
+        "scored_prefix_rows": 43441,
+        "prefix_start": "2021-07-24T00:00:00+00:00",
+        "prefix_end": "2026-07-08T00:00:00+00:00",
+        "all_confirmed": true,
+        "contiguous_1h": true,
+        "future_suffix_position_invariance": true
+      },
+      "training": {
+        "candidate": {"net_return": -0.33375280098601323, "sharpe": -0.576149673725686, "max_drawdown": -0.5161926018888466, "turnover": 27.5, "fees": 0.01375, "edge_per_turnover_bps": -114.88004619014337},
+        "benchmark_b1": {"net_return": -0.4058878437623247, "sharpe": -0.5841780885870211, "max_drawdown": -0.5695187578011079, "turnover": 23.0, "fees": 0.0115, "edge_per_turnover_bps": -168.7689113472807}
+      },
+      "development_oos": {
+        "candidate": {"net_return": 0.631813608403351, "sharpe": 0.6510351600602343, "max_drawdown": -0.4730418264214056, "turnover": 39.0, "fees": 0.0195, "edge_per_turnover_bps": 171.20221044035705},
+        "benchmark_b1": {"net_return": 0.7451603410954828, "sharpe": 0.6456279607587625, "max_drawdown": -0.4776594160762392, "turnover": 30.0, "fees": 0.015, "edge_per_turnover_bps": 283.5837648433161}
+      },
+      "full_scored": {
+        "candidate": {"net_return": 0.0871912459116484, "sharpe": 0.2234216749861723, "max_drawdown": -0.5161926018888466, "turnover": 66.5, "fees": 0.03325, "edge_per_turnover_bps": 52.897517848796745},
+        "benchmark_b1": {"net_return": 0.03682097322871436, "sharpe": 0.23303476477091942, "max_drawdown": -0.5695187578011079, "turnover": 53.0, "fees": 0.0265, "edge_per_turnover_bps": 87.27977328890617}
+      },
+      "breadth": {
+        "profitable_folds": 6,
+        "profitable_years": 3,
+        "improved_folds_vs_benchmark": 7,
+        "improved_years_vs_benchmark": 1,
+        "positive_fold_concentration": 0.2516427279862674,
+        "residual_sharpe": -0.383223004275152
+      },
+      "uncertainty": {
+        "block_hours": 168,
+        "resamples": 5000,
+        "seed": 20260731,
+        "mean_return_delta_annualized": {"point": -0.06186840364961379, "ci95": [-0.2383587441868456, 0.11725231870894694]},
+        "sharpe_delta": {"point": 0.005407199301471821, "ci95": [-0.3801225478794309, 0.39804524449622564]}
+      },
+      "failure_diagnostic": {
+        "risk_transitions": 14,
+        "recovery_transitions": 9,
+        "half_state_hours": 6144,
+        "half_state_inherited_boundary_hours": 0,
+        "half_state_new_event_hours": 6144,
+        "full_exposure_equivalent_hours_removed": 3072.0,
+        "half_state_market_arithmetic_return": 0.3571252416526278,
+        "market_carry_removed_arithmetic": 0.1785626208263139,
+        "incremental_fee_vs_b1": 0.0045,
+        "arithmetic_net_delta_vs_b1": -0.1830626208263139,
+        "half_state_market_sharpe": 0.7677380892221061,
+        "full_state_market_sharpe": 1.0987790218352596,
+        "next_168h_after_risk_mean": 0.015412405409077704,
+        "next_168h_after_risk_positive_share": 0.5714285714285714,
+        "decomposition_error": 0.0
+      },
+      "acceptance_gates": {"return_no_worse": false, "sharpe_no_worse": true, "drawdown_no_worse": true, "turnover_no_greater": false, "edge_per_turnover_no_worse": false, "profitable_folds_at_least_7": false, "profitable_years_at_least_3": true, "positive_residual_sharpe": false, "mean_delta_lower_bound_positive": false, "sharpe_delta_lower_bound_positive": false, "source_timing_fee_checks": true}
+    }
+  },
+  "verdict": "reject_exact_variance_ratio_persistence_risk_state_family"
+}
