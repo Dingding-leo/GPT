@@ -1,0 +1,62 @@
+{
+  "bar": "1H",
+  "base": "close_t > close_(t-2160H)",
+  "bootstrap": {
+    "block_hours": 168,
+    "confidence": 0.95,
+    "method": "paired non-circular moving blocks",
+    "resamples": 5000,
+    "seed": 20260731
+  },
+  "breadth": {
+    "calendar_years": 4,
+    "fold_hours": 2160,
+    "folds": 12
+  },
+  "bridge_condition": "latest_drawdown <= preceding_drawdown or recovery_fraction >= 0.5",
+  "candidate_count": 1,
+  "execution": "completed daily 00:00 UTC decision to next hourly open",
+  "expected_hashes": {
+    "BTC-USDT": {
+      "full": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0",
+      "prefix": "4efd9875f8205f2c44c6e26042b24bdfb89f077f7c89b2888a6bac9b645747e0"
+    },
+    "ETH-USDT": {
+      "full": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8",
+      "prefix": "3c6ce0c424280f1e0b6210501380336190d832359895df9534e5c5a16d9ec6ed"
+    }
+  },
+  "family_id": "drawdown-conditioned-base-exit-bridge-1h-v1",
+  "feature": "adjacent 168H maximum log drawdowns and latest trough recovery",
+  "fee_one_way": 0.0005,
+  "issue": 736,
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "parameter_grid_count": 0,
+  "provider": "public confirmed OKX SPOT",
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "rows": 43441,
+  "samples": {
+    "full": [
+      2880,
+      43440
+    ],
+    "oos": [
+      17520,
+      43440
+    ],
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "source_artifacts": {
+    "BTC-USDT": 8769605568,
+    "ETH-USDT": 8769619607
+  },
+  "source_run_id": 30567744552,
+  "state": "full positive base; one half bridge at first non-positive base decision; restore on base recross; expire at 168H",
+  "verdict_on_failure": "reject_exact_drawdown_conditioned_base_exit_bridge_family"
+}
