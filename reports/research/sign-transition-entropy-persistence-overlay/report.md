@@ -135,7 +135,7 @@ The first implementation attempted to assign a next-open position for the final 
 After failure inspection, the initial diagnostics could not distinguish incremental entropy information from the already-visible 168H return direction. A diagnostic-only direction overlay was added and the complete experiment was rerun. This changed no candidate signal, position, fee, metric, bootstrap draw, acceptance gate or verdict. Two terminal executions produced byte-identical JSON.
 
 ```text
-result.json SHA-256 6a17f1c27604f164e59bf1624a7ed4400fd7dd91f6d0722449e626f8c17f13a8
+result.json SHA-256 b541de7cfd293aff76599839924b27441b419da876d7f58c076ddaa9bd44d576
 ```
 
 ## Verdict
