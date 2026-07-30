@@ -50,11 +50,7 @@ def load(path: Path, market: str) -> pd.DataFrame:
 
 def renewal_flags(close: np.ndarray) -> np.ndarray:
     prior_high = (
-        pd.Series(close)
-        .shift(1)
-        .rolling(HIGH_WINDOW, min_periods=HIGH_WINDOW)
-        .max()
-        .to_numpy()
+        pd.Series(close).shift(1).rolling(HIGH_WINDOW, min_periods=HIGH_WINDOW).max().to_numpy()
     )
     renew = np.zeros(len(close), dtype=bool)
     finite = np.isfinite(prior_high)
@@ -296,7 +292,9 @@ def diagnose(d: pd.DataFrame, p, arrays, events):
                 "start_timestamp": start_event["timestamp"],
                 "terminal_timestamp": terminal["timestamp"] if terminal else None,
                 "terminal_type": (
-                    "restore" if terminal and terminal["bridge_restore"] else "expiry"
+                    "restore"
+                    if terminal and terminal["bridge_restore"]
+                    else "expiry"
                     if terminal
                     else "right_censored"
                 ),
@@ -333,9 +331,7 @@ def acceptance(market_result: dict[str, Any]) -> dict[str, bool]:
         "positive_net": c["net_return"] > 0,
         "net_at_least_b1": c["net_return"] >= b["net_return"],
         "sharpe_at_least_b1": (
-            c["sharpe"] is not None
-            and b["sharpe"] is not None
-            and c["sharpe"] >= b["sharpe"]
+            c["sharpe"] is not None and b["sharpe"] is not None and c["sharpe"] >= b["sharpe"]
         ),
         "drawdown_no_worse": c["max_drawdown"] >= b["max_drawdown"] - 1e-12,
         "turnover_no_more": c["turnover"] <= b["turnover"] + 1e-12,
