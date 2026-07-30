@@ -1,0 +1,431 @@
+{
+  "bilateral_accepted": false,
+  "full_result_sha256": "52fc64ac8b39b074e5a8eb51ac38bd9f1a47991f0fcbfec4dd6734b8fd63d5a6",
+  "markets": {
+    "BTC-USDT": {
+      "accepted": false,
+      "breadth": {
+        "folds_improved_vs_b1": 5,
+        "positive_fold_concentration": 0.3010469579414006,
+        "profitable_folds": 4,
+        "profitable_years": 2,
+        "years_improved_vs_b1": 2
+      },
+      "gates": {
+        "drawdown_no_worse_b1": true,
+        "edge_per_turnover_at_least_b1": false,
+        "net_at_least_b1": false,
+        "positive_fold_concentration_at_most_half": true,
+        "positive_full_scored_net": true,
+        "positive_mean_delta_lower_95": false,
+        "positive_oos_net": true,
+        "positive_oos_sharpe": true,
+        "positive_residual_sharpe": false,
+        "positive_sharpe_delta_lower_95": false,
+        "profitable_folds_at_least_7": false,
+        "profitable_years_at_least_3": false,
+        "sharpe_at_least_b1": true,
+        "turnover_no_greater_b1": false
+      },
+      "metrics": {
+        "development_oos": {
+          "b0": {
+            "edge_per_turnover_bps": 45.306063115162424,
+            "fees": 0.1015,
+            "max_drawdown": -0.2267892412401914,
+            "net_return": 1.1163633418975247,
+            "sharpe": 0.9171594854982952,
+            "turnover": 203.0
+          },
+          "b1": {
+            "edge_per_turnover_bps": 212.75128054469278,
+            "fees": 0.0225,
+            "max_drawdown": -0.2654678573881635,
+            "net_return": 1.1968197962400904,
+            "sharpe": 0.953765119416238,
+            "turnover": 45.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 164.45816645960105,
+            "fees": 0.026250000000000002,
+            "max_drawdown": -0.2319706649107598,
+            "net_return": 1.1267595012433533,
+            "sharpe": 1.07586111754378,
+            "turnover": 52.5
+          }
+        },
+        "full_scored": {
+          "b1": {
+            "edge_per_turnover_bps": 69.85171629923276,
+            "fees": 0.0365,
+            "max_drawdown": -0.5592198563591351,
+            "net_return": 0.2897393033937914,
+            "sharpe": 0.3317518863849881,
+            "turnover": 73.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 70.20801410782389,
+            "fees": 0.04125,
+            "max_drawdown": -0.41785900371902196,
+            "net_return": 0.5162396755491403,
+            "sharpe": 0.4715393145653283,
+            "turnover": 82.5
+          }
+        },
+        "training": {
+          "b1": {
+            "edge_per_turnover_bps": -159.80829766668512,
+            "fees": 0.014,
+            "max_drawdown": -0.5592198563591351,
+            "net_return": -0.41290619030236553,
+            "sharpe": -0.8402669561161515,
+            "turnover": 28.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": -94.72975250778612,
+            "fees": 0.015,
+            "max_drawdown": -0.41785900371902196,
+            "net_return": -0.28706575677093826,
+            "sharpe": -0.6683266855241632,
+            "turnover": 30.0
+          }
+        }
+      },
+      "oos_diagnostics": {
+        "candidate_vs_b1": {
+          "arithmetic_net_delta": -0.09397538853821205,
+          "b1_only_full_exposure_equivalent_hours": 3672.5,
+          "b1_only_market_return": 0.09022538853821205,
+          "candidate_only_full_exposure_equivalent_hours": 0.0,
+          "candidate_only_market_return": 0.0,
+          "exposure_market_return_delta": -0.09022538853821205,
+          "incremental_fees": 0.0037500000000000033
+        },
+        "daily_decisions": 1080,
+        "effective_recovery_transitions": 8,
+        "effective_risk_transitions": 16,
+        "eligible_positive_trend_decisions": 597,
+        "exposure_occupancy": {
+          "cash": {
+            "arithmetic_market_return": 0.08901805808303354,
+            "conditional_market_sharpe": 0.142938053110296,
+            "hours": 11063,
+            "share": 0.42681327160493826,
+            "strategy_market_contribution": 0.0
+          },
+          "full": {
+            "arithmetic_market_return": 0.7994299853746933,
+            "conditional_market_sharpe": 2.0540430219122725,
+            "hours": 7512,
+            "share": 0.2898148148148148,
+            "strategy_market_contribution": 0.7994299853746933
+          },
+          "half": {
+            "arithmetic_market_return": 0.1804507770764241,
+            "conditional_market_sharpe": 0.48685484221102515,
+            "hours": 7345,
+            "share": 0.28337191358024694,
+            "strategy_market_contribution": 0.09022538853821205
+          }
+        },
+        "half_state_episodes": {
+          "count": 17,
+          "largest_abs_return_concentration": 0.13661353592910813,
+          "largest_duration_concentration": 0.14703880190605853,
+          "negative_episodes": 7,
+          "positive_episodes": 10
+        },
+        "recovery_transition_forward": {
+          "168h": {
+            "count": 8,
+            "horizon_hours": 168,
+            "mean": -0.00691312667549189,
+            "median": -0.026355271518087753,
+            "positive_share": 0.375
+          },
+          "24h": {
+            "count": 8,
+            "horizon_hours": 24,
+            "mean": -0.008474818631548933,
+            "median": -0.006251016052737424,
+            "positive_share": 0.375
+          }
+        },
+        "recovery_trigger_frequency_eligible": 0.21608040201005024,
+        "risk_transition_forward": {
+          "168h": {
+            "count": 16,
+            "horizon_hours": 168,
+            "mean": 0.004112911519031273,
+            "median": 0.007063200829751093,
+            "positive_share": 0.5625
+          },
+          "24h": {
+            "count": 16,
+            "horizon_hours": 24,
+            "mean": 0.009429044283428195,
+            "median": 0.006342309424297088,
+            "positive_share": 0.6875
+          }
+        },
+        "risk_trigger_frequency_eligible": 0.34673366834170855
+      },
+      "residual_sharpe_vs_b1": -0.26994784933384697,
+      "source_artifact": 8704977298,
+      "source_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "uncertainty": {
+        "annualized_mean_delta": {
+          "lower_95": -0.1633935059985352,
+          "point": -0.03176020075596981,
+          "upper_95": 0.08828987336916541
+        },
+        "sharpe_delta": {
+          "lower_95": -0.25471742381847495,
+          "point": 0.12209599812754202,
+          "upper_95": 0.4653801957189427
+        }
+      }
+    },
+    "ETH-USDT": {
+      "accepted": false,
+      "breadth": {
+        "folds_improved_vs_b1": 6,
+        "positive_fold_concentration": 0.3191637261171811,
+        "profitable_folds": 6,
+        "profitable_years": 3,
+        "years_improved_vs_b1": 2
+      },
+      "gates": {
+        "drawdown_no_worse_b1": true,
+        "edge_per_turnover_at_least_b1": false,
+        "net_at_least_b1": true,
+        "positive_fold_concentration_at_most_half": true,
+        "positive_full_scored_net": true,
+        "positive_mean_delta_lower_95": false,
+        "positive_oos_net": true,
+        "positive_oos_sharpe": true,
+        "positive_residual_sharpe": false,
+        "positive_sharpe_delta_lower_95": false,
+        "profitable_folds_at_least_7": false,
+        "profitable_years_at_least_3": true,
+        "sharpe_at_least_b1": true,
+        "turnover_no_greater_b1": false
+      },
+      "metrics": {
+        "development_oos": {
+          "b0": {
+            "edge_per_turnover_bps": 58.30762446386598,
+            "fees": 0.0695,
+            "max_drawdown": -0.4730328076249738,
+            "net_return": 0.6801914056080769,
+            "sharpe": 0.6175145349430254,
+            "turnover": 139.0
+          },
+          "b1": {
+            "edge_per_turnover_bps": 283.5837648433161,
+            "fees": 0.015000000000000001,
+            "max_drawdown": -0.4776594160762392,
+            "net_return": 0.7451603410954828,
+            "sharpe": 0.6456279607587625,
+            "turnover": 30.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 195.84838150431955,
+            "fees": 0.0195,
+            "max_drawdown": -0.3746191776421828,
+            "net_return": 0.8448067761185643,
+            "sharpe": 0.8068746521781075,
+            "turnover": 39.0
+          }
+        },
+        "full_scored": {
+          "b1": {
+            "edge_per_turnover_bps": 87.27977328890617,
+            "fees": 0.0265,
+            "max_drawdown": -0.5695187578011079,
+            "net_return": 0.03682097322871436,
+            "sharpe": 0.23303476477091944,
+            "turnover": 53.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 68.64121703588418,
+            "fees": 0.03275,
+            "max_drawdown": -0.40296366748385637,
+            "net_return": 0.26227150160467905,
+            "sharpe": 0.31750221020588165,
+            "turnover": 65.5
+          }
+        },
+        "training": {
+          "b1": {
+            "edge_per_turnover_bps": -168.7689113472807,
+            "fees": 0.0115,
+            "max_drawdown": -0.5695187578011079,
+            "net_return": -0.4058878437623247,
+            "sharpe": -0.5841780885870211,
+            "turnover": 23.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": -118.56932689879436,
+            "fees": 0.013250000000000001,
+            "max_drawdown": -0.40296366748385637,
+            "net_return": -0.31577034627958667,
+            "sharpe": -0.6735523929240145,
+            "turnover": 26.5
+          }
+        }
+      },
+      "oos_diagnostics": {
+        "candidate_vs_b1": {
+          "arithmetic_net_delta": -0.08694260666310205,
+          "b1_only_full_exposure_equivalent_hours": 3888.0,
+          "b1_only_market_return": 0.08244260666310205,
+          "candidate_only_full_exposure_equivalent_hours": 0.0,
+          "candidate_only_market_return": 0.0,
+          "exposure_market_return_delta": -0.08244260666310205,
+          "incremental_fees": 0.004499999999999999
+        },
+        "daily_decisions": 1080,
+        "effective_recovery_transitions": 9,
+        "effective_risk_transitions": 20,
+        "eligible_positive_trend_decisions": 522,
+        "exposure_occupancy": {
+          "cash": {
+            "arithmetic_market_return": -0.3269781065427392,
+            "conditional_market_sharpe": -0.3412643077929177,
+            "hours": 13032,
+            "share": 0.5027777777777778,
+            "strategy_market_contribution": 0.0
+          },
+          "full": {
+            "arithmetic_market_return": 0.7008660812037443,
+            "conditional_market_sharpe": 2.0110566953697675,
+            "hours": 5112,
+            "share": 0.19722222222222222,
+            "strategy_market_contribution": 0.7008660812037443
+          },
+          "half": {
+            "arithmetic_market_return": 0.1648852133262041,
+            "conditional_market_sharpe": 0.2843984533624504,
+            "hours": 7776,
+            "share": 0.3,
+            "strategy_market_contribution": 0.08244260666310205
+          }
+        },
+        "half_state_episodes": {
+          "count": 20,
+          "largest_abs_return_concentration": 0.16698840100777373,
+          "largest_duration_concentration": 0.20679012345679013,
+          "negative_episodes": 7,
+          "positive_episodes": 13
+        },
+        "recovery_transition_forward": {
+          "168h": {
+            "count": 9,
+            "horizon_hours": 168,
+            "mean": 0.0413070169625916,
+            "median": 0.020961744003580085,
+            "positive_share": 0.6666666666666666
+          },
+          "24h": {
+            "count": 9,
+            "horizon_hours": 24,
+            "mean": 0.0001177286585189637,
+            "median": -0.005236635794635736,
+            "positive_share": 0.4444444444444444
+          }
+        },
+        "recovery_trigger_frequency_eligible": 0.20881226053639848,
+        "risk_transition_forward": {
+          "168h": {
+            "count": 20,
+            "horizon_hours": 168,
+            "mean": -0.014712571453179868,
+            "median": -0.02036534829566189,
+            "positive_share": 0.4
+          },
+          "24h": {
+            "count": 20,
+            "horizon_hours": 24,
+            "mean": -0.0008011257681645068,
+            "median": 0.0016911721550232905,
+            "positive_share": 0.55
+          }
+        },
+        "risk_trigger_frequency_eligible": 0.38122605363984674
+      },
+      "residual_sharpe_vs_b1": -0.16428532288418674,
+      "source_artifact": 8704978112,
+      "source_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "uncertainty": {
+        "annualized_mean_delta": {
+          "lower_95": -0.2410428931575588,
+          "point": -0.029383380955585417,
+          "upper_95": 0.17485724390117324
+        },
+        "sharpe_delta": {
+          "lower_95": -0.22384538846317883,
+          "point": 0.161246691419345,
+          "upper_95": 0.5269962212101703
+        }
+      }
+    }
+  },
+  "next_experiment": "One own-history-only trend-onset participation-decay architecture: enter the unchanged 2,160H positive trend immediately, then permit a single irreversible exit only when the latest 168H positive directional-movement sum falls below one half of its maximum since onset while the completed close remains below the onset close; no re-entry until a new onset, one candidate, no fitted threshold, grid, exogenous input or market-specific rule.",
+  "protocol": {
+    "bar": "1H",
+    "bootstrap": {
+      "block_hours": 168,
+      "kind": "paired non-circular moving blocks",
+      "resamples": 5000,
+      "seed": 20260730
+    },
+    "candidate_count": 1,
+    "canonical_fee_one_way": 0.0005,
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "directional_movement_smoother_hours": 720,
+    "family_id": "directional-movement-trend-quality-risk-state-1h-v1",
+    "fold_count": 12,
+    "fold_hours": 2160,
+    "full_scored": [
+      2880,
+      43440
+    ],
+    "hard_boundary": {
+      "credentials": false,
+      "cross_sectional": false,
+      "leverage": false,
+      "market_neutral": false,
+      "orders": false,
+      "own_history_only": true,
+      "pairs_spreads": false,
+      "synthetic_data": false
+    },
+    "issue": 691,
+    "observations": 43441,
+    "parameter_grid_count": 0,
+    "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+    "sources": {
+      "BTC-USDT": {
+        "artifact_id": 8704977298,
+        "sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9"
+      },
+      "ETH-USDT": {
+        "artifact_id": 8704978112,
+        "sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726"
+      }
+    },
+    "state_means_hours": 168,
+    "training": [
+      2880,
+      17520
+    ],
+    "trend_horizon_hours": 2160
+  },
+  "remaining_blocker": "Directional-movement deterioration separates lower-quality from higher-quality exposure, especially in ETH, but the lower-quality state still carries positive unconditional trend return. Recurrent half-sizing therefore removes positive carry and adds turnover; BTC risk transitions are followed by positive short-horizon continuation, while neither market achieves breadth or dependence-aware superiority.",
+  "repaired_discrepancy": "The initial diagnostic classified any positive-trend onset that also satisfied the recovery inequality as a recovery transition. Terminal evidence counts effective risk and recovery transitions only when the corresponding state-machine action actually changes an already-positive trend exposure, separates unconditional from eligible trigger frequencies, and attributes turnover at next-open execution. No signal, exposure, fee, return, benchmark, bootstrap result, gate or verdict changed.",
+  "verdict": "reject_exact_directional_movement_trend_quality_risk_state_family"
+}
