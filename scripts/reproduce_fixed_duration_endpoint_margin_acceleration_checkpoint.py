@@ -170,9 +170,12 @@ def positions(frame: pd.DataFrame) -> tuple[dict[str, np.ndarray], list[dict[str
             raise AssertionError("checkpoint exceeded frozen duration")
         if not np.all(candidate[start:finish] == 0.5):
             raise AssertionError("checkpoint exposure mismatch")
-        if finish < len(candidate) and event["finish_reason"] == "automatic_restore":
-            if candidate[finish] != 1.0:
-                raise AssertionError("automatic restoration mismatch")
+        if (
+            finish < len(candidate)
+            and event["finish_reason"] == "automatic_restore"
+            and candidate[finish] != 1.0
+        ):
+            raise AssertionError("automatic restoration mismatch")
     return {"candidate": candidate, "b1": daily, "b0": hourly}, events
 
 
