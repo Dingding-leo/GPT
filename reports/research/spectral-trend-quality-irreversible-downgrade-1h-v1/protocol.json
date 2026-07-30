@@ -1,0 +1,46 @@
+{
+  "bands": {
+    "high_bins": [
+      181,
+      360
+    ],
+    "low_bins": [
+      1,
+      180
+    ]
+  },
+  "bar": "1H",
+  "base": "close_t > close_t-2160H",
+  "bootstrap": {
+    "block_hours": 168,
+    "resamples": 5000,
+    "seed": 20260731
+  },
+  "candidate_count": 1,
+  "execution": "completed daily 00:00 UTC decision to next hourly open",
+  "family_id": "spectral-trend-quality-irreversible-downgrade-1h-v1",
+  "fee_one_way": 0.0005,
+  "fold_count": 12,
+  "fold_hours": 2160,
+  "issue": 725,
+  "parameter_grid_count": 0,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "risk_trigger": "mean_power_bins_1_180 / mean_power_bins_181_360 < 1 and ret168 < 0",
+  "samples": {
+    "full": [
+      2880,
+      43440
+    ],
+    "oos": [
+      17520,
+      43440
+    ],
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "spectral_window_hours": 720,
+  "state": "immediate full onset; at most one irreversible half downgrade per positive regime",
+  "verdict_on_failure": "reject_exact_spectral_trend_quality_irreversible_downgrade_family"
+}
