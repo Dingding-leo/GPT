@@ -1,0 +1,73 @@
+{
+  "bar": "1H",
+  "benchmarks": {
+    "B0": "hourly 2160H endpoint trend long/cash",
+    "B1": "daily 00:00 UTC 2160H endpoint trend long/cash"
+  },
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "family_id": "bipower-jump-concentration-trend-carry-1h-v1",
+  "feature": {
+    "bv": "(pi/2)*H/(H-1)*sum adjacent absolute-return products",
+    "jump_share": "max(RV-BV,0)/RV",
+    "risk_trigger": "JS720>0 and JS168_recent>JS168_prior and return168<0",
+    "rv": "sum squared hourly log returns"
+  },
+  "issue": 670,
+  "parameter_grid_count": 0,
+  "policy": {
+    "base_exit": "zero when 2160H trend non-positive",
+    "decision_cadence": "daily completed 00:00 UTC",
+    "execution": "next hourly open",
+    "exposure_states": [
+      0,
+      0.5,
+      1
+    ],
+    "fees": "5 bps per absolute exposure change",
+    "forced_hold": false,
+    "hysteresis": false,
+    "risk_state": "0.5 exactly while trigger true; otherwise 1 under positive base trend"
+  },
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "sample": {
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "fold_hours": 2160,
+    "folds": 12,
+    "full_scored": [
+      2880,
+      43440
+    ],
+    "later_suffix_unread": true,
+    "parsed_prefix_bars": 43441,
+    "training": [
+      2880,
+      17520
+    ],
+    "warmup": [
+      0,
+      2880
+    ]
+  },
+  "sources": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "provider": "OKX public confirmed SPOT"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "provider": "OKX public confirmed SPOT"
+    }
+  },
+  "uncertainty": {
+    "block_hours": 168,
+    "paired_non_circular": true,
+    "resamples": 5000,
+    "seed": 20260730
+  }
+}
