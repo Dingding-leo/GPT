@@ -1,0 +1,340 @@
+{
+  "accepted": false,
+  "candidate_count": 1,
+  "family_id": "downside-semivariance-persistence-risk-state-1h-v1",
+  "issue": 667,
+  "markets": {
+    "BTC-USDT": {
+      "acceptance": {
+        "drawdown_no_worse_b1": true,
+        "edge_per_turnover_at_least_b1": false,
+        "mean_delta_lower_95_positive": false,
+        "net_at_least_b1": false,
+        "positive_fold_concentration_at_most_half": true,
+        "positive_full_scored_net": true,
+        "positive_oos_net": true,
+        "positive_oos_sharpe": true,
+        "positive_residual_sharpe_b1": false,
+        "profitable_folds_at_least_7": false,
+        "profitable_years_at_least_3": true,
+        "sharpe_at_least_b1": true,
+        "sharpe_delta_lower_95_positive": false,
+        "turnover_no_greater_b1": false
+      },
+      "b0_development_oos": {
+        "edge_per_turnover_bps": 45.306063115162424,
+        "fees": 0.1015,
+        "full_exposure_hours": 14838,
+        "half_exposure_hours": 0,
+        "max_drawdown": -0.2267892412401914,
+        "mean_exposure": 0.5724537037037037,
+        "net_return": 1.1163633418975247,
+        "sharpe": 0.9171594854982952,
+        "turnover": 203.0
+      },
+      "breadth": {
+        "positive_fold_concentration": 0.33814371004499,
+        "profitable_folds": 5,
+        "profitable_years": 3
+      },
+      "diagnostics": {
+        "candidate_less_exposure_hours": 2952.0,
+        "decomposition_identity_passes": true,
+        "exposure_delta_market_arithmetic_return": -0.05826800187108272,
+        "improved_arithmetic_net_folds_vs_b1": 4,
+        "incremental_fees_candidate_minus_b1": 0.003500000000000003,
+        "observed_candidate_minus_b1_arithmetic_net": -0.06176800187108289,
+        "oos_forward_risk_trigger": {
+          "events": 132,
+          "forward_168h": {
+            "complete_events": 132,
+            "mean": 0.006546398719711334,
+            "median": 0.0011840611610819396,
+            "positive_rate": 0.5151515151515151
+          },
+          "forward_24h": {
+            "complete_events": 132,
+            "mean": 0.0012552678437284602,
+            "median": 0.0016638631987122565,
+            "positive_rate": 0.5606060606060606
+          }
+        },
+        "oos_transition_turnover": 52.0,
+        "oos_trigger_rate": 0.26666666666666666,
+        "training_trigger_rate": 0.30983606557377047
+      },
+      "metrics": {
+        "development_oos": {
+          "b1": {
+            "edge_per_turnover_bps": 212.75128054469278,
+            "fees": 0.0225,
+            "full_exposure_hours": 14857,
+            "half_exposure_hours": 0,
+            "max_drawdown": -0.2654678573881635,
+            "mean_exposure": 0.5731867283950617,
+            "net_return": 1.1968197962400904,
+            "sharpe": 0.953765119416238,
+            "turnover": 45.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 172.2332231884682,
+            "fees": 0.026000000000000002,
+            "full_exposure_hours": 8953,
+            "half_exposure_hours": 5904,
+            "max_drawdown": -0.24942476104922107,
+            "mean_exposure": 0.45929783950617287,
+            "net_return": 1.1728505451630458,
+            "sharpe": 1.0648022886174948,
+            "turnover": 52.0
+          }
+        },
+        "full_scored": {
+          "b1": {
+            "edge_per_turnover_bps": 69.85171629923276,
+            "fees": 0.0365,
+            "full_exposure_hours": 20785,
+            "half_exposure_hours": 0,
+            "max_drawdown": -0.5592198563591351,
+            "mean_exposure": 0.5124506903353058,
+            "net_return": 0.2897393033937914,
+            "sharpe": 0.3317518863849881,
+            "turnover": 73.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 60.89463783066319,
+            "fees": 0.04000000000000001,
+            "full_exposure_hours": 11953,
+            "half_exposure_hours": 8832,
+            "max_drawdown": -0.5035254251659282,
+            "mean_exposure": 0.40357495069033533,
+            "net_return": 0.36631630531935455,
+            "sharpe": 0.3828662037366465,
+            "turnover": 80.0
+          }
+        },
+        "training": {
+          "b1": {
+            "edge_per_turnover_bps": -159.80829766668512,
+            "fees": 0.014,
+            "full_exposure_hours": 5928,
+            "half_exposure_hours": 0,
+            "max_drawdown": -0.5592198563591351,
+            "mean_exposure": 0.40491803278688526,
+            "net_return": -0.41290619030236553,
+            "sharpe": -0.8402669561161515,
+            "turnover": 28.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": -145.8770206909746,
+            "fees": 0.014000000000000002,
+            "full_exposure_hours": 3000,
+            "half_exposure_hours": 2928,
+            "max_drawdown": -0.5035254251659282,
+            "mean_exposure": 0.30491803278688523,
+            "net_return": -0.3711871677686709,
+            "sharpe": -0.9503156651071877,
+            "turnover": 28.0
+          }
+        }
+      },
+      "residual_sharpe": {
+        "vs_b0": -0.06722505713330054,
+        "vs_b1": -0.19528045551256748
+      },
+      "source": {
+        "artifact_id": 8704977298,
+        "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+        "observations": 43441,
+        "parsed_prefix": 43441
+      },
+      "uncertainty": {
+        "annualized_mean_delta": {
+          "lower_95": -0.13780557834913115,
+          "point": -0.020875296928652958,
+          "upper_95": 0.0912553122554257
+        },
+        "block_hours": 168,
+        "resamples": 5000,
+        "seed": 20260730,
+        "sharpe_delta": {
+          "lower_95": -0.20848670001397307,
+          "point": 0.11103716920125684,
+          "upper_95": 0.4372168138377976
+        }
+      }
+    },
+    "ETH-USDT": {
+      "acceptance": {
+        "drawdown_no_worse_b1": true,
+        "edge_per_turnover_at_least_b1": false,
+        "mean_delta_lower_95_positive": false,
+        "net_at_least_b1": true,
+        "positive_fold_concentration_at_most_half": true,
+        "positive_full_scored_net": true,
+        "positive_oos_net": true,
+        "positive_oos_sharpe": true,
+        "positive_residual_sharpe_b1": true,
+        "profitable_folds_at_least_7": false,
+        "profitable_years_at_least_3": true,
+        "sharpe_at_least_b1": true,
+        "sharpe_delta_lower_95_positive": false,
+        "turnover_no_greater_b1": false
+      },
+      "b0_development_oos": {
+        "edge_per_turnover_bps": 58.30762446386598,
+        "fees": 0.0695,
+        "full_exposure_hours": 12882,
+        "half_exposure_hours": 0,
+        "max_drawdown": -0.4730328076249738,
+        "mean_exposure": 0.49699074074074073,
+        "net_return": 0.6801914056080769,
+        "sharpe": 0.6175145349430254,
+        "turnover": 139.0
+      },
+      "breadth": {
+        "positive_fold_concentration": 0.23994795705499927,
+        "profitable_folds": 6,
+        "profitable_years": 3
+      },
+      "diagnostics": {
+        "candidate_less_exposure_hours": 3132.0,
+        "decomposition_identity_passes": true,
+        "exposure_delta_market_arithmetic_return": 0.012275285225935129,
+        "improved_arithmetic_net_folds_vs_b1": 5,
+        "incremental_fees_candidate_minus_b1": 0.002,
+        "observed_candidate_minus_b1_arithmetic_net": 0.010275285225935127,
+        "oos_forward_risk_trigger": {
+          "events": 139,
+          "forward_168h": {
+            "complete_events": 139,
+            "mean": -0.0053777778667200805,
+            "median": -0.00935659947565215,
+            "positive_rate": 0.4460431654676259
+          },
+          "forward_24h": {
+            "complete_events": 139,
+            "mean": -0.0009023557548977044,
+            "median": -0.0014865420501628535,
+            "positive_rate": 0.4748201438848921
+          }
+        },
+        "oos_transition_turnover": 34.0,
+        "oos_trigger_rate": 0.29814814814814816,
+        "training_trigger_rate": 0.3114754098360656
+      },
+      "metrics": {
+        "development_oos": {
+          "b1": {
+            "edge_per_turnover_bps": 283.5837648433161,
+            "fees": 0.015000000000000001,
+            "full_exposure_hours": 12888,
+            "half_exposure_hours": 0,
+            "max_drawdown": -0.4776594160762392,
+            "mean_exposure": 0.49722222222222223,
+            "net_return": 0.7451603410954828,
+            "sharpe": 0.6456279607587625,
+            "turnover": 30.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 253.24311169290687,
+            "fees": 0.017,
+            "full_exposure_hours": 6624,
+            "half_exposure_hours": 6264,
+            "max_drawdown": -0.38124112116759057,
+            "mean_exposure": 0.3763888888888889,
+            "net_return": 0.9869833712300033,
+            "sharpe": 0.8477788112508627,
+            "turnover": 34.0
+          }
+        },
+        "full_scored": {
+          "b1": {
+            "edge_per_turnover_bps": 87.27977328890617,
+            "fees": 0.0265,
+            "full_exposure_hours": 19417,
+            "half_exposure_hours": 0,
+            "max_drawdown": -0.5695187578011079,
+            "mean_exposure": 0.4787228796844181,
+            "net_return": 0.03682097322871436,
+            "sharpe": 0.23303476477091944,
+            "turnover": 53.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": 106.68676815485388,
+            "fees": 0.028999999999999998,
+            "full_exposure_hours": 8545,
+            "half_exposure_hours": 10872,
+            "max_drawdown": -0.3830853445088389,
+            "mean_exposure": 0.3446992110453649,
+            "net_return": 0.46930547637865283,
+            "sharpe": 0.4205340151208458,
+            "turnover": 58.0
+          }
+        },
+        "training": {
+          "b1": {
+            "edge_per_turnover_bps": -168.7689113472807,
+            "fees": 0.0115,
+            "full_exposure_hours": 6529,
+            "half_exposure_hours": 0,
+            "max_drawdown": -0.5695187578011079,
+            "mean_exposure": 0.44596994535519124,
+            "net_return": -0.4058878437623247,
+            "sharpe": -0.5841780885870211,
+            "turnover": 23.0
+          },
+          "candidate": {
+            "edge_per_turnover_bps": -100.9347185240546,
+            "fees": 0.012,
+            "full_exposure_hours": 1921,
+            "half_exposure_hours": 4608,
+            "max_drawdown": -0.3830853445088389,
+            "mean_exposure": 0.2885928961748634,
+            "net_return": -0.2605345884353889,
+            "sharpe": -0.5432319033415517,
+            "turnover": 24.0
+          }
+        }
+      },
+      "residual_sharpe": {
+        "vs_b0": 0.10050020112463257,
+        "vs_b1": 0.02119935453006531
+      },
+      "source": {
+        "artifact_id": 8704978112,
+        "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+        "observations": 43441,
+        "parsed_prefix": 43441
+      },
+      "uncertainty": {
+        "annualized_mean_delta": {
+          "lower_95": -0.17843667579208092,
+          "point": 0.0034726658402465934,
+          "upper_95": 0.18086919914596736
+        },
+        "block_hours": 168,
+        "resamples": 5000,
+        "seed": 20260730,
+        "sharpe_delta": {
+          "lower_95": -0.17064592412802937,
+          "point": 0.20215085049210024,
+          "upper_95": 0.5498100656936478
+        }
+      }
+    }
+  },
+  "next_experiment": "Preregister one own-history-only bipower-jump-concentration trend-carry architecture: retain the 2,160H base trend, estimate fixed 720H realized variance and bipower variation, and use a partial risk state only when the latest 168H jump-variation share is both above its preceding 168H value and accompanied by a negative 168H return; one candidate, no fitted threshold, no market-specific rule and no forced hold.",
+  "parameter_grid_count": 0,
+  "remaining_blocker": "The downside-asymmetry state is not economically transportable across the two development markets: it removed profitable BTC carry, while ETH point estimates improved but remained too narrow and uncertain to qualify.",
+  "repaired_discrepancy": "The first diagnostic version filtered turnover transitions by decision index rather than execution index. It was repaired to attribute every transition to the next-open bar that actually incurs turnover and fees. The complete experiment was rerun; no signal, exposure, metric, gate, bootstrap result or verdict changed.",
+  "sample": {
+    "development_oos": [17520, 43440],
+    "fee_one_way": 0.0005,
+    "fold_hours": 2160,
+    "folds": 12,
+    "full_scored": [2880, 43440],
+    "later_suffix_unread": true,
+    "training": [2880, 17520]
+  },
+  "verdict": "reject_exact_downside_semivariance_persistence_risk_state_family"
+}
