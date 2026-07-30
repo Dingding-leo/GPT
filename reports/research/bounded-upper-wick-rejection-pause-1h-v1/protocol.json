@@ -1,0 +1,64 @@
+{
+  "bar": "1H",
+  "bootstrap": {
+    "block_hours": 168,
+    "kind": "paired non-circular moving blocks",
+    "resamples": 5000,
+    "seed": 20260730
+  },
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "decision_cadence": "completed daily 00:00 UTC",
+  "development_oos": [
+    17520,
+    43440
+  ],
+  "execution": "next hourly open",
+  "family_id": "bounded-upper-wick-rejection-pause-1h-v1",
+  "fold_count": 12,
+  "fold_hours": 2160,
+  "full_scored": [
+    2880,
+    43440
+  ],
+  "hard_boundary": {
+    "credentials": false,
+    "cross_sectional": false,
+    "fifteen_minute_data": false,
+    "leverage": false,
+    "market_neutral": false,
+    "orders": false,
+    "own_history_only": true,
+    "pairs_spreads": false,
+    "private_endpoints": false,
+    "synthetic_data": false
+  },
+  "issue": 697,
+  "observations": 43441,
+  "parameter_grid_count": 0,
+  "pause_hours": 168,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "rule": {
+    "lower_wick": "(min(open,close)-low)/(high-low), zero when high==low",
+    "pause_limit": "at most one per positive 2160H base-trend regime",
+    "resume": "automatic after exactly 168H if base trend remains positive",
+    "trigger": "upper168>lower168 and log(close_t/close_t-168)<0",
+    "upper_wick": "(high-max(open,close))/(high-low), zero when high==low"
+  },
+  "sources": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726"
+    }
+  },
+  "training": [
+    2880,
+    17520
+  ],
+  "trend_horizon_hours": 2160,
+  "wick_window_hours": 168
+}
