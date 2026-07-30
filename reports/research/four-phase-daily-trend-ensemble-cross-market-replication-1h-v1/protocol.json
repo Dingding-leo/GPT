@@ -1,0 +1,71 @@
+{
+  "bar": "1H",
+  "bootstrap": {
+    "block_hours": 168,
+    "kind": "paired non-circular moving blocks",
+    "resamples": 5000,
+    "seed": 20260730
+  },
+  "candidate_count": 1,
+  "canonical_fee_one_way": 0.0005,
+  "development_oos": [
+    2160,
+    28080
+  ],
+  "exposure_mapping": "fraction of four latest completed positive phase states",
+  "family_id": "four-phase-daily-trend-ensemble-cross-market-replication-1h-v1",
+  "fold_count": 12,
+  "fold_hours": 2160,
+  "full_scored": [
+    2160,
+    28080
+  ],
+  "hard_boundary": {
+    "credentials": false,
+    "cross_sectional": false,
+    "leverage": false,
+    "market_neutral": false,
+    "orders": false,
+    "own_history_only": true,
+    "pairs_spreads": false,
+    "synthetic_data": false
+  },
+  "issue": 717,
+  "parameter_grid_count": 0,
+  "phase_hours_utc": [
+    0,
+    6,
+    12,
+    18
+  ],
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "source_artifact": {
+    "artifact_id": 8691110722,
+    "artifact_sha256": "d9d686f4abd2c740044079b287802ef3e8c4f032c316035a95a2bb40ae2b7822",
+    "workflow_run": 30364475418
+  },
+  "source_family": "four-phase-daily-trend-ensemble-1h-v1",
+  "sources": {
+    "DOGE-USDT": {
+      "rows": 28081,
+      "sha256": "715f3ed0952ce19734625dbb13b40d09f9ba2c4ad17e6bfdcdd54a0fa329fb18"
+    },
+    "LTC-USDT": {
+      "rows": 28081,
+      "sha256": "c9f7f8c2a7f709518d1fd3211b8bc0281809e77ba06a7128d6fa3a46b7981e0c"
+    },
+    "SOL-USDT": {
+      "rows": 28081,
+      "sha256": "57954fa6f0af09866787a6e622040bf1254c776b78a7c09860491d12d57428d9"
+    },
+    "XRP-USDT": {
+      "rows": 28081,
+      "sha256": "9047ced1f34d3a684c297a65b169c355a68a7906788d930c0916851a4d979e93"
+    }
+  },
+  "trend_horizon_hours": 2160,
+  "warmup": [
+    0,
+    2160
+  ]
+}
