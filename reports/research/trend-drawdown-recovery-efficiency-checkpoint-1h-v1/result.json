@@ -1,0 +1,444 @@
+{
+  "candidate_count": 1,
+  "canonical_result_sha256": "4e2e20c26277b1e076fb4375ea8b7e30b29fbb30687dae6eac1e07d820b95f11",
+  "checkpoint_hours": 168,
+  "drawdown_block_hours": 168,
+  "family_id": "trend-drawdown-recovery-efficiency-checkpoint-1h-v1",
+  "fee_one_way": 0.0005,
+  "full_result_sha256": "1b49785cc041dfc4bdd9ee50d8cd3d8b4a7ba6f426380b35256dcafed120d0c7",
+  "issue": 733,
+  "markets": {
+    "BTC-USDT": {
+      "all_gates_pass": false,
+      "breadth": {
+        "improved_folds": 5,
+        "improved_years": 3,
+        "positive_fold_concentration": 0.352395115108195,
+        "profitable_folds": 5,
+        "profitable_years": 3,
+        "residual_sharpe": 0.11682358938244627
+      },
+      "diagnostics": {
+        "oos": {
+          "arithmetic_delta": 0.016115850866187692,
+          "arithmetic_market_return_during_half_state": -0.03973170173237539,
+          "checkpoint_starts_in_span": 10,
+          "fee_contribution": -0.00375,
+          "finish_counts": {
+            "automatic_restore": 8,
+            "base_exit": 3,
+            "sample_end": 0
+          },
+          "full_equivalent_exposure_removed": 792.5,
+          "half_state_hours": 1585,
+          "incremental_turnover": 7.5,
+          "inherited_checkpoint_count": 1,
+          "next_returns": {
+            "168": {
+              "mean": 0.0061403817360125125,
+              "positive_share": 0.4
+            },
+            "24": {
+              "mean": -0.005863743572562185,
+              "positive_share": 0.5
+            },
+            "720": {
+              "mean": 0.059942834319403025,
+              "positive_share": 0.4
+            }
+          },
+          "overlapping_checkpoint_count": 11,
+          "timing_contribution": 0.019865850866187695
+        },
+        "training": {
+          "arithmetic_delta": 0.04175406037056792,
+          "arithmetic_market_return_during_half_state": -0.08700812074113584,
+          "checkpoint_starts_in_span": 8,
+          "fee_contribution": -0.00175,
+          "finish_counts": {
+            "automatic_restore": 3,
+            "base_exit": 5,
+            "sample_end": 0
+          },
+          "full_equivalent_exposure_removed": 503.5,
+          "half_state_hours": 1007,
+          "incremental_turnover": 3.5,
+          "inherited_checkpoint_count": 0,
+          "next_returns": {
+            "168": {
+              "mean": -0.009260694389874452,
+              "positive_share": 0.375
+            },
+            "24": {
+              "mean": -0.0013213814943763974,
+              "positive_share": 0.375
+            },
+            "720": {
+              "mean": -0.07790245332246232,
+              "positive_share": 0.375
+            }
+          },
+          "overlapping_checkpoint_count": 8,
+          "timing_contribution": 0.04350406037056792
+        }
+      },
+      "full": {
+        "b0": {
+          "edge_per_turnover_bps": 13.984780312354363,
+          "effective_transitions": 341,
+          "exposure_hours": 20720,
+          "fees": 0.1705,
+          "full_equivalent_exposure_hours": 20720.0,
+          "max_drawdown": -0.5555790197814092,
+          "net_return": 0.24823142997608683,
+          "sharpe": 0.3104155593521776,
+          "turnover": 341.0
+        },
+        "b1": {
+          "edge_per_turnover_bps": 69.85171629923276,
+          "effective_transitions": 73,
+          "exposure_hours": 20785,
+          "fees": 0.0365,
+          "full_equivalent_exposure_hours": 20785.0,
+          "max_drawdown": -0.5592198563591351,
+          "net_return": 0.2897393033937914,
+          "sharpe": 0.3317518863849881,
+          "turnover": 73.0
+        },
+        "candidate": {
+          "edge_per_turnover_bps": 67.59374288347081,
+          "effective_transitions": 102,
+          "exposure_hours": 20785,
+          "fees": 0.042,
+          "full_equivalent_exposure_hours": 19489.0,
+          "max_drawdown": -0.5336151651702444,
+          "net_return": 0.3936104869947361,
+          "sharpe": 0.3844603925643751,
+          "turnover": 84.0
+        }
+      },
+      "future_suffix_invariance": true,
+      "gates": {
+        "drawdown": true,
+        "edge_per_turnover": false,
+        "fold_concentration": true,
+        "full_positive": true,
+        "integrity": true,
+        "mean_uncertainty": false,
+        "profitable_folds": false,
+        "profitable_years": true,
+        "residual_sharpe": true,
+        "return": true,
+        "sharpe": true,
+        "sharpe_uncertainty": false,
+        "turnover": false
+      },
+      "oos": {
+        "b0": {
+          "edge_per_turnover_bps": 45.306063115162424,
+          "effective_transitions": 203,
+          "exposure_hours": 14838,
+          "fees": 0.1015,
+          "full_equivalent_exposure_hours": 14838.0,
+          "max_drawdown": -0.2267892412401914,
+          "net_return": 1.1163633418975247,
+          "sharpe": 0.9171594854982952,
+          "turnover": 203.0
+        },
+        "b1": {
+          "edge_per_turnover_bps": 212.75128054469278,
+          "effective_transitions": 45,
+          "exposure_hours": 14857,
+          "fees": 0.0225,
+          "full_equivalent_exposure_hours": 14857.0,
+          "max_drawdown": -0.2654678573881635,
+          "net_return": 1.1968197962400904,
+          "sharpe": 0.953765119416238,
+          "turnover": 45.0
+        },
+        "candidate": {
+          "edge_per_turnover_bps": 185.42792634615336,
+          "effective_transitions": 63,
+          "exposure_hours": 14857,
+          "fees": 0.02625,
+          "full_equivalent_exposure_hours": 14064.5,
+          "max_drawdown": -0.24387163458639605,
+          "net_return": 1.254150295678631,
+          "sharpe": 0.998545953066367,
+          "turnover": 52.5
+        }
+      },
+      "training": {
+        "b0": {
+          "edge_per_turnover_bps": -32.089280622211106,
+          "effective_transitions": 138,
+          "exposure_hours": 5882,
+          "fees": 0.069,
+          "full_equivalent_exposure_hours": 5882.0,
+          "max_drawdown": -0.5555790197814092,
+          "net_return": -0.4101998436351103,
+          "sharpe": -0.8311585079316,
+          "turnover": 138.0
+        },
+        "b1": {
+          "edge_per_turnover_bps": -159.80829766668512,
+          "effective_transitions": 28,
+          "exposure_hours": 5928,
+          "fees": 0.014,
+          "full_equivalent_exposure_hours": 5928.0,
+          "max_drawdown": -0.5592198563591351,
+          "net_return": -0.41290619030236553,
+          "sharpe": -0.8402669561161514,
+          "turnover": 28.0
+        },
+        "candidate": {
+          "edge_per_turnover_bps": -128.7965628876668,
+          "effective_transitions": 39,
+          "exposure_hours": 5928,
+          "fees": 0.01575,
+          "full_equivalent_exposure_hours": 5424.5,
+          "max_drawdown": -0.5336151651702444,
+          "net_return": -0.3817579556845059,
+          "sharpe": -0.8108233043386297,
+          "turnover": 31.5
+        }
+      },
+      "uncertainty": {
+        "mean_delta_annualized": {
+          "ci95": [
+            -0.03215269611367968,
+            0.058058592252862036
+          ],
+          "point": 0.005446560709406026
+        },
+        "sharpe_delta": {
+          "ci95": [
+            -0.06344110764130356,
+            0.19104024700999392
+          ],
+          "point": 0.04478083365012897
+        }
+      }
+    },
+    "ETH-USDT": {
+      "all_gates_pass": false,
+      "breadth": {
+        "improved_folds": 4,
+        "improved_years": 4,
+        "positive_fold_concentration": 0.23119234025492932,
+        "profitable_folds": 6,
+        "profitable_years": 3,
+        "residual_sharpe": 0.5108476906444128
+      },
+      "diagnostics": {
+        "oos": {
+          "arithmetic_delta": 0.08200552737795291,
+          "arithmetic_market_return_during_half_state": -0.16801105475590583,
+          "checkpoint_starts_in_span": 7,
+          "fee_contribution": -0.002,
+          "finish_counts": {
+            "automatic_restore": 4,
+            "base_exit": 3,
+            "sample_end": 0
+          },
+          "full_equivalent_exposure_removed": 420.0,
+          "half_state_hours": 840,
+          "incremental_turnover": 4.0,
+          "inherited_checkpoint_count": 0,
+          "next_returns": {
+            "168": {
+              "mean": -0.0530000845056127,
+              "positive_share": 0.14285714285714285
+            },
+            "24": {
+              "mean": -0.0072612421561367236,
+              "positive_share": 0.5714285714285714
+            },
+            "720": {
+              "mean": -0.051860014160196526,
+              "positive_share": 0.2857142857142857
+            }
+          },
+          "overlapping_checkpoint_count": 7,
+          "timing_contribution": 0.08400552737795292
+        },
+        "training": {
+          "arithmetic_delta": 0.030638544274596557,
+          "arithmetic_market_return_during_half_state": -0.06627708854919312,
+          "checkpoint_starts_in_span": 8,
+          "fee_contribution": -0.0025,
+          "finish_counts": {
+            "automatic_restore": 5,
+            "base_exit": 3,
+            "sample_end": 0
+          },
+          "full_equivalent_exposure_removed": 468.0,
+          "half_state_hours": 936,
+          "incremental_turnover": 5.0,
+          "inherited_checkpoint_count": 0,
+          "next_returns": {
+            "168": {
+              "mean": 0.0038419489297200488,
+              "positive_share": 0.625
+            },
+            "24": {
+              "mean": 0.010806789138830111,
+              "positive_share": 0.625
+            },
+            "720": {
+              "mean": -0.10165237122338774,
+              "positive_share": 0.375
+            }
+          },
+          "overlapping_checkpoint_count": 8,
+          "timing_contribution": 0.03313854427459656
+        }
+      },
+      "full": {
+        "b0": {
+          "edge_per_turnover_bps": 13.787263815430185,
+          "effective_transitions": 227,
+          "exposure_hours": 19479,
+          "fees": 0.1135,
+          "full_equivalent_exposure_hours": 19479.0,
+          "max_drawdown": -0.5775445421085006,
+          "net_return": -0.1067577946903614,
+          "sharpe": 0.1577691303734697,
+          "turnover": 227.0
+        },
+        "b1": {
+          "edge_per_turnover_bps": 87.27977328890617,
+          "effective_transitions": 53,
+          "exposure_hours": 19417,
+          "fees": 0.0265,
+          "full_equivalent_exposure_hours": 19417.0,
+          "max_drawdown": -0.5695187578011079,
+          "net_return": 0.03682097322871436,
+          "sharpe": 0.23303476477091942,
+          "turnover": 53.0
+        },
+        "candidate": {
+          "edge_per_turnover_bps": 92.77852743286326,
+          "effective_transitions": 77,
+          "exposure_hours": 19417,
+          "fees": 0.031,
+          "full_equivalent_exposure_hours": 18529.0,
+          "max_drawdown": -0.5113516075835076,
+          "net_return": 0.19387451491629792,
+          "sharpe": 0.29991120723546805,
+          "turnover": 62.0
+        }
+      },
+      "future_suffix_invariance": true,
+      "gates": {
+        "drawdown": true,
+        "edge_per_turnover": false,
+        "fold_concentration": true,
+        "full_positive": true,
+        "integrity": true,
+        "mean_uncertainty": false,
+        "profitable_folds": false,
+        "profitable_years": true,
+        "residual_sharpe": true,
+        "return": true,
+        "sharpe": true,
+        "sharpe_uncertainty": false,
+        "turnover": false
+      },
+      "oos": {
+        "b0": {
+          "edge_per_turnover_bps": 58.30762446386598,
+          "effective_transitions": 139,
+          "exposure_hours": 12882,
+          "fees": 0.0695,
+          "full_equivalent_exposure_hours": 12882.0,
+          "max_drawdown": -0.4730328076249738,
+          "net_return": 0.6801914056080769,
+          "sharpe": 0.6175145349430256,
+          "turnover": 139.0
+        },
+        "b1": {
+          "edge_per_turnover_bps": 283.5837648433161,
+          "effective_transitions": 30,
+          "exposure_hours": 12888,
+          "fees": 0.015,
+          "full_equivalent_exposure_hours": 12888.0,
+          "max_drawdown": -0.4776594160762392,
+          "net_return": 0.7451603410954828,
+          "sharpe": 0.6456279607587625,
+          "turnover": 30.0
+        },
+        "candidate": {
+          "edge_per_turnover_bps": 274.34024173761804,
+          "effective_transitions": 41,
+          "exposure_hours": 12888,
+          "fees": 0.017,
+          "full_equivalent_exposure_hours": 12468.0,
+          "max_drawdown": -0.4540562072838642,
+          "net_return": 0.9193514966209364,
+          "sharpe": 0.7241875257684247,
+          "turnover": 34.0
+        }
+      },
+      "training": {
+        "b0": {
+          "edge_per_turnover_bps": -56.534669481530884,
+          "effective_transitions": 88,
+          "exposure_hours": 6597,
+          "fees": 0.044,
+          "full_equivalent_exposure_hours": 6597.0,
+          "max_drawdown": -0.5775445421085006,
+          "net_return": -0.4683687808851905,
+          "sharpe": -0.7437877705962023,
+          "turnover": 88.0
+        },
+        "b1": {
+          "edge_per_turnover_bps": -168.7689113472807,
+          "effective_transitions": 23,
+          "exposure_hours": 6529,
+          "fees": 0.0115,
+          "full_equivalent_exposure_hours": 6529.0,
+          "max_drawdown": -0.5695187578011079,
+          "net_return": -0.4058878437623247,
+          "sharpe": -0.5841780885870211,
+          "turnover": 23.0
+        },
+        "candidate": {
+          "edge_per_turnover_bps": -127.68926850862468,
+          "effective_transitions": 36,
+          "exposure_hours": 6529,
+          "fees": 0.014,
+          "full_equivalent_exposure_hours": 6061.0,
+          "max_drawdown": -0.5113516075835076,
+          "net_return": -0.3779802620738637,
+          "sharpe": -0.5719339453948871,
+          "turnover": 28.0
+        }
+      },
+      "uncertainty": {
+        "mean_delta_annualized": {
+          "ci95": [
+            -0.027948297781780103,
+            0.07667650545766885
+          ],
+          "point": 0.027714831011993343
+        },
+        "sharpe_delta": {
+          "ci95": [
+            -0.05232076885596479,
+            0.18956357429645954
+          ],
+          "point": 0.07855956500966221
+        }
+      }
+    }
+  },
+  "parameter_grid_count": 0,
+  "recovery_fraction_threshold": 0.5,
+  "source_artifacts": {
+    "BTC-USDT": 8769605568,
+    "ETH-USDT": 8769619607
+  },
+  "source_run_id": 30567744552,
+  "verdict": "reject_exact_trend_drawdown_recovery_efficiency_checkpoint_family"
+}
