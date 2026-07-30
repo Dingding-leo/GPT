@@ -221,10 +221,7 @@ def diagnostics(
 ) -> dict[str, Any]:
     start, end = span
     selected = [index for index in triggers if start <= index < end]
-    mask = (
-        (position["candidate"][start:end] == 0.5)
-        & (position["b1"][start:end] == 1)
-    )
+    mask = (position["candidate"][start:end] == 0.5) & (position["b1"][start:end] == 1)
     difference = position["candidate"][start:end] - position["b1"][start:end]
     timing = float((difference * gross[start:end]).sum())
     turn_difference = turn["candidate"][start:end] - turn["b1"][start:end]
@@ -234,10 +231,7 @@ def diagnostics(
         raise AssertionError("return decomposition failed")
     following: dict[str, dict[str, float]] = {}
     for horizon in (24, 168, 720):
-        values = [
-            compounded(gross[index : min(index + horizon, end)])
-            for index in selected
-        ]
+        values = [compounded(gross[index : min(index + horizon, end)]) for index in selected]
         following[str(horizon)] = {
             "mean": float(np.mean(values)),
             "positive_share": float(np.mean(np.asarray(values) > 0)),
@@ -261,9 +255,7 @@ def evaluate(frame: pd.DataFrame) -> dict[str, Any]:
     for name, values in position.items():
         net[name], turn[name], gross = returns(frame, values)
     return {
-        "training": {
-            name: metric(net[name], turn[name], TRAIN) for name in position
-        },
+        "training": {name: metric(net[name], turn[name], TRAIN) for name in position},
         "oos": {name: metric(net[name], turn[name], OOS) for name in position},
         "full": {name: metric(net[name], turn[name], FULL) for name in position},
         "breadth": breadth(frame, net["candidate"], net["b1"]),
@@ -302,9 +294,7 @@ def main() -> None:
         "parameter_grid_count": 0,
         "fee_one_way": FEE,
         "markets": {},
-        "verdict": (
-            "reject_exact_spectral_trend_quality_irreversible_downgrade_family"
-        ),
+        "verdict": ("reject_exact_spectral_trend_quality_irreversible_downgrade_family"),
     }
     for market, path in paths.items():
         prefix = load(path, market)
