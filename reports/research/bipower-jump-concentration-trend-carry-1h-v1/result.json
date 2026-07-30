@@ -1,0 +1,107 @@
+{
+  "accepted": false,
+  "candidate_count": 1,
+  "family_id": "bipower-jump-concentration-trend-carry-1h-v1",
+  "issue": 670,
+  "parameter_grid_count": 0,
+  "reproducibility": {
+    "protocol_sha256": "d07bbb5a08ce52d1de3c2c78af71370bc4f4a4634cda3f99b1f4496be0c83595",
+    "report_sha256": "13209381ba2e332a25d40c907eadcb45715f95bcfbc7d2a74e9935fd27749eaa",
+    "two_byte_identical_reruns": true
+  },
+  "markets": {
+    "BTC-USDT": {
+      "source": {
+        "artifact_id": 8704977298,
+        "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+        "observations": 43441
+      },
+      "metrics": {
+        "training": {
+          "candidate": {"net_return": -0.39962906006675014, "sharpe": -0.910001621952183, "max_drawdown": -0.5306597589544748, "turnover": 47.5, "fees": 0.02375, "edge_per_turnover_bps": -92.64086144046952},
+          "b1": {"net_return": -0.41290619030236553, "sharpe": -0.8402669561161515, "max_drawdown": -0.5592198563591351, "turnover": 28.0, "fees": 0.014, "edge_per_turnover_bps": -159.80829766668512}
+        },
+        "development_oos": {
+          "candidate": {"net_return": 0.9920767479326233, "sharpe": 0.8955033237799398, "max_drawdown": -0.27436891732895907, "turnover": 76.5, "fees": 0.038250000000000006, "edge_per_turnover_bps": 109.38409759719421, "mean_exposure": 0.5176118827160494, "half_exposure_hours": 2881, "full_exposure_hours": 11976},
+          "b0": {"net_return": 1.1163633418975247, "sharpe": 0.9171594854982952, "max_drawdown": -0.2267892412401914, "turnover": 203.0, "fees": 0.1015, "edge_per_turnover_bps": 45.306063115162424},
+          "b1": {"net_return": 1.1968197962400904, "sharpe": 0.953765119416238, "max_drawdown": -0.2654678573881635, "turnover": 45.0, "fees": 0.0225, "edge_per_turnover_bps": 212.75128054469278}
+        },
+        "full_scored": {
+          "candidate": {"net_return": 0.19598498957547084, "sharpe": 0.27954296697033504, "max_drawdown": -0.5306597589544748, "turnover": 124.0, "fees": 0.062, "edge_per_turnover_bps": 31.995504417443975},
+          "b1": {"net_return": 0.2897393033937914, "sharpe": 0.3317518863849881, "max_drawdown": -0.5592198563591351, "turnover": 73.0, "fees": 0.0365, "edge_per_turnover_bps": 69.85171629923276}
+        }
+      },
+      "breadth": {
+        "profitable_folds": 4,
+        "profitable_years": 3,
+        "positive_fold_concentration": 0.39727173192063214,
+        "fold_returns": [-0.11384854271915756, 0.3016149560090693, 0.49482632086210665, -0.04194683449074377, -0.04251755991369721, 0.2651964649710419, -0.03603462539197888, 0.18392362359861392, -0.019275029053060222, -0.0029905515651325043, 0.0, -0.10789737401618615],
+        "year_returns": {"2023": 0.20940253598831848, "2024": 0.6820584787655559, "2025": 0.09768892663177509, "2026": -0.10789737401618615}
+      },
+      "uncertainty": {
+        "annualized_mean_delta": {"point": -0.04075577016564108, "lower_95": -0.14165013241638258, "upper_95": 0.0526492934380827},
+        "sharpe_delta": {"point": -0.058261795636298186, "lower_95": -0.34419479173521283, "upper_95": 0.2142793532507134}
+      },
+      "residual_sharpe_vs_b1": -0.5694466956418801,
+      "diagnostics": {
+        "eligible_trigger_rate_training": 0.30364372469635625,
+        "eligible_trigger_rate_oos": 0.1938610662358643,
+        "candidate_less_exposure_hours": 1440.5,
+        "exposure_delta_market_arithmetic_return": -0.1048424158325818,
+        "incremental_fees_candidate_minus_b1": 0.015750000000000007,
+        "forward_168h_mean": 0.007382233126428591,
+        "forward_168h_positive_rate": 0.5666666666666667,
+        "improved_arithmetic_net_folds_vs_b1": 4,
+        "decomposition_identity_passes": true
+      }
+    },
+    "ETH-USDT": {
+      "source": {
+        "artifact_id": 8704978112,
+        "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+        "observations": 43441
+      },
+      "metrics": {
+        "training": {
+          "candidate": {"net_return": -0.342665538249181, "sharpe": -0.5598933170554921, "max_drawdown": -0.4737014656239382, "turnover": 39.0, "fees": 0.019499999999999997, "edge_per_turnover_bps": -82.30597042110594},
+          "b1": {"net_return": -0.4058878437623247, "sharpe": -0.5841780885870211, "max_drawdown": -0.5695187578011079, "turnover": 23.0, "fees": 0.0115, "edge_per_turnover_bps": -168.7689113472807}
+        },
+        "development_oos": {
+          "candidate": {"net_return": 0.580882237343681, "sharpe": 0.5815903519191102, "max_drawdown": -0.424561774150922, "turnover": 57.0, "fees": 0.0285, "edge_per_turnover_bps": 124.45381821861533, "mean_exposure": 0.449537037037037, "half_exposure_hours": 2472, "full_exposure_hours": 10416},
+          "b0": {"net_return": 0.6801914056080769, "sharpe": 0.6175145349430254, "max_drawdown": -0.4730328076249738, "turnover": 139.0, "fees": 0.0695, "edge_per_turnover_bps": 58.30762446386598},
+          "b1": {"net_return": 0.7451603410954828, "sharpe": 0.6456279607587625, "max_drawdown": -0.4776594160762392, "turnover": 30.0, "fees": 0.015000000000000001, "edge_per_turnover_bps": 283.5837648433161}
+        },
+        "full_scored": {
+          "candidate": {"net_return": 0.03916837457572897, "sharpe": 0.21581685016893057, "max_drawdown": -0.4737014656239382, "turnover": 96.0, "fees": 0.048, "edge_per_turnover_bps": 40.45765408372858},
+          "b1": {"net_return": 0.03682097322871436, "sharpe": 0.23303476477091944, "max_drawdown": -0.5695187578011079, "turnover": 53.0, "fees": 0.0265, "edge_per_turnover_bps": 87.27977328890617}
+        }
+      },
+      "breadth": {
+        "profitable_folds": 6,
+        "profitable_years": 3,
+        "positive_fold_concentration": 0.2561738527502871,
+        "fold_returns": [-0.04445466078119775, 0.23727479429828802, 0.12310622997735954, 0.15235274149263933, -0.12471014242958589, 0.20904081258893936, -0.11358901394003751, 0.1397637384849617, 0.29671394415685626, -0.14526263472948742, 0.0, -0.12812126372513932],
+        "year_returns": {"2023": 0.1138883762401448, "2024": 0.5771071375466883, "2025": 0.032144646992828374, "2026": -0.12812126372513932}
+      },
+      "uncertainty": {
+        "annualized_mean_delta": {"point": -0.047775975647779585, "lower_95": -0.1551698510882684, "upper_95": 0.04683783071596668},
+        "sharpe_delta": {"point": -0.06403760883965226, "lower_95": -0.31317338996346383, "upper_95": 0.16073403507884293}
+      },
+      "residual_sharpe_vs_b1": -0.49098374974302594,
+      "diagnostics": {
+        "eligible_trigger_rate_training": 0.3161764705882353,
+        "eligible_trigger_rate_oos": 0.19180633147113593,
+        "candidate_less_exposure_hours": 1236.0,
+        "exposure_delta_market_arithmetic_return": -0.12786453068384096,
+        "incremental_fees_candidate_minus_b1": 0.0135,
+        "forward_168h_mean": -0.009186970399484403,
+        "forward_168h_positive_rate": 0.4854368932038835,
+        "improved_arithmetic_net_folds_vs_b1": 4,
+        "decomposition_identity_passes": true
+      }
+    }
+  },
+  "verdict": "reject_exact_bipower_jump_concentration_trend_carry_family",
+  "remaining_blocker": "Increasing jump-share concentration was not a monotonic warning state. Half-exposure hours carried positive arithmetic market return in both markets, activation fell materially OOS, and frequent state changes consumed more fees than B1.",
+  "next_experiment": "Preregister one own-history-only signed-range compression breakout architecture using a fixed 720H Parkinson range-volatility baseline and a 168H close-to-range efficiency change, with one candidate, no fitted threshold and unchanged 2,160H trend exit."
+}
