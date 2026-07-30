@@ -82,8 +82,8 @@ def write_report(output_dir: Path, result: dict[str, Any]) -> None:
             "## Five-interval forward scorecard",
             "",
             "| Market | Long decisions | Net return | Benchmark | Residual | Turnover | "
-            "Fees | Edge/turnover | Max drawdown | Sharpe | Losses | Max loss cluster |",
-            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+            "Fees | Edge/turnover | Max drawdown | Sharpe | Losses |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
         ]
     )
     for market in result["markets"]:
@@ -92,7 +92,7 @@ def write_report(output_dir: Path, result: dict[str, Any]) -> None:
         lines.append(
             "| {instrument} | {long}/{count} | {net:.6%} | {benchmark:+.6%} | "
             "{residual:+.6%} | {turnover:.4f} | {fees:.6%} | {edge} | "
-            "{drawdown:.6%} | {sharpe} | {losses} | {cluster} |".format(
+            "{drawdown:.6%} | {sharpe} | {losses} |".format(
                 instrument=market["instrument"],
                 long=recent["long_decision_count"],
                 count=recent["realized_interval_count"],
@@ -105,7 +105,6 @@ def write_report(output_dir: Path, result: dict[str, Any]) -> None:
                 drawdown=recent["maximum_drawdown"],
                 sharpe=fmt_optional(recent["sharpe"]),
                 losses=recent["loss_count"],
-                cluster=recent["maximum_consecutive_losses"],
             )
         )
 
