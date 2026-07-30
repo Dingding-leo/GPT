@@ -99,9 +99,7 @@ def positions(d: pd.DataFrame):
             events.append((t + 1, before, state, risk, recovery, hl, hp, r168))
             prev = base
         p["candidate"][t + 1], p["b1"][t + 1] = state, b1
-    if not np.isin(p["candidate"], [0, 0.5, 1]).all() or np.any(
-        p["candidate"] > p["b1"]
-    ):
+    if not np.isin(p["candidate"], [0, 0.5, 1]).all() or np.any(p["candidate"] > p["b1"]):
         raise ValueError("position state")
     return p, events
 
@@ -142,21 +140,12 @@ def metrics(a, p, span):
 
 def breadth(net, index):
     folds = [
-        float(
-            np.prod(
-                1 + net[OOS[0] + k * FOLD : OOS[0] + (k + 1) * FOLD]
-            )
-            - 1
-        )
-        for k in range(12)
+        float(np.prod(1 + net[OOS[0] + k * FOLD : OOS[0] + (k + 1) * FOLD]) - 1) for k in range(12)
     ]
     pos = [x for x in folds if x > 0]
     years = index[:-1].year[OOS[0] : OOS[1]]
     yn = net[OOS[0] : OOS[1]]
-    yr = {
-        str(y): float(np.prod(1 + yn[years == y]) - 1)
-        for y in sorted(set(years))
-    }
+    yr = {str(y): float(np.prod(1 + yn[years == y]) - 1) for y in sorted(set(years))}
     return {
         "fold_returns": folds,
         "profitable_folds": sum(x > 0 for x in folds),
@@ -173,18 +162,14 @@ def bootstrap(c, b):
     offs, nb = np.arange(BLOCK), math.ceil(n / BLOCK)
     for z in range(0, RESAMPLES, 100):
         q = min(100, RESAMPLES - z)
-        idx = (
-            rng.integers(0, n - BLOCK + 1, (q, nb))[:, :, None] + offs
-        ).reshape(q, -1)[:, :n]
+        idx = (rng.integers(0, n - BLOCK + 1, (q, nb))[:, :, None] + offs).reshape(q, -1)[:, :n]
         cc, bb = c[idx], b[idx]
         cm, bm = cc.mean(1), bb.mean(1)
         cs, bs = cc.std(1, ddof=1), bb.std(1, ddof=1)
         md[z : z + q] = ANN * (cm - bm)
         sd[z : z + q] = np.divide(
             math.sqrt(ANN) * cm, cs, out=np.zeros(q), where=cs > 0
-        ) - np.divide(
-            math.sqrt(ANN) * bm, bs, out=np.zeros(q), where=bs > 0
-        )
+        ) - np.divide(math.sqrt(ANN) * bm, bs, out=np.zeros(q), where=bs > 0)
     return {
         "annualized_mean_delta": {
             "point": float(ANN * np.mean(c - b)),
@@ -218,9 +203,7 @@ def diagnose(p, arrays, events):
         return {
             "count": len(rows),
             "mean_next_168h": float(np.mean(vals)) if vals else None,
-            "positive_next_168h_share": (
-                float(np.mean(np.array(vals) > 0)) if vals else None
-            ),
+            "positive_next_168h_share": (float(np.mean(np.array(vals) > 0)) if vals else None),
         }
 
     half = c[i:j] == 0.5
@@ -250,24 +233,16 @@ def run(d):
     p, events = positions(d)
     arrays = {k: pack(d, v) for k, v in p.items()}
     spans = (("training", TRAIN), ("development_oos", OOS), ("full_scored", FULL))
-    met = {
-        key: {name: metrics(arrays[key], p[key], span) for name, span in spans}
-        for key in p
-    }
+    met = {key: {name: metrics(arrays[key], p[key], span) for name, span in spans} for key in p}
     cb = breadth(arrays["candidate"][3], d.index)
     bb = breadth(arrays["b1"][3], d.index)
-    residual = (
-        arrays["candidate"][3][OOS[0] : OOS[1]]
-        - arrays["b1"][3][OOS[0] : OOS[1]]
-    )
+    residual = arrays["candidate"][3][OOS[0] : OOS[1]] - arrays["b1"][3][OOS[0] : OOS[1]]
     boot = bootstrap(arrays["candidate"][3], arrays["b1"][3])
     c, b = met["candidate"]["development_oos"], met["b1"]["development_oos"]
     gates = {
         "candidate_oos_positive": c["net_return"] > 0,
         "oos_net_not_below_b1": c["net_return"] >= b["net_return"],
-        "oos_sharpe_not_below_b1": (
-            c["sharpe"] is not None and c["sharpe"] >= b["sharpe"]
-        ),
+        "oos_sharpe_not_below_b1": (c["sharpe"] is not None and c["sharpe"] >= b["sharpe"]),
         "oos_drawdown_not_worse_b1": c["max_drawdown"] >= b["max_drawdown"],
         "oos_turnover_not_above_b1": c["turnover"] <= b["turnover"],
         "oos_edge_per_turn_not_below_b1": (
@@ -280,12 +255,8 @@ def run(d):
             and cb["positive_fold_concentration"] <= 0.5
         ),
         "residual_sharpe_positive": (sharpe(residual) or 0) > 0,
-        "mean_delta_lower_95_positive": (
-            boot["annualized_mean_delta"]["lower_95"] > 0
-        ),
-        "sharpe_delta_lower_95_positive": (
-            boot["sharpe_delta"]["lower_95"] > 0
-        ),
+        "mean_delta_lower_95_positive": (boot["annualized_mean_delta"]["lower_95"] > 0),
+        "sharpe_delta_lower_95_positive": (boot["sharpe_delta"]["lower_95"] > 0),
     }
     return {
         "metrics": met,
@@ -337,6 +308,7 @@ def main():
     )
     a.output.write_text(json.dumps(out, sort_keys=True, indent=2) + "\n")
     print(out["verdict"])
+
 
 if __name__ == "__main__":
     main()
