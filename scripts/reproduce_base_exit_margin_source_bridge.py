@@ -86,11 +86,17 @@ def positions(d: pd.DataFrame) -> tuple[dict[str, np.ndarray], list[dict[str, An
                 current_leg = None
                 lag_leg = None
             post_margin = float(math.log(close[t] / close[t - TREND]))
-            if pre_margin is not None and current_leg is not None and lag_leg is not None:
-                if not math.isclose(
-                    post_margin - pre_margin, current_leg - lag_leg, abs_tol=1e-14
-                ):
-                    raise ValueError("endpoint margin decomposition")
+            if (
+                pre_margin is not None
+                and current_leg is not None
+                and lag_leg is not None
+                and not math.isclose(
+                    post_margin - pre_margin,
+                    current_leg - lag_leg,
+                    abs_tol=1e-14,
+                )
+            ):
+                raise ValueError("endpoint margin decomposition")
 
             exit_crossing = bool((not base) and prior_daily_base)
             mechanical_exit = bool(
