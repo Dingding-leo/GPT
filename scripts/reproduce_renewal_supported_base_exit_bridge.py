@@ -272,6 +272,7 @@ def diagnose(d: pd.DataFrame, p, arrays, events):
     expiries = [e for e in oos_events if e["bridge_expiry"]]
     direct = [e for e in oos_events if e["direct_exit"]]
 
+    # Initial diagnostic: pair each bridge start with its first terminal event.
     episodes = []
     for start_event in starts:
         terminal = next(
@@ -331,17 +332,26 @@ def acceptance(market_result: dict[str, Any]) -> dict[str, bool]:
     return {
         "positive_net": c["net_return"] > 0,
         "net_at_least_b1": c["net_return"] >= b["net_return"],
-        "sharpe_at_least_b1": c["sharpe"] is not None and b["sharpe"] is not None and c["sharpe"] >= b["sharpe"],
+        "sharpe_at_least_b1": (
+            c["sharpe"] is not None
+            and b["sharpe"] is not None
+            and c["sharpe"] >= b["sharpe"]
+        ),
         "drawdown_no_worse": c["max_drawdown"] >= b["max_drawdown"] - 1e-12,
         "turnover_no_more": c["turnover"] <= b["turnover"] + 1e-12,
         "edge_per_turnover_at_least_b1": c["edge_per_turnover_bps"] >= b["edge_per_turnover_bps"],
         "profitable_folds": br["profitable_folds"] >= 7,
         "profitable_years": br["profitable_years"] >= 3,
-        "fold_concentration": br["positive_fold_concentration"] is not None and br["positive_fold_concentration"] <= 0.5,
+        "fold_concentration": (
+            br["positive_fold_concentration"] is not None
+            and br["positive_fold_concentration"] <= 0.5
+        ),
         "positive_residual_sharpe": residual is not None and residual > 0,
         "mean_delta_lower_positive": u["annualized_mean_delta"]["lower_95"] > 0,
         "sharpe_delta_lower_positive": u["sharpe_delta"]["lower_95"] > 0,
-        "positive_full_return": market_result["metrics"]["full_scored"]["candidate"]["net_return"] > 0,
+        "positive_full_return": (
+            market_result["metrics"]["full_scored"]["candidate"]["net_return"] > 0
+        ),
     }
 
 
