@@ -1,0 +1,62 @@
+{
+  "acceptance": "all preregistered per-market gates plus positive common-index lower bounds on both markets",
+  "artifacts": {
+    "BTC-USDT": 8769605568,
+    "ETH-USDT": 8769619607
+  },
+  "bar": "1H",
+  "base": "daily 00:00 UTC 2160H endpoint trend",
+  "candidate_count": 1,
+  "comparators": [
+    "hourly B0 2160H endpoint trend",
+    "daily 00:00 UTC B1 2160H endpoint trend"
+  ],
+  "episode": "0.5 sleeve from next open after positive-to-non-positive base exit until first daily recross at or before 168H or exact 168H expiry",
+  "estimator": "sum(current segment completed episode targets)/(segment count+2)",
+  "family_id": "two-loss-payoff-change-point-reset-selector-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 748,
+  "live_trading_authorized": false,
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "paper_trading_authorized": false,
+  "parameter_grid_count": 0,
+  "prefix_rows": 43441,
+  "rejection_verdict": "reject_two_loss_payoff_change_point_reset_selector_family",
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "reset": "after two consecutive completed targets <= 0, discard the entire segment and reset loss count; triggering losses are not retained",
+  "sample": {
+    "full": [
+      2880,
+      43440
+    ],
+    "oos": [
+      17520,
+      43440
+    ],
+    "training": [
+      2880,
+      17520
+    ],
+    "warmup": [
+      0,
+      2880
+    ]
+  },
+  "selection": "prediction > 0",
+  "source_sha256": {
+    "BTC-USDT": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0",
+    "ETH-USDT": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8"
+  },
+  "strategy_boundary": "own-instrument completed lagged history -> same-instrument future unlevered long/cash",
+  "target": "0.5 * arithmetic open-to-open carry + 0.0005 only on restoration",
+  "uncertainty": {
+    "block_hours": 168,
+    "method": "paired non-circular moving-block bootstrap",
+    "resamples": 5000,
+    "seed": 20260731
+  },
+  "workflow_run": 30567744552
+}
