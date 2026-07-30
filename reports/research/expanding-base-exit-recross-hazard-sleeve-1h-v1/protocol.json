@@ -1,0 +1,67 @@
+{
+  "bar": "1H",
+  "bootstrap": {
+    "block_hours": 168,
+    "method": "paired non-circular moving blocks",
+    "resamples": 5000,
+    "seed": 20260731
+  },
+  "candidate_count": 1,
+  "estimator": {
+    "features": [
+      "margin_depth",
+      "return_24h",
+      "log1p(hourly_negative_age)/log(25)"
+    ],
+    "max_iter": 100,
+    "neutral_prior": [
+      {
+        "y": 0,
+        "z": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "y": 1,
+        "z": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "ridge_lambda": 1.0,
+    "step_tolerance": 1e-12,
+    "threshold": "strict p > 0.5",
+    "type": "expanding same-instrument episode-level ridge logistic"
+  },
+  "family_id": "expanding-base-exit-recross-hazard-sleeve-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 740,
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "parameter_grid_count": 0,
+  "provider": "public confirmed OKX SPOT",
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "rows": 43441,
+  "samples": {
+    "full": [
+      2880,
+      43440
+    ],
+    "oos": [
+      17520,
+      43440
+    ],
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "state": "positive base=1; selected exit=0.5 until daily recross or 168H expiry; otherwise cash",
+  "verdict_on_failure": "reject_exact_expanding_base_exit_recross_hazard_sleeve_family"
+}
