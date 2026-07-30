@@ -1,0 +1,326 @@
+{
+  "bilateral_accepted": false,
+  "markets": {
+    "BTC-USDT": {
+      "accepted": false,
+      "breadth_summary": {
+        "positive_fold_concentration": 0.3409676948890662,
+        "profitable_folds": 5,
+        "profitable_years": 3
+      },
+      "diagnostics": {
+        "candidate_vs_b1": {
+          "arithmetic_net_delta": 0.035202814440968844,
+          "b1_only_hours": 384,
+          "b1_only_market_return": -0.035202814440968844,
+          "candidate_only_hours": 0,
+          "candidate_only_market_return": 0.0,
+          "exposure_market_return_delta": 0.035202814440968844,
+          "incremental_fees": 0.0
+        },
+        "development_oos": {
+          "below_half_decisions": 100,
+          "exit_forward": {
+            "168h": {
+              "count": 2,
+              "mean": 0.010715238873139021,
+              "median": 0.010715238873139021,
+              "positive_share": 0.5
+            },
+            "24h": {
+              "count": 2,
+              "mean": -0.031561465907693376,
+              "median": -0.031561465907693376,
+              "positive_share": 0.5
+            },
+            "720h": {
+              "count": 2,
+              "mean": -0.018163596668504534,
+              "median": -0.018163596668504534,
+              "positive_share": 0.5
+            }
+          },
+          "exits": 2,
+          "locked_cash_decisions": 14,
+          "omitted_hours": 384,
+          "omitted_market_return": -0.035202814440968844,
+          "trend_onsets": 22
+        },
+        "folds_improved_vs_b1": 2,
+        "identity_checks": {
+          "allowed_exposure_states": true,
+          "decomposition": true,
+          "fee": true,
+          "omitted_regime_partition": true,
+          "turnover_attribution": true
+        },
+        "training": {
+          "below_half_decisions": 21,
+          "exits": 1,
+          "locked_cash_decisions": 97,
+          "omitted_hours": 2352,
+          "omitted_market_return": 0.2701448759089077,
+          "trend_onsets": 14
+        },
+        "years_improved_vs_b1": 1
+      },
+      "gates": {
+        "drawdown_no_worse_b1": false,
+        "edge_per_turnover_at_least_b1": true,
+        "net_at_least_b1": true,
+        "positive_fold_concentration_at_most_half": true,
+        "positive_full_scored_net": true,
+        "positive_mean_delta_lower_95": false,
+        "positive_oos_net": true,
+        "positive_oos_sharpe": true,
+        "positive_residual_sharpe": true,
+        "positive_sharpe_delta_lower_95": false,
+        "profitable_folds_at_least_7": false,
+        "profitable_years_at_least_3": true,
+        "sharpe_at_least_b1": true,
+        "turnover_no_greater_b1": true
+      },
+      "metrics": {
+        "development_oos": {
+          "b0": {
+            "arithmetic_net_return": 0.9197130812377972,
+            "edge_per_turnover_bps": 45.306063115162424,
+            "exposure_hours": 14838.0,
+            "fees": 0.1015,
+            "max_drawdown": -0.2267892412401914,
+            "mean_exposure": 0.5724537037037037,
+            "net_return": 1.1163633418975247,
+            "sharpe": 0.9171594854982952,
+            "turnover": 203.0
+          },
+          "b1": {
+            "arithmetic_net_return": 0.9573807624511175,
+            "edge_per_turnover_bps": 212.75128054469278,
+            "exposure_hours": 14857.0,
+            "fees": 0.0225,
+            "max_drawdown": -0.2654678573881635,
+            "mean_exposure": 0.5731867283950617,
+            "net_return": 1.1968197962400904,
+            "sharpe": 0.953765119416238,
+            "turnover": 45.0
+          },
+          "candidate": {
+            "arithmetic_net_return": 0.9925835768920863,
+            "edge_per_turnover_bps": 220.5741281982414,
+            "exposure_hours": 14473.0,
+            "fees": 0.0225,
+            "max_drawdown": -0.2851532848551309,
+            "mean_exposure": 0.558371913580247,
+            "net_return": 1.2856234711902292,
+            "sharpe": 1.0017851524827448,
+            "turnover": 45.0
+          }
+        },
+        "full_scored": {
+          "b0": {
+            "arithmetic_net_return": 0.47688100865128386,
+            "edge_per_turnover_bps": 13.984780312354363,
+            "exposure_hours": 20720.0,
+            "fees": 0.1705,
+            "max_drawdown": -0.5555790197814092,
+            "mean_exposure": 0.5108481262327417,
+            "net_return": 0.24823142997608683,
+            "sharpe": 0.3104155593521776,
+            "turnover": 341.0
+          },
+          "b1": {
+            "arithmetic_net_return": 0.5099175289843991,
+            "edge_per_turnover_bps": 69.85171629923276,
+            "exposure_hours": 20785.0,
+            "fees": 0.0365,
+            "max_drawdown": -0.5592198563591351,
+            "mean_exposure": 0.5124506903353058,
+            "net_return": 0.2897393033937914,
+            "sharpe": 0.3317518863849881,
+            "turnover": 73.0
+          },
+          "candidate": {
+            "arithmetic_net_return": 0.27497546751646024,
+            "edge_per_turnover_bps": 37.667872262528796,
+            "exposure_hours": 18049.0,
+            "fees": 0.0365,
+            "max_drawdown": -0.5974506647543861,
+            "mean_exposure": 0.4449950690335306,
+            "net_return": 0.05911074484355838,
+            "sharpe": 0.1938409030607095,
+            "turnover": 73.0
+          }
+        },
+        "training": {
+          "b0": {
+            "arithmetic_net_return": -0.4428320725865133,
+            "edge_per_turnover_bps": -32.089280622211106,
+            "exposure_hours": 5882.0,
+            "fees": 0.069,
+            "max_drawdown": -0.5555790197814092,
+            "mean_exposure": 0.401775956284153,
+            "net_return": -0.4101998436351103,
+            "sharpe": -0.8311585079315998,
+            "turnover": 138.0
+          },
+          "b1": {
+            "arithmetic_net_return": -0.4474632334667183,
+            "edge_per_turnover_bps": -159.80829766668512,
+            "exposure_hours": 5928.0,
+            "fees": 0.014,
+            "max_drawdown": -0.5592198563591351,
+            "mean_exposure": 0.40491803278688526,
+            "net_return": -0.41290619030236553,
+            "sharpe": -0.8402669561161515,
+            "turnover": 28.0
+          },
+          "candidate": {
+            "arithmetic_net_return": -0.7176081093756259,
+            "edge_per_turnover_bps": -256.288610491295,
+            "exposure_hours": 3576.0,
+            "fees": 0.014,
+            "max_drawdown": -0.548248326889898,
+            "mean_exposure": 0.2442622950819672,
+            "net_return": -0.5366206384413714,
+            "sharpe": -1.7315668213993576,
+            "turnover": 28.0
+          }
+        }
+      },
+      "residual_sharpe_vs_b1": 0.21878939738775727,
+      "source_artifact": 8704977298,
+      "source_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "uncertainty": {
+        "annualized_mean_delta": {
+          "lower_95": -0.08939511313964411,
+          "point": 0.011897247473105211,
+          "upper_95": 0.11258966442613899
+        },
+        "sharpe_delta": {
+          "lower_95": -0.2516088103499742,
+          "point": 0.04802003306650682,
+          "upper_95": 0.3524257683489049
+        }
+      }
+    },
+    "ETH-USDT": {
+      "accepted": false,
+      "breadth_summary": {
+        "positive_fold_concentration": 0.2097472294624046,
+        "profitable_folds": 6,
+        "profitable_years": 3
+      },
+      "diagnostics": {
+        "candidate_vs_b1": {
+          "arithmetic_net_delta": 0.0,
+          "b1_only_hours": 0,
+          "b1_only_market_return": 0.0,
+          "candidate_only_hours": 0,
+          "candidate_only_market_return": 0.0,
+          "exposure_market_return_delta": 0.0,
+          "incremental_fees": 0.0
+        },
+        "development_oos": {
+          "below_half_decisions": 74,
+          "exit_forward": {
+            "168h": {"count": 0, "mean": null, "median": null, "positive_share": null},
+            "24h": {"count": 0, "mean": null, "median": null, "positive_share": null},
+            "720h": {"count": 0, "mean": null, "median": null, "positive_share": null}
+          },
+          "exits": 0,
+          "locked_cash_decisions": 0,
+          "omitted_hours": 0,
+          "omitted_market_return": 0.0,
+          "trend_onsets": 15
+        },
+        "folds_improved_vs_b1": 0,
+        "identity_checks": {
+          "allowed_exposure_states": true,
+          "decomposition": true,
+          "fee": true,
+          "omitted_regime_partition": true,
+          "turnover_attribution": true
+        },
+        "training": {
+          "below_half_decisions": 3,
+          "exits": 3,
+          "locked_cash_decisions": 111,
+          "omitted_hours": 2736,
+          "omitted_market_return": -0.04105846921563405,
+          "trend_onsets": 11
+        },
+        "years_improved_vs_b1": 0
+      },
+      "gates": {
+        "drawdown_no_worse_b1": true,
+        "edge_per_turnover_at_least_b1": true,
+        "net_at_least_b1": true,
+        "positive_fold_concentration_at_most_half": true,
+        "positive_full_scored_net": true,
+        "positive_mean_delta_lower_95": false,
+        "positive_oos_net": true,
+        "positive_oos_sharpe": true,
+        "positive_residual_sharpe": false,
+        "positive_sharpe_delta_lower_95": false,
+        "profitable_folds_at_least_7": false,
+        "profitable_years_at_least_3": true,
+        "sharpe_at_least_b1": true,
+        "turnover_no_greater_b1": true
+      },
+      "metrics": {
+        "development_oos": {
+          "b0": {"arithmetic_net_return": 0.810475980047737, "edge_per_turnover_bps": 58.30762446386598, "exposure_hours": 12882.0, "fees": 0.0695, "max_drawdown": -0.4730328076249738, "mean_exposure": 0.49699074074074073, "net_return": 0.6801914056080769, "sharpe": 0.6175145349430254, "turnover": 139.0},
+          "b1": {"arithmetic_net_return": 0.8507512945299482, "edge_per_turnover_bps": 283.5837648433161, "exposure_hours": 12888.0, "fees": 0.015000000000000001, "max_drawdown": -0.4776594160762392, "mean_exposure": 0.49722222222222223, "net_return": 0.7451603410954828, "sharpe": 0.6456279607587625, "turnover": 30.0},
+          "candidate": {"arithmetic_net_return": 0.8507512945299482, "edge_per_turnover_bps": 283.5837648433161, "exposure_hours": 12888.0, "fees": 0.015000000000000001, "max_drawdown": -0.4776594160762392, "mean_exposure": 0.49722222222222223, "net_return": 0.7451603410954828, "sharpe": 0.6456279607587625, "turnover": 30.0}
+        },
+        "full_scored": {
+          "b0": {"arithmetic_net_return": 0.31297088861026523, "edge_per_turnover_bps": 13.787263815430185, "exposure_hours": 19479.0, "fees": 0.1135, "max_drawdown": -0.5775445421085006, "mean_exposure": 0.48025147928994083, "net_return": -0.1067577946903614, "sharpe": 0.1577691303734697, "turnover": 227.0},
+          "b1": {"arithmetic_net_return": 0.46258279843120276, "edge_per_turnover_bps": 87.27977328890617, "exposure_hours": 19417.0, "fees": 0.0265, "max_drawdown": -0.5695187578011079, "mean_exposure": 0.4787228796844181, "net_return": 0.03682097322871436, "sharpe": 0.23303476477091944, "turnover": 53.0},
+          "candidate": {"arithmetic_net_return": 0.5036412676468368, "edge_per_turnover_bps": 95.02665427298808, "exposure_hours": 16681.0, "fees": 0.0265, "max_drawdown": -0.4998941206310079, "mean_exposure": 0.411267258382643, "net_return": 0.12743915977692466, "sharpe": 0.2674583757067369, "turnover": 53.0}
+        },
+        "training": {
+          "b0": {"arithmetic_net_return": -0.4975050914374718, "edge_per_turnover_bps": -56.534669481530884, "exposure_hours": 6597.0, "fees": 0.044000000000000004, "max_drawdown": -0.5775445421085006, "mean_exposure": 0.45061475409836066, "net_return": -0.4683687808851905, "sharpe": -0.7437877705962022, "turnover": 88.0},
+          "b1": {"arithmetic_net_return": -0.38816849609874565, "edge_per_turnover_bps": -168.7689113472807, "exposure_hours": 6529.0, "fees": 0.0115, "max_drawdown": -0.5695187578011079, "mean_exposure": 0.44596994535519124, "net_return": -0.4058878437623247, "sharpe": -0.5841780885870211, "turnover": 23.0},
+          "candidate": {"arithmetic_net_return": -0.3471100268831116, "edge_per_turnover_bps": -150.9174029926572, "exposure_hours": 3793.0, "fees": 0.0115, "max_drawdown": -0.4998941206310079, "mean_exposure": 0.2590846994535519, "net_return": -0.3539624221180686, "sharpe": -0.6346381737229205, "turnover": 23.0}
+        }
+      },
+      "residual_sharpe_vs_b1": null,
+      "source_artifact": 8704978112,
+      "source_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726",
+      "uncertainty": {
+        "annualized_mean_delta": {"lower_95": 0.0, "point": 0.0, "upper_95": 0.0},
+        "sharpe_delta": {"lower_95": 0.0, "point": 0.0, "upper_95": 0.0}
+      }
+    }
+  },
+  "next_experiment": "One own-history-only bounded upper-wick rejection pause architecture: retain immediate 2,160H trend entry, permit at most one fixed 168H cash pause per positive-trend regime when the latest 168H range-normalized upper-wick sum exceeds the lower-wick sum and the latest 168H close return is negative, then automatically resume if the base trend remains positive. One candidate, no fitted threshold, grid, exogenous input or market-specific rule.",
+  "protocol": {
+    "bar": "1H",
+    "bootstrap": {"block_hours": 168, "kind": "paired non-circular moving blocks", "resamples": 5000, "seed": 20260730},
+    "candidate_count": 1,
+    "canonical_fee_one_way": 0.0005,
+    "development_oos": [17520, 43440],
+    "family_id": "trend-onset-participation-decay-exit-1h-v1",
+    "fold_count": 12,
+    "fold_hours": 2160,
+    "full_scored": [2880, 43440],
+    "hard_boundary": {"credentials": false, "cross_sectional": false, "leverage": false, "market_neutral": false, "orders": false, "own_history_only": true, "pairs_spreads": false, "synthetic_data": false},
+    "issue": 694,
+    "observations": 43441,
+    "parameter_grid_count": 0,
+    "participation_decay_ratio": 0.5,
+    "positive_dm_sum_hours": 168,
+    "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+    "same_regime_reentry": false,
+    "sources": {
+      "BTC-USDT": {"artifact_id": 8704977298, "sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9"},
+      "ETH-USDT": {"artifact_id": 8704978112, "sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726"}
+    },
+    "training": [2880, 17520],
+    "trend_horizon_hours": 2160
+  },
+  "remaining_blocker": "The half-maximum positive-DM decay condition is too sparse and not economically transportable. It fired only twice in BTC development OOS and never in ETH; one BTC exit avoided an immediate loss but the other omitted profitable recovery, while the sole BTC training exit omitted a large positive continuation. The family therefore cannot establish bilateral breadth or uncertainty-supported superiority.",
+  "repaired_discrepancy": "Initial regime-level inspection treated every omitted interval inside a scored span as belonging to a trend that began inside that span. Terminal diagnostics propagate the frozen regime identifier across each sample boundary and separate regimes that began inside the span from a positive trend already active at the boundary; this repairs the training attribution for an overlapping ETH regime. The omitted-exposure mask and arithmetic decomposition are unchanged; no signal, position, fee, metric, bootstrap result, gate or verdict changed.",
+  "result_full_sha256": "d01fff2b77b299da4f8abbf7817a65b3f7d0d7627f5544e7c0572c3f7aedfd84",
+  "verdict": "reject_exact_trend_onset_participation_decay_exit_family"
+}
