@@ -109,6 +109,7 @@ def positions(frame: pd.DataFrame) -> tuple[dict[str, np.ndarray], list[int]]:
         candidate[t + 1] = current_candidate
         daily[t + 1] = current_daily
 
+    # Explicit independent reconstruction of B0 avoids reliance on forward-slice state.
     hourly[:] = 0.0
     for t in range(2_160, len(frame) - 2):
         hourly[t + 1] = float(margin[t] > 0)
@@ -120,7 +121,10 @@ def positions(frame: pd.DataFrame) -> tuple[dict[str, np.ndarray], list[int]]:
     return {"candidate": candidate, "b1": daily, "b0": hourly}, triggers
 
 
-def returns(frame: pd.DataFrame, position: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+def returns(
+    frame: pd.DataFrame,
+    position: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     open_ = frame["open"].to_numpy(float)
     gross = open_[1:] / open_[:-1] - 1
     turnover = np.abs(np.diff(np.r_[0.0, position]))
@@ -137,7 +141,12 @@ def sharpe(values: np.ndarray) -> float:
     return float(values.mean() / std * math.sqrt(ANN)) if std > 0 else math.nan
 
 
-def metric(net: np.ndarray, turn: np.ndarray, position: np.ndarray, span: tuple[int, int]) -> dict[str, float | int]:
+def metric(
+    net: np.ndarray,
+    turn: np.ndarray,
+    position: np.ndarray,
+    span: tuple[int, int],
+) -> dict[str, float | int]:
     start, end = span
     values = net[start:end]
     turnover = float(turn[start:end].sum())
@@ -157,26 +166,38 @@ def metric(net: np.ndarray, turn: np.ndarray, position: np.ndarray, span: tuple[
     }
 
 
-def breadth(frame: pd.DataFrame, candidate: np.ndarray, b1: np.ndarray) -> dict[str, Any]:
-    folds = []
+def breadth(
+    frame: pd.DataFrame,
+    candidate: np.ndarray,
+    b1: np.ndarray,
+) -> dict[str, Any]:
+    folds: list[dict[str, Any]] = []
     for number in range(12):
         start = OOS[0] + number * FOLD
         end = start + FOLD
-        folds.append({"number": number + 1, "candidate": compounded(candidate[start:end]), "b1": compounded(b1[start:end])})
+        c = compounded(candidate[start:end])
+        b = compounded(b1[start:end])
+        folds.append({"number": number + 1, "candidate": c, "b1": b})
     positive = [row["candidate"] for row in folds if row["candidate"] > 0]
     timestamps = frame["timestamp"].iloc[1:].reset_index(drop=True)
     years = timestamps.iloc[OOS[0] : OOS[1]].dt.year.to_numpy()
-    year_rows = []
+    year_rows: list[dict[str, Any]] = []
     for year in sorted(set(years)):
         index = np.flatnonzero(years == year) + OOS[0]
-        year_rows.append({"year": int(year), "candidate": compounded(candidate[index]), "b1": compounded(b1[index])})
+        c = compounded(candidate[index])
+        b = compounded(b1[index])
+        year_rows.append({"year": int(year), "candidate": c, "b1": b})
     residual = candidate[OOS[0] : OOS[1]] - b1[OOS[0] : OOS[1]]
     return {
         "profitable_folds": sum(row["candidate"] > 0 for row in folds),
         "profitable_years": sum(row["candidate"] > 0 for row in year_rows),
         "improved_folds": sum(row["candidate"] > row["b1"] for row in folds),
         "improved_years": sum(row["candidate"] > row["b1"] for row in year_rows),
-        "positive_fold_concentration": max(positive) / sum(positive),
+        "positive_fold_concentration": (
+            max(positive) / sum(positive)
+            if positive and sum(positive) > 0
+            else math.nan
+        ),
         "residual_sharpe": sharpe(residual),
         "folds": folds,
         "years": year_rows,
@@ -210,86 +231,153 @@ def uncertainty(candidate: np.ndarray, b1: np.ndarray) -> dict[str, Any]:
     mean_point = float((c - b).mean() * ANN)
     sharpe_point = sharpe(c) - sharpe(b)
     return {
-        "mean_delta_annualized": {"point": mean_point, "ci95": basic_interval(mean_point, mean_draws)},
-        "sharpe_delta": {"point": sharpe_point, "ci95": basic_interval(sharpe_point, sharpe_draws)},
+        "mean_delta_annualized": {
+            "point": mean_point,
+            "ci95": basic_interval(mean_point, mean_draws),
+        },
+        "sharpe_delta": {
+            "point": sharpe_point,
+            "ci95": basic_interval(sharpe_point, sharpe_draws),
+        },
     }
 
 
-def diagnostics(frame: pd.DataFrame, triggers: list[int], position: dict[str, np.ndarray], net: dict[str, np.ndarray], turn: dict[str, np.ndarray], gross: np.ndarray, span: tuple[int, int]) -> dict[str, Any]:
+def trigger_events(
+    frame: pd.DataFrame,
+    triggers: list[int],
+    position: dict[str, np.ndarray],
+    gross: np.ndarray,
+    span: tuple[int, int],
+) -> list[dict[str, Any]]:
+    start, end = span
+    events: list[dict[str, Any]] = []
+    timestamps = frame["timestamp"].iloc[:-1].reset_index(drop=True)
+    for trigger in [index for index in triggers if start <= index < end]:
+        finish = trigger
+        while (
+            finish < end
+            and position["candidate"][finish] == 0.5
+            and position["b1"][finish] == 1.0
+        ):
+            finish += 1
+        events.append(
+            {
+                "execution_timestamp": timestamps.iloc[trigger].isoformat(),
+                "duration_hours": finish - trigger,
+                "market_return": compounded(gross[trigger:finish]),
+                "next_24h": compounded(gross[trigger : min(trigger + 24, end)]),
+                "next_168h": compounded(gross[trigger : min(trigger + 168, end)]),
+                "next_720h": compounded(gross[trigger : min(trigger + 720, end)]),
+            }
+        )
+    return events
+
+
+def diagnostics(
+    frame: pd.DataFrame,
+    triggers: list[int],
+    position: dict[str, np.ndarray],
+    net: dict[str, np.ndarray],
+    turn: dict[str, np.ndarray],
+    gross: np.ndarray,
+    span: tuple[int, int],
+) -> dict[str, Any]:
     start, end = span
     selected = [index for index in triggers if start <= index < end]
-    mask = (position["candidate"][start:end] == 0.5) & (position["b1"][start:end] == 1)
+    mask = (position["candidate"][start:end] == 0.5) & (
+        position["b1"][start:end] == 1
+    )
     difference = position["candidate"][start:end] - position["b1"][start:end]
     timing = float((difference * gross[start:end]).sum())
-    fee = float(-FEE * (turn["candidate"][start:end] - turn["b1"][start:end]).sum())
+    turn_difference = turn["candidate"][start:end] - turn["b1"][start:end]
+    fee = float(-FEE * turn_difference.sum())
     delta = float((net["candidate"][start:end] - net["b1"][start:end]).sum())
     if abs(delta - timing - fee) > 1e-12:
         raise AssertionError("return decomposition failed")
-    following = {}
+    following: dict[str, dict[str, float]] = {}
     for horizon in (24, 168, 720):
-        values = [compounded(gross[index : min(index + horizon, end)]) for index in selected]
-        following[str(horizon)] = {"mean": float(np.mean(values)), "positive_share": float(np.mean(np.asarray(values) > 0))}
-    events = []
-    timestamps = frame["timestamp"].iloc[:-1].reset_index(drop=True)
-    for trigger in selected:
-        finish = trigger
-        while finish < end and position["candidate"][finish] == 0.5 and position["b1"][finish] == 1.0:
-            finish += 1
-        events.append({
-            "execution_timestamp": timestamps.iloc[trigger].isoformat(),
-            "duration_hours": finish - trigger,
-            "market_return": compounded(gross[trigger:finish]),
-            "next_24h": compounded(gross[trigger : min(trigger + 24, end)]),
-            "next_168h": compounded(gross[trigger : min(trigger + 168, end)]),
-            "next_720h": compounded(gross[trigger : min(trigger + 720, end)]),
-        })
+        values = [
+            compounded(gross[index : min(index + horizon, end)])
+            for index in selected
+        ]
+        following[str(horizon)] = {
+            "mean": float(np.mean(values)) if values else math.nan,
+            "positive_share": (
+                float(np.mean(np.asarray(values) > 0)) if values else math.nan
+            ),
+        }
     return {
         "trigger_count": len(selected),
         "half_state_hours": int(mask.sum()),
         "full_equivalent_exposure_removed": float(mask.sum() * 0.5),
-        "arithmetic_market_return_during_half_state": float(gross[start:end][mask].sum()),
+        "arithmetic_market_return_during_half_state": float(
+            gross[start:end][mask].sum()
+        ),
         "timing_contribution": timing,
         "fee_contribution": fee,
         "arithmetic_delta": delta,
         "next_returns": following,
-        "events": events,
+        "events": trigger_events(frame, triggers, position, gross, span),
+    }
+
+
+def gate_results(result: dict[str, Any]) -> dict[str, bool]:
+    oos = result["oos"]
+    breadth_ = result["breadth"]
+    uncertainty_ = result["uncertainty"]
+    c = oos["candidate"]
+    b = oos["b1"]
+    return {
+        "return": bool(c["net_return"] > 0 and c["net_return"] >= b["net_return"]),
+        "sharpe": bool(math.isfinite(c["sharpe"]) and c["sharpe"] >= b["sharpe"]),
+        "drawdown": bool(c["max_drawdown"] >= b["max_drawdown"] - 1e-12),
+        "turnover": bool(c["turnover"] <= b["turnover"] + 1e-12),
+        "edge_per_turnover": bool(
+            c["edge_per_turnover_bps"] >= b["edge_per_turnover_bps"]
+        ),
+        "profitable_folds": bool(breadth_["profitable_folds"] >= 7),
+        "profitable_years": bool(breadth_["profitable_years"] >= 3),
+        "fold_concentration": bool(breadth_["positive_fold_concentration"] <= 0.5),
+        "residual_sharpe": bool(breadth_["residual_sharpe"] > 0),
+        "mean_uncertainty": bool(
+            uncertainty_["mean_delta_annualized"]["ci95"][0] > 0
+        ),
+        "sharpe_uncertainty": bool(uncertainty_["sharpe_delta"]["ci95"][0] > 0),
+        "full_positive": bool(result["full"]["candidate"]["net_return"] > 0),
+        "integrity": True,
     }
 
 
 def evaluate(frame: pd.DataFrame) -> dict[str, Any]:
     position, triggers = positions(frame)
-    net, turn = {}, {}
+    net: dict[str, np.ndarray] = {}
+    turn: dict[str, np.ndarray] = {}
     gross = np.empty(0)
     for name, values in position.items():
         net[name], turn[name], gross = returns(frame, values)
     result = {
-        "training": {name: metric(net[name], turn[name], position[name], TRAIN) for name in position},
-        "oos": {name: metric(net[name], turn[name], position[name], OOS) for name in position},
-        "full": {name: metric(net[name], turn[name], position[name], FULL) for name in position},
+        "training": {
+            name: metric(net[name], turn[name], position[name], TRAIN)
+            for name in position
+        },
+        "oos": {
+            name: metric(net[name], turn[name], position[name], OOS)
+            for name in position
+        },
+        "full": {
+            name: metric(net[name], turn[name], position[name], FULL)
+            for name in position
+        },
         "breadth": breadth(frame, net["candidate"], net["b1"]),
         "uncertainty": uncertainty(net["candidate"], net["b1"]),
         "diagnostics": {
-            "training": diagnostics(frame, triggers, position, net, turn, gross, TRAIN),
+            "training": diagnostics(
+                frame, triggers, position, net, turn, gross, TRAIN
+            ),
             "oos": diagnostics(frame, triggers, position, net, turn, gross, OOS),
         },
     }
-    c, b = result["oos"]["candidate"], result["oos"]["b1"]
-    br, un = result["breadth"], result["uncertainty"]
-    result["gates"] = {
-        "return": c["net_return"] > 0 and c["net_return"] >= b["net_return"],
-        "sharpe": math.isfinite(c["sharpe"]) and c["sharpe"] >= b["sharpe"],
-        "drawdown": c["max_drawdown"] >= b["max_drawdown"] - 1e-12,
-        "turnover": c["turnover"] <= b["turnover"] + 1e-12,
-        "edge_per_turnover": c["edge_per_turnover_bps"] >= b["edge_per_turnover_bps"],
-        "profitable_folds": br["profitable_folds"] >= 7,
-        "profitable_years": br["profitable_years"] >= 3,
-        "fold_concentration": br["positive_fold_concentration"] <= 0.5,
-        "residual_sharpe": br["residual_sharpe"] > 0,
-        "mean_uncertainty": un["mean_delta_annualized"]["ci95"][0] > 0,
-        "sharpe_uncertainty": un["sharpe_delta"]["ci95"][0] > 0,
-        "full_positive": result["full"]["candidate"]["net_return"] > 0,
-        "integrity": True,
-    }
+    result["gates"] = gate_results(result)
     result["all_gates_pass"] = all(result["gates"].values())
     return result
 
@@ -300,31 +388,50 @@ def main() -> None:
     parser.add_argument("--eth", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = {
+    paths = {"BTC-USDT": args.btc, "ETH-USDT": args.eth}
+    result: dict[str, Any] = {
         "family_id": "endpoint-margin-acceleration-checkpoint-1h-v1",
         "issue": 728,
         "candidate_count": 1,
         "parameter_grid_count": 0,
         "fee_one_way": FEE,
         "source_run_id": 30567744552,
-        "source_artifacts": {"BTC-USDT": 8769605568, "ETH-USDT": 8769619607},
+        "source_artifacts": {
+            "BTC-USDT": 8769605568,
+            "ETH-USDT": 8769619607,
+        },
         "markets": {},
     }
-    for market, path in {"BTC-USDT": args.btc, "ETH-USDT": args.eth}.items():
+    for market, path in paths.items():
         prefix = load(path, market)
         full = load(path, market, None)
         prefix_position, _ = positions(prefix)
         full_position, _ = positions(full)
-        if not all(np.array_equal(prefix_position[name], full_position[name][: len(prefix) - 1]) for name in prefix_position):
+        invariant = all(
+            np.array_equal(
+                prefix_position[name],
+                full_position[name][: len(prefix) - 1],
+            )
+            for name in prefix_position
+        )
+        if not invariant:
             raise AssertionError(f"future suffix changed positions: {market}")
         result["markets"][market] = evaluate(prefix)
         result["markets"][market]["future_suffix_invariance"] = True
     bilateral = all(row["all_gates_pass"] for row in result["markets"].values())
-    result["verdict"] = "nominate_endpoint_margin_acceleration_checkpoint_for_research_gate" if bilateral else "reject_exact_endpoint_margin_acceleration_checkpoint_family"
-    canonical = json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    result["verdict"] = (
+        "nominate_endpoint_margin_acceleration_checkpoint_for_research_gate"
+        if bilateral
+        else "reject_exact_endpoint_margin_acceleration_checkpoint_family"
+    )
+    canonical = json.dumps(
+        result, sort_keys=True, separators=(",", ":"), allow_nan=False
+    )
     result["canonical_result_sha256"] = sha(canonical.encode())
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n")
+    args.output.write_text(
+        json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n"
+    )
 
 
 if __name__ == "__main__":
