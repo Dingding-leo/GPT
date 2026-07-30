@@ -175,7 +175,7 @@ def breadth(frame: pd.DataFrame, candidate: np.ndarray, benchmark: np.ndarray) -
     timestamps = frame["timestamp"].iloc[1:].reset_index(drop=True)
     for year in sorted(set(timestamps.iloc[OOS[0] : OOS[1]].dt.year)):
         mask = np.flatnonzero(
-            (timestamps.iloc[OOS[0] : OOS[1]].dt.year.to_numpy() == year)
+            timestamps.iloc[OOS[0] : OOS[1]].dt.year.to_numpy() == year
         ) + OOS[0]
         years.append(
             {
