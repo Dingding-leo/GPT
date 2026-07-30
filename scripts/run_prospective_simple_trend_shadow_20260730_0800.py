@@ -133,6 +133,27 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     result["window"]["prior_cumulative_realized_hours"] = 534
     result["window"]["updated_cumulative_realized_hours"] = 535
     result["nomination_status"] = "no_statistically_eligible_frozen_strategy"
+    latest_asset_returns = {
+        market["instrument"]: market["realized_interval"]["asset_return"]
+        for market in result["markets"]
+    }
+    five_interval_benchmarks = {
+        market["instrument"]: market["recent_forward_window"]["benchmark_compound_return"]
+        for market in result["markets"]
+    }
+    result["strategy_facing_discrepancy"] = {
+        "classification": "latest_hour_opportunity_cost_vs_five_interval_loss_avoidance",
+        "latest_interval_asset_returns": latest_asset_returns,
+        "five_interval_benchmark_returns": five_interval_benchmarks,
+        "diagnosis": (
+            "Both assets rose in the newest realised hour while both five-interval buy-and-hold "
+            "benchmarks remained negative. The frozen cash state therefore incurred one-hour "
+            "opportunity cost but still delivered loss avoidance over the rolling five-interval "
+            "window. This is horizon-dependent regime behaviour, not a chronology, next-open "
+            "execution, policy-state or fee-accounting defect."
+        ),
+        "policy_or_accounting_defect_detected": False,
+    }
     result["active_alpha_context"] = {
         "issue": 688,
         "pull_request": 689,
