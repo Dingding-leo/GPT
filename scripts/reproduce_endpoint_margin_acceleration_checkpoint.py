@@ -194,9 +194,7 @@ def breadth(
         "improved_folds": sum(row["candidate"] > row["b1"] for row in folds),
         "improved_years": sum(row["candidate"] > row["b1"] for row in year_rows),
         "positive_fold_concentration": (
-            max(positive) / sum(positive)
-            if positive and sum(positive) > 0
-            else math.nan
+            max(positive) / sum(positive) if positive and sum(positive) > 0 else math.nan
         ),
         "residual_sharpe": sharpe(residual),
         "folds": folds,
@@ -255,9 +253,7 @@ def trigger_events(
     for trigger in [index for index in triggers if start <= index < end]:
         finish = trigger
         while (
-            finish < end
-            and position["candidate"][finish] == 0.5
-            and position["b1"][finish] == 1.0
+            finish < end and position["candidate"][finish] == 0.5 and position["b1"][finish] == 1.0
         ):
             finish += 1
         events.append(
@@ -284,9 +280,7 @@ def diagnostics(
 ) -> dict[str, Any]:
     start, end = span
     selected = [index for index in triggers if start <= index < end]
-    mask = (position["candidate"][start:end] == 0.5) & (
-        position["b1"][start:end] == 1
-    )
+    mask = (position["candidate"][start:end] == 0.5) & (position["b1"][start:end] == 1)
     difference = position["candidate"][start:end] - position["b1"][start:end]
     timing = float((difference * gross[start:end]).sum())
     turn_difference = turn["candidate"][start:end] - turn["b1"][start:end]
@@ -296,23 +290,16 @@ def diagnostics(
         raise AssertionError("return decomposition failed")
     following: dict[str, dict[str, float]] = {}
     for horizon in (24, 168, 720):
-        values = [
-            compounded(gross[index : min(index + horizon, end)])
-            for index in selected
-        ]
+        values = [compounded(gross[index : min(index + horizon, end)]) for index in selected]
         following[str(horizon)] = {
             "mean": float(np.mean(values)) if values else math.nan,
-            "positive_share": (
-                float(np.mean(np.asarray(values) > 0)) if values else math.nan
-            ),
+            "positive_share": (float(np.mean(np.asarray(values) > 0)) if values else math.nan),
         }
     return {
         "trigger_count": len(selected),
         "half_state_hours": int(mask.sum()),
         "full_equivalent_exposure_removed": float(mask.sum() * 0.5),
-        "arithmetic_market_return_during_half_state": float(
-            gross[start:end][mask].sum()
-        ),
+        "arithmetic_market_return_during_half_state": float(gross[start:end][mask].sum()),
         "timing_contribution": timing,
         "fee_contribution": fee,
         "arithmetic_delta": delta,
@@ -332,16 +319,12 @@ def gate_results(result: dict[str, Any]) -> dict[str, bool]:
         "sharpe": bool(math.isfinite(c["sharpe"]) and c["sharpe"] >= b["sharpe"]),
         "drawdown": bool(c["max_drawdown"] >= b["max_drawdown"] - 1e-12),
         "turnover": bool(c["turnover"] <= b["turnover"] + 1e-12),
-        "edge_per_turnover": bool(
-            c["edge_per_turnover_bps"] >= b["edge_per_turnover_bps"]
-        ),
+        "edge_per_turnover": bool(c["edge_per_turnover_bps"] >= b["edge_per_turnover_bps"]),
         "profitable_folds": bool(breadth_["profitable_folds"] >= 7),
         "profitable_years": bool(breadth_["profitable_years"] >= 3),
         "fold_concentration": bool(breadth_["positive_fold_concentration"] <= 0.5),
         "residual_sharpe": bool(breadth_["residual_sharpe"] > 0),
-        "mean_uncertainty": bool(
-            uncertainty_["mean_delta_annualized"]["ci95"][0] > 0
-        ),
+        "mean_uncertainty": bool(uncertainty_["mean_delta_annualized"]["ci95"][0] > 0),
         "sharpe_uncertainty": bool(uncertainty_["sharpe_delta"]["ci95"][0] > 0),
         "full_positive": bool(result["full"]["candidate"]["net_return"] > 0),
         "integrity": True,
@@ -357,23 +340,14 @@ def evaluate(frame: pd.DataFrame) -> dict[str, Any]:
         net[name], turn[name], gross = returns(frame, values)
     result = {
         "training": {
-            name: metric(net[name], turn[name], position[name], TRAIN)
-            for name in position
+            name: metric(net[name], turn[name], position[name], TRAIN) for name in position
         },
-        "oos": {
-            name: metric(net[name], turn[name], position[name], OOS)
-            for name in position
-        },
-        "full": {
-            name: metric(net[name], turn[name], position[name], FULL)
-            for name in position
-        },
+        "oos": {name: metric(net[name], turn[name], position[name], OOS) for name in position},
+        "full": {name: metric(net[name], turn[name], position[name], FULL) for name in position},
         "breadth": breadth(frame, net["candidate"], net["b1"]),
         "uncertainty": uncertainty(net["candidate"], net["b1"]),
         "diagnostics": {
-            "training": diagnostics(
-                frame, triggers, position, net, turn, gross, TRAIN
-            ),
+            "training": diagnostics(frame, triggers, position, net, turn, gross, TRAIN),
             "oos": diagnostics(frame, triggers, position, net, turn, gross, OOS),
         },
     }
@@ -424,14 +398,10 @@ def main() -> None:
         if bilateral
         else "reject_exact_endpoint_margin_acceleration_checkpoint_family"
     )
-    canonical = json.dumps(
-        result, sort_keys=True, separators=(",", ":"), allow_nan=False
-    )
+    canonical = json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False)
     result["canonical_result_sha256"] = sha(canonical.encode())
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n"
-    )
+    args.output.write_text(json.dumps(result, indent=2, sort_keys=True, allow_nan=False) + "\n")
 
 
 if __name__ == "__main__":
