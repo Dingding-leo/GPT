@@ -42,7 +42,7 @@
   },
   "provider": "OKX SPOT public confirmed 1H",
   "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
-  "result_sha256": "6a17f1c27604f164e59bf1624a7ed4400fd7dd91f6d0722449e626f8c17f13a8",
+  "result_sha256": "b541de7cfd293aff76599839924b27441b419da876d7f58c076ddaa9bd44d576",
   "robustness": {
     "bootstrap_block_hours": 168,
     "bootstrap_resamples": 5000,
