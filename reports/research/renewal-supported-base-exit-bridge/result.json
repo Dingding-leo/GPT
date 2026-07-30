@@ -1,0 +1,106 @@
+{
+  "accepted": false,
+  "bar": "1H",
+  "bootstrap": {
+    "block_hours": 168,
+    "resamples": 5000,
+    "seed": 20260730
+  },
+  "candidate_count": 1,
+  "execution": "completed daily 00:00 UTC decision -> next hourly open",
+  "family_id": "renewal-supported-base-exit-bridge-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 712,
+  "markets": {
+    "BTC-USDT": {
+      "acceptance_gates": {
+        "drawdown_no_worse": false,
+        "edge_per_turnover_at_least_b1": true,
+        "fold_concentration": true,
+        "mean_delta_lower_positive": false,
+        "net_at_least_b1": false,
+        "positive_full_return": true,
+        "positive_net": true,
+        "positive_residual_sharpe": false,
+        "profitable_folds": false,
+        "profitable_years": true,
+        "sharpe_at_least_b1": false,
+        "sharpe_delta_lower_positive": false,
+        "turnover_no_more": true
+      },
+      "accepted": false,
+      "benchmark_breadth": {
+        "fold_returns": [-0.1670492705132791, 0.3825658436650947, 0.523762544977092, 0.03998328574521626, -0.05389543512923767, 0.38489206794658615, -0.023411004303242167, 0.2049023252730846, -0.060135592706735075, -0.0029905515651325043, 0.0, -0.16677473185659364],
+        "positive_fold_concentration": 0.3409676948890662,
+        "profitable_folds": 5,
+        "profitable_years": 3,
+        "year_returns": {"2023": 0.16885568202245338, "2024": 1.0250700066999965, "2025": 0.11386117917488936, "2026": -0.16677473185659364}
+      },
+      "breadth": {
+        "fold_returns": [-0.1670492705132791, 0.3825658436650947, 0.523762544977092, 0.015297341906862272, -0.050529403642725956, 0.39717152534196476, -0.023411004303242167, 0.2049023252730846, -0.060135592706735075, -0.027752107457951203, 0.0, -0.16677473185659364],
+        "positive_fold_concentration": 0.34374397122098055,
+        "profitable_folds": 5,
+        "profitable_years": 3,
+        "year_returns": {"2023": 0.16885568202245338, "2024": 1.0016268183306694, "2025": 0.0861975137118618, "2026": -0.16677473185659364}
+      },
+      "diagnostic": {
+        "arithmetic_candidate_minus_b1": -0.033486384380394585,
+        "bridge_expiries": 1,
+        "bridge_full_market_return_arithmetic": -0.06997276876078917,
+        "bridge_hours": 480,
+        "bridge_restores": 3,
+        "bridge_starts": 4,
+        "candidate_timing_contribution": -0.034986384380394586,
+        "direct_exits": 19,
+        "episodes": [
+          {"candidate_timing_contribution": -0.02416502616139482, "full_market_return_arithmetic": -0.04833005232278964, "full_market_return_compounded": -0.048548169380957185, "hours": 120, "start_timestamp": "2024-06-10T00:00:00+00:00", "terminal_timestamp": "2024-06-15T00:00:00+00:00", "terminal_type": "restore"},
+          {"candidate_timing_contribution": 0.005414159022447518, "full_market_return_arithmetic": 0.010828318044895036, "full_market_return_compounded": 0.0013953640542434531, "hours": 144, "start_timestamp": "2024-08-03T00:00:00+00:00", "terminal_timestamp": "2024-08-09T00:00:00+00:00", "terminal_type": "restore"},
+          {"candidate_timing_contribution": 0.008345847690302666, "full_market_return_arithmetic": 0.01669169538060533, "full_market_return_compounded": 0.016755566210181483, "hours": 48, "start_timestamp": "2024-10-26T00:00:00+00:00", "terminal_timestamp": "2024-10-28T00:00:00+00:00", "terminal_type": "restore"},
+          {"candidate_timing_contribution": -0.02458136493174995, "full_market_return_arithmetic": -0.0491627298634999, "full_market_return_compounded": -0.05012934598049534, "hours": 168, "start_timestamp": "2025-10-11T00:00:00+00:00", "terminal_timestamp": "2025-10-18T00:00:00+00:00", "terminal_type": "expiry"}
+        ],
+        "full_exposure_equivalent_hours_added": 240.0,
+        "incremental_fees": -0.0015000000000000013
+      },
+      "metrics": {
+        "development_oos": {
+          "b0": {"arithmetic_net_return": 0.9197130812377972, "edge_per_turnover_bps": 45.306063115162424, "fees": 0.1015, "max_drawdown": -0.2267892412401914, "mean_exposure": 0.5724537037037037, "net_return": 1.1163633418975247, "sharpe": 0.9171594854982952, "turnover": 203.0},
+          "b1": {"arithmetic_net_return": 0.9573807624511175, "edge_per_turnover_bps": 212.75128054469278, "fees": 0.0225, "max_drawdown": -0.2654678573881635, "mean_exposure": 0.5731867283950617, "net_return": 1.1968197962400904, "sharpe": 0.953765119416238, "turnover": 45.0},
+          "candidate": {"arithmetic_net_return": 0.9238943780707228, "edge_per_turnover_bps": 219.97485192160067, "fees": 0.020999999999999998, "max_drawdown": -0.283710571870862, "mean_exposure": 0.582445987654321, "net_return": 1.117460120235735, "sharpe": 0.9115803097648203, "turnover": 42.0}
+        },
+        "full_scored": {
+          "b0": {"arithmetic_net_return": 0.47688100865128386, "edge_per_turnover_bps": 13.984780312354363, "fees": 0.1705, "max_drawdown": -0.5555790197814092, "mean_exposure": 0.5108481262327417, "net_return": 0.24823142997608683, "sharpe": 0.3104155593521776, "turnover": 341.0},
+          "b1": {"arithmetic_net_return": 0.5099175289843991, "edge_per_turnover_bps": 69.85171629923276, "fees": 0.0365, "max_drawdown": -0.5592198563591351, "mean_exposure": 0.5124506903353058, "net_return": 0.2897393033937914, "sharpe": 0.3317518863849881, "turnover": 73.0},
+          "candidate": {"arithmetic_net_return": 0.5051419467366539, "edge_per_turnover_bps": 75.39432040845581, "fees": 0.0335, "max_drawdown": -0.5541814415459587, "mean_exposure": 0.5201429980276134, "net_return": 0.2788093662272644, "sharpe": 0.3262624177260394, "turnover": 67.0}
+        },
+        "training": {
+          "b0": {"arithmetic_net_return": -0.4428320725865133, "edge_per_turnover_bps": -32.089280622211106, "fees": 0.069, "max_drawdown": -0.5555790197814092, "mean_exposure": 0.401775956284153, "net_return": -0.4101998436351103, "sharpe": -0.8311585079315998, "turnover": 138.0},
+          "b1": {"arithmetic_net_return": -0.4474632334667183, "edge_per_turnover_bps": -159.80829766668512, "fees": 0.014, "max_drawdown": -0.5592198563591351, "mean_exposure": 0.40491803278688526, "net_return": -0.41290619030236553, "sharpe": -0.8402669561161515, "turnover": 28.0},
+          "candidate": {"arithmetic_net_return": -0.418752431334069, "edge_per_turnover_bps": -167.5009725336276, "fees": 0.012499999999999999, "max_drawdown": -0.5541814415459587, "mean_exposure": 0.4098360655737705, "net_return": -0.39606448593474064, "sharpe": -0.784371590164692, "turnover": 25.0}
+        }
+      },
+      "renewal_count_full_prefix": 685,
+      "residual_sharpe": -0.23926361157380927,
+      "source": {"end": "2026-07-08T00:00:00+00:00", "path": "/mnt/data/strategy20/BTC-USDT.csv", "rows_read": 43441, "sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9", "start": "2021-07-24T00:00:00+00:00"},
+      "uncertainty": {"annualized_mean_delta": {"lower_95": -0.05323321431595543, "point": -0.011317157684114837, "upper_95": 0.02921941131752569}, "sharpe_delta": {"lower_95": -0.16846796585631782, "point": -0.04218480965141769, "upper_95": 0.07647536592216897}}
+    },
+    "ETH-USDT": {
+      "acceptance_gates": {"drawdown_no_worse": true, "edge_per_turnover_at_least_b1": true, "fold_concentration": true, "mean_delta_lower_positive": false, "net_at_least_b1": true, "positive_full_return": true, "positive_net": true, "positive_residual_sharpe": true, "profitable_folds": false, "profitable_years": true, "sharpe_at_least_b1": true, "sharpe_delta_lower_positive": false, "turnover_no_more": true},
+      "accepted": false,
+      "benchmark_breadth": {"fold_returns": [-0.05425675475172986, 0.3000661830663778, 0.22984681694685682, 0.19599233026467866, -0.1374363266793467, 0.26209634730811326, -0.11818941450915943, 0.14398959561099955, 0.29861729233905443, -0.15261567490215777, 0.0, -0.2015006902665436], "positive_fold_concentration": 0.2097472294624046, "profitable_folds": 6, "profitable_years": 3, "year_returns": {"2023": 0.12611040757394942, "2024": 0.8594909078927644, "2025": 0.043724212805974716, "2026": -0.2015006902665436}},
+      "breadth": {"fold_returns": [-0.05425675475172986, 0.3239654971896251, 0.22984681694685682, 0.19599233026467866, -0.1316806814136291, 0.26209634730811326, -0.11818941450915943, 0.14398959561099955, 0.29861729233905443, -0.15261567490215777, 0.0, -0.2015006902665436], "positive_fold_concentration": 0.22273203309527873, "profitable_folds": 6, "profitable_years": 3, "year_returns": {"2023": 0.14681186625245202, "2024": 0.871898768751834, "2025": 0.043724212805974716, "2026": -0.2015006902665436}},
+      "diagnostic": {"arithmetic_candidate_minus_b1": 0.024939342866082737, "bridge_expiries": 0, "bridge_full_market_return_arithmetic": 0.04787868573216547, "bridge_hours": 72, "bridge_restores": 2, "bridge_starts": 2, "candidate_timing_contribution": 0.023939342866082736, "direct_exits": 13, "episodes": [{"candidate_timing_contribution": 0.017767140398144365, "full_market_return_arithmetic": 0.03553428079628873, "full_market_return_compounded": 0.035962967938383494, "hours": 48, "start_timestamp": "2023-11-03T00:00:00+00:00", "terminal_timestamp": "2023-11-05T00:00:00+00:00", "terminal_type": "restore"}, {"candidate_timing_contribution": 0.00617220246793837, "full_market_return_arithmetic": 0.01234440493587674, "full_market_return_compounded": 0.012329594105942698, "hours": 24, "start_timestamp": "2024-07-28T00:00:00+00:00", "terminal_timestamp": "2024-07-29T00:00:00+00:00", "terminal_type": "restore"}], "full_exposure_equivalent_hours_added": 36.0, "incremental_fees": -0.0010000000000000009},
+      "metrics": {
+        "development_oos": {"b0": {"arithmetic_net_return": 0.810475980047737, "edge_per_turnover_bps": 58.30762446386598, "fees": 0.0695, "max_drawdown": -0.4730328076249738, "mean_exposure": 0.49699074074074073, "net_return": 0.6801914056080769, "sharpe": 0.6175145349430254, "turnover": 139.0}, "b1": {"arithmetic_net_return": 0.8507512945299482, "edge_per_turnover_bps": 283.5837648433161, "fees": 0.015000000000000001, "max_drawdown": -0.4776594160762392, "mean_exposure": 0.49722222222222223, "net_return": 0.7451603410954828, "sharpe": 0.6456279607587625, "turnover": 30.0}, "candidate": {"arithmetic_net_return": 0.8756906373960311, "edge_per_turnover_bps": 312.7466562128683, "fees": 0.014, "max_drawdown": -0.4776594160762423, "mean_exposure": 0.4986111111111111, "net_return": 0.7891009249775316, "sharpe": 0.6644729310066098, "turnover": 28.0}},
+        "full_scored": {"b0": {"arithmetic_net_return": 0.31297088861026523, "edge_per_turnover_bps": 13.787263815430185, "fees": 0.1135, "max_drawdown": -0.5775445421085006, "mean_exposure": 0.48025147928994083, "net_return": -0.1067577946903614, "sharpe": 0.1577691303734697, "turnover": 227.0}, "b1": {"arithmetic_net_return": 0.46258279843120276, "edge_per_turnover_bps": 87.27977328890617, "fees": 0.0265, "max_drawdown": -0.5695187578011079, "mean_exposure": 0.4787228796844181, "net_return": 0.03682097322871436, "sharpe": 0.23303476477091944, "turnover": 53.0}, "candidate": {"arithmetic_net_return": 0.5395588121331196, "edge_per_turnover_bps": 114.79974726236587, "fees": 0.0235, "max_drawdown": -0.5695187578011079, "mean_exposure": 0.4828648915187377, "net_return": 0.1188485214364765, "sharpe": 0.27154643186352473, "turnover": 47.0}},
+        "training": {"b0": {"arithmetic_net_return": -0.4975050914374718, "edge_per_turnover_bps": -56.534669481530884, "fees": 0.044000000000000004, "max_drawdown": -0.5775445421085006, "mean_exposure": 0.45061475409836066, "net_return": -0.4683687808851905, "sharpe": -0.7437877705962022, "turnover": 88.0}, "b1": {"arithmetic_net_return": -0.38816849609874565, "edge_per_turnover_bps": -168.7689113472807, "fees": 0.0115, "max_drawdown": -0.5695187578011079, "mean_exposure": 0.44596994535519124, "net_return": -0.4058878437623247, "sharpe": -0.5841780885870211, "turnover": 23.0}, "candidate": {"arithmetic_net_return": -0.33613182526291163, "edge_per_turnover_bps": -176.91148698047982, "fees": 0.009500000000000001, "max_drawdown": -0.5695187578011079, "mean_exposure": 0.4549863387978142, "net_return": -0.37463085183384526, "sharpe": -0.504406308333376, "turnover": 19.0}}
+      },
+      "renewal_count_full_prefix": 625,
+      "residual_sharpe": 1.1942205050501014,
+      "source": {"end": "2026-07-08T00:00:00+00:00", "path": "/mnt/data/strategy20/ETH-USDT.csv", "rows_read": 43441, "sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726", "start": "2021-07-24T00:00:00+00:00"},
+      "uncertainty": {"annualized_mean_delta": {"lower_95": 0.0, "point": 0.008428574209370553, "upper_95": 0.02329798526112672}, "sharpe_delta": {"lower_95": 0.0, "point": 0.01884497024784726, "upper_95": 0.053067537266827336}}
+    }
+  },
+  "parameter_grid_count": 0,
+  "sample": {"development_oos": [17520, 43440], "full_scored": [2880, 43440], "rows": 43441, "training": [2880, 17520]},
+  "verdict": "reject_exact_renewal_supported_base_exit_bridge_family"
+}
