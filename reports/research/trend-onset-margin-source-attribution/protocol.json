@@ -1,0 +1,65 @@
+{
+  "family_id": "trend-onset-margin-source-attribution-selector-1h-v1",
+  "issue": 702,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "status_at_freeze": "active_preregistered_before_performance_inspection",
+  "candidate_count": 1,
+  "parameter_grid_count": 0,
+  "provider": "OKX SPOT public confirmed candles",
+  "bar": "1H",
+  "markets": ["BTC-USDT", "ETH-USDT"],
+  "source": {
+    "BTC-USDT": {
+      "artifact_id": 8704977298,
+      "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8704978112,
+      "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726"
+    },
+    "source_rows_per_market": 43941,
+    "scored_prefix_rows": 43441
+  },
+  "sample": {
+    "training": [2880, 17520],
+    "development_oos": [17520, 43440],
+    "full_scored": [2880, 43440],
+    "oos_folds": 12,
+    "fold_hours": 2160
+  },
+  "base_rule": "at completed daily 00:00 UTC, close_t > close_(t-2160H)",
+  "onset_rule": "base_t and not base_(t-24H)",
+  "feature_rule": {
+    "current_leg": "log(close_t / close_(t-24H))",
+    "lag_leg": "log(close_(t-2160H) / close_(t-2184H))",
+    "stale_release": "max(0, -lag_leg)",
+    "accept_onset": "current_leg > stale_release"
+  },
+  "state_rule": "accepted onset remains long until base exit; skipped onset remains cash until a distinct new positive-trend onset",
+  "execution": "next hourly open",
+  "fee_one_way": 0.0005,
+  "position_domain": [0, 1],
+  "uncertainty": {
+    "method": "paired non-circular moving-block resampling",
+    "block_hours": 168,
+    "resamples": 5000,
+    "seed": 20260730
+  },
+  "bilateral_gate": {
+    "oos_net_positive": true,
+    "oos_net_at_least_b1": true,
+    "oos_sharpe_at_least_b1": true,
+    "oos_drawdown_no_worse_than_b1": true,
+    "oos_turnover_no_greater_than_b1": true,
+    "oos_edge_per_turnover_at_least_b1": true,
+    "profitable_oos_folds_min": 7,
+    "profitable_oos_years_min": 3,
+    "positive_fold_concentration_max": 0.5,
+    "residual_sharpe_positive": true,
+    "annualized_mean_delta_lower_95_strictly_positive": true,
+    "sharpe_delta_lower_95_strictly_positive": true,
+    "identity_checks": true
+  },
+  "reject_verdict": "reject_exact_trend_onset_margin_source_attribution_selector_family",
+  "same_interval_rescue_forbidden": true
+}
