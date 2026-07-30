@@ -1,0 +1,45 @@
+{
+  "bootstrap": {
+    "block_hours": 168,
+    "resamples": 5000,
+    "seed": 20260731
+  },
+  "candidate_count": 1,
+  "canonical_signature": "drawdown-conditioned-base-exit-bridge-1h-v1|base=2160H-endpoint-trend|feature=adjacent-168H-max-log-drawdown-and-latest-recovery|bridge-if-latest-dd<=preceding-dd-or-recovery>=0.5|state=one-half-bridge-at-first-base-exit|max=168H|restore-on-base-recross|daily-00UTC|next-open|5bps|candidate=1|grid=0",
+  "family_id": "drawdown-conditioned-base-exit-bridge-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 736,
+  "markets": [
+    "BTC-USDT",
+    "ETH-USDT"
+  ],
+  "parameter_grid_count": 0,
+  "prefix_rows": 43441,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "source_artifacts": {
+    "BTC-USDT": {
+      "artifact_id": 8769605568,
+      "artifact_sha256": "269593ae016672396ad31ad7f11ced77a8b492a3350f7a827e2af0b3e4de7700"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8769619607,
+      "artifact_sha256": "935ce567d34bb5fc835f413bada976ce8a277d0383254b8c2c096f64f15d7062"
+    }
+  },
+  "source_workflow_run": 30567744552,
+  "spans": {
+    "full": [
+      2880,
+      43440
+    ],
+    "oos": [
+      17520,
+      43440
+    ],
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "timeframe": "1H"
+}
