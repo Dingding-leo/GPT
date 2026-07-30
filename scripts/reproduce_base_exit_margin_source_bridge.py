@@ -409,12 +409,8 @@ def diagnose(
         "incremental_fees": fee_delta,
         "arithmetic_candidate_minus_b1": observed,
         "episode_breadth": {
-            "positive_episodes": int(
-                sum(x["full_market_return_arithmetic"] > 0 for x in episodes)
-            ),
-            "negative_episodes": int(
-                sum(x["full_market_return_arithmetic"] < 0 for x in episodes)
-            ),
+            "positive_episodes": int(sum(x["full_market_return_arithmetic"] > 0 for x in episodes)),
+            "negative_episodes": int(sum(x["full_market_return_arithmetic"] < 0 for x in episodes)),
             "largest_abs_timing_contribution_share": (
                 float(max(abs_episode_contributions) / sum(abs_episode_contributions))
                 if abs_episode_contributions and sum(abs_episode_contributions) > 0
