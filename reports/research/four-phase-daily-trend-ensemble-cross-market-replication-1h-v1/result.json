@@ -1,0 +1,124 @@
+{
+  "candidate_count": 1,
+  "cross_market_uncertainty": {
+    "median_annualized_mean_delta": {
+      "lower_95": -0.03529177125248078,
+      "point": 0.014890505425927118,
+      "upper_95": 0.049847001573331
+    },
+    "median_sharpe_delta": {
+      "lower_95": -0.05276745799733249,
+      "point": 0.024251526881870933,
+      "upper_95": 0.07610486988113156
+    }
+  },
+  "family_id": "four-phase-daily-trend-ensemble-cross-market-replication-1h-v1",
+  "fee_one_way": 0.0005,
+  "full_result_sha256": "c5daaebc92a158191617d7c348195fda51467678651ebeba7e14c3d9de2f76a1",
+  "issue": 717,
+  "markets": {
+    "DOGE-USDT": {
+      "accepted": false,
+      "arithmetic_net_delta_vs_b1": -0.08846343440995871,
+      "development_oos": {
+        "b0": {"edge_per_turnover_bps": 38.042689816680756, "fees": 0.125, "max_drawdown": -0.6755491130655054, "net_return": 0.20628521860997062, "sharpe": 0.4473867582474471, "turnover": 250.0},
+        "b1": {"edge_per_turnover_bps": 260.20590029579375, "fees": 0.025, "max_drawdown": -0.7177610764481119, "net_return": 0.7067336046702872, "sharpe": 0.610804694810887, "turnover": 50.0},
+        "candidate": {"edge_per_turnover_bps": 222.48918661816703, "fees": 0.027250000000000003, "max_drawdown": -0.7008833120440606, "net_return": 0.577983721291941, "sharpe": 0.5730357370176046, "turnover": 54.5}
+      },
+      "exposure_timing_delta_vs_b1": -0.08621343440995871,
+      "failed_gates": ["edge_per_turnover_at_least_b1", "net_at_least_b1", "positive_fold_concentration_at_most_half", "positive_mean_delta_lower_95", "positive_residual_sharpe", "positive_sharpe_delta_lower_95", "profitable_folds_at_least_7", "profitable_years_at_least_3", "sharpe_at_least_b1", "turnover_no_greater_b1"],
+      "fractional_exposure_hours": 1506,
+      "full_scored_equals_oos": true,
+      "incremental_fees_vs_b1": 0.002250000000000002,
+      "positive_fold_concentration": 0.6285999933152784,
+      "profitable_folds": 2,
+      "profitable_years": 1,
+      "residual_sharpe_vs_b1": -0.33365301528149904,
+      "training_applicable": false,
+      "uncertainty": {
+        "annualized_mean_delta": {"lower_95": -0.13137788294555452, "point": -0.02989736440706938, "upper_95": 0.0587519920089112},
+        "sharpe_delta": {"lower_95": -0.18232499973074706, "point": -0.037768957793282376, "upper_95": 0.08926525826061854}
+      }
+    },
+    "LTC-USDT": {
+      "accepted": false,
+      "arithmetic_net_delta_vs_b1": -0.007082328075117217,
+      "development_oos": {
+        "b0": {"edge_per_turnover_bps": 21.114526288718285, "fees": 0.122, "max_drawdown": -0.4179936024653035, "net_return": 0.03347961107264097, "sharpe": 0.3058266270924001, "turnover": 244.0},
+        "b1": {"edge_per_turnover_bps": 215.70651540661672, "fees": 0.020000000000000004, "max_drawdown": -0.3952371004804668, "net_return": 0.459505719543315, "sharpe": 0.5108797925483635, "turnover": 40.0},
+        "candidate": {"edge_per_turnover_bps": 211.2947490250246, "fees": 0.020250000000000004, "max_drawdown": -0.3952371004804687, "net_return": 0.4545596922072601, "sharpe": 0.5086145304344539, "turnover": 40.5}
+      },
+      "exposure_timing_delta_vs_b1": -0.006832328075117217,
+      "failed_gates": ["edge_per_turnover_at_least_b1", "net_at_least_b1", "positive_mean_delta_lower_95", "positive_residual_sharpe", "positive_sharpe_delta_lower_95", "profitable_years_at_least_3", "sharpe_at_least_b1", "turnover_no_greater_b1"],
+      "fractional_exposure_hours": 1068,
+      "full_scored_equals_oos": true,
+      "incremental_fees_vs_b1": 0.0002500000000000002,
+      "positive_fold_concentration": 0.42285628717719803,
+      "profitable_folds": 7,
+      "profitable_years": 2,
+      "residual_sharpe_vs_b1": -0.047062513851149304,
+      "training_applicable": false,
+      "uncertainty": {
+        "annualized_mean_delta": {"lower_95": -0.05308292187632018, "point": -0.002393564580942393, "upper_95": 0.031771755624783626},
+        "sharpe_delta": {"lower_95": -0.09456623724319625, "point": -0.0022652621139095386, "upper_95": 0.055373821609648134}
+      }
+    },
+    "SOL-USDT": {
+      "accepted": false,
+      "arithmetic_net_delta_vs_b1": 0.09520148347238455,
+      "development_oos": {
+        "b0": {"edge_per_turnover_bps": 92.61823085007791, "fees": 0.1, "max_drawdown": -0.5496713890458631, "net_return": 2.106882535694795, "sharpe": 0.8979545546356412, "turnover": 200.0},
+        "b1": {"edge_per_turnover_bps": 318.04467321457383, "fees": 0.027000000000000003, "max_drawdown": -0.5839699942618446, "net_return": 1.7203406292007664, "sharpe": 0.8337668310791075, "turnover": 54.0},
+        "candidate": {"edge_per_turnover_bps": 358.9391522437789, "fees": 0.02525, "max_drawdown": -0.5880579963016359, "net_return": 2.014266777512644, "sharpe": 0.8845351469567589, "turnover": 50.5}
+      },
+      "exposure_timing_delta_vs_b1": 0.09345148347238455,
+      "failed_gates": ["drawdown_no_worse_b1", "positive_fold_concentration_at_most_half", "positive_mean_delta_lower_95", "positive_sharpe_delta_lower_95", "profitable_folds_at_least_7", "profitable_years_at_least_3"],
+      "fractional_exposure_hours": 1320,
+      "full_scored_equals_oos": true,
+      "incremental_fees_vs_b1": -0.0017500000000000016,
+      "positive_fold_concentration": 0.7464278784270219,
+      "profitable_folds": 6,
+      "profitable_years": 2,
+      "residual_sharpe_vs_b1": 0.43621023931101405,
+      "training_applicable": false,
+      "uncertainty": {
+        "annualized_mean_delta": {"lower_95": -0.042863132401942755, "point": 0.03217457543279663, "upper_95": 0.09605618516272812},
+        "sharpe_delta": {"lower_95": -0.059910068409341585, "point": 0.050768315877651404, "upper_95": 0.1431674990586718}
+      }
+    },
+    "XRP-USDT": {
+      "accepted": false,
+      "arithmetic_net_delta_vs_b1": 0.24215252944994903,
+      "development_oos": {
+        "b0": {"edge_per_turnover_bps": 16.794706324145157, "fees": 0.162, "max_drawdown": -0.6715697947481136, "net_return": -0.035154268495210084, "sharpe": 0.2937199377828039, "turnover": 324.0},
+        "b1": {"edge_per_turnover_bps": 42.38131912415597, "fees": 0.031, "max_drawdown": -0.6917031300882108, "net_return": -0.2668237263183346, "sharpe": 0.1429093500490945, "turnover": 62.0},
+        "candidate": {"edge_per_turnover_bps": 74.2524570617229, "fees": 0.034, "max_drawdown": -0.6792182204476411, "net_return": -0.054393404720555094, "sharpe": 0.27747343433437893, "turnover": 68.0}
+      },
+      "exposure_timing_delta_vs_b1": 0.24515252944994909,
+      "failed_gates": ["positive_fold_concentration_at_most_half", "positive_full_scored_net", "positive_mean_delta_lower_95", "positive_oos_net", "positive_sharpe_delta_lower_95", "profitable_folds_at_least_7", "profitable_years_at_least_3", "turnover_no_greater_b1"],
+      "fractional_exposure_hours": 1788,
+      "full_scored_equals_oos": true,
+      "incremental_fees_vs_b1": 0.0030000000000000027,
+      "positive_fold_concentration": 0.9210423452100109,
+      "profitable_folds": 4,
+      "profitable_years": 1,
+      "residual_sharpe_vs_b1": 0.7353354248174897,
+      "training_applicable": false,
+      "uncertainty": {
+        "annualized_mean_delta": {"lower_95": -0.06411802560710661, "point": 0.08183858634188092, "upper_95": 0.23748037338843284},
+        "sharpe_delta": {"lower_95": -0.10243196124043333, "point": 0.13456408428528444, "upper_95": 0.38400963984061853}
+      }
+    }
+  },
+  "markets_passing_all_original_gates": 0,
+  "parameter_grid_count": 0,
+  "sample": {
+    "artifact_id": 8691110722,
+    "artifact_sha256": "d9d686f4abd2c740044079b287802ef3e8c4f032c316035a95a2bb40ae2b7822",
+    "folds": 12,
+    "markets": ["SOL-USDT", "XRP-USDT", "LTC-USDT", "DOGE-USDT"],
+    "rows_per_market": 28081,
+    "scored_observations": 25920
+  },
+  "verdict": "reject_cross_market_transportability_of_four_phase_ensemble"
+}
