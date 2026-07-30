@@ -368,9 +368,7 @@ def run(d: pd.DataFrame):
     p, events, renew = positions(d)
     arrays = {key: pack(d, value) for key, value in p.items()}
     spans = (("training", TRAIN), ("development_oos", OOS), ("full_scored", FULL))
-    met = {
-        key: {name: metrics(arrays[key], p[key], span) for name, span in spans} for key in p
-    }
+    met = {key: {name: metrics(arrays[key], p[key], span) for name, span in spans} for key in p}
     candidate_breadth = breadth(arrays["candidate"][3], d.index)
     b1_breadth = breadth(arrays["b1"][3], d.index)
     residual = arrays["candidate"][3][OOS[0] : OOS[1]] - arrays["b1"][3][OOS[0] : OOS[1]]
