@@ -341,9 +341,7 @@ def transition_diagnostics(
     incremental_fees = FEE * float(
         np.sum(candidate_turnover[start:end]) - np.sum(benchmark_turnover[start:end])
     )
-    candidate_minus_benchmark = float(
-        np.sum(diff[start:end] * gross[start:end]) - incremental_fees
-    )
+    candidate_minus_benchmark = float(np.sum(diff[start:end] * gross[start:end]) - incremental_fees)
     direct = float(
         np.sum(
             candidate_position[start:end] * gross[start:end]
