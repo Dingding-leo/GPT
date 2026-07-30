@@ -151,8 +151,7 @@ def metrics(a, p: np.ndarray, span):
 
 def breadth(net: np.ndarray, index: pd.DatetimeIndex):
     folds = [
-        float(np.prod(1 + net[OOS[0] + k * FOLD : OOS[0] + (k + 1) * FOLD]) - 1)
-        for k in range(12)
+        float(np.prod(1 + net[OOS[0] + k * FOLD : OOS[0] + (k + 1) * FOLD]) - 1) for k in range(12)
     ]
     pos = [x for x in folds if x > 0]
     years = index[:-1].year[OOS[0] : OOS[1]]
@@ -223,11 +222,7 @@ def diagnose(d: pd.DataFrame, p, arrays, events):
             continue
         start = onset["execution_t"]
         exit_event = next(
-            (
-                e
-                for e in events
-                if e["base_exit"] and e["decision_t"] > onset["decision_t"]
-            ),
+            (e for e in events if e["base_exit"] and e["decision_t"] > onset["decision_t"]),
             None,
         )
         end = exit_event["execution_t"] if exit_event else len(candidate)
@@ -285,8 +280,7 @@ def diagnose(d: pd.DataFrame, p, arrays, events):
     if cg["half_hours"] + ug["half_hours"] != int(half.sum()):
         raise ValueError("stage attribution hours")
     if not math.isclose(
-        cg["half_state_market_return_arithmetic"]
-        + ug["half_state_market_return_arithmetic"],
+        cg["half_state_market_return_arithmetic"] + ug["half_state_market_return_arithmetic"],
         float(market[i:j][half].sum()),
         abs_tol=1e-12,
     ):
@@ -303,8 +297,7 @@ def diagnose(d: pd.DataFrame, p, arrays, events):
         "oos_onsets": len(onsets),
         "oos_topups": len(topups),
         "oos_unconfirmed_started_regimes": sum(
-            r["started_in_oos"] and r["topup_timestamp"] is None
-            for r in regime_summaries
+            r["started_in_oos"] and r["topup_timestamp"] is None for r in regime_summaries
         ),
         "half_state_hours": int(half.sum()),
         "full_exposure_equivalent_hours_removed": 0.5 * int(half.sum()),
@@ -323,24 +316,16 @@ def run(d: pd.DataFrame):
     p, events = positions(d)
     arrays = {k: pack(d, v) for k, v in p.items()}
     spans = (("training", TRAIN), ("development_oos", OOS), ("full_scored", FULL))
-    met = {
-        key: {name: metrics(arrays[key], p[key], span) for name, span in spans}
-        for key in p
-    }
+    met = {key: {name: metrics(arrays[key], p[key], span) for name, span in spans} for key in p}
     cb = breadth(arrays["candidate"][3], d.index)
     bb = breadth(arrays["b1"][3], d.index)
-    residual = (
-        arrays["candidate"][3][OOS[0] : OOS[1]]
-        - arrays["b1"][3][OOS[0] : OOS[1]]
-    )
+    residual = arrays["candidate"][3][OOS[0] : OOS[1]] - arrays["b1"][3][OOS[0] : OOS[1]]
     boot = bootstrap(arrays["candidate"][3], arrays["b1"][3])
     c, b = met["candidate"]["development_oos"], met["b1"]["development_oos"]
     gates = {
         "candidate_oos_positive": c["net_return"] > 0,
         "oos_net_not_below_b1": c["net_return"] >= b["net_return"],
-        "oos_sharpe_not_below_b1": (
-            c["sharpe"] is not None and c["sharpe"] >= b["sharpe"]
-        ),
+        "oos_sharpe_not_below_b1": (c["sharpe"] is not None and c["sharpe"] >= b["sharpe"]),
         "oos_drawdown_not_worse_b1": c["max_drawdown"] >= b["max_drawdown"],
         "oos_turnover_not_above_b1": c["turnover"] <= b["turnover"],
         "oos_edge_per_turn_not_below_b1": (
@@ -353,9 +338,7 @@ def run(d: pd.DataFrame):
             and cb["positive_fold_concentration"] <= 0.5
         ),
         "residual_sharpe_positive": (sharpe(residual) or 0) > 0,
-        "mean_delta_lower_95_positive": (
-            boot["annualized_mean_delta"]["lower_95"] > 0
-        ),
+        "mean_delta_lower_95_positive": (boot["annualized_mean_delta"]["lower_95"] > 0),
         "sharpe_delta_lower_95_positive": boot["sharpe_delta"]["lower_95"] > 0,
         "full_scored_positive": met["candidate"]["full_scored"]["net_return"] > 0,
     }
