@@ -1,0 +1,42 @@
+{
+  "acceptance": "both markets pass all frozen point-estimate, efficiency, breadth, concentration, residual-Sharpe, uncertainty, full-sample and integrity gates",
+  "benchmark": "B1 daily 00:00 UTC 2160H endpoint-trend long/cash, same next-open execution and fee",
+  "candidate_count": 1,
+  "data": {
+    "artifact_ids": {
+      "BTC-USDT": 8685574446,
+      "ETH-USDT": 8685572234
+    },
+    "bar": "1H",
+    "development_oos": [17520, 43440],
+    "full_scored": [2880, 43440],
+    "later_suffix": "unread and unscored",
+    "markets": ["BTC-USDT", "ETH-USDT"],
+    "prefix_rows": 43441,
+    "provider": "OKX public SPOT",
+    "training": [2880, 17520]
+  },
+  "family_id": "two-tap-daily-trend-state-ensemble-1h-v1",
+  "issue": 722,
+  "parameter_grid_count": 0,
+  "performance_seen_at_freeze": false,
+  "rejection": "any bilateral failure -> reject_exact_two_tap_daily_trend_state_ensemble_family",
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "same_interval_rescue_authorized": false,
+  "strategy": {
+    "base": "base_t = 1[close_t > close_(t-2160H)] at completed daily 00:00 UTC bars",
+    "boundary": "first available daily decision uses base_prev = 0",
+    "execution": "next hourly open",
+    "fee_one_way": 0.0005,
+    "position_domain": [0, 0.5, 1],
+    "target": "target_t = 0.5 * base_t + 0.5 * base_prev",
+    "temporal_interpretation": "fixed two-tap causal average of current and immediately preceding daily base states"
+  },
+  "uncertainty": {
+    "block_hours": 168,
+    "confidence": 0.95,
+    "method": "paired non-circular moving-block basic interval",
+    "resamples": 5000,
+    "seed": 20260731
+  }
+}
