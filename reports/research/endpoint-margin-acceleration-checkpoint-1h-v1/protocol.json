@@ -1,0 +1,49 @@
+{
+  "bar": "1H",
+  "base": "m_t = log(close_t / close_t-2160H); base = 1[m_t > 0]",
+  "bootstrap": {
+    "block_hours": 168,
+    "confidence": 0.95,
+    "resamples": 5000,
+    "seed": 20260731
+  },
+  "candidate_count": 1,
+  "execution": "completed daily 00:00 UTC decision to next hourly open",
+  "expected_hashes": {
+    "BTC-USDT": {
+      "full": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0",
+      "prefix": "4efd9875f8205f2c44c6e26042b24bdfb89f077f7c89b2888a6bac9b645747e0"
+    },
+    "ETH-USDT": {
+      "full": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8",
+      "prefix": "3c6ce0c424280f1e0b6210501380336190d832359895df9534e5c5a16d9ec6ed"
+    }
+  },
+  "family_id": "endpoint-margin-acceleration-checkpoint-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 728,
+  "parameter_grid_count": 0,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "samples": {
+    "full": [
+      2880,
+      43440
+    ],
+    "oos": [
+      17520,
+      43440
+    ],
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "source_artifacts": {
+    "BTC-USDT": 8769605568,
+    "ETH-USDT": 8769619607
+  },
+  "source_run_id": 30567744552,
+  "state": "immediate full onset; at most one irreversible 1.0 to 0.5 downgrade per positive regime",
+  "trigger": "latest=m_t-m_t-168<0; preceding=m_t-168-m_t-336<0; latest<preceding",
+  "verdict_on_failure": "reject_exact_endpoint_margin_acceleration_checkpoint_family"
+}
