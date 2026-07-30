@@ -1,0 +1,56 @@
+{
+  "acceptance": "both markets must pass all frozen OOS return, Sharpe, drawdown, turnover, edge-per-turnover, fold/year, concentration, residual and uncertainty gates; full scored return positive",
+  "candidate_count": 1,
+  "comparators": [
+    "B0 hourly 2160H endpoint trend",
+    "B1 daily 00:00 UTC 2160H endpoint trend"
+  ],
+  "data": {
+    "artifact_ids": {
+      "BTC-USDT": 8704977298,
+      "ETH-USDT": 8704978112
+    },
+    "bar": "1H",
+    "csv_sha256": {
+      "BTC-USDT": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9",
+      "ETH-USDT": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726"
+    },
+    "development_oos": [17520, 43440],
+    "full_scored": [2880, 43440],
+    "later_suffix": "[43440,end) unread and unscored",
+    "markets": ["BTC-USDT", "ETH-USDT"],
+    "provider": "public confirmed OKX SPOT",
+    "scored_prefix_rows": 43441,
+    "source_rows": 43941,
+    "training": [2880, 17520],
+    "warmup": [0, 2880],
+    "zip_sha256": {
+      "BTC-USDT": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c",
+      "ETH-USDT": "e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3"
+    }
+  },
+  "execution": {
+    "decision": "completed daily 00:00 UTC",
+    "fee_one_way": 0.0005,
+    "payoff": "open[t+1] to open[t+2]",
+    "target": "next hourly open"
+  },
+  "family_id": "staged-trend-entry-confirmation-sizing-1h-v1",
+  "issue": 707,
+  "parameter_grid_count": 0,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "rule": {
+    "base": "close_t > close_(t-2160)",
+    "exit": "base non-positive forces 0",
+    "onset_target": 0.5,
+    "position_domain": [0, 0.5, 1.0],
+    "topup": "while base positive and target=0.5, one irreversible top-up to 1.0 when age>=168H, log(close_t/onset_close)>0 and log(close_t/close_(t-168))>0"
+  },
+  "status": "frozen_before_oos_inspection",
+  "uncertainty": {
+    "block_hours": 168,
+    "method": "paired non-circular moving-block bootstrap",
+    "resamples": 5000,
+    "seed": 20260730
+  }
+}
