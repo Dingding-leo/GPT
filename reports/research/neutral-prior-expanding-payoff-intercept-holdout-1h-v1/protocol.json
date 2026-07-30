@@ -1,0 +1,52 @@
+{
+  "bar": "1H",
+  "base": "completed daily 00:00 UTC close_t > close_(t-2160H)",
+  "breadth": {
+    "fold_hours": 2160,
+    "oos_calendar_years": 3,
+    "oos_folds": 8
+  },
+  "candidate_count": 1,
+  "episode_target": "0.5 * arithmetic open-to-open carry until daily recross or exact 168H expiry + 0.0005 fee saving only on recross",
+  "estimator": "feature-free expanding same-instrument intercept: sum(prior completed episode targets)/(n+2)",
+  "execution": "completed decision to next hourly open",
+  "family_id": "neutral-prior-expanding-payoff-intercept-holdout-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 745,
+  "markets": [
+    "CFX-USDT",
+    "FIL-USDT"
+  ],
+  "neutral_prior": "one zero-target observation weight 1 plus ridge lambda=1 on intercept",
+  "parameter_grid_count": 0,
+  "performance_sharpe": "annualized sqrt(8760), sample standard deviation ddof=1",
+  "provider": "public confirmed OKX SPOT",
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "rows_per_market": 28081,
+  "samples": {
+    "development_oos": [10800, 28080],
+    "full": [2160, 28080],
+    "training": [2160, 10800],
+    "warmup": [0, 2160]
+  },
+  "selection": "prediction > 0",
+  "source_artifact": {
+    "artifact_id": 8691110722,
+    "sha256": "d9d686f4abd2c740044079b287802ef3e8c4f032c316035a95a2bb40ae2b7822",
+    "workflow_run": 30364475418
+  },
+  "source_csv_sha256": {
+    "CFX-USDT": "c7e3cc5156fbd743ec93fd39bdbdd999ac11a42b5511fc4b9aeb63c7e8e82805",
+    "FIL-USDT": "8da8710e88fb1b3e053a2526b50e6b1a675f4798433cae5b2399ca32b3ea1696"
+  },
+  "source_span_utc": ["2023-04-25T00:00:00Z", "2026-07-08T00:00:00Z"],
+  "state": "positive base 1.0; selected exit sleeve 0.5; restore 1.0 on daily recross at/before 168H else cash at expiry",
+  "uncertainty": {
+    "block_hours": 168,
+    "confidence": 0.95,
+    "method": "paired non-circular moving blocks",
+    "resamples": 5000,
+    "seed": 20260731
+  },
+  "verdict_on_failure": "reject_holdout_transportability_of_neutral_prior_expanding_payoff_intercept"
+}
