@@ -326,9 +326,7 @@ def event_rows(
                 "span_overlap_arithmetic_market_return": float(
                     gross[overlap_start:overlap_end].sum()
                 ),
-                "span_timing_contribution": float(
-                    -0.5 * gross[overlap_start:overlap_end].sum()
-                ),
+                "span_timing_contribution": float(-0.5 * gross[overlap_start:overlap_end].sum()),
                 "next_24h": compounded(gross[execution : min(execution + 24, end)]),
                 "next_168h": compounded(gross[execution : min(execution + 168, end)]),
                 "next_720h": compounded(gross[execution : min(execution + 720, end)]),
