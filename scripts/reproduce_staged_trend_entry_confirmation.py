@@ -179,9 +179,9 @@ def bootstrap(c: np.ndarray, b: np.ndarray):
         cm, bm = cc.mean(1), bb.mean(1)
         cs, bs = cc.std(1, ddof=1), bb.std(1, ddof=1)
         md[z : z + q] = ANN * (cm - bm)
-        sd[z : z + q] = np.divide(math.sqrt(ANN) * cm, cs, out=np.zeros(q), where=cs > 0) - np.divide(
-            math.sqrt(ANN) * bm, bs, out=np.zeros(q), where=bs > 0
-        )
+        sd[z : z + q] = np.divide(
+            math.sqrt(ANN) * cm, cs, out=np.zeros(q), where=cs > 0
+        ) - np.divide(math.sqrt(ANN) * bm, bs, out=np.zeros(q), where=bs > 0)
     return {
         "annualized_mean_delta": {
             "point": float(ANN * np.mean(c - b)),
@@ -212,6 +212,7 @@ def diagnose(d: pd.DataFrame, p, arrays, events):
     onsets = [e for e in oos_events if e["onset"]]
     topups = [e for e in oos_events if e["topup"]]
 
+    # Attribute actual position paths, including regimes crossing the OOS boundary.
     regime_summaries = []
     daily = [e for e in events if e["regime_id"] > 0]
     ids = sorted({e["regime_id"] for e in daily})
@@ -221,7 +222,14 @@ def diagnose(d: pd.DataFrame, p, arrays, events):
         if onset is None:
             continue
         start = onset["execution_t"]
-        exit_event = next((e for e in events if e["base_exit"] and e["decision_t"] > onset["decision_t"]), None)
+        exit_event = next(
+            (
+                e
+                for e in events
+                if e["base_exit"] and e["decision_t"] > onset["decision_t"]
+            ),
+            None,
+        )
         end = exit_event["execution_t"] if exit_event else len(candidate)
         top = next((e for e in es if e["topup"]), None)
         overlap_start, overlap_end = max(start, i), min(end, j)
@@ -277,7 +285,8 @@ def diagnose(d: pd.DataFrame, p, arrays, events):
     if cg["half_hours"] + ug["half_hours"] != int(half.sum()):
         raise ValueError("stage attribution hours")
     if not math.isclose(
-        cg["half_state_market_return_arithmetic"] + ug["half_state_market_return_arithmetic"],
+        cg["half_state_market_return_arithmetic"]
+        + ug["half_state_market_return_arithmetic"],
         float(market[i:j][half].sum()),
         abs_tol=1e-12,
     ):
@@ -294,7 +303,8 @@ def diagnose(d: pd.DataFrame, p, arrays, events):
         "oos_onsets": len(onsets),
         "oos_topups": len(topups),
         "oos_unconfirmed_started_regimes": sum(
-            r["started_in_oos"] and r["topup_timestamp"] is None for r in regime_summaries
+            r["started_in_oos"] and r["topup_timestamp"] is None
+            for r in regime_summaries
         ),
         "half_state_hours": int(half.sum()),
         "full_exposure_equivalent_hours_removed": 0.5 * int(half.sum()),
@@ -313,31 +323,49 @@ def run(d: pd.DataFrame):
     p, events = positions(d)
     arrays = {k: pack(d, v) for k, v in p.items()}
     spans = (("training", TRAIN), ("development_oos", OOS), ("full_scored", FULL))
-    met = {key: {name: metrics(arrays[key], p[key], span) for name, span in spans} for key in p}
+    met = {
+        key: {name: metrics(arrays[key], p[key], span) for name, span in spans}
+        for key in p
+    }
     cb = breadth(arrays["candidate"][3], d.index)
     bb = breadth(arrays["b1"][3], d.index)
-    residual = arrays["candidate"][3][OOS[0] : OOS[1]] - arrays["b1"][3][OOS[0] : OOS[1]]
+    residual = (
+        arrays["candidate"][3][OOS[0] : OOS[1]]
+        - arrays["b1"][3][OOS[0] : OOS[1]]
+    )
     boot = bootstrap(arrays["candidate"][3], arrays["b1"][3])
     c, b = met["candidate"]["development_oos"], met["b1"]["development_oos"]
     gates = {
         "candidate_oos_positive": c["net_return"] > 0,
         "oos_net_not_below_b1": c["net_return"] >= b["net_return"],
-        "oos_sharpe_not_below_b1": c["sharpe"] is not None and c["sharpe"] >= b["sharpe"],
+        "oos_sharpe_not_below_b1": (
+            c["sharpe"] is not None and c["sharpe"] >= b["sharpe"]
+        ),
         "oos_drawdown_not_worse_b1": c["max_drawdown"] >= b["max_drawdown"],
         "oos_turnover_not_above_b1": c["turnover"] <= b["turnover"],
-        "oos_edge_per_turn_not_below_b1": c["edge_per_turnover_bps"] >= b["edge_per_turnover_bps"],
+        "oos_edge_per_turn_not_below_b1": (
+            c["edge_per_turnover_bps"] >= b["edge_per_turnover_bps"]
+        ),
         "profitable_folds_at_least_7": cb["profitable_folds"] >= 7,
         "profitable_years_at_least_3": cb["profitable_years"] >= 3,
-        "positive_fold_concentration_not_above_50pct": cb["positive_fold_concentration"] is not None
-        and cb["positive_fold_concentration"] <= 0.5,
+        "positive_fold_concentration_not_above_50pct": (
+            cb["positive_fold_concentration"] is not None
+            and cb["positive_fold_concentration"] <= 0.5
+        ),
         "residual_sharpe_positive": (sharpe(residual) or 0) > 0,
-        "mean_delta_lower_95_positive": boot["annualized_mean_delta"]["lower_95"] > 0,
+        "mean_delta_lower_95_positive": (
+            boot["annualized_mean_delta"]["lower_95"] > 0
+        ),
         "sharpe_delta_lower_95_positive": boot["sharpe_delta"]["lower_95"] > 0,
         "full_scored_positive": met["candidate"]["full_scored"]["net_return"] > 0,
     }
     return {
         "metrics": met,
-        "breadth": {"candidate": cb, "b1": bb, "residual_sharpe_vs_b1": sharpe(residual)},
+        "breadth": {
+            "candidate": cb,
+            "b1": bb,
+            "residual_sharpe_vs_b1": sharpe(residual),
+        },
         "bootstrap": boot,
         "diagnostics": diagnose(d, p, arrays, events),
         "acceptance_gates": gates,
@@ -364,7 +392,11 @@ def main():
             "rows_in_source": 43941,
             "scored_prefix_rows": N,
         },
-        "sample": {"training": TRAIN, "development_oos": OOS, "full_scored": FULL},
+        "sample": {
+            "training": TRAIN,
+            "development_oos": OOS,
+            "full_scored": FULL,
+        },
         "markets": {},
     }
     for m, path in (("BTC-USDT", a.btc), ("ETH-USDT", a.eth)):
