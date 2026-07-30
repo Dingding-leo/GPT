@@ -1,0 +1,51 @@
+{
+  "acceptance": "both markets pass all frozen point-estimate, efficiency, breadth, residual-Sharpe, uncertainty, and integrity gates",
+  "benchmark": "B1 daily 00:00 UTC 2160H endpoint-trend long/cash, same execution and fee",
+  "breadth": {
+    "calendar_years": true,
+    "fold_hours": 2160,
+    "folds": 12
+  },
+  "candidate_count": 1,
+  "data": {
+    "artifact_ids": {
+      "BTC-USDT": 8685574446,
+      "ETH-USDT": 8685572234
+    },
+    "bar": "1H",
+    "development_oos": [17520, 43440],
+    "full_scored": [2880, 43440],
+    "later_suffix": "unread and unscored",
+    "markets": ["BTC-USDT", "ETH-USDT"],
+    "prefix_rows": 43441,
+    "provider": "OKX public SPOT",
+    "training": [2880, 17520]
+  },
+  "family_id": "variance-ratio-persistence-risk-state-1h-v1",
+  "issue": 720,
+  "parameter_grid_count": 0,
+  "performance_seen_at_freeze": false,
+  "rejection": "any bilateral failure -> reject_exact_variance_ratio_persistence_risk_state_family",
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "same_interval_rescue_authorized": false,
+  "strategy": {
+    "ambiguous": "retain prior exposure",
+    "base": "close_t > close_(t-2160H), evaluated at completed daily 00:00 UTC bars",
+    "base_exit": "non-positive base -> 0.0",
+    "execution": "next hourly open",
+    "fee_one_way": 0.0005,
+    "hourly_return": "log(close_h/close_(h-1))",
+    "onset": "new positive base trend -> 1.0",
+    "position_domain": [0, 0.5, 1],
+    "recovery": "VR24 > 1 and log(close_t/close_(t-168H)) > 0 -> 1.0",
+    "risk": "VR24 < 1 and log(close_t/close_(t-168H)) < 0 -> 0.5",
+    "variance_ratio": "population variance of overlapping 24H return sums inside latest 720H divided by 24 times population variance of the same 720 hourly returns"
+  },
+  "uncertainty": {
+    "block_hours": 168,
+    "confidence": 0.95,
+    "method": "paired non-circular moving-block basic interval",
+    "resamples": 5000,
+    "seed": 20260731
+  }
+}
