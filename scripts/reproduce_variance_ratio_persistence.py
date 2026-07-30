@@ -144,9 +144,7 @@ def uncertainty(candidate: np.ndarray, benchmark: np.ndarray) -> dict:
         mean_draws[start : start + size] = np.mean(cs - bs, axis=1) * ANN
         cm, bm = np.mean(cs, axis=1), np.mean(bs, axis=1)
         cstd, bstd = np.std(cs, axis=1, ddof=1), np.std(bs, axis=1, ddof=1)
-        sharpe_draws[start : start + size] = (
-            cm / cstd - bm / bstd
-        ) * math.sqrt(ANN)
+        sharpe_draws[start : start + size] = (cm / cstd - bm / bstd) * math.sqrt(ANN)
     mean_point = float(np.mean(c - b) * ANN)
     sharpe_point = sharpe(c) - sharpe(b)
     return {
@@ -174,9 +172,7 @@ def breadth(frame: pd.DataFrame, candidate: np.ndarray, benchmark: np.ndarray) -
     years = []
     timestamps = frame["timestamp"].iloc[1:].reset_index(drop=True)
     for year in sorted(set(timestamps.iloc[OOS[0] : OOS[1]].dt.year)):
-        mask = np.flatnonzero(
-            timestamps.iloc[OOS[0] : OOS[1]].dt.year.to_numpy() == year
-        ) + OOS[0]
+        mask = np.flatnonzero(timestamps.iloc[OOS[0] : OOS[1]].dt.year.to_numpy() == year) + OOS[0]
         years.append(
             {
                 "year": int(year),
