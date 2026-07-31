@@ -192,9 +192,7 @@ def breadth(table: pd.DataFrame) -> dict[str, Any]:
     ]
     return {
         "folds": folds,
-        "positive_gross_folds": sum(
-            row["gross"] is not None and row["gross"] > 0 for row in folds
-        ),
+        "positive_gross_folds": sum(row["gross"] is not None and row["gross"] > 0 for row in folds),
         "positive_net_folds": sum(row["net"] is not None and row["net"] > 0 for row in folds),
         "years": annual,
         "positive_gross_years": sum(row["gross"] > 0 for row in annual),
@@ -232,8 +230,7 @@ def market_result(path: Path, market: str) -> dict[str, Any]:
     positive_net = int((regimes["mean_net"] > 0).sum())
     gates = {
         "positive_median": median_gross > 0 and median_net > 0,
-        "regime_breadth": positive_gross > len(regimes) / 2
-        and positive_net >= len(regimes) / 2,
+        "regime_breadth": positive_gross > len(regimes) / 2 and positive_net >= len(regimes) / 2,
         "equal_lower_bounds": uncertainty["equal_gross_ci95"][0] > 0
         and uncertainty["equal_net_ci95"][0] > 0,
         "day_lower_bounds": uncertainty["day_gross_ci95"][0] > 0
