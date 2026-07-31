@@ -57,9 +57,10 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
           RUNNER=reports/research/trend-conditioned-weekly-loss-probability-veto-1h-v1/run_experiment.py
-          python -m py_compile "$RUNNER"
-          ruff check "$RUNNER"
-          ruff format --check "$RUNNER"
+          DIAGNOSTIC=reports/research/trend-conditioned-weekly-loss-probability-veto-1h-v1/diagnose_veto.py
+          python -m py_compile "$RUNNER" "$DIAGNOSTIC"
+          ruff check "$RUNNER" "$DIAGNOSTIC"
+          ruff format --check "$RUNNER" "$DIAGNOSTIC"
 
       - name: Acquire immutable public OKX 1H source
         run: |
@@ -87,11 +88,25 @@ jobs:
             --tested-sha "$EXPECTED_SHA"
           )
           RUNNER=reports/research/trend-conditioned-weekly-loss-probability-veto-1h-v1/run_experiment.py
+          DIAGNOSTIC=reports/research/trend-conditioned-weekly-loss-probability-veto-1h-v1/diagnose_veto.py
           python "$RUNNER" --output-dir "$OUTPUT_DIR" "${COMMON_ARGS[@]}"
           python "$RUNNER" --output-dir "$REPLAY_DIR" "${COMMON_ARGS[@]}"
+          python "$DIAGNOSTIC" \
+            --runner "$RUNNER" \
+            --data-root "$SOURCE_DIR" \
+            --output "$OUTPUT_DIR/failure-diagnostic.json" \
+            --instrument NEAR-USDT \
+            --instrument SAND-USDT
+          python "$DIAGNOSTIC" \
+            --runner "$RUNNER" \
+            --data-root "$SOURCE_DIR" \
+            --output "$REPLAY_DIR/failure-diagnostic.json" \
+            --instrument NEAR-USDT \
+            --instrument SAND-USDT
           cmp "$OUTPUT_DIR/result.json" "$REPLAY_DIR/result.json"
           cmp "$OUTPUT_DIR/result-summary.json" "$REPLAY_DIR/result-summary.json"
           cmp "$OUTPUT_DIR/report.md" "$REPLAY_DIR/report.md"
+          cmp "$OUTPUT_DIR/failure-diagnostic.json" "$REPLAY_DIR/failure-diagnostic.json"
           cp "$SOURCE_DIR/coverage-manifest.json" "$OUTPUT_DIR/coverage-manifest.json"
           cp reports/research/trend-conditioned-weekly-loss-probability-veto-1h-v1/protocol.json "$OUTPUT_DIR/protocol.json"
           printf '%s\n' "$EXPECTED_SHA" > "$OUTPUT_DIR/tested-sha.txt"
@@ -99,6 +114,7 @@ jobs:
           test -s "$OUTPUT_DIR/result.json"
           test -s "$OUTPUT_DIR/result-summary.json"
           test -s "$OUTPUT_DIR/report.md"
+          test -s "$OUTPUT_DIR/failure-diagnostic.json"
           sha256sum "$OUTPUT_DIR"/* > "$OUTPUT_DIR/artifact-manifest.sha256"
 
       - name: Upload immutable source and result evidence
