@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import sys
 from pathlib import Path
 from typing import Any
@@ -112,7 +111,9 @@ def build_paths(market: dict[str, Any]) -> dict[str, Any]:
                 centre = np.median(train_x, axis=0)
                 scale = np.median(np.abs(train_x - centre), axis=0)
                 scale[~np.isfinite(scale) | (scale <= 0)] = 1.0
-                distance = np.sum(((train_x - centre) / scale - (x[t] - centre) / scale) ** 2, axis=1)
+                scaled_train = (train_x - centre) / scale
+                scaled_query = (x[t] - centre) / scale
+                distance = np.sum((scaled_train - scaled_query) ** 2, axis=1)
                 order = np.lexsort((eligible, distance))[:NEIGHBOURS]
                 neighbours = eligible[order]
                 labels = opens[neighbours + 169] / opens[neighbours + 1] - 1.0
@@ -342,7 +343,8 @@ def report(result: dict[str, Any]) -> str:
                 f"selected {diag['selected']['count']}; lower-bound/realized correlation "
                 f"{diag['lower_bound_realized_correlation']}.",
                 "",
-                f"Selected label sum {diag['selected']['sum_realized_168h']:+.2%}; rejected label sum "
+                "Selected label sum "
+                f"{diag['selected']['sum_realized_168h']:+.2%}; rejected label sum "
                 f"{diag['rejected']['sum_realized_168h']:+.2%}. Gross timing residual "
                 f"{diag['gross_timing_residual']:+.2%}; fee contribution "
                 f"{diag['fee_contribution']:+.2%}; net arithmetic residual "
