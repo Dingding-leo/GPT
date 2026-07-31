@@ -168,8 +168,12 @@ def summary(rows: pd.DataFrame, sampled: np.ndarray) -> tuple[dict, np.ndarray, 
     mae_draws = np.array([rho(x[index], mae[index]) for index in sampled])
     item = {
         "n_anchors": len(rows),
-        "occupancy_iqr": float(rows["occupancy"].quantile(0.75) - rows["occupancy"].quantile(0.25)),
-        "occupancy_quartiles": [float(rows["occupancy"].quantile(q)) for q in (0.25, 0.5, 0.75)],
+        "occupancy_iqr": float(
+            rows["occupancy"].quantile(0.75) - rows["occupancy"].quantile(0.25)
+        ),
+        "occupancy_quartiles": [
+            float(rows["occupancy"].quantile(q)) for q in (0.25, 0.5, 0.75)
+        ],
         "clearance_median": median,
         "low_n": len(low),
         "high_n": len(high),
@@ -189,16 +193,24 @@ def summary(rows: pd.DataFrame, sampled: np.ndarray) -> tuple[dict, np.ndarray, 
         "descriptive_no_boundary_minus_boundary": {
             "no_boundary_n": len(absent),
             "boundary_n": len(present),
-            "gross_mean_delta": float(absent["gross"].mean() - present["gross"].mean()),
+            "gross_mean_delta": float(
+                absent["gross"].mean() - present["gross"].mean()
+            ),
             "mae_mean_delta": float(absent["mae"].mean() - present["mae"].mean()),
-            "turnover_mean_delta": float(absent["turnover"].mean() - present["turnover"].mean()),
+            "turnover_mean_delta": float(
+                absent["turnover"].mean() - present["turnover"].mean()
+            ),
         },
         "folds": folds,
         "years": years,
     }
     if len(high):
-        item["high_minus_low_gross_mean"] = float(high["gross"].mean() - low["gross"].mean())
-        item["high_minus_low_mae_mean"] = float(high["mae"].mean() - low["mae"].mean())
+        item["high_minus_low_gross_mean"] = float(
+            high["gross"].mean() - low["gross"].mean()
+        )
+        item["high_minus_low_mae_mean"] = float(
+            high["mae"].mean() - low["mae"].mean()
+        )
     item["positive_gross_folds"] = sum(
         x["gross_slope"] is not None and x["gross_slope"] > 0 for x in folds
     )
@@ -212,12 +224,19 @@ def summary(rows: pd.DataFrame, sampled: np.ndarray) -> tuple[dict, np.ndarray, 
         x["mae_slope"] is not None and x["mae_slope"] > 0 for x in years
     )
     gates = {
-        "gross_rho_positive_lcb": item["gross_rho"] > 0 and item["gross_rho_ci95"][0] > 0,
-        "mae_rho_positive_lcb": item["mae_rho"] > 0 and item["mae_rho_ci95"][0] > 0,
-        "gross_breadth": (
-            item["positive_gross_folds"] >= 4 and item["positive_gross_years"] >= 2
+        "gross_rho_positive_lcb": (
+            item["gross_rho"] > 0 and item["gross_rho_ci95"][0] > 0
         ),
-        "mae_breadth": item["positive_mae_folds"] >= 4 and item["positive_mae_years"] >= 2,
+        "mae_rho_positive_lcb": (
+            item["mae_rho"] > 0 and item["mae_rho_ci95"][0] > 0
+        ),
+        "gross_breadth": (
+            item["positive_gross_folds"] >= 4
+            and item["positive_gross_years"] >= 2
+        ),
+        "mae_breadth": (
+            item["positive_mae_folds"] >= 4 and item["positive_mae_years"] >= 2
+        ),
         "state_variation": (
             item["occupancy_iqr"] >= 0.10 and len(low) >= 20 and len(high) >= 20
         ),
@@ -274,13 +293,17 @@ def run(btc: Path, eth: Path) -> dict:
         mae_draws.append(mae)
     result["common_index"] = {
         "median_gross_rho_point": float(
-            np.median([result["markets"][x]["summary"]["gross_rho"] for x in HASHES])
+            np.median(
+                [result["markets"][x]["summary"]["gross_rho"] for x in HASHES]
+            )
         ),
         "median_gross_rho_ci95": np.quantile(
             np.median(np.vstack(gross_draws), axis=0), [0.025, 0.975]
         ).tolist(),
         "median_mae_rho_point": float(
-            np.median([result["markets"][x]["summary"]["mae_rho"] for x in HASHES])
+            np.median(
+                [result["markets"][x]["summary"]["mae_rho"] for x in HASHES]
+            )
         ),
         "median_mae_rho_ci95": np.quantile(
             np.median(np.vstack(mae_draws), axis=0), [0.025, 0.975]
@@ -290,19 +313,29 @@ def run(btc: Path, eth: Path) -> dict:
         result["markets"][x]["summary"]["passes_all"] for x in HASHES
     )
     result["verdict"] = (
-        "authorizeWÙœ™\ÚØÛÚÜØ›Ý[™\žWÛØØÝ\[˜ÞWØØ[™Y]H‚ˆYˆ™\Ý[È›X\šÙ]×Ü\ÜÚ[™×Ø[—HOH‚ˆ[ÙHœ™Z™XÝÝ™[™Ø›Ý[™\žWÛØØÝ\[˜ÞWÛÜÜ[š]WÜ™[Z\ÙH‚ˆ
-Bˆ™]\›ˆ™\Ý[‚‚™YˆXZ[Š
-HOˆ›Û™N‚ˆ\œÙ\ˆH\™Ü\œÙK\™Ý[Y[\œÙ\Š
-Bˆ\œÙ\‹˜YØ\™Ý[Y[
-‹KXËXÜÝˆ‹™\]Z\™YUYK\OT]
-Bˆ\œÙ\‹˜YØ\™Ý[Y[
-‹KY]XÜÝˆ‹™\]Z\™YUYK\OT]
-Bˆ\œÙ\‹˜YØ\™Ý[Y[
-‹K[Ý]]‹™\]Z\™YUYK\OT]
-Bˆ\™ÜÈH\œÙ\‹œ\œÙWØ\™ÜÊ
-Bˆ\™ÜË›Ý]]Üš]WÝ^
-ˆœÛÛ‹™[\Êˆ[Š\™ÜË˜×ØÜÝ‹\™ÜË™]ØÜÝŠK[™[L‹ÛÜÚÙ^\ÏUYK[Ý×Û˜[Q˜[ÙBˆ
-Bˆ
-È—ˆ‚ˆ
-B‚‚šYˆ×Û˜[YW×ÈOH—×ÛXZ[—×ÈŽ‚ˆXZ[Š
-B
+        "authorize_fresh_cohort_boundary_occupancy_candidate"
+        if result["markets_passing_all"] == 2
+        else "reject_trend_boundary_occupancy_opportunity_premise"
+    )
+    return result
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--btc-csv", required=True, type=Path)
+    parser.add_argument("--eth-csv", required=True, type=Path)
+    parser.add_argument("--output", required=True, type=Path)
+    args = parser.parse_args()
+    args.output.write_text(
+        json.dumps(
+            run(args.btc_csv, args.eth_csv),
+            indent=2,
+            sort_keys=True,
+            allow_nan=False,
+        )
+        + "\n"
+    )
+
+
+if __name__ == "__main__":
+    main()
