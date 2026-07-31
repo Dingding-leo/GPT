@@ -1,0 +1,115 @@
+name: Dual-Horizon Direct Forecast Consensus Experiment
+
+on:
+  push:
+    branches:
+      - auto/research/20260731-19-dual-horizon-forecast-consensus
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: >-
+    dual-horizon-forecast-${{ github.event_name }}-${{
+    github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OKX_BASE_URL: https://www.okx.com
+      SOURCE_DIR: /tmp/dual-horizon-forecast-source
+      OUTPUT_DIR: reports/research/dual-horizon-direct-forecast-consensus-1h-v1/generated
+      REPLAY_DIR: /tmp/dual-horizon-forecast-replay
+      ARTIFACT_NAME: dual-horizon-forecast-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact branch head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          if [[ "$GITHUB_EVENT_NAME" = "push" ]]; then
+            test "$GITHUB_REF" = "refs/heads/auto/research/20260731-19-dual-horizon-forecast-consensus"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project and validate experiment code
+        run: |
+          set -euo pipefail
+          python -m pip install -e ".[dev]"
+          python -m pip check
+          python -m py_compile \
+            reports/research/dual-horizon-direct-forecast-consensus-1h-v1/common.py \
+            reports/research/dual-horizon-direct-forecast-consensus-1h-v1/strategy.py \
+            reports/research/dual-horizon-direct-forecast-consensus-1h-v1/metrics.py \
+            reports/research/dual-horizon-direct-forecast-consensus-1h-v1/diagnostics.py \
+            reports/research/dual-horizon-direct-forecast-consensus-1h-v1/reporting.py \
+            reports/research/dual-horizon-direct-forecast-consensus-1h-v1/run_experiment.py
+
+      - name: Acquire immutable public OKX 1H source
+        run: |
+          set -euo pipefail
+          python scripts/run_okx_1h_coverage.py \
+            --start 2021-07-24T00:00:00Z \
+            --output-dir "$SOURCE_DIR" \
+            --instrument UNI-USDT \
+            --instrument AAVE-USDT \
+            --pause-seconds 0.08
+          test -s "$SOURCE_DIR/coverage-manifest.json"
+          test "$(find "$SOURCE_DIR/UNI-USDT/snapshot" -type f -name '*.csv' | wc -l)" -eq 1
+          test "$(find "$SOURCE_DIR/AAVE-USDT/snapshot" -type f -name '*.csv' | wc -l)" -eq 1
+
+      - name: Run and replay frozen strategy experiment
+        run: |
+          set -euo pipefail
+          COMMON_ARGS=(
+            --data-root "$SOURCE_DIR"
+            --instrument UNI-USDT
+            --instrument AAVE-USDT
+            --resamples 5000
+            --seed 20260731
+            --source-workflow-run "$GITHUB_RUN_ID"
+            --tested-sha "$EXPECTED_SHA"
+          )
+          RUNNER=reports/research/dual-horizon-direct-forecast-consensus-1h-v1/run_experiment.py
+          python "$RUNNER" --output-dir "$OUTPUT_DIR" "${COMMON_ARGS[@]}"
+          python "$RUNNER" --output-dir "$REPLAY_DIR" "${COMMON_ARGS[@]}"
+          cmp "$OUTPUT_DIR/result.json" "$REPLAY_DIR/result.json"
+          cmp "$OUTPUT_DIR/result-summary.json" "$REPLAY_DIR/result-summary.json"
+          cmp "$OUTPUT_DIR/report.md" "$REPLAY_DIR/report.md"
+          cp "$SOURCE_DIR/coverage-manifest.json" "$OUTPUT_DIR/coverage-manifest.json"
+          cp reports/research/dual-horizon-direct-forecast-consensus-1h-v1/protocol.json "$OUTPUT_DIR/protocol.json"
+          printf '%s\n' "$EXPECTED_SHA" > "$OUTPUT_DIR/tested-sha.txt"
+          printf '%s\n' deterministic_replay_byte_identical > "$OUTPUT_DIR/replay-verdict.txt"
+          test -s "$OUTPUT_DIR/result.json"
+          test -s "$OUTPUT_DIR/result-summary.json"
+          test -s "$OUTPUT_DIR/report.md"
+          sha256sum "$OUTPUT_DIR"/* > "$OUTPUT_DIR/artifact-manifest.sha256"
+
+      - name: Upload immutable source and result evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: |
+            ${{ env.SOURCE_DIR }}/
+            ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
