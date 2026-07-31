@@ -33,9 +33,7 @@ def metrics(path: dict[str, np.ndarray], start: int, end: int) -> dict[str, Any]
         "annualized_turnover": float(turnover / len(net) * ANNUAL_HOURS),
         "fees": float(np.sum(fee)),
         "edge_per_turn_bps": (
-            finite_or_none(float(np.sum(net) / turnover * 10_000))
-            if turnover > 0
-            else None
+            finite_or_none(float(np.sum(net) / turnover * 10_000)) if turnover > 0 else None
         ),
         "exposure": float(np.mean(position)),
         "position_changes": int(np.count_nonzero(changes)),
@@ -51,9 +49,7 @@ def residual_sharpe(candidate: np.ndarray, benchmark: np.ndarray) -> float | Non
     return finite_or_none(sharpe_value(candidate - benchmark))
 
 
-def fold_year_diagnostics(
-    path: dict[str, np.ndarray], timestamps: pd.Series
-) -> dict[str, Any]:
+def fold_year_diagnostics(path: dict[str, np.ndarray], timestamps: pd.Series) -> dict[str, Any]:
     start, end = OOS
     fold_returns = [
         float(np.prod(1.0 + path["net"][left : left + FOLD_HOURS]) - 1.0)
@@ -108,15 +104,11 @@ def paired_bootstrap(
         "method": "paired_non_circular_moving_block",
         "block_hours": BLOCK_HOURS,
         "resamples": int(len(starts)),
-        "annualized_mean_delta_point": float(
-            np.mean(candidate - benchmark) * ANNUAL_HOURS
-        ),
+        "annualized_mean_delta_point": float(np.mean(candidate - benchmark) * ANNUAL_HOURS),
         "annualized_mean_delta_ci95": [
             float(value) for value in np.quantile(mean_delta, [0.025, 0.975])
         ],
-        "sharpe_delta_point": finite_or_none(
-            sharpe_value(candidate) - sharpe_value(benchmark)
-        ),
+        "sharpe_delta_point": finite_or_none(sharpe_value(candidate) - sharpe_value(benchmark)),
         "sharpe_delta_ci95": [
             float(value) for value in np.nanquantile(sharpe_delta, [0.025, 0.975])
         ],
