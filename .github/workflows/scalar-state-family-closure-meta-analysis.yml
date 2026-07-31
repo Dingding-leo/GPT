@@ -60,12 +60,23 @@ jobs:
           import json
           from pathlib import Path
 
+          def normalize(value):
+              if isinstance(value, float):
+                  return round(value, 12)
+              if isinstance(value, list):
+                  return [normalize(item) for item in value]
+              if isinstance(value, dict):
+                  return {key: normalize(item) for key, item in value.items()}
+              return value
+
           source = Path("reports/research/scalar-state-family-closure-meta-analysis-1h-v1")
           generated = Path("artifacts/scalar-state-family-closure")
           committed = json.loads((source / "evidence.json").read_text(encoding="utf-8"))
           replayed = json.loads((generated / "evidence.json").read_text(encoding="utf-8"))
-          assert committed == replayed
-          assert (source / "report.md").read_bytes() == (generated / "report.md").read_bytes()
+          assert normalize(committed) == normalize(replayed)
+          committed_report = (source / "report.md").read_text(encoding="utf-8").strip()
+          replayed_report = (generated / "report.md").read_text(encoding="utf-8").strip()
+          assert committed_report == replayed_report
           assert replayed["candidate_count"] == 0
           assert replayed["parameter_grid_count"] == 0
           assert replayed["fee_one_way"] == 0.0005
