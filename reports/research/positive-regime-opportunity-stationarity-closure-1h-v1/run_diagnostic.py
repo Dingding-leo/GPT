@@ -131,9 +131,7 @@ def regime_summary(table: pd.DataFrame) -> pd.DataFrame:
                 "net_positive_fraction": float(np.mean(net > 0)),
                 "lag1": (
                     float(np.corrcoef(gross[:-1], gross[1:])[0, 1])
-                    if len(gross) >= 4
-                    and np.std(gross[:-1]) > 0
-                    and np.std(gross[1:]) > 0
+                    if len(gross) >= 4 and np.std(gross[:-1]) > 0 and np.std(gross[1:]) > 0
                     else None
                 ),
             }
@@ -153,11 +151,7 @@ def pooled_centered_lag1(table: pd.DataFrame) -> float | None:
         current.extend(centered[1:])
     lagged_array = np.asarray(lagged, dtype=float)
     current_array = np.asarray(current, dtype=float)
-    if (
-        len(lagged_array) < 2
-        or np.std(lagged_array) == 0
-        or np.std(current_array) == 0
-    ):
+    if len(lagged_array) < 2 or np.std(lagged_array) == 0 or np.std(current_array) == 0:
         return None
     return float(np.corrcoef(lagged_array, current_array)[0, 1])
 
@@ -232,12 +226,8 @@ def breadth(table: pd.DataFrame) -> dict[str, Any]:
     ]
     return {
         "folds": folds,
-        "positive_gross_folds": sum(
-            row["gross"] is not None and row["gross"] > 0 for row in folds
-        ),
-        "positive_net_folds": sum(
-            row["net"] is not None and row["net"] > 0 for row in folds
-        ),
+        "positive_gross_folds": sum(row["gross"] is not None and row["gross"] > 0 for row in folds),
+        "positive_net_folds": sum(row["net"] is not None and row["net"] > 0 for row in folds),
         "years": annual,
         "positive_gross_years": sum(row["gross"] > 0 for row in annual),
         "positive_net_years": sum(row["net"] > 0 for row in annual),
@@ -257,9 +247,7 @@ def leave_one_out(regimes: pd.DataFrame, table: pd.DataFrame) -> dict[str, Any]:
         values["equal_gross"].append(
             (float(remaining_regimes["mean_gross"].mean()), int(regime_id))
         )
-        values["equal_net"].append(
-            (float(remaining_regimes["mean_net"].mean()), int(regime_id))
-        )
+        values["equal_net"].append((float(remaining_regimes["mean_net"].mean()), int(regime_id)))
         values["day_gross"].append((float(remaining_days["gross"].mean()), int(regime_id)))
         values["day_net"].append((float(remaining_days["net"].mean()), int(regime_id)))
     return {
@@ -297,8 +285,7 @@ def market_result(path: Path, market: str) -> dict[str, Any]:
     positive_net = int((regimes["mean_net"] > 0).sum())
     gates = {
         "positive_median": median_gross > 0 and median_net > 0,
-        "regime_breadth": positive_gross > len(regimes) / 2
-        and positive_net >= len(regimes) / 2,
+        "regime_breadth": positive_gross > len(regimes) / 2 and positive_net >= len(regimes) / 2,
         "equal_lower_bounds": uncertainty["equal_gross_ci95"][0] > 0
         and uncertainty["equal_net_ci95"][0] > 0,
         "day_lower_bounds": uncertainty["day_gross_ci95"][0] > 0
