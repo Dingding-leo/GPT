@@ -7,11 +7,13 @@ on:
     paths:
       - .github/workflows/discounted-payoff-sign-evidence-sizing.yml
       - scripts/run_discounted_payoff_sign_evidence_sizing.py
+      - scripts/diagnose_discounted_payoff_sign_evidence_sizing.py
       - reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/reproducer.py.gz.b64
   pull_request:
     paths:
       - .github/workflows/discounted-payoff-sign-evidence-sizing.yml
       - scripts/run_discounted_payoff_sign_evidence_sizing.py
+      - scripts/diagnose_discounted_payoff_sign_evidence_sizing.py
       - reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/reproducer.py.gz.b64
 
 permissions:
@@ -52,6 +54,12 @@ jobs:
           rm -rf reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/run
           python scripts/run_discounted_payoff_sign_evidence_sizing.py \
             --output-dir reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/run
+      - name: Add selector-quality diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/diagnose_discounted_payoff_sign_evidence_sizing.py \
+            --output-dir reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/run
       - name: Verify terminal evidence
         shell: bash
         run: |
@@ -61,6 +69,7 @@ jobs:
           test -s "$root/result.json"
           test -s "$root/result-summary.json"
           test -s "$root/report.md"
+          test -s "$root/selector-diagnostic.json"
           test -s "$root/data/ADA-USDT/candles.csv"
           test -s "$root/data/AVAX-USDT/candles.csv"
           python - <<'PY'
@@ -80,6 +89,15 @@ jobs:
           }
           for market in result["markets"].values():
               assert market["source"]["rows"] == 28081
+              assert all(market["validation"].values())
+
+          diagnostic = json.loads((root / "selector-diagnostic.json").read_text())
+          assert diagnostic["family_id"] == result["family_id"]
+          assert diagnostic["result_payload_sha256"] == result["result_payload_sha256"]
+          assert diagnostic["strategy_outputs_changed"] is False
+          assert diagnostic["verdict"] == result["verdict"]
+          assert set(diagnostic["markets"]) == {"ADA-USDT", "AVAX-USDT"}
+          for market in diagnostic["markets"].values():
               assert all(market["validation"].values())
           PY
           (
