@@ -110,11 +110,15 @@ jobs:
           assert result["active_alpha_context"]["issue"] == 779
           assert result["active_alpha_context"]["pull_request"] == 780
           assert result["active_alpha_context"]["family_id"] == "trend-conditioned-weekly-loss-probability-veto-1h-v1"
-          assert result["active_alpha_context"]["status"] == "preregistered_evaluation_in_progress"
-          assert result["active_alpha_context"]["candidate_performance_evaluated"] is False
+          assert result["active_alpha_context"]["status"] == "terminally_rejected"
+          assert result["active_alpha_context"]["candidate_performance_evaluated"] is True
           assert result["active_alpha_context"]["prospective_performance_consumed"] is False
           assert result["active_alpha_context"]["correction_permitted"] is False
-          assert result["active_alpha_context"]["markets_passing_all_gates"] is None
+          assert result["active_alpha_context"]["markets_passing_all_gates"] == 0
+          assert result["active_alpha_context"]["workflow_run"] == 30622844310
+          assert result["active_alpha_context"]["artifact_id"] == 8790248290
+          assert result["active_alpha_context"]["artifact_sha256"] == "5bd0142cb3debf38d853d8e97a7fdb89cb4681860f528f0e145cf3ffb3e067be"
+          assert result["active_alpha_context"]["result_sha256"] == "a7541d3b2c760d7fed4f612da6d934f9bd4f2de6f4c977d80c77a993e7fad776"
           assert result["strategy_facing_discrepancy"]["policy_or_accounting_defect_detected"] is False
           assert len(result["markets"]) == 2
           assert all(m["recent_forward_window"]["realized_interval_count"] == 5 for m in result["markets"])
