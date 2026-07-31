@@ -61,9 +61,7 @@ def build_paths(market: dict[str, Any]) -> dict[str, Any]:
         if time_index in anchor_set:
             decision_mask[time_index] = True
             eligible = anchors[
-                (anchors >= 2_160)
-                & (anchors + 169 <= time_index)
-                & (base[anchors] == 1)
+                (anchors >= 2_160) & (anchors + 169 <= time_index) & (base[anchors] == 1)
             ]
             history_rows[time_index] = len(eligible)
             if time_index + 169 < length:
@@ -80,9 +78,7 @@ def build_paths(market: dict[str, Any]) -> dict[str, Any]:
                 distance = np.sum((scaled_history - scaled_query) ** 2, axis=1)
                 order = np.lexsort((eligible, distance))[:NEIGHBOURS]
                 neighbours = eligible[order]
-                labels = (
-                    opens[neighbours + 169] / opens[neighbours + 1] - 1.0 - HURDLE
-                )
+                labels = opens[neighbours + 169] / opens[neighbours + 1] - 1.0 - HURDLE
                 numerator = float(np.sum(labels))
                 denominator = float(np.sum(np.abs(labels)))
                 score = numerator / denominator if denominator > 0 else 0.0
@@ -247,9 +243,7 @@ def evaluate_market(
         "mean_delta_ci_lower_positive": fw.ci_lower_positive(
             bootstrap["annualized_mean_delta_ci95"]
         ),
-        "sharpe_delta_ci_lower_positive": fw.ci_lower_positive(
-            bootstrap["sharpe_delta_ci95"]
-        ),
+        "sharpe_delta_ci_lower_positive": fw.ci_lower_positive(bootstrap["sharpe_delta_ci95"]),
         "positive_full_return": performance["full"]["candidate"]["net_return"] > 0,
     }
     return {
