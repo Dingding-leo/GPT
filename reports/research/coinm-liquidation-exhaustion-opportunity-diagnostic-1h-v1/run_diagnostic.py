@@ -102,10 +102,7 @@ def build_specs() -> list[ObjectSpec]:
         for day in dates(START_DAY, END_DAY):
             period = day.isoformat()
             filename = f"{coinm}-liquidationSnapshot-{period}.zip"
-            url = (
-                f"{BASE_URL}/futures/cm/daily/liquidationSnapshot/"
-                f"{coinm}/{filename}"
-            )
+            url = f"{BASE_URL}/futures/cm/daily/liquidationSnapshot/{coinm}/{filename}"
             specs.append(
                 ObjectSpec(
                     market=spot,
@@ -135,9 +132,7 @@ def http_get(url: str, attempts: int = 5) -> bytes:
             last_error = exc
         if attempt + 1 < attempts:
             time.sleep(float(2**attempt))
-    raise RuntimeError(
-        f"download failed after {attempts} attempts: {url}: {last_error}"
-    )
+    raise RuntimeError(f"download failed after {attempts} attempts: {url}: {last_error}")
 
 
 def parse_checksum(payload: bytes, url: str) -> str:
@@ -155,9 +150,7 @@ def verify_object(spec: ObjectSpec) -> VerifiedObject:
     payload = http_get(spec.url)
     actual = hashlib.sha256(payload).hexdigest()
     if actual != expected:
-        raise RuntimeError(
-            f"checksum mismatch: expected {expected}, observed {actual}: {spec.url}"
-        )
+        raise RuntimeError(f"checksum mismatch: expected {expected}, observed {actual}: {spec.url}")
     return VerifiedObject(
         market=spec.market,
         kind=spec.kind,
@@ -228,8 +221,7 @@ def render_report(evidence: dict[str, Any]) -> str:
     ]
     for failure in source["failures"]:
         lines.append(
-            f"- `{failure['market']} {failure['kind']} {failure['period']}`: "
-            f"{failure['error']}"
+            f"- `{failure['market']} {failure['kind']} {failure['period']}`: {failure['error']}"
         )
     lines.extend(
         [
