@@ -178,7 +178,11 @@ def state_diagnostics(built: dict[str, Any]) -> dict[str, Any]:
             else [None, None, None, None, None]
         ),
         "efficiency_min_median_max": (
-            [float(np.min(efficiencies)), float(np.median(efficiencies)), float(np.max(efficiencies))]
+            [
+                float(np.min(efficiencies)),
+                float(np.median(efficiencies)),
+                float(np.max(efficiencies)),
+            ]
             if len(efficiencies)
             else [None, None, None]
         ),
@@ -224,7 +228,9 @@ def evaluate_market(
             and benchmark_metrics["sharpe"] is not None
             and candidate_metrics["sharpe"] >= benchmark_metrics["sharpe"]
         ),
-        "drawdown_no_worse_B1": candidate_metrics["max_drawdown"] >= benchmark_metrics["max_drawdown"],
+        "drawdown_no_worse_B1": (
+            candidate_metrics["max_drawdown"] >= benchmark_metrics["max_drawdown"]
+        ),
         "turnover_no_worse_B1": candidate_metrics["turnover"] <= benchmark_metrics["turnover"],
         "edge_per_turn_positive_and_at_least_B1": (
             candidate_metrics["edge_per_turn_bps"] is not None
@@ -234,10 +240,16 @@ def evaluate_market(
         ),
         "profitable_folds_at_least_7": breadth["profitable_folds"] >= 7,
         "profitable_years_at_least_3": breadth["profitable_years"] >= 3,
-        "positive_fold_concentration_at_most_0_5": concentration is not None and concentration <= 0.5,
+        "positive_fold_concentration_at_most_0_5": (
+            concentration is not None and concentration <= 0.5
+        ),
         "positive_residual_sharpe": residual is not None and residual > 0,
-        "mean_delta_ci_lower_positive": fw.ci_lower_positive(bootstrap["annualized_mean_delta_ci95"]),
-        "sharpe_delta_ci_lower_positive": fw.ci_lower_positive(bootstrap["sharpe_delta_ci95"]),
+        "mean_delta_ci_lower_positive": fw.ci_lower_positive(
+            bootstrap["annualized_mean_delta_ci95"]
+        ),
+        "sharpe_delta_ci_lower_positive": fw.ci_lower_positive(
+            bootstrap["sharpe_delta_ci95"]
+        ),
         "positive_full_return": performance["full"]["candidate"]["net_return"] > 0,
     }
     return {
