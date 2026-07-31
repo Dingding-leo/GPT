@@ -1,0 +1,66 @@
+{
+  "acceptance": "Both markets must pass absolute and B1-relative OOS return, Sharpe, drawdown, turnover, edge/turnover, 7/12 fold breadth, 3/4 year breadth, <=50% positive-fold concentration, positive residual Sharpe, positive per-market confidence lower bounds, positive full return, and integrity; common median lower bounds must also be positive.",
+  "candidate_count": 1,
+  "canonical_signature": "reference-uplift-exit-bridge-1h-v1|markets=BCH-USDT,LINK-USDT|provider=OKX-SPOT-public-confirmed|bar=1H|source-start=2021-07-24T00:00Z|frozen-prefix=43441|base=2160H-endpoint-trend|decision=daily-00UTC-completed-bar|execution=next-hour-open|exit-decomposition=margin-change=current-24H-reference-24H|select=current-24H>=0-and-reference-24H>0|max-bridge=168H|bridge=0.5|fee=5bps-one-way|candidate=1|grid=0",
+  "comparators": [
+    "hourly B0 2160H endpoint trend",
+    "daily 00:00 UTC B1 2160H endpoint trend"
+  ],
+  "data": {
+    "acquired_end": "2026-07-31T03:00:00Z",
+    "bar": "1H",
+    "development_oos": [17520, 43440],
+    "endpoint": "public unauthenticated history-candles",
+    "frozen_end": "2026-07-08T00:00:00Z",
+    "frozen_rows": 43441,
+    "full": [2880, 43440],
+    "market_type": "SPOT",
+    "provider": "OKX",
+    "start": "2021-07-24T00:00:00Z",
+    "training": [2880, 17520]
+  },
+  "family": "reference-uplift-exit-bridge-1h-v1",
+  "fees": {
+    "formula": "0.0005 * abs(exposure change)",
+    "one_way": 0.0005
+  },
+  "hypothesis": "A daily 2160H trend exit caused by non-declining current price and a rising lagged reference is a mechanical crossing with positive bounded post-exit carry.",
+  "issue": 761,
+  "market_evaluation": "independent_same_instrument_only",
+  "markets": ["BCH-USDT", "LINK-USDT"],
+  "parameter_grid_count": 0,
+  "prohibitions": [
+    "cross-sectional ranking or selection",
+    "pairs or spreads",
+    "cointegration or statistical arbitrage",
+    "market-neutral or long-short portfolios",
+    "current relative ranks",
+    "post-hoc market filtering",
+    "credentials or private endpoints",
+    "accounts or orders",
+    "leverage",
+    "enabled adapters",
+    "synthetic data",
+    "15m data"
+  ],
+  "schema_version": 1,
+  "signal": {
+    "base": "close_t > close_(t-2160H) at completed daily 00:00 UTC decisions",
+    "current_24h": "log(close_t/close_(t-24H))",
+    "execution": "next hourly open",
+    "exit": "prior daily base positive and current base non-positive",
+    "maximum_bridge_hours": 168,
+    "reference_24h": "log(close_(t-2160H)/close_(t-2184H))",
+    "select": "current_24h >= 0 and reference_24h > 0",
+    "selected_exposure": 0.5,
+    "terminal": "first positive daily recross at or before 168H, else exact expiry"
+  },
+  "uncertainty": {
+    "block_hours": 168,
+    "common_indices_across_markets": true,
+    "method": "paired non-circular moving-block resampling",
+    "resamples": 5000,
+    "seed": 20260731
+  },
+  "verdict_on_failure": "reject_reference_uplift_exit_bridge_family"
+}
