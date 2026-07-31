@@ -34,9 +34,7 @@ def label_group(mask: np.ndarray, labels: np.ndarray, hurdle: float) -> dict[str
         "mean": float(np.mean(values)) if len(values) else None,
         "sum": float(np.sum(values)),
         "positive_fraction": float(np.mean(values > 0)) if len(values) else None,
-        "fee_hurdle_success_fraction": (
-            float(np.mean(values > hurdle)) if len(values) else None
-        ),
+        "fee_hurdle_success_fraction": (float(np.mean(values > hurdle)) if len(values) else None),
     }
 
 
@@ -67,9 +65,7 @@ def diagnose_market(module: ModuleType, data_root: Path, instrument: str) -> dic
         & np.isfinite(built["realized_label"])
     )
     base = np.zeros(len(market["closes"]), dtype=np.int8)
-    base[2_160:] = (market["closes"][2_160:] > market["closes"][:-2_160]).astype(
-        np.int8
-    )
+    base[2_160:] = (market["closes"][2_160:] > market["closes"][:-2_160]).astype(np.int8)
     effective = valid & (base == 1)
     vetoed = effective & (built["probability_lower"] > 0.5)
     allowed = effective & ~vetoed
@@ -102,19 +98,13 @@ def diagnose_market(module: ModuleType, data_root: Path, instrument: str) -> dic
         "effective_veto_frequency": (
             float(np.mean(vetoed[effective])) if np.any(effective) else 0.0
         ),
-        "effective_vetoed_labels": label_group(
-            vetoed, built["realized_label"], module.HURDLE
-        ),
-        "effective_allowed_labels": label_group(
-            allowed, built["realized_label"], module.HURDLE
-        ),
+        "effective_vetoed_labels": label_group(vetoed, built["realized_label"], module.HURDLE),
+        "effective_allowed_labels": label_group(allowed, built["realized_label"], module.HURDLE),
         "blocked_B1_hours": int(np.sum(blocked)),
         "blocked_episode_count": len(episodes),
         "missed_gain_episode_count": len(missed_gains),
         "avoided_loss_episode_count": len(avoided_losses),
-        "missed_gain_sum": float(
-            sum(episode["B1_gross_return_sum"] for episode in missed_gains)
-        ),
+        "missed_gain_sum": float(sum(episode["B1_gross_return_sum"] for episode in missed_gains)),
         "avoided_loss_sum": float(
             sum(-episode["B1_gross_return_sum"] for episode in avoided_losses)
         ),
@@ -146,13 +136,10 @@ def main() -> None:
     result = {
         "schema_version": 1,
         "family_id": "trend-conditioned-weekly-loss-probability-veto-1h-v1",
-        "diagnostic_scope": (
-            "OOS effective positive-trend vetoes and contiguous B1-only episodes"
-        ),
+        "diagnostic_scope": ("OOS effective positive-trend vetoes and contiguous B1-only episodes"),
         "strategy_outputs_changed": False,
         "markets": [
-            diagnose_market(module, args.data_root, instrument)
-            for instrument in args.instrument
+            diagnose_market(module, args.data_root, instrument) for instrument in args.instrument
         ],
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
