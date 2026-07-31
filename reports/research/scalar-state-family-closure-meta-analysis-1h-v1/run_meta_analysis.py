@@ -144,9 +144,7 @@ def compute() -> dict[str, Any]:
         sample = [groups[rng.randrange(len(groups))] for _ in groups]
         btc_draws.append(statistics.median(item["btc_rho"] for item in sample))
         eth_draws.append(statistics.median(item["eth_rho"] for item in sample))
-        bilateral_draws.append(
-            statistics.median(item["bilateral_mean_rho"] for item in sample)
-        )
+        bilateral_draws.append(statistics.median(item["bilateral_mean_rho"] for item in sample))
 
     loo: list[dict[str, Any]] = []
     for omitted in groups:
@@ -163,20 +161,15 @@ def compute() -> dict[str, Any]:
         )
 
     diagnostic_bilateral_positive = sum(
-        item["btc"]["rho"] > 0.0 and item["eth"]["rho"] > 0.0
-        for item in DIAGNOSTICS
+        item["btc"]["rho"] > 0.0 and item["eth"]["rho"] > 0.0 for item in DIAGNOSTICS
     )
     positive_lower_bounds = sum(
-        item[market]["ci95"][0] > 0.0
-        for item in DIAGNOSTICS
-        for market in ("btc", "eth")
+        item[market]["ci95"][0] > 0.0 for item in DIAGNOSTICS for market in ("btc", "eth")
     )
     grouped_bilateral_positive = sum(item["both_markets_positive"] for item in groups)
     btc_median = statistics.median(item["btc_rho"] for item in groups)
     eth_median = statistics.median(item["eth_rho"] for item in groups)
-    bilateral_median = statistics.median(
-        item["bilateral_mean_rho"] for item in groups
-    )
+    bilateral_median = statistics.median(item["bilateral_mean_rho"] for item in groups)
     btc_ci = interval(btc_draws)
     eth_ci = interval(eth_draws)
     bilateral_ci = interval(bilateral_draws)
@@ -194,9 +187,7 @@ def compute() -> dict[str, Any]:
             bilateral_median > 0.0 and bilateral_ci[0] > 0.0
         ),
         "at_least_4_of_5_groups_bilateral_positive": grouped_bilateral_positive >= 4,
-        "at_least_6_of_7_diagnostics_bilateral_positive": (
-            diagnostic_bilateral_positive >= 6
-        ),
+        "at_least_6_of_7_diagnostics_bilateral_positive": (diagnostic_bilateral_positive >= 6),
         "at_least_7_of_14_source_lower_bounds_positive": positive_lower_bounds >= 7,
         "all_leave_one_group_out_bilateral_medians_positive": min_loo > 0.0,
         "one_sided_exact_sign_p_below_0_05": sign_p < 0.05,
@@ -222,9 +213,7 @@ def compute() -> dict[str, Any]:
             diagnostic_bilateral_positive / len(DIAGNOSTICS)
         ),
         "positive_source_lower_bound_count": positive_lower_bounds,
-        "positive_source_lower_bound_fraction": (
-            positive_lower_bounds / (2 * len(DIAGNOSTICS))
-        ),
+        "positive_source_lower_bound_fraction": (positive_lower_bounds / (2 * len(DIAGNOSTICS))),
         "group_bilateral_positive_count": grouped_bilateral_positive,
         "group_bilateral_positive_fraction": grouped_bilateral_positive / len(groups),
         "grouped_point_estimates": {
@@ -251,15 +240,11 @@ def compute() -> dict[str, Any]:
             "btc_positive_segments": sum(
                 item["btc"]["positive_breadth"][0] for item in DIAGNOSTICS
             ),
-            "btc_total_segments": sum(
-                item["btc"]["positive_breadth"][1] for item in DIAGNOSTICS
-            ),
+            "btc_total_segments": sum(item["btc"]["positive_breadth"][1] for item in DIAGNOSTICS),
             "eth_positive_segments": sum(
                 item["eth"]["positive_breadth"][0] for item in DIAGNOSTICS
             ),
-            "eth_total_segments": sum(
-                item["eth"]["positive_breadth"][1] for item in DIAGNOSTICS
-            ),
+            "eth_total_segments": sum(item["eth"]["positive_breadth"][1] for item in DIAGNOSTICS),
             "note": (
                 "Descriptive only: source segment definitions differ between "
                 "folds, years, and months, so no pooled significance is claimed."
