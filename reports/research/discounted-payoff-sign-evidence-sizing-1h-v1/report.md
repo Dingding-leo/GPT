@@ -105,3 +105,18 @@ reject_discounted_payoff_sign_evidence_sizing_family
 ```
 
 Both markets pass every preregistered gate: `False`. No parameter change, market substitution, paper promotion, or live-trading authorisation follows from this result.
+
+## Repaired selector-quality diagnostic
+
+The initial failure report showed aggregate weighted episode payoff but not whether the soft evidence state selected the correct episode signs. The repaired diagnostic reconstructs the causal nonzero/zero decision at every OOS exit, the realized target sign, fixed-half payoff by decision, and immediately preceding episode-sign transitions.
+
+| Market | Nonzero hit rate | Zero missed-positive rate | Sign persistence | Nonzero fixed-half payoff | Zero fixed-half payoff |
+|---|---:|---:|---:|---:|---:|
+| ADA-USDT | 37.50% | 71.43% | 33.33% | -8.81% | +5.80% |
+| AVAX-USDT | 54.55% | 45.45% | 54.55% | +10.80% | -5.14% |
+
+ADA's soft state was directionally inverted: only 3 of 8 nonzero sleeves had positive targets, while 5 of 7 zero sleeves omitted positive targets. AVAX had only weak sign persistence and a near-balanced 6/11 nonzero hit rate. The family therefore failed because episode signs were not persistently predictable enough for the fixed discounted state, not because exposure sizing exceeded its frozen domain. No strategy position, fee, return, bootstrap draw, gate, or verdict changed.
+
+## Later-suffix invariance rerun
+
+A later public-data rerun at exact head `806d40bba40c7f33acddeffe4a089bdada9b298d` changed only raw response bytes after the frozen 8 July 2026 boundary. Both fixed-window candle hashes, every scored position and return, all metrics, bootstrap draws, gates, and the rejection verdict remained unchanged. Dedicated workflow `30595595738` completed successfully; artifact `8780040860` has digest `sha256:d119fda9b01ede97eec0fa71e3533727964ca3e2a310e4c52c286d66c1dd9216`.
