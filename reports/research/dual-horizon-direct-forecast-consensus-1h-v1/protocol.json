@@ -41,6 +41,7 @@
     "forecast_horizons_hours": [24, 168],
     "training_window_hours": 17520,
     "minimum_training_daily_rows": 60,
+    "training_label_observable_rule": "signal_index + horizon + 1 <= decision_index",
     "ridge_penalty": 0.0001,
     "ridge_intercept_penalized": false,
     "normalization": "training-row median and MAD",
