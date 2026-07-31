@@ -316,9 +316,7 @@ def main() -> None:
             for item in result["markets"]
         },
     }
-    (args.output_dir / "result-summary.json").write_bytes(
-        parent.parent.fw.canonical_bytes(summary)
-    )
+    (args.output_dir / "result-summary.json").write_bytes(parent.parent.fw.canonical_bytes(summary))
     (args.output_dir / "report.md").write_text(report(result), encoding="utf-8")
 
 
