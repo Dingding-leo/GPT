@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "family_id": "lagged-realised-b1-payoff-state-sizing-1h-v1",
+  "issue": 790,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "candidate_count": 1,
+  "parameter_grid": 0,
+  "markets_fixed_preperformance": [
+    "ZEC-USDT",
+    "DASH-USDT"
+  ],
+  "provider": "OKX public confirmed SPOT",
+  "bar": "1H",
+  "fee_bps_one_way": 5.0,
+  "source_start": "2021-07-24T00:00:00Z",
+  "frozen_prefix_rows": 43441,
+  "samples": {
+    "warmup": [0, 2880],
+    "train": [2880, 17520],
+    "oos": [17520, 43440],
+    "full": [2880, 43440]
+  },
+  "candidate": {
+    "base": "daily 00:00 UTC close_t > close_t_minus_2160H",
+    "weekly_anchor": "Monday 00:00 UTC completed bar",
+    "predictor": "latest fully observed self-contained trailing 168H daily-B1 sleeve net payoff over q=t-169 through t-2, ending at observed open_t",
+    "turnover_in_label": "start from cash plus internal absolute B1 changes plus terminal liquidation to cash",
+    "weekly_size": "1.0 if lagged payoff > 0, else 0.5; fallback 1.0 before first complete payoff",
+    "target": "daily B1 times carried weekly size",
+    "execution": "next hourly open"
+  },
+  "comparators": {
+    "B0": "hourly 2160H endpoint trend",
+    "B1": "daily 00:00 UTC 2160H endpoint trend",
+    "fixed_half_control": "B1 before activation and 0.5 times B1 thereafter",
+    "exposure_matched_control": "B1 before activation and constant multiplier thereafter matching adaptive OOS equivalent exposure"
+  },
+  "uncertainty": {
+    "resampling": "paired non-circular moving block",
+    "block_hours": 168,
+    "resamples": 5000,
+    "seed": 20260731,
+    "common_indices_across_markets": true
+  },
+  "acceptance": "all per-market economic, breadth, concentration, residual, uncertainty, full-sample and constant-control gates plus common-index lower bounds",
+  "prohibited": [
+    "cross-sectional ranking or selection",
+    "pairs or spreads",
+    "cointegration or statistical arbitrage",
+    "market-neutral or long-short portfolios",
+    "current relative rank",
+    "post-hoc asset filtering",
+    "credentials or private endpoints",
+    "accounts or orders",
+    "leverage",
+    "enabled adapters",
+    "synthetic data",
+    "15m"
+  ],
+  "paper_trading_authorized": false,
+  "live_trading_authorized": false
+}
