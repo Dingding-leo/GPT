@@ -15,12 +15,10 @@ SOURCE_URL = (
     "reports/research/volatility-gated-cadence-state-1h-v1/run_experiment.py"
 )
 _PATH_NEEDLE = (
-    b'        data_root / instrument / "snapshot" / '
-    b'f"okx-{instrument}-1H.normalized.csv",\n'
+    b'        data_root / instrument / "snapshot" / f"okx-{instrument}-1H.normalized.csv",\n'
 )
 _PATH_REPLACEMENT = _PATH_NEEDLE + (
-    b'        data_root / instrument / "snapshot" / '
-    b'f"okx-{instrument}-1H.csv",\n'
+    b'        data_root / instrument / "snapshot" / f"okx-{instrument}-1H.csv",\n'
 )
 
 
