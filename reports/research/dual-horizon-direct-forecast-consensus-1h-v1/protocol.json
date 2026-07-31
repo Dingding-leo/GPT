@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "family_id": "dual-horizon-direct-forecast-consensus-1h-v1",
+  "issue": 774,
+  "research_parent_sha": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "classification": "research_only_causal_time_series",
+  "candidate_count": 1,
+  "parameter_grid": 0,
+  "provider": "OKX",
+  "market_type": "SPOT",
+  "bar": "1H",
+  "fixed_markets": [
+    "UNI-USDT",
+    "AAVE-USDT"
+  ],
+  "source": {
+    "public_only": true,
+    "confirmed_only": true,
+    "credentials": false,
+    "private_endpoints": false,
+    "frozen_prefix_rows": 43441,
+    "frozen_start_utc": "2021-07-24T00:00:00Z",
+    "frozen_end_utc": "2026-07-08T00:00:00Z"
+  },
+  "hard_boundary": {
+    "same_instrument_history_only": true,
+    "position_domain": [0, 1],
+    "next_open_execution": true,
+    "cross_sectional_ranking": false,
+    "pairs_or_spreads": false,
+    "cointegration_or_stat_arb": false,
+    "market_neutral_long_short": false,
+    "post_hoc_market_filtering": false,
+    "leverage": false,
+    "orders": false,
+    "synthetic_data": false,
+    "fifteen_minute_data": false
+  },
+  "strategy": {
+    "decision_cadence": "completed 00:00 UTC bars",
+    "forecast_horizons_hours": [24, 168],
+    "training_window_hours": 17520,
+    "minimum_training_daily_rows": 60,
+    "ridge_penalty": 0.0001,
+    "ridge_intercept_penalized": false,
+    "normalization": "training-row median and MAD",
+    "features": [
+      "log_return_24h",
+      "log_return_168h",
+      "log_return_720h",
+      "rms_volatility_24h_over_168h_minus_1",
+      "downside_rms_24h_over_168h_minus_1",
+      "drawdown_from_trailing_168h_max"
+    ],
+    "decision_rule": "long iff both direct forecasts are strictly positive; otherwise cash",
+    "fee_bps_one_way": 5.0,
+    "fee_formula": "0.0005 * abs(exposure_change)"
+  },
+  "samples": {
+    "train": [2880, 17520],
+    "development_oos": [17520, 43440],
+    "full": [2880, 43440],
+    "fold_hours": 2160,
+    "oos_folds": 12,
+    "bootstrap_block_hours": 168,
+    "bootstrap_resamples": 5000,
+    "bootstrap_seed": 20260731
+  },
+  "benchmarks": [
+    "B0_hourly_2160h_endpoint_trend",
+    "B1_daily_0000_utc_2160h_endpoint_trend"
+  ],
+  "acceptance": [
+    "positive OOS net return and Sharpe in both markets",
+    "OOS return and Sharpe at least B1 in both markets",
+    "maximum drawdown no worse than B1 in both markets",
+    "turnover below B0 and net edge per turnover at least B1",
+    "at least 7 of 12 profitable OOS folds",
+    "at least 3 profitable OOS calendar years",
+    "positive-fold concentration at most 0.5",
+    "positive candidate-minus-B1 residual Sharpe",
+    "paired-bootstrap lower bounds for annualized mean and Sharpe deltas positive",
+    "positive full-sample net return",
+    "no causal, label-boundary, source, fee or replay defect"
+  ],
+  "rejection": "any failed market gate rejects the family; no same-cohort rescue or retuning"
+}
