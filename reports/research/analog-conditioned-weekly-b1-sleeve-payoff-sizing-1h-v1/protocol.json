@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "family_id": "analog-conditioned-weekly-b1-sleeve-payoff-sizing-1h-v1",
+  "issue": 787,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "candidate_count": 1,
+  "parameter_grid": 0,
+  "markets_fixed_preperformance": [
+    "KSM-USDT",
+    "IOTA-USDT"
+  ],
+  "provider": "OKX public confirmed SPOT",
+  "bar": "1H",
+  "fee_bps_one_way": 5.0,
+  "source_start": "2021-07-24T00:00:00Z",
+  "frozen_prefix_rows": 43441,
+  "samples": {
+    "warmup": [0, 2880],
+    "train": [2880, 17520],
+    "oos": [17520, 43440],
+    "full": [2880, 43440]
+  },
+  "candidate": {
+    "base": "daily 00:00 UTC close_t > close_t_minus_2160H",
+    "weekly_anchor": "Monday 00:00 UTC completed bar",
+    "features": [
+      "168H log return",
+      "720H log return",
+      "2160H log return",
+      "168H to 2160H RMS ratio minus one",
+      "168H to 2160H downside RMS ratio minus one",
+      "drawdown from trailing 720H high"
+    ],
+    "eligible_history": "all strictly prior Monday anchors with complete self-contained 168H B1-sleeve labels",
+    "minimum_history": 64,
+    "neighbors": 32,
+    "distance": "median-MAD scaled squared Euclidean with earlier-index tie break",
+    "label": "sum of future daily-B1-gated next-open hourly returns over 168H less exactly 5 bps times start, internal and terminal absolute sleeve turnover",
+    "efficiency": "sum(label) / sum(abs(label)); zero when denominator is zero",
+    "size": "clip((1 + efficiency) / 2, 0, 1); fallback 1 before minimum history",
+    "target": "daily B1 times carried weekly size",
+    "execution": "next hourly open"
+  },
+  "comparators": {
+    "B0": "hourly 2160H endpoint trend",
+    "B1": "daily 00:00 UTC 2160H endpoint trend",
+    "fixed_half_control": "B1 before adaptive activation and 0.5 times B1 thereafter",
+    "exposure_matched_control": "B1 before activation and constant multiplier thereafter matching adaptive OOS equivalent exposure"
+  },
+  "uncertainty": {
+    "resampling": "paired non-circular moving block",
+    "block_hours": 168,
+    "resamples": 5000,
+    "seed": 20260731,
+    "common_indices_across_markets": true
+  },
+  "acceptance": "all per-market economic, breadth, concentration, residual, uncertainty, full-sample and constant-control gates plus common-index lower bounds",
+  "prohibited": [
+    "cross-sectional ranking or selection",
+    "pairs or spreads",
+    "cointegration or statistical arbitrage",
+    "market-neutral or long-short portfolios",
+    "current relative rank",
+    "post-hoc asset filtering",
+    "credentials or private endpoints",
+    "accounts or orders",
+    "leverage",
+    "enabled adapters",
+    "synthetic data",
+    "15m"
+  ],
+  "paper_trading_authorized": false,
+  "live_trading_authorized": false
+}
