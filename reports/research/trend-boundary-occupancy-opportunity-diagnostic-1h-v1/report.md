@@ -109,7 +109,7 @@ Before evidence was frozen, the median-balance implementation was repaired to fo
 The standalone reproducer uses only the repository's NumPy/Pandas dependency boundary. Two complete replays were byte-identical:
 
 ```text
-reproducer SHA-256  000e478354cd5a9ffb1a93f892e008b186096c8b6c52ce059a7e3ca8efa1a581
+reproducer SHA-256  da316b31dd3f4b4070c159b70a6e4735b16c84e101177b2edb8160a3ea9285c6
 evidence SHA-256    3f515324e23c5e7c7b4d0ef69f1caac5d04f2e22038200e5e47fafcabd435a04
 ```
 
