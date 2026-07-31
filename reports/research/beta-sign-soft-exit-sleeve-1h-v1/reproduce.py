@@ -394,6 +394,7 @@ def bootstrap(
             zip(
                 ["q025", "q500", "q975"],
                 map(float, np.quantile(mean_delta, q)),
+                strict=True,
             )
         ),
         "sharpe_delta_point": sharpe(candidate) - sharpe(b1),
@@ -401,6 +402,7 @@ def bootstrap(
             zip(
                 ["q025", "q500", "q975"],
                 map(float, np.quantile(sharpe_delta, q)),
+                strict=True,
             )
         ),
         "resamples": BOOTSTRAP_RESAMPLES,
