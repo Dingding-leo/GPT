@@ -295,9 +295,7 @@ def main() -> None:
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     args.output.write_text(
-        json.dumps(
-            run(args.btc_csv, args.eth_csv), indent=2, sort_keys=True, allow_nan=False
-        )
+        json.dumps(run(args.btc_csv, args.eth_csv), indent=2, sort_keys=True, allow_nan=False)
         + "\n"
     )
 
