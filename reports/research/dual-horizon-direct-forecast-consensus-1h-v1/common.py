@@ -29,8 +29,7 @@ DEFAULT_SEED = 20_260_731
 
 def canonical_bytes(value: Any) -> bytes:
     return (
-        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-        + "\n"
+        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
     ).encode()
 
 
@@ -61,9 +60,7 @@ def find_csv(data_root: Path, instrument: str) -> Path:
         | set(data_root.glob(f"**/{instrument}/**/candles.csv"))
     )
     if len(matches) != 1:
-        raise FileNotFoundError(
-            f"expected exactly one candle CSV for {instrument}, got {matches}"
-        )
+        raise FileNotFoundError(f"expected exactly one candle CSV for {instrument}, got {matches}")
     return matches[0]
 
 
@@ -77,9 +74,7 @@ def load_market(path: Path, instrument: str) -> dict[str, Any]:
         raise ValueError(f"{instrument}: need {PREFIX_ROWS} rows, got {len(full)}")
     frame = full.iloc[:PREFIX_ROWS].copy()
     timestamps = pd.to_datetime(frame["timestamp"], utc=True, errors="raise")
-    expected = pd.date_range(
-        timestamps.iloc[0], periods=PREFIX_ROWS, freq="h", tz="UTC"
-    )
+    expected = pd.date_range(timestamps.iloc[0], periods=PREFIX_ROWS, freq="h", tz="UTC")
     if not np.array_equal(timestamps.array, expected.array):
         raise ValueError(f"{instrument}: frozen prefix is not contiguous 1H")
     if timestamps.iloc[0] != pd.Timestamp("2021-07-24T00:00:00Z"):
@@ -153,9 +148,7 @@ def build_feature_matrix(market: dict[str, Any]) -> np.ndarray:
     downside_ratio[valid_down] = down24[valid_down] / down168[valid_down] - 1.0
     drawdown168 = trailing_drawdown(closes, 168)
 
-    features = np.column_stack(
-        [r24, r168, r720, vol_ratio, downside_ratio, drawdown168]
-    )
+    features = np.column_stack([r24, r168, r720, vol_ratio, downside_ratio, drawdown168])
     if not np.all(np.isfinite(features[720:])):
         bad = np.argwhere(~np.isfinite(features[720:]))[:5]
         raise ValueError(f"non-finite features after warm-up at {bad.tolist()}")
