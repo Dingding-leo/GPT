@@ -7,6 +7,7 @@ import hashlib
 from pathlib import Path
 
 EXPECTED_SOURCE_SHA256 = "e166e9df67f5374923d6684df728482b0c6c3b42f4e9ebdac9599001e8c3414d"
+EXPECTED_PARTS = 5
 
 
 def parse_args() -> argparse.Namespace:
@@ -17,12 +18,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    payload_path = Path(__file__).with_name("run_duration_ensemble_impl.py.gz.b64")
-    encoded = "".join(payload_path.read_text(encoding="ascii").splitlines())
-    # The payload is hash-verified after decompression. Ignore accidental text
-    # following the first padded Base64 record, then restore canonical padding.
-    encoded = encoded.split("=", 1)[0]
-    encoded += "=" * (-len(encoded) % 4)
+    root = Path(__file__).parent
+    parts = sorted(root.glob("payload.part.*"))
+    if len(parts) != EXPECTED_PARTS:
+        raise RuntimeError(f"expected {EXPECTED_PARTS} payload parts, found {len(parts)}")
+    encoded = "".join(part.read_text(encoding="ascii").strip() for part in parts)
     source = gzip.decompress(base64.b64decode(encoded, validate=True))
     digest = hashlib.sha256(source).hexdigest()
     if digest != EXPECTED_SOURCE_SHA256:
