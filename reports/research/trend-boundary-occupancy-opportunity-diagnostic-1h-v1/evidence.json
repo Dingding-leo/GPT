@@ -1,0 +1,397 @@
+{
+  "accepted": false,
+  "bar": "public confirmed OKX SPOT 1H",
+  "candidate_count": 0,
+  "classification": "training-only architecture-eligibility diagnostic",
+  "common_index": {
+    "ci95": {
+      "adverse_slope_per_sd_clearance": [
+        -0.0030641174799861852,
+        0.012736385067429544
+      ],
+      "adverse_spearman": [
+        -0.09199079562505659,
+        0.4303956418005184
+      ],
+      "gross_slope_per_sd_clearance": [
+        -0.0036421801401464956,
+        0.015447010883918186
+      ],
+      "gross_spearman": [
+        -0.12497184366419048,
+        0.374937569602231
+      ]
+    },
+    "point": {
+      "adverse_slope_per_sd_clearance": 0.004571582331564898,
+      "adverse_spearman": 0.17607882336760508,
+      "gross_slope_per_sd_clearance": 0.006010419222530067,
+      "gross_spearman": 0.13501437086567458
+    }
+  },
+  "diagnostic_count": 1,
+  "family_id": "trend-boundary-occupancy-opportunity-diagnostic-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 798,
+  "markets": [
+    {
+      "accepted": false,
+      "artifact_id": 8769605568,
+      "breadth": {
+        "folds": [
+          {
+            "adverse_slope": 0.005047806440409531,
+            "end_index_exclusive": 5040,
+            "fold": 1,
+            "gross_slope": -0.013165044113726513,
+            "observations": 12,
+            "start_index": 2880
+          },
+          {
+            "adverse_slope": 0.02908894747866659,
+            "end_index_exclusive": 7200,
+            "fold": 2,
+            "gross_slope": 0.02704689454961662,
+            "observations": 13,
+            "start_index": 5040
+          },
+          {
+            "adverse_slope": null,
+            "end_index_exclusive": 9360,
+            "fold": 3,
+            "gross_slope": null,
+            "observations": 13,
+            "start_index": 7200
+          },
+          {
+            "adverse_slope": -0.004573001850673716,
+            "end_index_exclusive": 11520,
+            "fold": 4,
+            "gross_slope": -0.004174609518311384,
+            "observations": 13,
+            "start_index": 9360
+          },
+          {
+            "adverse_slope": 2.3671517937697238e-05,
+            "end_index_exclusive": 13680,
+            "fold": 5,
+            "gross_slope": -0.02368455481011821,
+            "observations": 13,
+            "start_index": 11520
+          },
+          {
+            "adverse_slope": null,
+            "end_index_exclusive": 15840,
+            "fold": 6,
+            "gross_slope": null,
+            "observations": 12,
+            "start_index": 13680
+          }
+        ],
+        "positive_adverse_folds": 3,
+        "positive_adverse_years": 1,
+        "positive_gross_folds": 1,
+        "positive_gross_years": 1,
+        "years": [
+          {
+            "adverse_slope": -0.04459553457601783,
+            "gross_slope": -0.05835000041724664,
+            "observations": 5,
+            "year": 2021
+          },
+          {
+            "adverse_slope": 0.0119762627524265,
+            "gross_slope": 0.010991955990266549,
+            "observations": 52,
+            "year": 2022
+          },
+          {
+            "adverse_slope": -0.01117260640570185,
+            "gross_slope": -0.017180787093308083,
+            "observations": 28,
+            "year": 2023
+          }
+        ]
+      },
+      "ci95": {
+        "adverse_slope_per_sd_clearance": [
+          -0.004709899717668244,
+          0.015820487311218198
+        ],
+        "adverse_spearman": [
+          -0.08799496180690541,
+          0.5166090296937929
+        ],
+        "gross_slope_per_sd_clearance": [
+          -0.007620134969349066,
+          0.01647948883431309
+        ],
+        "gross_spearman": [
+          -0.17198432001915942,
+          0.44884755715793284
+        ]
+      },
+      "csv_sha256": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0",
+      "distribution": {
+        "adverse_mean": -0.02371400030028101,
+        "adverse_median": 0.0,
+        "clearance_mean": 0.8750700280112045,
+        "fees_total": 0.04400000000000001,
+        "gross_mean": -0.004757511829979517,
+        "gross_median": 0.0,
+        "gross_positive_weeks": 15,
+        "inactive_target_weeks": 45,
+        "long_hours_total": 5592,
+        "max_absolute_gross_share": 0.10832429991441576,
+        "max_absolute_net_share": 0.10709688893943316,
+        "net_mean": -0.005275158888803048,
+        "net_median": 0.0,
+        "net_positive_weeks": 15,
+        "occupancy_iqr": 0.041666666666666664,
+        "occupancy_quantiles": {
+          "max": 0.9940476190476191,
+          "median": 0.0,
+          "min": 0.0,
+          "q25": 0.0,
+          "q75": 0.041666666666666664
+        },
+        "turnover_total": 88.0,
+        "zero_gross_weeks": 45,
+        "zero_occupancy_weeks": 61
+      },
+      "eligible_anchors": 85,
+      "failure_diagnostic": {
+        "active_and_positive_occupancy_weeks": 17,
+        "active_gross_mean": -0.010109712638706475,
+        "active_only_adverse_spearman": 0.03575068329119447,
+        "active_only_gross_spearman": 0.14196043919127369,
+        "active_target_weeks": 40,
+        "inactive_gross_mean": 0.0,
+        "inactive_target_weeks": 45,
+        "zero_occupancy_weeks": 61
+      },
+      "first_anchor": "2021-11-29T00:00:00+00:00",
+      "instrument": "BTC-USDT",
+      "last_anchor": "2023-07-10T00:00:00+00:00",
+      "median_split": {
+        "clearance_median": 1.0,
+        "high_clearance": {
+          "adverse_mean": null,
+          "gross_mean": null,
+          "net_mean": null,
+          "observations": 0
+        },
+        "high_minus_low_adverse": null,
+        "high_minus_low_gross": null,
+        "high_minus_low_net": null,
+        "low_clearance": {
+          "adverse_mean": -0.033790304180337676,
+          "gross_mean": -0.013682858096560668,
+          "net_mean": -0.014557858096560669,
+          "observations": 24
+        },
+        "median_ties": 61
+      },
+      "point": {
+        "adverse_slope_per_sd_clearance": 0.005818188176658812,
+        "adverse_spearman": 0.23972355031969703,
+        "gross_slope_per_sd_clearance": 0.004683565330253186,
+        "gross_spearman": 0.16515826721386645
+      }
+    },
+    {
+      "accepted": false,
+      "artifact_id": 8769619607,
+      "breadth": {
+        "folds": [
+          {
+            "adverse_slope": -0.007865507929348786,
+            "end_index_exclusive": 5040,
+            "fold": 1,
+            "gross_slope": -0.013097866159367593,
+            "observations": 12,
+            "start_index": 2880
+          },
+          {
+            "adverse_slope": 0.02269860444862703,
+            "end_index_exclusive": 7200,
+            "fold": 2,
+            "gross_slope": 0.019383297346186504,
+            "observations": 13,
+            "start_index": 5040
+          },
+          {
+            "adverse_slope": 0.0,
+            "end_index_exclusive": 9360,
+            "fold": 3,
+            "gross_slope": 0.0,
+            "observations": 13,
+            "start_index": 7200
+          },
+          {
+            "adverse_slope": -0.010027231057696172,
+            "end_index_exclusive": 11520,
+            "fold": 4,
+            "gross_slope": 0.001225366324486062,
+            "observations": 13,
+            "start_index": 9360
+          },
+          {
+            "adverse_slope": 0.021473289974248383,
+            "end_index_exclusive": 13680,
+            "fold": 5,
+            "gross_slope": 0.024949319231974288,
+            "observations": 13,
+            "start_index": 11520
+          },
+          {
+            "adverse_slope": null,
+            "end_index_exclusive": 15840,
+            "fold": 6,
+            "gross_slope": null,
+            "observations": 12,
+            "start_index": 13680
+          }
+        ],
+        "positive_adverse_folds": 2,
+        "positive_adverse_years": 1,
+        "positive_gross_folds": 3,
+        "positive_gross_years": 2,
+        "years": [
+          {
+            "adverse_slope": -0.03264864903476622,
+            "gross_slope": -0.028347461757830567,
+            "observations": 5,
+            "year": 2021
+          },
+          {
+            "adverse_slope": 0.008263157205445614,
+            "gross_slope": 0.008227422217258092,
+            "observations": 52,
+            "year": 2022
+          },
+          {
+            "adverse_slope": -0.0024305038829028442,
+            "gross_slope": 0.011515541983315595,
+            "observations": 28,
+            "year": 2023
+          }
+        ]
+      },
+      "ci95": {
+        "adverse_slope_per_sd_clearance": [
+          -0.005019919786117319,
+          0.01300290964225282
+        ],
+        "adverse_spearman": [
+          -0.15794270218657314,
+          0.39567774213589396
+        ],
+        "gross_slope_per_sd_clearance": [
+          -0.0023479498940448956,
+          0.017020536279168542
+        ],
+        "gross_spearman": [
+          -0.12620264519803842,
+          0.3312900263513493
+        ]
+      },
+      "csv_sha256": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8",
+      "distribution": {
+        "adverse_mean": -0.028078266537378795,
+        "adverse_median": 0.0,
+        "clearance_mean": 0.8550420168067225,
+        "fees_total": 0.048,
+        "gross_mean": -0.004168100962706435,
+        "gross_median": 0.0,
+        "gross_positive_weeks": 18,
+        "inactive_target_weeks": 42,
+        "long_hours_total": 6288,
+        "max_absolute_gross_share": 0.11601013360621999,
+        "max_absolute_net_share": 0.11572352920664619,
+        "net_mean": -0.004732806845059377,
+        "net_median": 0.0,
+        "net_positive_weeks": 17,
+        "occupancy_iqr": 0.25,
+        "occupancy_quantiles": {
+          "max": 0.9464285714285714,
+          "median": 0.0,
+          "min": 0.0,
+          "q25": 0.0,
+          "q75": 0.25
+        },
+        "turnover_total": 96.0,
+        "zero_gross_weeks": 42,
+        "zero_occupancy_weeks": 49
+      },
+      "eligible_anchors": 85,
+      "failure_diagnostic": {
+        "active_and_positive_occupancy_weeks": 23,
+        "active_gross_mean": -0.008239269344884814,
+        "active_only_adverse_spearman": -0.12495612808811572,
+        "active_only_gross_spearman": 0.06886458752133486,
+        "active_target_weeks": 43,
+        "inactive_gross_mean": 0.0,
+        "inactive_target_weeks": 42,
+        "zero_occupancy_weeks": 49
+      },
+      "first_anchor": "2021-11-29T00:00:00+00:00",
+      "instrument": "ETH-USDT",
+      "last_anchor": "2023-07-10T00:00:00+00:00",
+      "median_split": {
+        "clearance_median": 1.0,
+        "high_clearance": {
+          "adverse_mean": null,
+          "gross_mean": null,
+          "net_mean": null,
+          "observations": 0
+        },
+        "high_minus_low_adverse": null,
+        "high_minus_low_gross": null,
+        "high_minus_low_net": null,
+        "low_clearance": {
+          "adverse_mean": -0.03217112623938359,
+          "gross_mean": -0.005072702773566803,
+          "net_mean": -0.005794924995789026,
+          "observations": 36
+        },
+        "median_ties": 49
+      },
+      "point": {
+        "adverse_slope_per_sd_clearance": 0.003324976486470984,
+        "adverse_spearman": 0.11243409641551312,
+        "gross_slope_per_sd_clearance": 0.007337273114806947,
+        "gross_spearman": 0.1048704745174827
+      }
+    }
+  ],
+  "markets_passing": 0,
+  "parameter_grid_count": 0,
+  "sample": {
+    "block_weeks": 4,
+    "frozen_prefix_rows": 43441,
+    "oos_accessed_for_statistics": false,
+    "oos_values_parsed_or_accessed": false,
+    "parsed_rows_per_market": 17520,
+    "resamples": 5000,
+    "seed": 20260731,
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "state": {
+    "boundary": 0.25,
+    "cadence": "completed Monday 00:00 UTC",
+    "occupancy_hours": 168,
+    "scaled_distance": "abs(log(close_t/close_t-2160))/(sqrt(2160)*RMS168(log return))",
+    "trend_hours": 2160
+  },
+  "strategy_metrics": {
+    "benchmark_comparison": "not applicable; diagnostic labels only",
+    "full": "not computed; candidate_count=0",
+    "oos": "not accessed",
+    "train": "not computed; candidate_count=0"
+  },
+  "verdict": "reject_trend_boundary_occupancy_opportunity_premise"
+}
