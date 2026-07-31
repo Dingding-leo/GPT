@@ -1,0 +1,377 @@
+{
+  "candidate_count": 0,
+  "classification": "retrospective_architecture_family_closure",
+  "diagnostic_bilateral_positive_count": 4,
+  "diagnostic_bilateral_positive_fraction": 0.5714285714285714,
+  "diagnostic_count": 1,
+  "exact_one_sided_sign_test_p": 0.8125,
+  "family_cluster_bootstrap": {
+    "bilateral_median_rho_ci95": [
+      -0.043550000000000005,
+      0.0819
+    ],
+    "btc_median_rho_ci95": [
+      -0.0684,
+      0.0589
+    ],
+    "eth_median_rho_ci95": [
+      -0.0187,
+      0.1049
+    ],
+    "limitation": "Between-family resampling preserves paired markets but cannot remove dependence from overlapping underlying market samples and targets.",
+    "resamples": 100000,
+    "seed": 20260801,
+    "unit": "paired_information_family_group"
+  },
+  "family_groups": [
+    {
+      "bilateral_mean_rho": 0.0819,
+      "both_markets_positive": true,
+      "btc_rho": 0.0589,
+      "eth_rho": 0.1049,
+      "group": "b1_geometry",
+      "members": [
+        "trend_boundary_occupancy",
+        "signed_168h_path_coherence",
+        "daily_positive_trend_age"
+      ]
+    },
+    {
+      "bilateral_mean_rho": -0.02385,
+      "both_markets_positive": false,
+      "btc_rho": -0.0497,
+      "eth_rho": 0.002,
+      "group": "derivatives_exogenous",
+      "members": [
+        "coinm_basis_compression_resilience"
+      ]
+    },
+    {
+      "bilateral_mean_rho": 0.03965,
+      "both_markets_positive": true,
+      "btc_rho": 0.0137,
+      "eth_rho": 0.0656,
+      "group": "lagged_vol_response",
+      "members": [
+        "lagged_return_range_response_resilience"
+      ]
+    },
+    {
+      "bilateral_mean_rho": -0.043550000000000005,
+      "both_markets_positive": false,
+      "btc_rho": -0.0684,
+      "eth_rho": -0.0187,
+      "group": "performance_memory",
+      "members": [
+        "lag1_self_contained_b1_payoff_memory"
+      ]
+    },
+    {
+      "bilateral_mean_rho": -0.00705,
+      "both_markets_positive": false,
+      "btc_rho": -0.0076,
+      "eth_rho": -0.0065,
+      "group": "spot_auction_geometry",
+      "members": [
+        "range_acceptance_continuation"
+      ]
+    }
+  ],
+  "family_id": "scalar-state-family-closure-meta-analysis-1h-v1",
+  "fee_one_way": 0.0005,
+  "gates": {
+    "all_leave_one_group_out_bilateral_medians_positive": false,
+    "at_least_4_of_5_groups_bilateral_positive": false,
+    "at_least_6_of_7_diagnostics_bilateral_positive": false,
+    "at_least_7_of_14_source_lower_bounds_positive": false,
+    "bilateral_grouped_median_positive_with_positive_lower_bound": false,
+    "btc_grouped_median_positive_with_positive_lower_bound": false,
+    "eth_grouped_median_positive_with_positive_lower_bound": false,
+    "one_sided_exact_sign_p_below_0_05": false
+  },
+  "gates_passed": 0,
+  "gates_total": 8,
+  "gross_breadth": {
+    "btc_positive_segments": 16,
+    "btc_total_segments": 54,
+    "eth_positive_segments": 23,
+    "eth_total_segments": 54,
+    "note": "Descriptive only: source segment definitions differ between folds, years, and months, so no pooled significance is claimed."
+  },
+  "group_bilateral_positive_count": 2,
+  "group_bilateral_positive_fraction": 0.4,
+  "grouped_point_estimates": {
+    "bilateral_median_rho": -0.00705,
+    "btc_median_rho": -0.0076,
+    "eth_median_rho": 0.002
+  },
+  "leave_one_group_out": [
+    {
+      "bilateral_median_rho": -0.01545,
+      "btc_median_rho": -0.028650000000000002,
+      "eth_median_rho": -0.0022500000000000003,
+      "omitted_group": "b1_geometry"
+    },
+    {
+      "bilateral_median_rho": 0.0163,
+      "btc_median_rho": 0.0030499999999999998,
+      "eth_median_rho": 0.02955,
+      "omitted_group": "derivatives_exogenous"
+    },
+    {
+      "bilateral_median_rho": -0.01545,
+      "btc_median_rho": -0.028650000000000002,
+      "eth_median_rho": -0.0022500000000000003,
+      "omitted_group": "lagged_vol_response"
+    },
+    {
+      "bilateral_median_rho": 0.0163,
+      "btc_median_rho": 0.0030499999999999998,
+      "eth_median_rho": 0.0338,
+      "omitted_group": "performance_memory"
+    },
+    {
+      "bilateral_median_rho": 0.0079,
+      "btc_median_rho": -0.018000000000000002,
+      "eth_median_rho": 0.0338,
+      "omitted_group": "spot_auction_geometry"
+    }
+  ],
+  "minimum_leave_one_group_out_bilateral_median_rho": -0.01545,
+  "new_market_performance_seen": false,
+  "next_experiment": "One fixed Bayesian online change-point long/cash architecture retaining the full causal run-length posterior, with one predeclared turnover-aware decision rule and direct net-performance gates on a fresh immutable cohort.",
+  "oos_accessed": false,
+  "parameter_grid_count": 0,
+  "positive_source_lower_bound_count": 0,
+  "positive_source_lower_bound_fraction": 0.0,
+  "remaining_blocker": "No tested single scalar state has replicated positive fee-aware forward-magnitude information across independent information groups.",
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "source_diagnostic_count": 7,
+  "source_diagnostics": [
+    {
+      "btc": {
+        "ci95": [
+          -0.363,
+          0.1693
+        ],
+        "positive_breadth": [
+          2,
+          6
+        ],
+        "rho": -0.0684
+      },
+      "eth": {
+        "ci95": [
+          -0.2255,
+          0.18
+        ],
+        "positive_breadth": [
+          2,
+          6
+        ],
+        "rho": -0.0187
+      },
+      "group": "performance_memory",
+      "issue": 795,
+      "name": "lag1_self_contained_b1_payoff_memory",
+      "pr": 796,
+      "source_head": "c6ce3ecc0ee67ca0dd99f86c99866d32beff1c1a",
+      "target": "next_week_fee_adjusted_b1_payoff"
+    },
+    {
+      "btc": {
+        "ci95": [
+          -0.172,
+          0.4488
+        ],
+        "positive_breadth": [
+          1,
+          6
+        ],
+        "rho": 0.1652
+      },
+      "eth": {
+        "ci95": [
+          -0.1262,
+          0.3313
+        ],
+        "positive_breadth": [
+          2,
+          6
+        ],
+        "rho": 0.1049
+      },
+      "group": "b1_geometry",
+      "issue": 798,
+      "name": "trend_boundary_occupancy",
+      "pr": 802,
+      "source_head": "ed222ce2c1df31f58e64a7d6287c00b07fddbee1",
+      "target": "next_week_b1_gross_opportunity"
+    },
+    {
+      "btc": {
+        "ci95": [
+          -0.4334,
+          0.4227
+        ],
+        "positive_breadth": [
+          2,
+          6
+        ],
+        "rho": 0.0077
+      },
+      "eth": {
+        "ci95": [
+          -0.2171,
+          0.4738
+        ],
+        "positive_breadth": [
+          2,
+          6
+        ],
+        "rho": 0.1204
+      },
+      "group": "b1_geometry",
+      "issue": 803,
+      "name": "signed_168h_path_coherence",
+      "pr": 804,
+      "source_head": "4611e9323fd9cefdd8a8e7057fba10f1464fecbb",
+      "target": "next_active_week_b1_gross_opportunity"
+    },
+    {
+      "btc": {
+        "ci95": [
+          -0.0488,
+          0.1683
+        ],
+        "positive_breadth": [
+          1,
+          6
+        ],
+        "rho": 0.0589
+      },
+      "eth": {
+        "ci95": [
+          -0.0847,
+          0.1189
+        ],
+        "positive_breadth": [
+          2,
+          6
+        ],
+        "rho": 0.0247
+      },
+      "group": "b1_geometry",
+      "issue": 806,
+      "name": "daily_positive_trend_age",
+      "pr": 807,
+      "source_head": "1e2cded75fe42e34af7cf4270752bc08da6ecb40",
+      "target": "next_day_active_b1_gross_opportunity"
+    },
+    {
+      "btc": {
+        "ci95": [
+          -0.1493,
+          0.0432
+        ],
+        "positive_breadth": [
+          3,
+          8
+        ],
+        "rho": -0.0497
+      },
+      "eth": {
+        "ci95": [
+          -0.1031,
+          0.1051
+        ],
+        "positive_breadth": [
+          6,
+          8
+        ],
+        "rho": 0.002
+      },
+      "group": "derivatives_exogenous",
+      "issue": 814,
+      "name": "coinm_basis_compression_resilience",
+      "pr": 815,
+      "source_head": "cb1e3c400e3f0858a9ff3f9f9524c75cd5fc3ed2",
+      "target": "next_day_spot_gross_opportunity"
+    },
+    {
+      "btc": {
+        "ci95": [
+          -0.1194,
+          0.1091
+        ],
+        "positive_breadth": [
+          4,
+          11
+        ],
+        "rho": -0.0076
+      },
+      "eth": {
+        "ci95": [
+          -0.1126,
+          0.0951
+        ],
+        "positive_breadth": [
+          5,
+          11
+        ],
+        "rho": -0.0065
+      },
+      "group": "spot_auction_geometry",
+      "issue": 817,
+      "name": "range_acceptance_continuation",
+      "pr": 818,
+      "source_head": "adf36a9ea67d30737f4e40fa1c867f645fbbc757",
+      "target": "next_day_spot_gross_opportunity"
+    },
+    {
+      "btc": {
+        "ci95": [
+          -0.0955,
+          0.1108
+        ],
+        "positive_breadth": [
+          3,
+          11
+        ],
+        "rho": 0.0137
+      },
+      "eth": {
+        "ci95": [
+          -0.0402,
+          0.174
+        ],
+        "positive_breadth": [
+          4,
+          11
+        ],
+        "rho": 0.0656
+      },
+      "group": "lagged_vol_response",
+      "issue": 822,
+      "name": "lagged_return_range_response_resilience",
+      "pr": 823,
+      "source_head": "6bf34008f37afbe36ea7c3310abf0f4fb354cdac",
+      "target": "next_day_spot_gross_opportunity"
+    }
+  ],
+  "source_market_effect_count": 14,
+  "strategy_metrics": {
+    "benchmark_comparison": null,
+    "edge_per_turnover": null,
+    "full_return": null,
+    "full_sharpe": null,
+    "maximum_drawdown": null,
+    "oos_return": null,
+    "oos_sharpe": null,
+    "reason": "Candidate count is zero; this closure aggregates terminal information diagnostics rather than an executable equity curve.",
+    "train_return": null,
+    "train_sharpe": null,
+    "turnover": null
+  },
+  "verdict": "reject_scalar_state_gating_architecture_family"
+}
