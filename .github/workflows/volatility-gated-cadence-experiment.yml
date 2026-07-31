@@ -25,6 +25,7 @@ jobs:
       OKX_BASE_URL: https://www.okx.com
       SOURCE_DIR: /tmp/volatility-gated-cadence-source
       OUTPUT_DIR: reports/research/volatility-gated-cadence-state-1h-v1/generated
+      REPLAY_DIR: /tmp/volatility-gated-cadence-replay
       ARTIFACT_NAME: volatility-gated-cadence-${{ github.run_id }}-attempt-${{ github.run_attempt }}
 
     steps:
@@ -67,23 +68,31 @@ jobs:
             --instrument ATOM-USDT \
             --pause-seconds 0.08
           test -s "$SOURCE_DIR/coverage-manifest.json"
-          test -s "$SOURCE_DIR/ALGO-USDT/snapshot/okx-ALGO-USDT-1H.normalized.csv"
-          test -s "$SOURCE_DIR/ATOM-USDT/snapshot/okx-ATOM-USDT-1H.normalized.csv"
+          test "$(find "$SOURCE_DIR/ALGO-USDT/snapshot" -type f -name '*.csv' | wc -l)" -eq 1
+          test "$(find "$SOURCE_DIR/ATOM-USDT/snapshot" -type f -name '*.csv' | wc -l)" -eq 1
 
-      - name: Run frozen strategy experiment
+      - name: Run and replay frozen strategy experiment
         run: |
           set -euo pipefail
-          python reports/research/volatility-gated-cadence-state-1h-v1/run_experiment.py \
-            --data-root "$SOURCE_DIR" \
-            --output-dir "$OUTPUT_DIR" \
-            --instrument ALGO-USDT \
-            --instrument ATOM-USDT \
-            --resamples 5000 \
-            --seed 20260731 \
-            --source-workflow-run "$GITHUB_RUN_ID" \
+          COMMON_ARGS=(
+            --data-root "$SOURCE_DIR"
+            --instrument ALGO-USDT
+            --instrument ATOM-USDT
+            --resamples 5000
+            --seed 20260731
+            --source-workflow-run "$GITHUB_RUN_ID"
             --tested-sha "$EXPECTED_SHA"
+          )
+          python reports/research/volatility-gated-cadence-state-1h-v1/run_experiment.py \
+            --output-dir "$OUTPUT_DIR" "${COMMON_ARGS[@]}"
+          python reports/research/volatility-gated-cadence-state-1h-v1/run_experiment.py \
+            --output-dir "$REPLAY_DIR" "${COMMON_ARGS[@]}"
+          cmp "$OUTPUT_DIR/result.json" "$REPLAY_DIR/result.json"
+          cmp "$OUTPUT_DIR/result-summary.json" "$REPLAY_DIR/result-summary.json"
+          cmp "$OUTPUT_DIR/report.md" "$REPLAY_DIR/report.md"
           cp "$SOURCE_DIR/coverage-manifest.json" "$OUTPUT_DIR/coverage-manifest.json"
           printf '%s\n' "$EXPECTED_SHA" > "$OUTPUT_DIR/tested-sha.txt"
+          printf '%s\n' deterministic_replay_byte_identical > "$OUTPUT_DIR/replay-verdict.txt"
           test -s "$OUTPUT_DIR/result.json"
           test -s "$OUTPUT_DIR/result-summary.json"
           test -s "$OUTPUT_DIR/report.md"
