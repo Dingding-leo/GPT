@@ -36,6 +36,14 @@ _ENTRY_ONLY_STATE = b"""        if midnight:
         candidate[t] = current_candidate
 """
 
+_GATE_NEEDLE = b'''        "turnover_below_B0": c["turnover"] < b0["turnover"],
+        "edge_per_turn_at_least_B1": c["edge_per_turn_bps"] >= b1["edge_per_turn_bps"],
+'''
+_GATE_REPLACEMENT = b'''        "turnover_below_B0": c["turnover"] < b0["turnover"],
+        "turnover_no_greater_B1": c["turnover"] <= b1["turnover"],
+        "edge_per_turn_at_least_B1": c["edge_per_turn_bps"] >= b1["edge_per_turn_bps"],
+'''
+
 _REPLACEMENTS = (
     (
         b"# Volatility-gated cadence state \xe2\x80\x94 terminal result",
@@ -73,6 +81,7 @@ def main() -> None:
 
     source = replace_once(source, _PATH_NEEDLE, _PATH_REPLACEMENT, "snapshot path")
     source = replace_once(source, _SYMMETRIC_STATE, _ENTRY_ONLY_STATE, "entry-only state")
+    source = replace_once(source, _GATE_NEEDLE, _GATE_REPLACEMENT, "B1 turnover gate")
     for index, (needle, replacement) in enumerate(_REPLACEMENTS):
         source = replace_once(source, needle, replacement, f"identity {index}")
 
