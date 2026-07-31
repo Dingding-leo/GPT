@@ -74,14 +74,10 @@ def build_table(path: Path, instrument: str) -> tuple[pd.DataFrame, dict[str, ob
     rows = []
     for anchor in anchors:
         state = np.arange(anchor - 167, anchor + 1)
-        rv = np.sqrt(
-            np.array([np.mean(returns[i - 167 : i + 1] ** 2) for i in state], dtype=float)
-        )
+        rv = np.sqrt(np.array([np.mean(returns[i - 167 : i + 1] ** 2) for i in state], dtype=float))
         if not np.all(np.isfinite(rv)) or np.any(rv <= 0):
             raise ValueError("undefined realised volatility")
-        distance = np.abs(log_close[state] - log_close[state - TREND]) / (
-            math.sqrt(TREND) * rv
-        )
+        distance = np.abs(log_close[state] - log_close[state - TREND]) / (math.sqrt(TREND) * rv)
         occupancy = float(np.mean(distance <= BOUNDARY))
         decisions = np.arange(anchor, anchor + WEEK)
         held = position[decisions].astype(float)
