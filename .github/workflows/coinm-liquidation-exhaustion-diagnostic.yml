@@ -1,0 +1,99 @@
+name: COIN-M Liquidation Exhaustion Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/coinm-liquidation-exhaustion-diagnostic.yml"
+      - "reports/research/coinm-liquidation-exhaustion-opportunity-diagnostic-1h-v1/**"
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify; defaults to dispatched ref
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: coinm-liquidation-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      REQUESTED_TARGET_SHA: ${{ inputs.target_sha || '' }}
+      DISPATCH_REF_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Check out exact research head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          if [[ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]]; then
+            test "$GITHUB_REF" = "refs/heads/main"
+          fi
+          if [[ -n "$REQUESTED_TARGET_SHA" ]]; then
+            test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"
+            git merge-base --is-ancestor "$EXPECTED_TESTED_SHA" "$DISPATCH_REF_SHA"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install frozen project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip check
+
+      - name: Execute frozen public-data diagnostic
+        run: |
+          python reports/research/coinm-liquidation-exhaustion-opportunity-diagnostic-1h-v1/run_diagnostic.py \
+            --output-dir artifacts/coinm-liquidation-exhaustion \
+            --workers 16
+
+      - name: Verify strict machine result
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("artifacts/coinm-liquidation-exhaustion")
+          evidence = json.loads((root / "evidence.json").read_text(encoding="utf-8"))
+          assert evidence["candidate_count"] == 0
+          assert evidence["diagnostic_count"] == 1
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["fee_one_way"] == 0.0005
+          assert evidence["source"]["object_count"] == evidence["source"]["checksum_matches"]
+          assert evidence["sample"]["intended_decisions"] == 242
+          assert evidence["verdict"] in {
+              "coinm_liquidation_exhaustion_information_premise_passed",
+              "reject_coinm_liquidation_exhaustion_information_premise",
+          }
+          PY
+
+      - name: Upload immutable diagnostic evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coinm-liquidation-exhaustion-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: artifacts/coinm-liquidation-exhaustion
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 30
