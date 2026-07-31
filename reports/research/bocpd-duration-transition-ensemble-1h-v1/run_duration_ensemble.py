@@ -19,6 +19,10 @@ def main() -> None:
     args = parse_args()
     payload_path = Path(__file__).with_name("run_duration_ensemble_impl.py.gz.b64")
     encoded = "".join(payload_path.read_text(encoding="ascii").splitlines())
+    # The payload is hash-verified after decompression. Ignore accidental text
+    # following the first padded Base64 record, then restore canonical padding.
+    encoded = encoded.split("=", 1)[0]
+    encoded += "=" * (-len(encoded) % 4)
     source = gzip.decompress(base64.b64decode(encoded, validate=True))
     digest = hashlib.sha256(source).hexdigest()
     if digest != EXPECTED_SOURCE_SHA256:
