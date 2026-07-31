@@ -4,12 +4,14 @@ on:
   push:
     branches:
       - auto/research/20260731-05-volatility-gated-cadence
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: volatility-gated-cadence-${{ github.sha }}
+  group: volatility-gated-cadence-${{ github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -17,6 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     env:
+      EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       OKX_BASE_URL: https://www.okx.com
       SOURCE_DIR: /tmp/volatility-gated-cadence-source
       OUTPUT_DIR: reports/research/volatility-gated-cadence-state-1h-v1/generated
@@ -26,7 +29,7 @@ jobs:
       - name: Check out exact branch head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ env.EXPECTED_SHA }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -34,8 +37,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
-          test "$GITHUB_REF" = "refs/heads/auto/research/20260731-05-volatility-gated-cadence"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          if [[ "$GITHUB_EVENT_NAME" = "push" ]]; then
+            test "$GITHUB_REF" = "refs/heads/auto/research/20260731-05-volatility-gated-cadence"
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -74,9 +79,9 @@ jobs:
             --resamples 5000 \
             --seed 20260731 \
             --source-workflow-run "$GITHUB_RUN_ID" \
-            --tested-sha "$GITHUB_SHA"
+            --tested-sha "$EXPECTED_SHA"
           cp "$SOURCE_DIR/coverage-manifest.json" "$OUTPUT_DIR/coverage-manifest.json"
-          printf '%s\n' "$GITHUB_SHA" > "$OUTPUT_DIR/tested-sha.txt"
+          printf '%s\n' "$EXPECTED_SHA" > "$OUTPUT_DIR/tested-sha.txt"
           test -s "$OUTPUT_DIR/result.json"
           test -s "$OUTPUT_DIR/result-summary.json"
           test -s "$OUTPUT_DIR/report.md"
