@@ -1,0 +1,391 @@
+{
+  "accepted": false,
+  "bar": "immutable public confirmed OKX SPOT 1H",
+  "block_daily_observations": 7,
+  "candidate_count": 0,
+  "classification": "training-only architecture-eligibility diagnostic",
+  "common_index": {
+    "adverse_slope_ci95": [
+      -0.0010310009811754796,
+      0.0034332119643925023
+    ],
+    "adverse_slope_point": 0.0009158101508937788,
+    "adverse_spearman_ci95": [
+      -0.04296419893302684,
+      0.16452230814261098
+    ],
+    "adverse_spearman_point": 0.05826230906134661,
+    "gross_slope_ci95": [
+      -0.0017728923316908075,
+      0.004256331664622296
+    ],
+    "gross_slope_point": 0.001102364136353412,
+    "gross_spearman_ci95": [
+      -0.049838159680651445,
+      0.12924051283835938
+    ],
+    "gross_spearman_point": 0.041772155343006524,
+    "valid_draws": 5000,
+    "valid_fraction": 1.0
+  },
+  "common_index_gate": false,
+  "diagnostic_count": 1,
+  "family_id": "daily-positive-trend-age-opportunity-diagnostic-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 806,
+  "markets": [
+    {
+      "active_anchors": 246,
+      "artifact_id": 8769605568,
+      "breadth": {
+        "folds": [
+          {
+            "adverse_slope": -0.0061489963165712565,
+            "end_index_exclusive": 5040,
+            "fold": 1,
+            "gross_slope": -0.006132507078820482,
+            "observations": 35,
+            "start_index": 2880
+          },
+          {
+            "adverse_slope": 0.0025249424914987172,
+            "end_index_exclusive": 7200,
+            "fold": 2,
+            "gross_slope": 0.0042199656489449065,
+            "observations": 23,
+            "start_index": 5040
+          },
+          {
+            "adverse_slope": null,
+            "end_index_exclusive": 9360,
+            "fold": 3,
+            "gross_slope": null,
+            "observations": 0,
+            "start_index": 7200
+          },
+          {
+            "adverse_slope": null,
+            "end_index_exclusive": 11520,
+            "fold": 4,
+            "gross_slope": null,
+            "observations": 5,
+            "start_index": 9360
+          },
+          {
+            "adverse_slope": -0.001618293122105172,
+            "end_index_exclusive": 13680,
+            "fold": 5,
+            "gross_slope": -0.004553303051337884,
+            "observations": 31,
+            "start_index": 11520
+          },
+          {
+            "adverse_slope": 0.0003901372524318012,
+            "end_index_exclusive": 15840,
+            "fold": 6,
+            "gross_slope": -0.003367521408504481,
+            "observations": 90,
+            "start_index": 13680
+          }
+        ],
+        "positive_adverse_folds": 2,
+        "positive_adverse_years": 1,
+        "positive_gross_folds": 1,
+        "positive_gross_years": 1,
+        "supported_adverse_folds": 4,
+        "supported_adverse_years": 3,
+        "supported_gross_folds": 4,
+        "supported_gross_years": 3,
+        "years": [
+          {
+            "adverse_slope": -0.0061489963165712565,
+            "gross_slope": -0.006132507078820482,
+            "observations": 35,
+            "year": 2021
+          },
+          {
+            "adverse_slope": 0.0035633829411523027,
+            "gross_slope": 0.005852941704924763,
+            "observations": 28,
+            "year": 2022
+          },
+          {
+            "adverse_slope": -0.0017920005988004868,
+            "gross_slope": -0.001197439927240285,
+            "observations": 183,
+            "year": 2023
+          }
+        ]
+      },
+      "calendar_anchors": 609,
+      "ci95": {
+        "adverse_slope_per_state_sd": [
+          -0.0008229664476118288,
+          0.0041390994400238995
+        ],
+        "adverse_spearman": [
+          -0.04903121913760987,
+          0.18733482958500816
+        ],
+        "gross_slope_per_state_sd": [
+          -0.0008255170425257869,
+          0.005981209357103952
+        ],
+        "gross_spearman": [
+          -0.04875098555665847,
+          0.1683468568973176
+        ]
+      },
+      "csv_sha256": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0",
+      "distribution": {
+        "adverse_mean": -0.016393674031651165,
+        "adverse_median": -0.01035710178935817,
+        "age_quantiles_days": {
+          "max": 153.0,
+          "median": 37.5,
+          "min": 1.0,
+          "q25": 7.25,
+          "q75": 91.75
+        },
+        "fees_total": 0.2460000000000001,
+        "gross_mean": -0.0017806255634196457,
+        "gross_median": -0.001730075270421405,
+        "gross_positive_days": 112,
+        "gross_zero_days": 0,
+        "max_absolute_gross_share": 0.021973506750286285,
+        "max_absolute_net_share": 0.021644918470662095,
+        "net_mean": -0.0027806255634196466,
+        "net_median": -0.002730075270421405,
+        "net_positive_days": 107,
+        "state_iqr": 2.4210094635332706,
+        "state_quantiles": {
+          "max": 5.0369526024136295,
+          "median": 3.650573902928016,
+          "min": 0.6931471805599453,
+          "q25": 2.1088873005939317,
+          "q75": 4.529896764127202
+        },
+        "turnover_total": 492.0
+      },
+      "first_anchor": "2021-11-21T00:00:00+00:00",
+      "gates": {
+        "adverse_positive_lower_bound": false,
+        "fold_breadth": false,
+        "gross_positive_lower_bound": false,
+        "median_partition_economics": true,
+        "median_partition_support": true,
+        "positive_economic_slopes": true,
+        "state_dispersion": true,
+        "valid_bootstrap_fraction": true,
+        "year_breadth": false
+      },
+      "instrument": "BTC-USDT",
+      "last_anchor": "2023-07-22T00:00:00+00:00",
+      "median_split": {
+        "high_adverse_mean": -0.01616889970828984,
+        "high_gross_mean": -0.00010792591027738341,
+        "high_minus_low_adverse": 0.0004495486467226452,
+        "high_minus_low_gross": 0.0033453993062845244,
+        "high_minus_low_net": 0.003345399306284524,
+        "high_net_mean": -0.0011079259102773843,
+        "high_observations": 123,
+        "low_adverse_mean": -0.016618448355012486,
+        "low_gross_mean": -0.003453325216561908,
+        "low_net_mean": -0.004453325216561908,
+        "low_observations": 123,
+        "state_median": 3.650573902928016
+      },
+      "passes_market_gates": false,
+      "point": {
+        "adverse_slope_per_state_sd": 0.0013208937123136766,
+        "adverse_spearman": 0.06492742094194895,
+        "gross_slope_per_state_sd": 0.0022882005781816334,
+        "gross_spearman": 0.05888168977090115
+      },
+      "positive_regimes": 14,
+      "valid_bootstrap_draws": 5000,
+      "valid_bootstrap_fraction": 1.0
+    },
+    {
+      "active_anchors": 272,
+      "artifact_id": 8769619607,
+      "breadth": {
+        "folds": [
+          {
+            "adverse_slope": 0.004046687198402525,
+            "end_index_exclusive": 5040,
+            "fold": 1,
+            "gross_slope": -0.0024012743223375014,
+            "observations": 46,
+            "start_index": 2880
+          },
+          {
+            "adverse_slope": -0.0019181055068567452,
+            "end_index_exclusive": 7200,
+            "fold": 2,
+            "gross_slope": 0.004359811097338555,
+            "observations": 18,
+            "start_index": 5040
+          },
+          {
+            "adverse_slope": null,
+            "end_index_exclusive": 9360,
+            "fold": 3,
+            "gross_slope": null,
+            "observations": 0,
+            "start_index": 7200
+          },
+          {
+            "adverse_slope": 0.006043183452449024,
+            "end_index_exclusive": 11520,
+            "fold": 4,
+            "gross_slope": 0.006217662658300939,
+            "observations": 35,
+            "start_index": 9360
+          },
+          {
+            "adverse_slope": -0.001978960938971565,
+            "end_index_exclusive": 13680,
+            "fold": 5,
+            "gross_slope": -0.005733323139645675,
+            "observations": 32,
+            "start_index": 11520
+          },
+          {
+            "adverse_slope": -0.0005910856794591157,
+            "end_index_exclusive": 15840,
+            "fold": 6,
+            "gross_slope": -0.0030815690629382793,
+            "observations": 90,
+            "start_index": 13680
+          }
+        ],
+        "positive_adverse_folds": 2,
+        "positive_adverse_years": 2,
+        "positive_gross_folds": 2,
+        "positive_gross_years": 1,
+        "supported_adverse_folds": 5,
+        "supported_adverse_years": 3,
+        "supported_gross_folds": 5,
+        "supported_gross_years": 3,
+        "years": [
+          {
+            "adverse_slope": 0.00404149439216634,
+            "gross_slope": -0.0014778955596689266,
+            "observations": 41,
+            "year": 2021
+          },
+          {
+            "adverse_slope": 0.0026119345373544324,
+            "gross_slope": 0.004208092459256259,
+            "observations": 58,
+            "year": 2022
+          },
+          {
+            "adverse_slope": -0.00041243154343718994,
+            "gross_slope": -0.002519692576986524,
+            "observations": 173,
+            "year": 2023
+          }
+        ]
+      },
+      "calendar_anchors": 609,
+      "ci95": {
+        "adverse_slope_per_state_sd": [
+          -0.0019672093550145773,
+          0.0034463257387016043
+        ],
+        "adverse_spearman": [
+          -0.06676306239439811,
+          0.17184762515814073
+        ],
+        "gross_slope_per_state_sd": [
+          -0.0037590337272899324,
+          0.0034837610091137798
+        ],
+        "gross_spearman": [
+          -0.08467673413767564,
+          0.11885521222573006
+        ]
+      },
+      "csv_sha256": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8",
+      "distribution": {
+        "adverse_mean": -0.02002969132041901,
+        "adverse_median": -0.01343116844867781,
+        "age_quantiles_days": {
+          "max": 131.0,
+          "median": 36.0,
+          "min": 1.0,
+          "q25": 11.75,
+          "q75": 70.0
+        },
+        "fees_total": 0.272,
+        "gross_mean": -0.0013680570051083738,
+        "gross_median": -0.002131039086864961,
+        "gross_positive_days": 128,
+        "gross_zero_days": 0,
+        "max_absolute_gross_share": 0.015437082921582853,
+        "max_absolute_net_share": 0.015554888148375995,
+        "net_mean": -0.002368057005108375,
+        "net_median": -0.003131039086864961,
+        "net_positive_days": 126,
+        "state_iqr": 1.7177411964981628,
+        "state_quantiles": {
+          "max": 4.882801922586371,
+          "median": 3.6109179126442243,
+          "min": 0.6931471805599453,
+          "q25": 2.5449386805431526,
+          "q75": 4.2626798770413155
+        },
+        "turnover_total": 544.0
+      },
+      "first_anchor": "2021-11-21T00:00:00+00:00",
+      "gates": {
+        "adverse_positive_lower_bound": false,
+        "fold_breadth": false,
+        "gross_positive_lower_bound": false,
+        "median_partition_economics": true,
+        "median_partition_support": true,
+        "positive_economic_slopes": false,
+        "state_dispersion": true,
+        "valid_bootstrap_fraction": true,
+        "year_breadth": false
+      },
+      "instrument": "ETH-USDT",
+      "last_anchor": "2023-07-22T00:00:00+00:00",
+      "median_split": {
+        "high_adverse_mean": -0.019013414100478757,
+        "high_gross_mean": 0.0003358195457289741,
+        "high_minus_low_adverse": 0.002017718276085753,
+        "high_minus_low_gross": 0.0033828789914434935,
+        "high_minus_low_net": 0.0033828789914434935,
+        "high_net_mean": -0.0006641804542710268,
+        "high_observations": 135,
+        "low_adverse_mean": -0.02103113237656451,
+        "low_gross_mean": -0.0030470594457145195,
+        "low_net_mean": -0.00404705944571452,
+        "low_observations": 137,
+        "state_median": 3.6109179126442243
+      },
+      "passes_market_gates": false,
+      "point": {
+        "adverse_slope_per_state_sd": 0.0005107265894738809,
+        "adverse_spearman": 0.051597197180744264,
+        "gross_slope_per_state_sd": -8.347230547480951e-05,
+        "gross_spearman": 0.024662620915111903
+      },
+      "positive_regimes": 11,
+      "valid_bootstrap_draws": 5000,
+      "valid_bootstrap_fraction": 1.0
+    }
+  ],
+  "oos_accessed": false,
+  "parameter_grid_count": 0,
+  "resamples": 5000,
+  "seed": 20260731,
+  "training_indices": [
+    2880,
+    17520
+  ],
+  "verdict": "reject_daily_positive_trend_age_opportunity_premise"
+}
