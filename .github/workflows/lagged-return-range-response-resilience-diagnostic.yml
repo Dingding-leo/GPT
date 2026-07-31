@@ -1,0 +1,126 @@
+name: Lagged Return Range Response Resilience Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/lagged-return-range-response-resilience-diagnostic.yml"
+      - "reports/research/lagged-return-range-response-resilience-opportunity-diagnostic-1h-v1/**"
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify; defaults to dispatched ref
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lagged-range-response-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      REQUESTED_TARGET_SHA: ${{ inputs.target_sha || '' }}
+      DISPATCH_REF_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Check out exact research head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          if [[ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]]; then
+            test "$GITHUB_REF" = "refs/heads/main"
+          fi
+          if [[ -n "$REQUESTED_TARGET_SHA" ]]; then
+            test "$REQUESTED_TARGET_SHA" = "$EXPECTED_TESTED_SHA"
+            git merge-base --is-ancestor "$EXPECTED_TESTED_SHA" "$DISPATCH_REF_SHA"
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install frozen project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip check
+
+      - name: Execute frozen public 1H diagnostic
+        run: |
+          python reports/research/lagged-return-range-response-resilience-opportunity-diagnostic-1h-v1/run_diagnostic.py \
+            --output-dir artifacts/lagged-return-range-response-resilience \
+            --workers 12
+
+      - name: Verify machine-readable strategy evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("artifacts/lagged-return-range-response-resilience")
+          evidence = json.loads((root / "evidence.json").read_text(encoding="utf-8"))
+          source = evidence["source"]
+          assert evidence["candidate_count"] == 0
+          assert evidence["diagnostic_count"] == 1
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["fee_one_way"] == 0.0005
+          assert evidence["later_data_accessed"] is False
+          assert source["requested_object_count"] == 26
+          assert source["successful_object_count"] == source["checksum_matches"]
+          if source["failed_object_count"]:
+              assert evidence["performance_seen"] is False
+              assert evidence["sample"]["completed_decisions"] == 0
+              assert evidence["verdict"] == (
+                  "abort_fixed_source_contract_missing_or_invalid_public_objects"
+              )
+          else:
+              assert evidence["performance_seen"] is True
+              assert set(evidence["markets"]) == {"BTCUSDT", "ETHUSDT"}
+              assert evidence["sample"]["feature_hours"] == 168
+              assert evidence["sample"]["pairs_per_decision"] == 167
+              for result in evidence["markets"].values():
+                  assert result["intended_decisions"] == 333
+                  assert result["valid_decisions"] <= 333
+                  assert result["uncertainty"]["resamples"] == 5000
+                  assert result["target_economics"]["turnover"] == 2 * result["valid_decisions"]
+              assert evidence["verdict"] in {
+                  "support_lagged_return_range_response_resilience_information_premise",
+                  "reject_lagged_return_range_response_resilience_information_premise",
+              }
+          PY
+
+      - name: Publish exact diagnostic report to logs
+        if: always()
+        run: |
+          test -f artifacts/lagged-return-range-response-resilience/report.md
+          test -f artifacts/lagged-return-range-response-resilience/evidence.json
+          cat artifacts/lagged-return-range-response-resilience/report.md
+          cat artifacts/lagged-return-range-response-resilience/evidence.json
+
+      - name: Upload immutable diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lagged-return-range-response-resilience-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: artifacts/lagged-return-range-response-resilience
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 30
