@@ -128,7 +128,7 @@ def http_get(url: str, attempts: int = 5) -> bytes:
             if exc.code == 404:
                 raise RuntimeError(f"HTTP 404 Not Found: {url}") from exc
             last_error = exc
-        except (urllib.error.URLError, TimeoutError, RuntimeError) as exc:
+        except (urllib.error.URLError, TimeoutError, OSError, RuntimeError) as exc:
             last_error = exc
         if attempt + 1 < attempts:
             time.sleep(float(2**attempt))
