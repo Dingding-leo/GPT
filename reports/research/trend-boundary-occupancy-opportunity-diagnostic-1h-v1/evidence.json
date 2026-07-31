@@ -1,129 +1,489 @@
 {
+  "audit": "strict-training-feature-window-eligibility",
   "candidate_count": 0,
   "canonical_fee_bps_one_way": 5.0,
-  "classification": "training-only architecture-eligibility diagnostic",
-  "common_index": {
-    "median_gross_rho_ci95": [
-      -0.12057750296398875,
-      0.38129032085693804
-    ],
-    "median_gross_rho_point": 0.13776218042865665,
-    "median_mae_rho_ci95": [
-      -0.084594118397178,
-      0.4221728328698779
-    ],
-    "median_mae_rho_point": 0.16359782968681502
+  "canonical_strategy_changed": false,
+  "corrected_evidence": {
+    "common_index": {
+      "median_gross_rho_ci95": [
+        -0.12497184366419048,
+        0.374937569602231
+      ],
+      "median_gross_rho_point": 0.13501437086567458,
+      "median_mae_rho_ci95": [
+        -0.09199079562505659,
+        0.4303956418005184
+      ],
+      "median_mae_rho_point": 0.17607882336760508
+    },
+    "eligibility_rule": "anchor - 167 >= 2880",
+    "markets": {
+      "BTC-USDT": {
+        "clearance_median": 1.0,
+        "first_anchor": "2021-11-29T00:00:00+00:00",
+        "first_feature_start": "2021-11-22T01:00:00+00:00",
+        "folds": [
+          {
+            "fold": 0,
+            "gross_slope": -0.015621749620125242,
+            "mae_slope": 0.0025676594248306623,
+            "n": 11
+          },
+          {
+            "fold": 1,
+            "gross_slope": 0.027260170073558597,
+            "mae_slope": 0.029224148233341574,
+            "n": 12
+          },
+          {
+            "fold": 2,
+            "gross_slope": null,
+            "mae_slope": null,
+            "n": 12
+          },
+          {
+            "fold": 3,
+            "gross_slope": -0.005000093352455896,
+            "mae_slope": -0.005475501428202059,
+            "n": 12
+          },
+          {
+            "fold": 4,
+            "gross_slope": -0.027954640380500852,
+            "mae_slope": 0.00011189974071052966,
+            "n": 12
+          },
+          {
+            "fold": 5,
+            "gross_slope": null,
+            "mae_slope": null,
+            "n": 11
+          }
+        ],
+        "gates": {
+          "gross_breadth": false,
+          "gross_rho_positive_lcb": false,
+          "mae_breadth": false,
+          "mae_rho_positive_lcb": false,
+          "state_variation": false
+        },
+        "gross_opportunity_mean": -0.004757511829979517,
+        "gross_rho": 0.16515826721386645,
+        "gross_rho_ci95": [
+          -0.17198432001915942,
+          0.44884755715793284
+        ],
+        "gross_slope": 0.004683565330253183,
+        "high_n": 0,
+        "low_n": 85,
+        "mae_rho": 0.23972355031969703,
+        "mae_rho_ci95": [
+          -0.08799496180690541,
+          0.5166090296937929
+        ],
+        "mae_slope": 0.00581818817665881,
+        "n_anchors": 85,
+        "net_payoff_mean": -0.005275158888803048,
+        "occupancy_iqr": 0.041666666666666664,
+        "occupancy_quartiles": [
+          0.0,
+          0.0,
+          0.041666666666666664
+        ],
+        "passes_all": false,
+        "positive_gross_folds": 1,
+        "positive_gross_weeks": 15,
+        "positive_gross_years": 1,
+        "positive_mae_folds": 3,
+        "positive_mae_years": 1,
+        "turnover_sum": 88.0,
+        "years": [
+          {
+            "gross_slope": -0.05835000041724665,
+            "mae_slope": -0.04459553457601784,
+            "n": 5,
+            "year": 2021
+          },
+          {
+            "gross_slope": 0.010991955990266549,
+            "mae_slope": 0.0119762627524265,
+            "n": 52,
+            "year": 2022
+          },
+          {
+            "gross_slope": -0.017180787093308086,
+            "mae_slope": -0.011172606405701854,
+            "n": 28,
+            "year": 2023
+          }
+        ],
+        "zero_gross_weeks": 45
+      },
+      "ETH-USDT": {
+        "clearance_median": 1.0,
+        "first_anchor": "2021-11-29T00:00:00+00:00",
+        "first_feature_start": "2021-11-22T01:00:00+00:00",
+        "folds": [
+          {
+            "fold": 0,
+            "gross_slope": -0.0152426456090748,
+            "mae_slope": -0.011697208216526044,
+            "n": 11
+          },
+          {
+            "fold": 1,
+            "gross_slope": 0.019723019414788573,
+            "mae_slope": 0.022999116420900873,
+            "n": 12
+          },
+          {
+            "fold": 2,
+            "gross_slope": null,
+            "mae_slope": null,
+            "n": 12
+          },
+          {
+            "fold": 3,
+            "gross_slope": -0.00012559603842864255,
+            "mae_slope": -0.013204188619048417,
+            "n": 12
+          },
+          {
+            "fold": 4,
+            "gross_slope": 0.022512144057772257,
+            "mae_slope": 0.023003559189724396,
+            "n": 12
+          },
+          {
+            "fold": 5,
+            "gross_slope": null,
+            "mae_slope": null,
+            "n": 11
+          }
+        ],
+        "gates": {
+          "gross_breadth": false,
+          "gross_rho_positive_lcb": false,
+          "mae_breadth": false,
+          "mae_rho_positive_lcb": false,
+          "state_variation": false
+        },
+        "gross_opportunity_mean": -0.004168100962706435,
+        "gross_rho": 0.1048704745174827,
+        "gross_rho_ci95": [
+          -0.12620264519803842,
+          0.3312900263513493
+        ],
+        "gross_slope": 0.007337273114806944,
+        "high_n": 0,
+        "low_n": 85,
+        "mae_rho": 0.11243409641551312,
+        "mae_rho_ci95": [
+          -0.15794270218657314,
+          0.39567774213589396
+        ],
+        "mae_slope": 0.003324976486470983,
+        "n_anchors": 85,
+        "net_payoff_mean": -0.004732806845059377,
+        "occupancy_iqr": 0.25,
+        "occupancy_quartiles": [
+          0.0,
+          0.0,
+          0.25
+        ],
+        "passes_all": false,
+        "positive_gross_folds": 2,
+        "positive_gross_weeks": 18,
+        "positive_gross_years": 2,
+        "positive_mae_folds": 2,
+        "positive_mae_years": 1,
+        "turnover_sum": 96.0,
+        "years": [
+          {
+            "gross_slope": -0.028347461757830556,
+            "mae_slope": -0.03264864903476621,
+            "n": 5,
+            "year": 2021
+          },
+          {
+            "gross_slope": 0.008227422217258095,
+            "mae_slope": 0.008263157205445616,
+            "n": 52,
+            "year": 2022
+          },
+          {
+            "gross_slope": 0.011515541983315586,
+            "mae_slope": -0.0024305038829028447,
+            "n": 28,
+            "year": 2023
+          }
+        ],
+        "zero_gross_weeks": 42
+      }
+    },
+    "markets_passing_all": 0,
+    "verdict": "reject_trend_boundary_occupancy_opportunity_premise"
   },
   "diagnostic_count": 1,
+  "excluded_rows": {
+    "BTC-USDT": [
+      {
+        "anchor_index": 2904,
+        "anchor_timestamp": "2021-11-22T00:00:00+00:00",
+        "clearance": 1.0,
+        "feature_start_index": 2737,
+        "feature_start_timestamp": "2021-11-15T01:00:00+00:00",
+        "gross": -0.0021087226498668343,
+        "mae": -0.0764082492415441,
+        "net": -0.0031087226498668344,
+        "occupancy": 0.0,
+        "turnover": 2.0,
+        "year": 2021
+      }
+    ],
+    "ETH-USDT": [
+      {
+        "anchor_index": 2904,
+        "anchor_timestamp": "2021-11-22T00:00:00+00:00",
+        "clearance": 1.0,
+        "feature_start_index": 2737,
+        "feature_start_timestamp": "2021-11-15T01:00:00+00:00",
+        "gross": 0.03359892338810111,
+        "mae": -0.05551119954486372,
+        "net": 0.03259892338810111,
+        "occupancy": 0.0,
+        "turnover": 2.0,
+        "year": 2021
+      }
+    ]
+  },
   "family": "trend-boundary-occupancy-opportunity-diagnostic-1h-v1",
   "issue": 798,
-  "markets": {
-    "BTC-USDT": {
-      "clearance_median": 1.0,
-      "descriptive_no_boundary_minus_boundary": {
-        "boundary_n": 24,
-        "gross_mean_delta": 0.012423041421065994,
-        "mae_mean_delta": 0.013126901366832432,
-        "no_boundary_n": 62,
-        "turnover_mean_delta": -0.9758064516129032
-      },
-      "gates": {
-        "gross_breadth": false,
-        "gross_rho_positive_lcb": false,
-        "half_ordering": false,
-        "mae_breadth": false,
-        "mae_rho_positive_lcb": false,
-        "state_variation": false
-      },
-      "gross_opportunity_mean": -0.004726711955792161,
-      "gross_rho": 0.16119260156983245,
-      "gross_rho_ci95": [
-        -0.15768966929700995,
-        0.4504887847132558
-      ],
-      "gross_slope": 0.004664440287204892,
-      "high_n": 0,
-      "low_n": 86,
-      "mae_rho": 0.2255549911722802,
-      "mae_rho_ci95": [
-        -0.08108299768418074,
-        0.5126160201690411
-      ],
-      "mae_slope": 0.005486682747732538,
-      "n_anchors": 86,
-      "net_payoff_mean": -0.0052499677697456495,
-      "occupancy_iqr": 0.03869047619047619,
-      "occupancy_quartiles": [
-        0.0,
-        0.0,
-        0.03869047619047619
-      ],
-      "passes_all": false,
-      "positive_gross_folds": 1,
-      "positive_gross_weeks": 15,
-      "positive_gross_years": 1,
-      "positive_mae_folds": 3,
-      "positive_mae_years": 1,
-      "turnover_sum": 90.0,
-      "zero_gross_weeks": 45
-    },
-    "ETH-USDT": {
-      "clearance_median": 1.0,
-      "descriptive_no_boundary_minus_boundary": {
-        "boundary_n": 36,
-        "gross_mean_delta": 0.0023112556016959837,
-        "mae_mean_delta": 0.006491060027298535,
-        "no_boundary_n": 50,
-        "turnover_mean_delta": -0.5244444444444444
-      },
-      "gates": {
-        "gross_breadth": false,
-        "gross_rho_positive_lcb": false,
-        "half_ordering": false,
-        "mae_breadth": false,
-        "mae_rho_positive_lcb": false,
-        "state_variation": false
-      },
-      "gross_opportunity_mean": -0.003728949516766812,
-      "gross_rho": 0.11433175928748086,
-      "gross_rho_ci95": [
-        -0.11629157137435187,
-        0.33219276956105626
-      ],
-      "gross_slope": 0.007533938936151301,
-      "high_n": 0,
-      "low_n": 86,
-      "mae_rho": 0.10164066820134983,
-      "mae_rho_ci95": [
-        -0.1503745896123925,
-        0.384534422197455
-      ],
-      "mae_slope": 0.0031142912360635085,
-      "n_anchors": 86,
-      "net_payoff_mean": -0.0042987169586272776,
-      "occupancy_iqr": 0.23065476190476192,
-      "occupancy_quartiles": [
-        0.0,
-        0.0,
-        0.23065476190476192
-      ],
-      "passes_all": false,
-      "positive_gross_folds": 2,
-      "positive_gross_weeks": 19,
-      "positive_gross_years": 2,
-      "positive_mae_folds": 2,
-      "positive_mae_years": 1,
-      "turnover_sum": 98.0,
-      "zero_gross_weeks": 42
-    }
-  },
-  "markets_passing_all": 0,
   "oos_accessed": false,
   "parameter_grid": 0,
+  "prior_terminal_evidence": {
+    "common_index": {
+      "median_gross_rho_ci95": [
+        -0.12057750296398875,
+        0.38129032085693804
+      ],
+      "median_gross_rho_point": 0.13776218042865665,
+      "median_mae_rho_ci95": [
+        -0.084594118397178,
+        0.4221728328698779
+      ],
+      "median_mae_rho_point": 0.16359782968681502
+    },
+    "head": "d574491e00913fe56288f25ab47357eeeebe5ec4",
+    "markets": {
+      "BTC-USDT": {
+        "clearance_median": 1.0,
+        "first_anchor": "2021-11-22T00:00:00+00:00",
+        "first_feature_start": "2021-11-15T01:00:00+00:00",
+        "folds": [
+          {
+            "fold": 0,
+            "gross_slope": -0.013290937137196797,
+            "mae_slope": 0.00048615130017752844,
+            "n": 12
+          },
+          {
+            "fold": 1,
+            "gross_slope": 0.027260170073558597,
+            "mae_slope": 0.029224148233341574,
+            "n": 12
+          },
+          {
+            "fold": 2,
+            "gross_slope": null,
+            "mae_slope": null,
+            "n": 12
+          },
+          {
+            "fold": 3,
+            "gross_slope": -0.005000093352455896,
+            "mae_slope": -0.005475501428202059,
+            "n": 12
+          },
+          {
+            "fold": 4,
+            "gross_slope": -0.027954640380500852,
+            "mae_slope": 0.00011189974071052966,
+            "n": 12
+          },
+          {
+            "fold": 5,
+            "gross_slope": null,
+            "mae_slope": null,
+            "n": 11
+          }
+        ],
+        "gates": {
+          "gross_breadth": false,
+          "gross_rho_positive_lcb": false,
+          "mae_breadth": false,
+          "mae_rho_positive_lcb": false,
+          "state_variation": false
+        },
+        "gross_opportunity_mean": -0.004726711955792161,
+        "gross_rho": 0.16119260156983245,
+        "gross_rho_ci95": [
+          -0.15768966929700995,
+          0.4504887847132558
+        ],
+        "gross_slope": 0.004664440287204892,
+        "high_n": 0,
+        "low_n": 86,
+        "mae_rho": 0.2255549911722802,
+        "mae_rho_ci95": [
+          -0.08108299768418074,
+          0.5126160201690411
+        ],
+        "mae_slope": 0.005486682747732538,
+        "n_anchors": 86,
+        "net_payoff_mean": -0.0052499677697456495,
+        "occupancy_iqr": 0.03869047619047619,
+        "occupancy_quartiles": [
+          0.0,
+          0.0,
+          0.03869047619047619
+        ],
+        "passes_all": false,
+        "positive_gross_folds": 1,
+        "positive_gross_weeks": 15,
+        "positive_gross_years": 1,
+        "positive_mae_folds": 3,
+        "positive_mae_years": 1,
+        "turnover_sum": 90.0,
+        "years": [
+          {
+            "gross_slope": -0.03937280771755169,
+            "mae_slope": -0.03287039507665841,
+            "n": 6,
+            "year": 2021
+          },
+          {
+            "gross_slope": 0.010991955990266549,
+            "mae_slope": 0.0119762627524265,
+            "n": 52,
+            "year": 2022
+          },
+          {
+            "gross_slope": -0.017180787093308086,
+            "mae_slope": -0.011172606405701854,
+            "n": 28,
+            "year": 2023
+          }
+        ],
+        "zero_gross_weeks": 45
+      },
+      "ETH-USDT": {
+        "clearance_median": 1.0,
+        "first_anchor": "2021-11-22T00:00:00+00:00",
+        "first_feature_start": "2021-11-15T01:00:00+00:00",
+        "folds": [
+          {
+            "fold": 0,
+            "gross_slope": -0.010896779471428867,
+            "mae_slope": -0.011502081665309052,
+            "n": 12
+          },
+          {
+            "fold": 1,
+            "gross_slope": 0.019723019414788573,
+            "mae_slope": 0.022999116420900873,
+            "n": 12
+          },
+          {
+            "fold": 2,
+            "gross_slope": null,
+            "mae_slope": null,
+            "n": 12
+          },
+          {
+            "fold": 3,
+            "gross_slope": -0.00012559603842864255,
+            "mae_slope": -0.013204188619048417,
+            "n": 12
+          },
+          {
+            "fold": 4,
+            "gross_slope": 0.022512144057772257,
+            "mae_slope": 0.023003559189724396,
+            "n": 12
+          },
+          {
+            "fold": 5,
+            "gross_slope": null,
+            "mae_slope": null,
+            "n": 11
+          }
+        ],
+        "gates": {
+          "gross_breadth": false,
+          "gross_rho_positive_lcb": false,
+          "mae_breadth": false,
+          "mae_rho_positive_lcb": false,
+          "state_variation": false
+        },
+        "gross_opportunity_mean": -0.003728949516766812,
+        "gross_rho": 0.11433175928748086,
+        "gross_rho_ci95": [
+          -0.11629157137435187,
+          0.33219276956105626
+        ],
+        "gross_slope": 0.007533938936151301,
+        "high_n": 0,
+        "low_n": 86,
+        "mae_rho": 0.10164066820134983,
+        "mae_rho_ci95": [
+          -0.1503745896123925,
+          0.384534422197455
+        ],
+        "mae_slope": 0.0031142912360635085,
+        "n_anchors": 86,
+        "net_payoff_mean": -0.0042987169586272776,
+        "occupancy_iqr": 0.23065476190476192,
+        "occupancy_quartiles": [
+          0.0,
+          0.0,
+          0.23065476190476192
+        ],
+        "passes_all": false,
+        "positive_gross_folds": 2,
+        "positive_gross_weeks": 19,
+        "positive_gross_years": 2,
+        "positive_mae_folds": 2,
+        "positive_mae_years": 1,
+        "turnover_sum": 98.0,
+        "years": [
+          {
+            "gross_slope": -0.015235120638337627,
+            "mae_slope": -0.02246321849070033,
+            "n": 6,
+            "year": 2021
+          },
+          {
+            "gross_slope": 0.008227422217258095,
+            "mae_slope": 0.008263157205445616,
+            "n": 52,
+            "year": 2022
+          },
+          {
+            "gross_slope": 0.011515541983315586,
+            "mae_slope": -0.0024305038829028447,
+            "n": 28,
+            "year": 2023
+          }
+        ],
+        "zero_gross_weeks": 42
+      }
+    }
+  },
   "protocol": {
     "bootstrap_block_weeks": 4,
     "bootstrap_draws": 5000,
-    "frozen_rows": 43441,
+    "frozen_text": "complete feature window and complete 168H target lie strictly inside training",
     "lookback_hours": 2160,
     "scaled_distance_threshold": 0.25,
     "seed": 20260731,
@@ -134,18 +494,15 @@
     ]
   },
   "schema_version": 1,
-  "source": {
-    "BTC-USDT": {
-      "artifact_id": 8769605568,
-      "csv_sha256": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0"
-    },
-    "ETH-USDT": {
-      "artifact_id": 8769619607,
-      "csv_sha256": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8"
-    },
-    "frozen_end_utc": "2026-07-08T00:00:00Z",
-    "frozen_rows": 43441,
-    "frozen_start_utc": "2021-07-24T00:00:00Z"
+  "source_csv_sha256": {
+    "BTC-USDT": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0",
+    "ETH-USDT": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8"
   },
-  "verdict": "reject_trend_boundary_occupancy_opportunity_premise"
+  "strategy_metrics": {
+    "benchmark_comparison": "not applicable; diagnostic target sleeves only",
+    "full": "not computed; candidate_count=0",
+    "oos": "not accessed",
+    "train": "not computed; candidate_count=0"
+  },
+  "verdict_changed": false
 }
