@@ -81,9 +81,7 @@ def bind_reproducer_provenance(directory: Path) -> None:
         encoding="utf-8",
     )
     digest = hashlib.sha256(evidence_path.read_bytes()).hexdigest()
-    (directory / "evidence.sha256").write_text(
-        f"{digest}  evidence.json\n", encoding="utf-8"
-    )
+    (directory / "evidence.sha256").write_text(f"{digest}  evidence.json\n", encoding="utf-8")
     with (directory / "report.md").open("a", encoding="utf-8") as report:
         report.write(
             "\n## Reproducer provenance\n\n"
