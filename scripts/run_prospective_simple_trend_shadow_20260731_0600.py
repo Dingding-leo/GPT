@@ -71,7 +71,7 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     result["window"]["prior_cumulative_realized_hours"] = 556
     result["window"]["updated_cumulative_realized_hours"] = 557
     result["nomination_status"] = "no_statistically_eligible_frozen_strategy"
-    result["active_alpha_context"] = {
+    result["latest_terminal_candidate_context"] = {
         "issue": 767,
         "pull_request": 768,
         "family_id": "entry-only-volatility-gated-cadence-state-1h-v1",
