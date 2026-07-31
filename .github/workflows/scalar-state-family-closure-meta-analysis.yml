@@ -1,0 +1,93 @@
+name: Scalar State Family Closure Meta Analysis
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/scalar-state-family-closure-meta-analysis.yml"
+      - "reports/research/scalar-state-family-closure-meta-analysis-1h-v1/**"
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scalar-state-family-closure-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out exact evidence head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          git cat-file -e "5a0fcc97d1a882f8223656c51f5bb8055f534e38^{commit}"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Reproduce family-cluster closure
+        run: |
+          python -m compileall -q reports/research/scalar-state-family-closure-meta-analysis-1h-v1
+          python reports/research/scalar-state-family-closure-meta-analysis-1h-v1/run_meta_analysis.py \
+            --output-dir artifacts/scalar-state-family-closure
+
+      - name: Verify immutable evidence and verdict
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          source = Path("reports/research/scalar-state-family-closure-meta-analysis-1h-v1")
+          generated = Path("artifacts/scalar-state-family-closure")
+          committed = json.loads((source / "evidence.json").read_text(encoding="utf-8"))
+          replayed = json.loads((generated / "evidence.json").read_text(encoding="utf-8"))
+          assert committed == replayed
+          assert (source / "report.md").read_bytes() == (generated / "report.md").read_bytes()
+          assert replayed["candidate_count"] == 0
+          assert replayed["parameter_grid_count"] == 0
+          assert replayed["fee_one_way"] == 0.0005
+          assert replayed["oos_accessed"] is False
+          assert replayed["new_market_performance_seen"] is False
+          assert replayed["source_diagnostic_count"] == 7
+          assert replayed["source_market_effect_count"] == 14
+          assert replayed["family_cluster_bootstrap"]["resamples"] == 100000
+          assert replayed["positive_source_lower_bound_count"] == 0
+          assert replayed["group_bilateral_positive_count"] == 2
+          assert replayed["gates_passed"] == 0
+          assert replayed["verdict"] == "reject_scalar_state_gating_architecture_family"
+          PY
+
+      - name: Publish terminal report
+        run: cat artifacts/scalar-state-family-closure/report.md
+
+      - name: Upload immutable closure artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scalar-state-family-closure-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: artifacts/scalar-state-family-closure
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 30
