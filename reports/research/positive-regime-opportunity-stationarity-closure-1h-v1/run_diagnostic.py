@@ -121,18 +121,45 @@ def regime_summary(table: pd.DataFrame) -> pd.DataFrame:
                 "left_censored": bool(part["regime_start"].iloc[0] < TRAIN_START),
                 "right_censored": bool(part["regime_end"].iloc[0] > part["anchor"].iloc[-1]),
                 "mean_gross": float(gross.mean()),
+                "median_gross": float(np.median(gross)),
                 "mean_net": float(net.mean()),
+                "median_net": float(np.median(net)),
                 "sum_gross": float(gross.sum()),
                 "sum_net": float(net.sum()),
                 "mean_adverse": float(part["adverse"].mean()),
+                "gross_positive_fraction": float(np.mean(gross > 0)),
+                "net_positive_fraction": float(np.mean(net > 0)),
                 "lag1": (
                     float(np.corrcoef(gross[:-1], gross[1:])[0, 1])
-                    if len(gross) >= 4 and np.std(gross[:-1]) > 0 and np.std(gross[1:]) > 0
+                    if len(gross) >= 4
+                    and np.std(gross[:-1]) > 0
+                    and np.std(gross[1:]) > 0
                     else None
                 ),
             }
         )
     return pd.DataFrame(rows)
+
+
+def pooled_centered_lag1(table: pd.DataFrame) -> float | None:
+    lagged: list[float] = []
+    current: list[float] = []
+    for _, part in table.groupby("regime", sort=True):
+        gross = part["gross"].to_numpy(float)
+        if len(gross) < 2:
+            continue
+        centered = gross - gross.mean()
+        lagged.extend(centered[:-1])
+        current.extend(centered[1:])
+    lagged_array = np.asarray(lagged, dtype=float)
+    current_array = np.asarray(current, dtype=float)
+    if (
+        len(lagged_array) < 2
+        or np.std(lagged_array) == 0
+        or np.std(current_array) == 0
+    ):
+        return None
+    return float(np.corrcoef(lagged_array, current_array)[0, 1])
 
 
 def bootstrap(regimes: pd.DataFrame) -> dict[str, Any]:
@@ -144,9 +171,12 @@ def bootstrap(regimes: pd.DataFrame) -> dict[str, Any]:
     sum_gross = regimes["sum_gross"].to_numpy(float)
     sum_net = regimes["sum_net"].to_numpy(float)
     days = regimes["days"].to_numpy(float)
-    draws = np.empty((RESAMPLES, 6))
+    draws = np.full((RESAMPLES, 9), np.nan)
     for row, sample in enumerate(picks):
         denominator = days[sample].sum()
+        absolute_denominator = np.abs(sum_gross[sample]).sum()
+        if denominator <= 0 or absolute_denominator <= 0:
+            continue
         draws[row] = (
             mean_gross[sample].mean(),
             mean_net[sample].mean(),
@@ -154,17 +184,27 @@ def bootstrap(regimes: pd.DataFrame) -> dict[str, Any]:
             np.median(mean_net[sample]),
             sum_gross[sample].sum() / denominator,
             sum_net[sample].sum() / denominator,
+            np.mean(mean_gross[sample] > 0),
+            np.mean(mean_net[sample] > 0),
+            np.max(np.abs(sum_gross[sample])) / absolute_denominator,
         )
+    valid = np.isfinite(draws).all(axis=1)
+    valid_draws = draws[valid]
+    if len(valid_draws) == 0:
+        raise ValueError("no valid complete-regime bootstrap draws")
     return {
         "resamples": RESAMPLES,
         "seed": SEED,
-        "valid_fraction": 1.0,
-        "equal_gross_ci95": interval(draws[:, 0]),
-        "equal_net_ci95": interval(draws[:, 1]),
-        "median_gross_ci95": interval(draws[:, 2]),
-        "median_net_ci95": interval(draws[:, 3]),
-        "day_gross_ci95": interval(draws[:, 4]),
-        "day_net_ci95": interval(draws[:, 5]),
+        "valid_fraction": float(valid.mean()),
+        "equal_gross_ci95": interval(valid_draws[:, 0]),
+        "equal_net_ci95": interval(valid_draws[:, 1]),
+        "median_gross_ci95": interval(valid_draws[:, 2]),
+        "median_net_ci95": interval(valid_draws[:, 3]),
+        "day_gross_ci95": interval(valid_draws[:, 4]),
+        "day_net_ci95": interval(valid_draws[:, 5]),
+        "positive_gross_fraction_ci95": interval(valid_draws[:, 6]),
+        "positive_net_fraction_ci95": interval(valid_draws[:, 7]),
+        "max_absolute_share_ci95": interval(valid_draws[:, 8]),
     }
 
 
@@ -192,11 +232,39 @@ def breadth(table: pd.DataFrame) -> dict[str, Any]:
     ]
     return {
         "folds": folds,
-        "positive_gross_folds": sum(row["gross"] is not None and row["gross"] > 0 for row in folds),
-        "positive_net_folds": sum(row["net"] is not None and row["net"] > 0 for row in folds),
+        "positive_gross_folds": sum(
+            row["gross"] is not None and row["gross"] > 0 for row in folds
+        ),
+        "positive_net_folds": sum(
+            row["net"] is not None and row["net"] > 0 for row in folds
+        ),
         "years": annual,
         "positive_gross_years": sum(row["gross"] > 0 for row in annual),
         "positive_net_years": sum(row["net"] > 0 for row in annual),
+    }
+
+
+def leave_one_out(regimes: pd.DataFrame, table: pd.DataFrame) -> dict[str, Any]:
+    values: dict[str, list[tuple[float, int]]] = {
+        "equal_gross": [],
+        "equal_net": [],
+        "day_gross": [],
+        "day_net": [],
+    }
+    for regime_id in regimes["regime"]:
+        remaining_regimes = regimes[regimes["regime"] != regime_id]
+        remaining_days = table[table["regime"] != regime_id]
+        values["equal_gross"].append(
+            (float(remaining_regimes["mean_gross"].mean()), int(regime_id))
+        )
+        values["equal_net"].append(
+            (float(remaining_regimes["mean_net"].mean()), int(regime_id))
+        )
+        values["day_gross"].append((float(remaining_days["gross"].mean()), int(regime_id)))
+        values["day_net"].append((float(remaining_days["net"].mean()), int(regime_id)))
+    return {
+        key: {"value": min(entries)[0], "omitted_regime": min(entries)[1]}
+        for key, entries in values.items()
     }
 
 
@@ -205,38 +273,40 @@ def market_result(path: Path, market: str) -> dict[str, Any]:
     regimes = regime_summary(table)
     absolute = np.abs(regimes["sum_gross"].to_numpy(float))
     positive = regimes["sum_gross"].clip(lower=0).to_numpy(float)
-    loo_equal_gross: list[float] = []
-    loo_equal_net: list[float] = []
-    loo_day_gross: list[float] = []
-    loo_day_net: list[float] = []
-    for regime_id in regimes["regime"]:
-        remaining_regimes = regimes[regimes["regime"] != regime_id]
-        remaining_days = table[table["regime"] != regime_id]
-        loo_equal_gross.append(float(remaining_regimes["mean_gross"].mean()))
-        loo_equal_net.append(float(remaining_regimes["mean_net"].mean()))
-        loo_day_gross.append(float(remaining_days["gross"].mean()))
-        loo_day_net.append(float(remaining_days["net"].mean()))
+    absolute_total = absolute.sum()
+    positive_total = positive.sum()
+    regimes["absolute_gross_contribution_share"] = absolute / absolute_total
+    regimes["positive_gross_contribution_share"] = (
+        positive / positive_total if positive_total > 0 else np.zeros(len(regimes))
+    )
+
     uncertainty = bootstrap(regimes)
     temporal = breadth(table)
+    leave_one_out_result = leave_one_out(regimes, table)
+    duration_quantiles = regimes["days"].quantile([0.0, 0.25, 0.5, 0.75, 1.0])
     median_gross = float(regimes["mean_gross"].median())
     median_net = float(regimes["mean_net"].median())
+    median_adverse = float(regimes["mean_adverse"].median())
     equal_gross = float(regimes["mean_gross"].mean())
     equal_net = float(regimes["mean_net"].mean())
     day_gross = float(table["gross"].mean())
     day_net = float(table["net"].mean())
-    max_absolute = float(absolute.max() / absolute.sum())
-    max_positive = float(positive.max() / positive.sum())
+    max_absolute = float(regimes["absolute_gross_contribution_share"].max())
+    max_positive = float(regimes["positive_gross_contribution_share"].max())
     positive_gross = int((regimes["mean_gross"] > 0).sum())
     positive_net = int((regimes["mean_net"] > 0).sum())
     gates = {
         "positive_median": median_gross > 0 and median_net > 0,
-        "regime_breadth": positive_gross > len(regimes) / 2 and positive_net >= len(regimes) / 2,
+        "regime_breadth": positive_gross > len(regimes) / 2
+        and positive_net >= len(regimes) / 2,
         "equal_lower_bounds": uncertainty["equal_gross_ci95"][0] > 0
         and uncertainty["equal_net_ci95"][0] > 0,
         "day_lower_bounds": uncertainty["day_gross_ci95"][0] > 0
         and uncertainty["day_net_ci95"][0] > 0,
-        "loo_equal": min(loo_equal_gross) > 0 and min(loo_equal_net) > 0,
-        "loo_day": min(loo_day_gross) > 0 and min(loo_day_net) > 0,
+        "loo_equal": leave_one_out_result["equal_gross"]["value"] > 0
+        and leave_one_out_result["equal_net"]["value"] > 0,
+        "loo_day": leave_one_out_result["day_gross"]["value"] > 0
+        and leave_one_out_result["day_net"]["value"] > 0,
         "non_dominance": max_absolute <= 0.35 and max_positive <= 0.50,
         "fold_breadth": temporal["positive_gross_folds"] >= 4
         and temporal["positive_net_folds"] >= 4,
@@ -253,11 +323,13 @@ def market_result(path: Path, market: str) -> dict[str, Any]:
         "regimes": len(regimes),
         "left_censored": int(regimes["left_censored"].sum()),
         "right_censored": int(regimes["right_censored"].sum()),
-        "duration_min_median_max": [
-            int(regimes["days"].min()),
-            float(regimes["days"].median()),
-            int(regimes["days"].max()),
-        ],
+        "duration_quantiles": {
+            "minimum": float(duration_quantiles.loc[0.0]),
+            "q25": float(duration_quantiles.loc[0.25]),
+            "median": float(duration_quantiles.loc[0.5]),
+            "q75": float(duration_quantiles.loc[0.75]),
+            "maximum": float(duration_quantiles.loc[1.0]),
+        },
         "day_weight": {
             "gross": day_gross,
             "net": day_net,
@@ -272,17 +344,15 @@ def market_result(path: Path, market: str) -> dict[str, Any]:
             "positive_net": positive_net,
             "median_gross": median_gross,
             "median_net": median_net,
+            "median_adverse": median_adverse,
             "equal_gross": equal_gross,
             "equal_net": equal_net,
         },
         "concentration": {"max_absolute": max_absolute, "max_positive": max_positive},
-        "leave_one_out_minimum": {
-            "equal_gross": min(loo_equal_gross),
-            "equal_net": min(loo_equal_net),
-            "day_gross": min(loo_day_gross),
-            "day_net": min(loo_day_net),
-        },
+        "leave_one_out_minimum": leave_one_out_result,
+        "within_regime_lag1_estimable": int(len(valid_lag)),
         "within_regime_lag1_median": float(np.median(valid_lag)),
+        "pooled_within_regime_centered_lag1": pooled_centered_lag1(table),
         "uncertainty": uncertainty,
         "temporal_breadth": temporal,
         "gates": gates,
