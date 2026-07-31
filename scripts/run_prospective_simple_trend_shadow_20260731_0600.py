@@ -40,7 +40,26 @@ def write_report(output_dir: Path, result: dict[str, Any]) -> None:
             lines.append("# Prospective simple-trend shadow update through 06:00 UTC on 31 July 2026")
         else:
             lines.append(line)
-    report_path.write_text("\n".join(lines) + "\n")
+    report = "\n".join(lines) + "\n"
+    correction_heading = "## Correction protocol\n"
+    correction_start = report.index(correction_heading) + len(correction_heading)
+    correction_end = report.index("\n## Abort conditions and verdict", correction_start)
+    correction = """
+
+- Correction permitted: `False`
+- Correction applied: `False`
+- Policy changed: `false`
+- Observation epoch restarted: `false`
+
+Issue #767 and closed evidence PR #768 contain terminal rejection evidence for the exact
+`entry-only-volatility-gated-cadence-state-1h-v1` candidate on the fresh TRX-USDT and
+DOT-USDT cohort. Preserving daily B1 authority for exits removed the prior premature-exit
+failure channel, but non-midnight high-volatility entries underperformed B1 in both markets,
+increased turnover, and failed bilateral uncertainty gates. Transient endpoint-sign crossings
+produced larger losses than persistent early onsets earned. No training-authorized correction
+exists, and this BTC/ETH forward interval was not consumed to revise or rescue the rejected family.
+"""
+    report_path.write_text(report[:correction_start] + correction + report[correction_end:])
 
 
 def run(output_dir: Path, base_url: str) -> dict[str, Any]:
@@ -52,6 +71,23 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     result["window"]["prior_cumulative_realized_hours"] = 556
     result["window"]["updated_cumulative_realized_hours"] = 557
     result["nomination_status"] = "no_statistically_eligible_frozen_strategy"
+    result["active_alpha_context"] = {
+        "issue": 767,
+        "pull_request": 768,
+        "family_id": "entry-only-volatility-gated-cadence-state-1h-v1",
+        "status": "terminal_rejection_evidence_closed_unmerged",
+        "workflow_run": 30611294305,
+        "artifact_id": 8785660933,
+        "artifact_sha256": "31b92b6d8cdca1530fbea30a97ae69759724762bda14ef2bd24a1c053f97a870",
+        "result_sha256": "15cd00ac79d5bf48ede083b2c813278c418526e65f593776c34326d8a5da9f1e",
+        "prospective_performance_consumed": False,
+        "correction_permitted": False,
+        "reason": (
+            "Both fresh markets underperformed the daily B1 benchmark. Entry-only volatility gating removed "
+            "premature exits but transient endpoint-sign crossings made the early-entry channel net adverse, "
+            "increased turnover, and failed dependence-aware bilateral gates; no same-cohort rescue is authorized."
+        ),
+    }
     exposed = any(market["realized_interval"]["position"] == 1 for market in result["markets"])
     result["historical_selection_relationship_status"] = {
         "assessable_in_new_interval": exposed,
@@ -63,7 +99,7 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     }
     result["next_strategy_action"] = (
         "continue the identical frozen 2160H benchmark-shadow epoch at the next complete public 1H observation; "
-        "do not prospectively rescue the rejected volatility-gated cadence state family"
+        "do not prospectively rescue the rejected entry-only volatility-gated cadence state family"
     )
     base.write_outputs(output_dir, result)
     write_report(output_dir, result)
