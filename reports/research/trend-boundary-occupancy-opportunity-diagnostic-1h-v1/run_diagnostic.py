@@ -286,7 +286,10 @@ def run(btc: Path, eth: Path) -> dict:
         "oos_accessed": False,
         "source_csv_sha256": HASHES,
         "protocol": {
-            "frozen_text": "complete feature window and complete 168H target lie strictly inside training",
+            "frozen_text": (
+                "complete feature window and complete 168H target "
+                "lie strictly inside training"
+            ),
             "training": list(TRAIN),
             "lookback_hours": LOOKBACK,
             "state_hours": WEEK,
