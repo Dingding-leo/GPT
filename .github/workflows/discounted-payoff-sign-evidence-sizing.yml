@@ -8,6 +8,11 @@ on:
       - .github/workflows/discounted-payoff-sign-evidence-sizing.yml
       - scripts/run_discounted_payoff_sign_evidence_sizing.py
       - reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/reproducer.py.gz.b64
+  pull_request:
+    paths:
+      - .github/workflows/discounted-payoff-sign-evidence-sizing.yml
+      - scripts/run_discounted_payoff_sign_evidence_sizing.py
+      - reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/reproducer.py.gz.b64
 
 permissions:
   contents: read
@@ -20,12 +25,14 @@ jobs:
       - name: Check out exact research head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Verify exact checked-out revision
         shell: bash
-        run: test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: test "$(git rev-parse HEAD)" = "${EXPECTED_SHA}"
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
