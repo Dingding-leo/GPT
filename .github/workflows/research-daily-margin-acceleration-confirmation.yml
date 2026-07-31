@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "scripts/research_daily_margin_acceleration_confirmation.py"
+      - "scripts/run_research_daily_margin_acceleration_confirmation.py"
       - ".github/workflows/research-daily-margin-acceleration-confirmation.yml"
   workflow_dispatch:
 
@@ -42,13 +43,15 @@ jobs:
           test -z "${{ secrets.OKX_API_KEY }}"
           test -z "${{ secrets.OKX_SECRET_KEY }}"
           test -z "${{ secrets.OKX_PASSPHRASE }}"
-          python -m py_compile scripts/research_daily_margin_acceleration_confirmation.py
+          python -m py_compile \
+            scripts/research_daily_margin_acceleration_confirmation.py \
+            scripts/run_research_daily_margin_acceleration_confirmation.py
 
       - name: Execute sole preregistered candidate
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/research_daily_margin_acceleration_confirmation.py --output-dir "$OUTPUT_DIR"
+          python scripts/run_research_daily_margin_acceleration_confirmation.py --output-dir "$OUTPUT_DIR"
 
       - name: Validate machine-readable evidence
         shell: bash
