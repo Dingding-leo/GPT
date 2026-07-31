@@ -63,13 +63,13 @@ jobs:
           python -m pip install -e .
           python -m pip check
 
-      - name: Execute frozen public-data diagnostic
+      - name: Execute frozen public-data source contract
         run: |
           python reports/research/coinm-liquidation-exhaustion-opportunity-diagnostic-1h-v1/run_diagnostic.py \
             --output-dir artifacts/coinm-liquidation-exhaustion \
             --workers 16
 
-      - name: Verify strict machine result
+      - name: Verify fail-closed machine result
         run: |
           python - <<'PY'
           import json
@@ -77,19 +77,29 @@ jobs:
 
           root = Path("artifacts/coinm-liquidation-exhaustion")
           evidence = json.loads((root / "evidence.json").read_text(encoding="utf-8"))
+          source = evidence["source"]
           assert evidence["candidate_count"] == 0
           assert evidence["diagnostic_count"] == 1
           assert evidence["parameter_grid_count"] == 0
           assert evidence["fee_one_way"] == 0.0005
-          assert evidence["source"]["object_count"] == evidence["source"]["checksum_matches"]
+          assert evidence["performance_seen"] is False
+          assert evidence["OOS_accessed"] is False
           assert evidence["sample"]["intended_decisions"] == 242
-          assert evidence["verdict"] in {
-              "coinm_liquidation_exhaustion_information_premise_passed",
-              "reject_coinm_liquidation_exhaustion_information_premise",
-          }
+          assert evidence["sample"]["completed_decisions"] == 0
+          assert evidence["verdict"] == (
+              "abort_fixed_source_contract_missing_public_objects"
+          )
+          assert source["requested_object_count"] == 566
+          assert source["successful_object_count"] == source["checksum_matches"]
+          assert source["failed_object_count"] > 0
+          assert (
+              source["successful_object_count"] + source["failed_object_count"]
+              == source["requested_object_count"]
+          )
           PY
 
-      - name: Upload immutable diagnostic evidence
+      - name: Upload immutable source-contract evidence
+        if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: coinm-liquidation-exhaustion-${{ github.run_number }}-attempt-${{ github.run_attempt }}
