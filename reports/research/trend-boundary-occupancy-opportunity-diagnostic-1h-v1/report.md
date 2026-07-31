@@ -134,7 +134,7 @@ The turnover and fee totals above belong only to the self-contained weekly B1 ta
 Two independent executions of the deterministic reproducer were byte-identical.
 
 ```text
-Reproducer SHA-256  88378b63d4842e95d13f48872a11615acc426797a743d3d18605160845023fa6
+Reproducer SHA-256  014e42e0d0b89ad8839905a3d0de0701c2e0b99870443f2a004f566375d57dad
 Evidence SHA-256    9f119b4b87eb291ec4412451791857ad525335b22f81c5fc9ae74656c6250394
 Summary SHA-256     698b52dba59ed4a99ae7fae9f28a1b29351a88ad376d78da8d7e09893dc00c6b
 ```
