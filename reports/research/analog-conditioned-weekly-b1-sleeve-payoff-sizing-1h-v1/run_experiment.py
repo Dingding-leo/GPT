@@ -60,11 +60,7 @@ def self_contained_b1_sleeve_label(
     decision_indices = np.arange(anchor, anchor + 168)
     returns = opens[decision_indices + 2] / opens[decision_indices + 1] - 1.0
     gross = float(np.sum(positions * returns))
-    turnover = float(
-        positions[0]
-        + np.sum(np.abs(np.diff(positions)))
-        + positions[-1]
-    )
+    turnover = float(positions[0] + np.sum(np.abs(np.diff(positions))) + positions[-1])
     return gross - parent.fw.FEE * turnover
 
 
@@ -96,8 +92,7 @@ def build_paths(market: dict[str, Any]) -> dict[str, Any]:
     realized_label = np.full(length, np.nan)
 
     anchors = np.flatnonzero(
-        (timestamps.dt.dayofweek.to_numpy() == 0)
-        & (timestamps.dt.hour.to_numpy() == 0)
+        (timestamps.dt.dayofweek.to_numpy() == 0) & (timestamps.dt.hour.to_numpy() == 0)
     )
     anchor_set = set(int(value) for value in anchors)
     complete_labels = {
@@ -113,9 +108,7 @@ def build_paths(market: dict[str, Any]) -> dict[str, Any]:
     for time_index in range(2_160, length):
         if time_index in anchor_set:
             decision_mask[time_index] = True
-            eligible = anchors[
-                (anchors >= 2_160) & (anchors + 169 <= time_index)
-            ]
+            eligible = anchors[(anchors >= 2_160) & (anchors + 169 <= time_index)]
             history_rows[time_index] = len(eligible)
             if time_index in complete_labels:
                 realized_label[time_index] = complete_labels[time_index]
@@ -215,20 +208,13 @@ def evaluate_market(
     """Evaluate frozen gates plus preregistered constant-sizing attribution controls."""
     result = ORIGINAL_EVALUATE(instrument, market, built, starts)
     start, end = parent.fw.OOS
-    candidate_arithmetic = float(
-        np.sum(built["paths"]["candidate"]["net"][start:end])
-    )
+    candidate_arithmetic = float(np.sum(built["paths"]["candidate"]["net"][start:end]))
     controls = {
-        name: parent.fw.metrics(path, start, end)
-        for name, path in built["controls"].items()
+        name: parent.fw.metrics(path, start, end) for name, path in built["controls"].items()
     }
-    fixed_half_arithmetic = float(
-        np.sum(built["controls"]["fixed_half"]["net"][start:end])
-    )
+    fixed_half_arithmetic = float(np.sum(built["controls"]["fixed_half"]["net"][start:end]))
     matched_arithmetic = float(
-        np.sum(
-            built["controls"]["exposure_matched_constant"]["net"][start:end]
-        )
+        np.sum(built["controls"]["exposure_matched_constant"]["net"][start:end])
     )
     result["gates"]["adaptive_beats_fixed_half_arithmetic"] = (
         candidate_arithmetic > fixed_half_arithmetic
@@ -284,9 +270,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         and parent.fw.ci_lower_positive(
             result["common_bootstrap_vs_B1"]["annualized_mean_delta_ci95"]
         )
-        and parent.fw.ci_lower_positive(
-            result["common_bootstrap_vs_B1"]["sharpe_delta_ci95"]
-        )
+        and parent.fw.ci_lower_positive(result["common_bootstrap_vs_B1"]["sharpe_delta_ci95"])
     )
     result["verdict"] = (
         "support_b1_sleeve_payoff_sizing_research_nomination"
@@ -361,9 +345,7 @@ def main() -> None:
             for item in result["markets"]
         },
     }
-    (args.output_dir / "result-summary.json").write_bytes(
-        parent.fw.canonical_bytes(summary)
-    )
+    (args.output_dir / "result-summary.json").write_bytes(parent.fw.canonical_bytes(summary))
     (args.output_dir / "report.md").write_text(report(result), encoding="utf-8")
 
 
