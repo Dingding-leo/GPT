@@ -65,16 +65,16 @@ The candidate retains the full capped causal BOCPD run-length posterior under a 
 
 | Gate | BTC-USDT | ETH-USDT |
 |---|---:|---:|
-| `beats_trend_drawdown` | FAIL | FAIL |
+| `oos_positive` | FAIL | FAIL |
 | `beats_trend_return` | FAIL | FAIL |
 | `beats_trend_sharpe` | FAIL | FAIL |
-| `bootstrap_lb_positive` | FAIL | FAIL |
-| `breadth` | FAIL | FAIL |
-| `delay_positive` | FAIL | FAIL |
+| `beats_trend_drawdown` | FAIL | FAIL |
 | `edge_per_turnover` | FAIL | FAIL |
-| `full_positive` | PASS | PASS |
-| `oos_positive` | FAIL | FAIL |
+| `breadth` | FAIL | FAIL |
+| `bootstrap_lb_positive` | FAIL | FAIL |
 | `turnover_bounded` | PASS | PASS |
+| `delay_positive` | FAIL | FAIL |
+| `full_positive` | PASS | PASS |
 
 ## Failure mechanism
 
