@@ -65,21 +65,13 @@ def forecast_diagnostics(market: dict[str, Any], built: dict[str, Any]) -> dict[
         "forecast_realized_correlation_168h": finite_or_none(
             float(np.corrcoef(pred168[corr168], label168[corr168])[0, 1])
         ),
-        "median_training_rows_24h": float(
-            np.median(built["training_rows"][24][valid])
-        ),
-        "median_training_rows_168h": float(
-            np.median(built["training_rows"][168][valid])
-        ),
+        "median_training_rows_24h": float(np.median(built["training_rows"][24][valid])),
+        "median_training_rows_168h": float(np.median(built["training_rows"][168][valid])),
         "candidate_only_hours": int(np.sum((cpos == 1) & (bpos == 0))),
         "b1_only_hours": int(np.sum((cpos == 0) & (bpos == 1))),
-        "gross_timing_residual": float(
-            np.sum(candidate["gross"][os:oe] - b1["gross"][os:oe])
-        ),
+        "gross_timing_residual": float(np.sum(candidate["gross"][os:oe] - b1["gross"][os:oe])),
         "fee_residual": float(np.sum(candidate["fee"][os:oe] - b1["fee"][os:oe])),
-        "net_arithmetic_residual": float(
-            np.sum(candidate["net"][os:oe] - b1["net"][os:oe])
-        ),
+        "net_arithmetic_residual": float(np.sum(candidate["net"][os:oe] - b1["net"][os:oe])),
     }
 
 
@@ -92,10 +84,7 @@ def evaluate_market(
     paths = built["paths"]
     samples = {"train": TRAIN, "oos": OOS, "full": FULL}
     performance = {
-        sample: {
-            name: metrics(paths[name], *bounds)
-            for name in ("candidate", "B0", "B1")
-        }
+        sample: {name: metrics(paths[name], *bounds) for name in ("candidate", "B0", "B1")}
         for sample, bounds in samples.items()
     }
     breadth = fold_year_diagnostics(paths["candidate"], market["timestamps"])
@@ -125,8 +114,7 @@ def evaluate_market(
         "positive_fold_concentration_at_most_0_5": concentration is not None
         and concentration <= 0.5,
         "positive_residual_sharpe": residual is not None and residual > 0,
-        "mean_delta_ci_lower_positive": bootstrap["annualized_mean_delta_ci95"][0]
-        > 0,
+        "mean_delta_ci_lower_positive": bootstrap["annualized_mean_delta_ci95"][0] > 0,
         "sharpe_delta_ci_lower_positive": bootstrap["sharpe_delta_ci95"][0] > 0,
         "positive_full_return": performance["full"]["candidate"]["net_return"] > 0,
     }
