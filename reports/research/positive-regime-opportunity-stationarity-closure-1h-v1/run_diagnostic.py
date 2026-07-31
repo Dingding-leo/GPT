@@ -45,6 +45,20 @@ def load(path: Path, instrument: str) -> tuple[pd.DataFrame, str]:
     return frame, digest
 
 
+def json_safe(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {key: json_safe(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [json_safe(item) for item in value]
+    if isinstance(value, tuple):
+        return [json_safe(item) for item in value]
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
+
+
 def finite_or_none(value: float) -> float | None:
     return float(value) if math.isfinite(value) else None
 
@@ -486,10 +500,10 @@ def main() -> None:
     parser.add_argument("--eth", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    result = run(args.btc, args.eth)
+    result = json_safe(run(args.btc, args.eth))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
-        json.dumps(result, sort_keys=True, separators=(",", ":")) + "\n",
+        json.dumps(result, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n",
         encoding="utf-8",
     )
     print(json.dumps({"accepted": result["accepted"], "verdict": result["verdict"]}))
