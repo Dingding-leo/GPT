@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "issue": 777,
+  "family": "weekly-analog-downside-bound-forecast-1h-v1",
+  "canonical_signature": "weekly-analog-downside-bound-forecast-1h-v1|markets=ETC-USDT,COMP-USDT-independent|provider=OKX-SPOT-public-confirmed|bar=1H|decision=Monday-00UTC-completed|features=168H-return,720H-return,2160H-return,168H-to-2160H-rms,168H-to-2160H-downside-rms,720H-drawdown|labels=nonoverlap-next-open-168H|analogues=32-nearest-robust-MAD-Euclidean|quantile=0.25|minimum=64|long-if-lower-bound>0.001|next-open|fee=5bps-one-way|candidate=1|grid=0",
+  "markets": ["ETC-USDT", "COMP-USDT"],
+  "provider": "OKX public unauthenticated confirmed SPOT candles",
+  "bar": "1H",
+  "source_start": "2021-07-24T00:00:00Z",
+  "frozen_prefix_rows": 43441,
+  "frozen_prefix_end": "2026-07-08T00:00:00Z",
+  "samples": {
+    "train": [2880, 17520],
+    "development_oos": [17520, 43440],
+    "full": [2880, 43440]
+  },
+  "decision_cadence": "completed Monday 00:00 UTC",
+  "label": "open[u+169]/open[u+1]-1 for prior weekly u, available only when u+169<=t",
+  "features": [
+    "168H log close return",
+    "720H log close return",
+    "2160H log close return",
+    "168H/2160H RMS volatility minus one",
+    "168H/2160H downside RMS minus one",
+    "drawdown from trailing 720H high"
+  ],
+  "minimum_history": 64,
+  "neighbours": 32,
+  "distance": "Euclidean after causal historical median/MAD scaling, earlier timestamp tie break",
+  "quantile": 0.25,
+  "quantile_method": "linear empirical",
+  "long_threshold": 0.001,
+  "execution": "next hourly open",
+  "position_domain": [0, 1],
+  "fee_one_way": 0.0005,
+  "candidate_count": 1,
+  "parameter_grid_count": 0,
+  "benchmarks": [
+    "hourly B0 2160H endpoint trend",
+    "daily 00UTC B1 2160H endpoint trend"
+  ],
+  "folds": "12 contiguous 2160H development-OOS folds",
+  "uncertainty": {
+    "method": "paired non-circular moving-block bootstrap with common starts across markets",
+    "block_hours": 168,
+    "resamples": 5000,
+    "seed": 20260731
+  },
+  "hard_boundary": "own completed lagged history to same-instrument future unlevered long/cash only"
+}
