@@ -188,9 +188,7 @@ def parse_kline(downloaded: Downloaded) -> pd.DataFrame:
             )
         try:
             open_time = int(fields[0])
-            open_price, high, low, close, volume = (
-                float(fields[index]) for index in range(1, 6)
-            )
+            open_price, high, low, close, volume = (float(fields[index]) for index in range(1, 6))
         except ValueError as exc:
             raise ValueError(f"non-numeric kline at {downloaded.meta.url}:{line_number}") from exc
         prices = (open_price, high, low, close)
@@ -201,9 +199,7 @@ def parse_kline(downloaded: Downloaded) -> pd.DataFrame:
         if high < max(open_price, close) or low > min(open_price, close) or high < low:
             raise ValueError(f"inconsistent OHLC at {downloaded.meta.url}:{line_number}")
         rows.append((open_time, open_price, high, low, close, volume))
-    frame = pd.DataFrame(
-        rows, columns=["open_time", "open", "high", "low", "close", "volume"]
-    )
+    frame = pd.DataFrame(rows, columns=["open_time", "open", "high", "low", "close", "volume"])
     if frame.empty:
         raise ValueError(f"empty kline archive: {downloaded.meta.url}")
     if frame["open_time"].max() >= 10**15:
@@ -260,9 +256,7 @@ def build_daily(frame: pd.DataFrame) -> pd.DataFrame:
     daily["true_high"] = np.maximum(daily["high"], daily["previous_close"])
     daily["true_low"] = np.minimum(daily["low"], daily["previous_close"])
     daily["true_range"] = daily["true_high"] - daily["true_low"]
-    daily["acceptance"] = (
-        2.0 * (daily["close"] - daily["true_low"]) / daily["true_range"] - 1.0
-    )
+    daily["acceptance"] = 2.0 * (daily["close"] - daily["true_low"]) / daily["true_range"] - 1.0
     daily["raw_expansion"] = np.nan
     for index in range(30, len(daily)):
         prior = daily.iloc[index - 30 : index]
@@ -769,12 +763,8 @@ def render_report(evidence: dict[str, Any]) -> str:
             f"{quintiles['gross_index_rho']:+.4f} | "
             f"{quintiles['adverse_index_rho']:+.4f} |"
         )
-        gross_sequence = ", ".join(
-            f"{row['mean_gross']:+.4%}" for row in quintiles["buckets"]
-        )
-        adverse_sequence = ", ".join(
-            f"{row['mean_adverse']:+.4%}" for row in quintiles["buckets"]
-        )
+        gross_sequence = ", ".join(f"{row['mean_gross']:+.4%}" for row in quintiles["buckets"])
+        adverse_sequence = ", ".join(f"{row['mean_adverse']:+.4%}" for row in quintiles["buckets"])
         lines.append(f"\n{market} gross bucket means: `{gross_sequence}`.")
         lines.append(f"{market} adverse bucket means: `{adverse_sequence}`.")
     lines.extend(
