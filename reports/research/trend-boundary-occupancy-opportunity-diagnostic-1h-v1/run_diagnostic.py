@@ -131,8 +131,12 @@ def breadth(rows: pd.DataFrame) -> tuple[list[dict], list[dict]]:
             {
                 "fold": fold,
                 "n": len(part),
-                "gross_slope": finite(slope(part["clearance"].to_numpy(), part["gross"].to_numpy())),
-                "mae_slope": finite(slope(part["clearance"].to_numpy(), part["mae"].to_numpy())),
+                "gross_slope": finite(
+                    slope(part["clearance"].to_numpy(), part["gross"].to_numpy())
+                ),
+                "mae_slope": finite(
+                    slope(part["clearance"].to_numpy(), part["mae"].to_numpy())
+                ),
             }
         )
     years = []
@@ -141,8 +145,12 @@ def breadth(rows: pd.DataFrame) -> tuple[list[dict], list[dict]]:
             {
                 "year": int(year),
                 "n": len(part),
-                "gross_slope": finite(slope(part["clearance"].to_numpy(), part["gross"].to_numpy())),
-                "mae_slope": finite(slope(part["clearance"].to_numpy(), part["mae"].to_numpy())),
+                "gross_slope": finite(
+                    slope(part["clearance"].to_numpy(), part["gross"].to_numpy())
+                ),
+                "mae_slope": finite(
+                    slope(part["clearance"].to_numpy(), part["mae"].to_numpy())
+                ),
             }
         )
     return folds, years
@@ -160,8 +168,8 @@ def summary(rows: pd.DataFrame, sampled: np.ndarray) -> tuple[dict, np.ndarray, 
     mae_draws = np.array([rho(x[index], mae[index]) for index in sampled])
     item = {
         "n_anchors": len(rows),
-        "occupancy_iqr": float(rows["occupancy"].quantile(.75) - rows["occupancy"].quantile(.25)),
-        "occupancy_quartiles": [float(rows["occupancy"].quantile(q)) for q in (.25, .5, .75)],
+        "occupancy_iqr": float(rows["occupancy"].quantile(0.75) - rows["occupancy"].quantile(0.25)),
+        "occupancy_quartiles": [float(rows["occupancy"].quantile(q)) for q in (0.25, 0.5, 0.75)],
         "clearance_median": median,
         "low_n": len(low),
         "high_n": len(high),
@@ -171,9 +179,9 @@ def summary(rows: pd.DataFrame, sampled: np.ndarray) -> tuple[dict, np.ndarray, 
         "positive_gross_weeks": int((gross > 0).sum()),
         "zero_gross_weeks": int((gross == 0).sum()),
         "gross_rho": rho(x, gross),
-        "gross_rho_ci95": np.quantile(gross_draws, [.025, .975]).tolist(),
+        "gross_rho_ci95": np.quantile(gross_draws, [0.025, 0.975]).tolist(),
         "mae_rho": rho(x, mae),
-        "mae_rho_ci95": np.quantile(mae_draws, [.025, .975]).tolist(),
+        "mae_rho_ci95": np.quantile(mae_draws, [0.025, 0.975]).tolist(),
         "gross_slope": slope(x, gross),
         "mae_slope": slope(x, mae),
         "high_minus_low_gross_mean": None,
@@ -191,17 +199,33 @@ def summary(rows: pd.DataFrame, sampled: np.ndarray) -> tuple[dict, np.ndarray, 
     if len(high):
         item["high_minus_low_gross_mean"] = float(high["gross"].mean() - low["gross"].mean())
         item["high_minus_low_mae_mean"] = float(high["mae"].mean() - low["mae"].mean())
-    item["positive_gross_folds"] = sum(x["gross_slope"] is not None and x["gross_slope"] > 0 for x in folds)
-    item["positive_mae_folds"] = sum(x["mae_slope"] is not None and x["mae_slope"] > 0 for x in folds)
-    item["positive_gross_years"] = sum(x["gross_slope"] is not None and x["gross_slope"] > 0 for x in years)
-    item["positive_mae_years"] = sum(x["mae_slope"] is not None and x["mae_slope"] > 0 for x in years)
+    item["positive_gross_folds"] = sum(
+        x["gross_slope"] is not None and x["gross_slope"] > 0 for x in folds
+    )
+    item["positive_mae_folds"] = sum(
+        x["mae_slope"] is not None and x["mae_slope"] > 0 for x in folds
+    )
+    item["positive_gross_years"] = sum(
+        x["gross_slope"] is not None and x["gross_slope"] > 0 for x in years
+    )
+    item["positive_mae_years"] = sum(
+        x["mae_slope"] is not None and x["mae_slope"] > 0 for x in years
+    )
     gates = {
         "gross_rho_positive_lcb": item["gross_rho"] > 0 and item["gross_rho_ci95"][0] > 0,
         "mae_rho_positive_lcb": item["mae_rho"] > 0 and item["mae_rho_ci95"][0] > 0,
-        "gross_breadth": item["positive_gross_folds"] >= 4 and item["positive_gross_years"] >= 2,
+        "gross_breadth": (
+            item["positive_gross_folds"] >= 4 and item["positive_gross_years"] >= 2
+        ),
         "mae_breadth": item["positive_mae_folds"] >= 4 and item["positive_mae_years"] >= 2,
-        "state_variation": item["occupancy_iqr"] >= .10 and len(low) >= 20 and len(high) >= 20,
-        "half_ordering": item["high_minus_low_gross_mean"] is not None and item["high_minus_low_gross_mean"] > 0 and item["high_minus_low_mae_mean"] > 0,
+        "state_variation": (
+            item["occupancy_iqr"] >= 0.10 and len(low) >= 20 and len(high) >= 20
+        ),
+        "half_ordering": (
+            item["high_minus_low_gross_mean"] is not None
+            and item["high_minus_low_gross_mean"] > 0
+            and item["high_minus_low_mae_mean"] > 0
+        ),
     }
     item["gates"] = gates
     item["passes_all"] = all(gates.values())
@@ -242,28 +266,43 @@ def run(btc: Path, eth: Path) -> dict:
     gross_draws, mae_draws = [], []
     for instrument, rows in market_rows.items():
         item, gross, mae = summary(rows, sampled)
-        result["markets"][instrument] = {"source_csv_sha256": HASHES[instrument], "summary": item}
+        result["markets"][instrument] = {
+            "source_csv_sha256": HASHES[instrument],
+            "summary": item,
+        }
         gross_draws.append(gross)
         mae_draws.append(mae)
     result["common_index"] = {
-        "median_gross_rho_point": float(np.median([result["markets"][x]["summary"]["gross_rho"] for x in HASHES])),
-        "median_gross_rho_ci95": np.quantile(np.median(np.vstack(gross_draws), axis=0), [.025, .975]).tolist(),
-        "median_mae_rho_point": float(np.median([result["markets"][x]["summary"]["mae_rho"] for x in HASHES])),
-        "median_mae_rho_ci95": np.quantile(np.median(np.vstack(mae_draws), axis=0), [.025, .975]).tolist(),
+        "median_gross_rho_point": float(
+            np.median([result["markets"][x]["summary"]["gross_rho"] for x in HASHES])
+        ),
+        "median_gross_rho_ci95": np.quantile(
+            np.median(np.vstack(gross_draws), axis=0), [0.025, 0.975]
+        ).tolist(),
+        "median_mae_rho_point": float(
+            np.median([result["markets"][x]["summary"]["mae_rho"] for x in HASHES])
+        ),
+        "median_mae_rho_ci95": np.quantile(
+            np.median(np.vstack(mae_draws), axis=0), [0.025, 0.975]
+        ).tolist(),
     }
-    result["markets_passing_all"] = sum(result["markets"][x]["summary"]["passes_all"] for x in HASHES)
-    result["verdict"] = "authorize_fresh_cohort_boundary_occupancy_candidate" if result["markets_passing_all"] == 2 else "reject_trend_boundary_occupancy_opportunity_premise"
-    return result
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--btc-csv", required=True, type=Path)
-    parser.add_argument("--eth-csv", required=True, type=Path)
-    parser.add_argument("--output", required=True, type=Path)
-    args = parser.parse_args()
-    args.output.write_text(json.dumps(run(args.btc_csv, args.eth_csv), indent=2, sort_keys=True, allow_nan=False) + "\n")
-
-
-if __name__ == "__main__":
-    main()
+    result["markets_passing_all"] = sum(
+        result["markets"][x]["summary"]["passes_all"] for x in HASHES
+    )
+    result["verdict"] = (
+        "authorizeWÙœ™\ÚØÛÚÜØ›İ[™\WÛØØİ\[˜ŞWØØ[™Y]H‚ˆYˆ™\İ[È›X\šÙ]×Ü\ÜÚ[™×Ø[—HOH‚ˆ[ÙHœ™Z™Xİİ™[™Ø›İ[™\WÛØØİ\[˜ŞWÛÜÜ[š]WÜ™[Z\ÙH‚ˆ
+Bˆ™]\›ˆ™\İ[‚‚™YˆXZ[Š
+HOˆ›Û™N‚ˆ\œÙ\ˆH\™Ü\œÙK\™İ[Y[\œÙ\Š
+Bˆ\œÙ\‹˜YØ\™İ[Y[
+‹KXËXÜİˆ‹™\]Z\™YUYK\OT]
+Bˆ\œÙ\‹˜YØ\™İ[Y[
+‹KY]XÜİˆ‹™\]Z\™YUYK\OT]
+Bˆ\œÙ\‹˜YØ\™İ[Y[
+‹K[İ]]‹™\]Z\™YUYK\OT]
+Bˆ\™ÜÈH\œÙ\‹œ\œÙWØ\™ÜÊ
+Bˆ\™ÜË›İ]]Üš]Wİ^
+ˆœÛÛ‹™[\Êˆ[Š\™ÜË˜×ØÜİ‹\™ÜË™]ØÜİŠK[™[L‹ÛÜÚÙ^\ÏUYK[İ×Û˜[Q˜[ÙBˆ
+Bˆ
+È—ˆ‚ˆ
+B‚‚šYˆ×Û˜[YW×ÈOH—×ÛXZ[—×È‚ˆXZ[Š
+B
