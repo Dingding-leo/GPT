@@ -1,0 +1,53 @@
+name: BOCPD Duration Transition Ensemble 1H Research
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/bocpd-duration-transition-ensemble-1h-v1.yml"
+      - "reports/research/bocpd-duration-transition-ensemble-1h-v1/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install fixed research dependencies
+        run: python -m pip install --disable-pip-version-check "numpy==2.2.6" "scipy==1.15.3"
+
+      - name: Materialize and compile deterministic reproducer
+        run: |
+          python reports/research/bocpd-duration-transition-ensemble-1h-v1/run_duration_ensemble.py \
+            --materialize /tmp/run_duration_ensemble.py
+          python -m py_compile /tmp/run_duration_ensemble.py
+          sha256sum /tmp/run_duration_ensemble.py
+
+      - name: Run immutable public-data experiment
+        run: |
+          mkdir -p /tmp/bocpd-duration-output /tmp/bocpd-duration-cache
+          python /tmp/run_duration_ensemble.py \
+            --output-dir /tmp/bocpd-duration-output \
+            --cache-dir /tmp/bocpd-duration-cache \
+            | tee /tmp/bocpd-duration-output/stdout.json
+          sha256sum /tmp/bocpd-duration-output/* | sort \
+            > /tmp/bocpd-duration-output/artifact-files.sha256
+
+      - name: Upload immutable evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bocpd-duration-transition-ensemble-1h-v1
+          path: /tmp/bocpd-duration-output
+          if-no-files-found: error
+          retention-days: 90
