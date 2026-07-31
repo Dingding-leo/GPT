@@ -199,9 +199,7 @@ def run(btc: Path, eth: Path) -> dict[str, Any]:
             and item["max_absolute_payoff_share"] <= 0.25
         )
 
-    accepted = all(market_passes(item) for item in markets) and bool(
-        np.all(common_ci[:, 0] > 0)
-    )
+    accepted = all(market_passes(item) for item in markets) and bool(np.all(common_ci[:, 0] > 0))
     return {
         "family_id": "lag1-self-contained-b1-payoff-memory-closure-1h-v1",
         "issue": 795,
@@ -211,10 +209,7 @@ def run(btc: Path, eth: Path) -> dict[str, Any]:
         "markets": [clean(item) for item in markets],
         "common": {
             "point": dict(zip(metric_names, common_point, strict=True)),
-            "ci95": {
-                name: common_ci[column].tolist()
-                for column, name in enumerate(metric_names)
-            },
+            "ci95": {name: common_ci[column].tolist() for column, name in enumerate(metric_names)},
         },
         "accepted": accepted,
         "verdict": (
