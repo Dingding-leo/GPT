@@ -34,19 +34,23 @@ def forecast_diagnostics(market: dict[str, Any], built: dict[str, Any]) -> dict[
         "both_nonpositive": valid & (pred24 <= 0) & (pred168 <= 0),
     }
     for name, group in sign_groups.items():
+        realized24 = group & np.isfinite(label24)
+        realized168 = group & np.isfinite(label168)
         groups[name] = {
             "count": int(np.sum(group)),
-            "mean_realized_24h": finite_or_none(float(np.mean(label24[group])))
-            if np.any(group)
+            "realized_24h_count": int(np.sum(realized24)),
+            "realized_168h_count": int(np.sum(realized168)),
+            "mean_realized_24h": finite_or_none(float(np.mean(label24[realized24])))
+            if np.any(realized24)
             else None,
-            "mean_realized_168h": finite_or_none(float(np.mean(label168[group])))
-            if np.any(group)
+            "mean_realized_168h": finite_or_none(float(np.mean(label168[realized168])))
+            if np.any(realized168)
             else None,
-            "positive_realized_24h_fraction": float(np.mean(label24[group] > 0))
-            if np.any(group)
+            "positive_realized_24h_fraction": float(np.mean(label24[realized24] > 0))
+            if np.any(realized24)
             else None,
-            "positive_realized_168h_fraction": float(np.mean(label168[group] > 0))
-            if np.any(group)
+            "positive_realized_168h_fraction": float(np.mean(label168[realized168] > 0))
+            if np.any(realized168)
             else None,
         }
     corr24 = valid & np.isfinite(label24)
