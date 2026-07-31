@@ -44,11 +44,13 @@ def write_report(output_dir: Path, result: dict[str, Any]) -> None:
     correction_start = report.index("Issue #761 and closed evidence PR #762")
     correction_end = report.index("\n\n## Abort conditions and verdict", correction_start)
     active_correction = (
-        "Issue #764 and draft PR #765 contain the sole preregistered training-only evaluation of the exact "
-        "`volatility-gated-cadence-1h-v1` candidate on the fresh ALGO-USDT and ATOM-USDT cohort. The rule remains "
-        "under terminal evaluation at this acquisition checkpoint. No training-authorized correction verdict has "
-        "been issued, the immutable BTC/ETH nominated policy is unchanged, and this forward interval is not "
-        "consumed for candidate selection, rescue tuning, or market filtering."
+        "Issue #764 and closed evidence PR #765 contain terminal rejection evidence for the exact "
+        "`volatility-gated-cadence-state-1h-v1` candidate on the fresh ALGO-USDT and ATOM-USDT cohort. "
+        "The volatility state accelerated both exits and re-entries after variance expansion, increasing turnover "
+        "while missing favourable rebound hours. ALGO and ATOM both underperformed the frozen daily B1 benchmark "
+        "in development OOS, failed breadth, residual-Sharpe, uncertainty and full-positive gates, and zero of two "
+        "markets passed every preregistered gate. No training-authorized correction exists, and this BTC/ETH "
+        "forward interval was not consumed to revise or rescue the rejected family."
     )
     report_path.write_text(report[:correction_start] + active_correction + report[correction_end:])
 
@@ -65,13 +67,17 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     result["active_alpha_context"] = {
         "issue": 764,
         "pull_request": 765,
-        "family_id": "volatility-gated-cadence-1h-v1",
-        "status": "preregistered_training_evaluation_in_progress",
+        "family_id": "volatility-gated-cadence-state-1h-v1",
+        "status": "terminal_rejection_evidence_closed_unmerged",
+        "workflow_run": 30608410142,
+        "artifact_id": 8784562532,
+        "artifact_sha256": "5072a14a42dce71ab51547ebd3d49ad0a0b58de780c70f2df6e7799899d9bff5",
+        "result_sha256": "50ff85bd571f75353557793f8efb3c3316b49f335dfc20220c23c1f78426fffa",
         "prospective_performance_consumed": False,
         "correction_permitted": False,
         "reason": (
-            "The sole fresh-cohort training evaluation was not terminal at acquisition; therefore no correction "
-            "is authorized and the nominated BTC/ETH policy and observation epoch remain unchanged."
+            "Both fresh markets failed the preregistered bilateral gates. Fast volatility-state refreshes increased "
+            "turnover and accelerated harmful exits before positive rebounds; no same-cohort rescue is authorized."
         ),
     }
     exposed = any(market["realized_interval"]["position"] == 1 for market in result["markets"])
@@ -85,7 +91,7 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     }
     result["next_strategy_action"] = (
         "continue the identical frozen 2160H benchmark-shadow epoch at the next complete public 1H observation; "
-        "separately complete the preregistered volatility-gated cadence evaluation without using BTC/ETH forward data"
+        "do not prospectively rescue the rejected volatility-gated cadence state family"
     )
     base.write_outputs(output_dir, result)
     write_report(output_dir, result)
