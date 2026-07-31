@@ -32,16 +32,12 @@ def report_markdown(result: dict[str, Any]) -> str:
     ]
     for market in result["markets"]:
         lines.extend([f"### {market['instrument']}", ""])
-        lines.append(
-            "| Sample | Policy | Net | Sharpe | Max DD | Turnover | Fees | Edge/turn |"
-        )
+        lines.append("| Sample | Policy | Net | Sharpe | Max DD | Turnover | Fees | Edge/turn |")
         lines.append("|---|---|---:|---:|---:|---:|---:|---:|")
         for sample in ("train", "oos", "full"):
             for policy in ("candidate", "B1", "B0"):
                 item = market["performance"][sample][policy]
-                sharpe = (
-                    "undefined" if item["sharpe"] is None else f"{item['sharpe']:.3f}"
-                )
+                sharpe = "undefined" if item["sharpe"] is None else f"{item['sharpe']:.3f}"
                 edge = (
                     "undefined"
                     if item["edge_per_turn_bps"] is None
@@ -62,8 +58,7 @@ def report_markdown(result: dict[str, Any]) -> str:
                 "",
                 f"Residual Sharpe versus B1: {market['residual_sharpe_vs_B1']}.",
                 "",
-                f"Accepted gates: {sum(market['gates'].values())}/"
-                f"{len(market['gates'])}.",
+                f"Accepted gates: {sum(market['gates'].values())}/{len(market['gates'])}.",
                 "",
             ]
         )
