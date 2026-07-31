@@ -91,7 +91,7 @@ Only 26.7% of BTC regimes and 33.3% of ETH regimes had positive mean gross oppor
 ## Concentration and leave-one-regime-out stability
 
 | Market | Max absolute-gross share | Max positive-gross share | Dominant positive regime | Minimum LOO equal gross | Minimum LOO equal net | Minimum LOO day gross | Minimum LOO day net |
-|---|---:|---:|---|---:|---:|---:|---:|---:|
+|---|---:|---:|---|---:|---:|---:|---:|
 | BTC-USDT | 22.74% | **75.75%** | 14 Jan–15 Jun 2023 | -1.5135% | -1.6135% | -0.7390% | -0.8390% |
 | ETH-USDT | 26.18% | **62.42%** | 9–24 Jan 2023 | -0.4902% | -0.5902% | -0.2943% | -0.3943% |
 
@@ -155,7 +155,9 @@ The age result in issue #806 was therefore not hiding a stable nonlinear selecto
 The reproducer verified exact source hashes, confirmed a contiguous 1H training prefix, constructed regimes only from completed daily states, retained boundary-censored regimes, used next-open chronology, charged exactly two one-way 5 bps transitions per independent label and never parsed OOS. A complete second reconstruction was byte-identical:
 
 ```text
-evidence SHA-256  1a753308a42a325e53df1e3b795e4e0007ce2df48f8d9e00f20b8a5c7e2009e0
+evidence JSON SHA-256       4a8188d7048b0a3421fb6974c70a2aa808704a5ea8360390765006f3d45c04dc
+evidence gzip SHA-256       1d63b7271b81186e2d14dba7d1ea2f766f49b0e1812517ba7982b8bd694dee41
+evidence encoding            deterministic gzip, base64 text in repository
 ```
 
 ## Verdict
