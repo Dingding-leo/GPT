@@ -214,9 +214,7 @@ def parse_kline(downloaded: Downloaded) -> pd.DataFrame:
             open_time = int(fields[0])
             values = tuple(float(fields[index]) for index in range(1, 5))
         except ValueError as exc:
-            raise ValueError(
-                f"non-numeric kline at {downloaded.meta.url}:{line_number}"
-            ) from exc
+            raise ValueError(f"non-numeric kline at {downloaded.meta.url}:{line_number}") from exc
         open_price, high, low, close = values
         if not all(math.isfinite(value) and value > 0 for value in values):
             raise ValueError(f"invalid OHLC at {downloaded.meta.url}:{line_number}")
@@ -239,8 +237,7 @@ def parse_kline(downloaded: Downloaded) -> pd.DataFrame:
 
 def build_market_frames(downloaded: list[Downloaded]) -> dict[str, dict[str, pd.DataFrame]]:
     grouped: dict[str, dict[str, list[pd.DataFrame]]] = {
-        market: {"spot_1h_kline": [], "coinm_perpetual_1h_kline": []}
-        for market in MARKETS
+        market: {"spot_1h_kline": [], "coinm_perpetual_1h_kline": []} for market in MARKETS
     }
     for item in downloaded:
         grouped[item.meta.market][item.meta.kind].append(parse_kline(item))
@@ -639,8 +636,7 @@ def render_report(evidence: dict[str, Any]) -> str:
         lines.extend(["## Source failures", ""])
         for failure in evidence["source"]["failures"]:
             lines.append(
-                f"- `{failure['market']} {failure['kind']} {failure['period']}`: "
-                f"{failure['error']}"
+                f"- `{failure['market']} {failure['kind']} {failure['period']}`: {failure['error']}"
             )
         lines.extend(
             [
@@ -774,15 +770,11 @@ def main() -> None:
         evidence = abort_evidence(specs, downloaded, failed)
     else:
         tables = {
-            market: build_labels(
-                kinds["spot_1h_kline"], kinds["coinm_perpetual_1h_kline"]
-            )
+            market: build_labels(kinds["spot_1h_kline"], kinds["coinm_perpetual_1h_kline"])
             for market, kinds in frames.items()
         }
         indices = bootstrap_indices(242)
-        bootstrap_results = {
-            market: bootstrap(table, indices) for market, table in tables.items()
-        }
+        bootstrap_results = {market: bootstrap(table, indices) for market, table in tables.items()}
         common = common_inference(bootstrap_results)
         markets: dict[str, Any] = {}
         for market, table in tables.items():
@@ -841,14 +833,8 @@ def main() -> None:
     write_json(output_dir / "evidence.json", evidence)
     (output_dir / "report.md").write_text(render_report(evidence), encoding="utf-8")
     digest = hashlib.sha256((output_dir / "evidence.json").read_bytes()).hexdigest()
-    (output_dir / "evidence.sha256").write_text(
-        f"{digest}  evidence.json\n", encoding="utf-8"
-    )
-    print(
-        json.dumps(
-            {"verdict": evidence["verdict"], "evidence_sha256": digest}, sort_keys=True
-        )
-    )
+    (output_dir / "evidence.sha256").write_text(f"{digest}  evidence.json\n", encoding="utf-8")
+    print(json.dumps({"verdict": evidence["verdict"], "evidence_sha256": digest}, sort_keys=True))
 
 
 if __name__ == "__main__":
