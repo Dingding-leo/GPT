@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Deterministic family-cluster closure for terminal scalar-state diagnostics."""
 
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import argparse
