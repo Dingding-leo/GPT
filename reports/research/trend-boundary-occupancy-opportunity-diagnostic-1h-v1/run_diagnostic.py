@@ -168,7 +168,10 @@ def breadth(table: pd.DataFrame) -> dict[str, object]:
             )
         )
     year_rows = [row(years == year, {"year": year}) for year in (2021, 2022, 2023)]
-    positive = lambda rows, key: sum(item[key] is not None and item[key] > 0 for item in rows)
+
+    def positive(rows, key):
+        return sum(item[key] is not None and item[key] > 0 for item in rows)
+
     return {
         "folds": folds,
         "positive_gross_folds": positive(folds, "gross_slope"),
