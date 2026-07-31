@@ -102,6 +102,9 @@ jobs:
 
       - name: Verify immutable evidence and rejected verdict
         run: |
+          diff -u \
+            reports/research/bocpd-runlength-hysteresis-1h-v1/report.md \
+            artifacts/bocpd-runlength-hysteresis/report.md || true
           python - <<'PY'
           import json
           from pathlib import Path
