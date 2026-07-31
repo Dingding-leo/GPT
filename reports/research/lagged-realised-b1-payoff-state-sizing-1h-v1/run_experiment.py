@@ -23,8 +23,8 @@ parent = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(parent)
 
 FAMILY_ID = "lagged-realised-b1-payoff-state-sizing-1h-v1"
-ISSUE = 790
-FIXED_MARKETS = ["ZEC-USDT", "DASH-USDT"]
+ISSUE = 792
+FIXED_MARKETS = ["MKR-USDT", "YFI-USDT"]
 ORIGINAL_EVALUATE = parent.evaluate_market
 
 
