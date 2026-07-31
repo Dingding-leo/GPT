@@ -1,0 +1,146 @@
+{
+  "accepted": false,
+  "candidate_count": 0,
+  "common": {
+    "ci95": {
+      "correlation": [
+        -0.26386683375484016,
+        0.1456107367848793
+      ],
+      "mean_delta": [
+        -0.04010234919625852,
+        0.010528571132861828
+      ],
+      "sign_delta": [
+        0.03797366233000561,
+        0.49128169654271675
+      ]
+    },
+    "point": {
+      "correlation": -0.04353853509119518,
+      "mean_delta": -0.009462488237559713,
+      "sign_delta": 0.2777652648895028
+    }
+  },
+  "diagnostic_count": 1,
+  "family_id": "lag1-self-contained-b1-payoff-memory-closure-1h-v1",
+  "issue": 795,
+  "markets": [
+    {
+      "breadth": {
+        "fold_correlations": [
+          -0.3909696010289683,
+          0.6227084607657626,
+          null,
+          -0.13183781549205068,
+          0.32032016685511555,
+          -0.3355937322489867
+        ],
+        "positive_folds": 2,
+        "positive_years": 1,
+        "year_correlations": [
+          -0.7432790716715235,
+          0.1503967817819643,
+          -0.16874758109090954
+        ]
+      },
+      "ci95": {
+        "correlation": [
+          -0.3629826662820188,
+          0.16929826371316722
+        ],
+        "mean_delta": [
+          -0.03436389666989618,
+          0.007964932900282289
+        ],
+        "sign_delta": [
+          -0.04809451219512194,
+          0.6089880952380949
+        ]
+      },
+      "embedded_fees": 0.046,
+      "embedded_turnover": 92.0,
+      "instrument": "BTC-USDT",
+      "lagged_nonpositive": 71,
+      "lagged_positive": 14,
+      "max_absolute_payoff_share": 0.11468010670711845,
+      "mean_weekly_payoff": -0.005351577168050866,
+      "median_weekly_payoff": 0.0,
+      "pairs": 85,
+      "point": {
+        "correlation": -0.06842241639400701,
+        "mean_delta": -0.008574553356425084,
+        "sign_delta": 0.31589537223340036
+      },
+      "transitions": {
+        "nonpositive_to_nonpositive": 63,
+        "nonpositive_to_positive": 8,
+        "positive_to_nonpositive": 8,
+        "positive_to_positive": 6
+      },
+      "weekly_observations": 86
+    },
+    {
+      "breadth": {
+        "fold_correlations": [
+          -0.11539191912839443,
+          0.5474097861743735,
+          null,
+          -0.10424812900604066,
+          0.2291100391939269,
+          -0.37471520697627575
+        ],
+        "positive_folds": 2,
+        "positive_years": 1,
+        "year_correlations": [
+          -0.6982498605212963,
+          0.009915013350165869,
+          -0.08384423967899896
+        ]
+      },
+      "ci95": {
+        "correlation": [
+          -0.22550179488244157,
+          0.18000706417961437
+        ],
+        "mean_delta": [
+          -0.06280263524731397,
+          0.024699182570001883
+        ],
+        "sign_delta": [
+          0.04411764705882354,
+          0.42
+        ]
+      },
+      "embedded_fees": 0.05,
+      "embedded_turnover": 100.0,
+      "instrument": "ETH-USDT",
+      "lagged_nonpositive": 67,
+      "lagged_positive": 18,
+      "max_absolute_payoff_share": 0.12305248526678068,
+      "mean_weekly_payoff": -0.004386428505829884,
+      "median_weekly_payoff": 0.0,
+      "pairs": 85,
+      "point": {
+        "correlation": -0.018654653788383345,
+        "mean_delta": -0.010350423118694344,
+        "sign_delta": 0.23963515754560533
+      },
+      "transitions": {
+        "nonpositive_to_nonpositive": 57,
+        "nonpositive_to_positive": 10,
+        "positive_to_nonpositive": 11,
+        "positive_to_positive": 7
+      },
+      "weekly_observations": 86
+    }
+  ],
+  "sample": {
+    "oos_accessed": false,
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "verdict": "reject_lag1_self_contained_b1_payoff_memory_premise"
+}
