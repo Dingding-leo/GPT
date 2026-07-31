@@ -47,9 +47,7 @@ def slope(x: np.ndarray, y: np.ndarray) -> float:
     if len(x) < 3 or np.std(x, ddof=1) == 0:
         return float("nan")
     standardized = (x - x.mean()) / np.std(x, ddof=1)
-    return float(
-        np.dot(standardized, y - y.mean()) / np.dot(standardized, standardized)
-    )
+    return float(np.dot(standardized, y - y.mean()) / np.dot(standardized, standardized))
 
 
 def load(path: Path, instrument: str) -> pd.DataFrame:
@@ -63,9 +61,7 @@ def load(path: Path, instrument: str) -> pd.DataFrame:
         pd.Timestamp("2026-07-08T00:00:00Z"),
     ]:
         raise ValueError("frozen boundaries changed")
-    if not bool(
-        (frame["timestamp"].diff().dropna() == pd.Timedelta(hours=1)).all()
-    ):
+    if not bool((frame["timestamp"].diff().dropna() == pd.Timedelta(hours=1)).all()):
         raise ValueError("non-contiguous 1H source")
     return frame.iloc[: TRAIN[1]].copy()
 
@@ -131,8 +127,7 @@ def breadth(rows: pd.DataFrame) -> tuple[list[dict], list[dict]]:
     for fold in range(6):
         start = TRAIN[0] + fold * LOOKBACK
         part = rows[
-            (rows["anchor_index"] >= start)
-            & (rows["anchor_index"] + WEEK + 1 < start + LOOKBACK)
+            (rows["anchor_index"] >= start) & (rows["anchor_index"] + WEEK + 1 < start + LOOKBACK)
         ]
         folds.append(
             {
@@ -141,9 +136,7 @@ def breadth(rows: pd.DataFrame) -> tuple[list[dict], list[dict]]:
                 "gross_slope": finite(
                     slope(part["clearance"].to_numpy(), part["gross"].to_numpy())
                 ),
-                "mae_slope": finite(
-                    slope(part["clearance"].to_numpy(), part["mae"].to_numpy())
-                ),
+                "mae_slope": finite(slope(part["clearance"].to_numpy(), part["mae"].to_numpy())),
             }
         )
     years = []
@@ -155,9 +148,7 @@ def breadth(rows: pd.DataFrame) -> tuple[list[dict], list[dict]]:
                 "gross_slope": finite(
                     slope(part["clearance"].to_numpy(), part["gross"].to_numpy())
                 ),
-                "mae_slope": finite(
-                    slope(part["clearance"].to_numpy(), part["mae"].to_numpy())
-                ),
+                "mae_slope": finite(slope(part["clearance"].to_numpy(), part["mae"].to_numpy())),
             }
         )
     return folds, years
@@ -185,12 +176,8 @@ def summary(rows: pd.DataFrame) -> tuple[dict, np.ndarray, np.ndarray]:
         "n_anchors": len(rows),
         "first_anchor": rows["anchor_timestamp"].iloc[0],
         "first_feature_start": rows["feature_start_timestamp"].iloc[0],
-        "occupancy_iqr": float(
-            rows["occupancy"].quantile(0.75) - rows["occupancy"].quantile(0.25)
-        ),
-        "occupancy_quartiles": [
-            float(rows["occupancy"].quantile(q)) for q in (0.25, 0.5, 0.75)
-        ],
+        "occupancy_iqr": float(rows["occupancy"].quantile(0.75) - rows["occupancy"].quantile(0.25)),
+        "occupancy_quartiles": [float(rows["occupancy"].quantile(q)) for q in (0.25, 0.5, 0.75)],
         "clearance_median": median,
         "low_n": len(low),
         "high_n": len(high),
@@ -221,17 +208,11 @@ def summary(rows: pd.DataFrame) -> tuple[dict, np.ndarray, np.ndarray]:
         row["mae_slope"] is not None and row["mae_slope"] > 0 for row in years
     )
     gates = {
-        "gross_rho_positive_lcb": item["gross_rho"] > 0
-        and item["gross_rho_ci95"][0] > 0,
-        "mae_rho_positive_lcb": item["mae_rho"] > 0
-        and item["mae_rho_ci95"][0] > 0,
-        "gross_breadth": item["positive_gross_folds"] >= 4
-        and item["positive_gross_years"] >= 2,
-        "mae_breadth": item["positive_mae_folds"] >= 4
-        and item["positive_mae_years"] >= 2,
-        "state_variation": item["occupancy_iqr"] >= 0.10
-        and len(low) >= 20
-        and len(high) >= 20,
+        "gross_rho_positive_lcb": item["gross_rho"] > 0 and item["gross_rho_ci95"][0] > 0,
+        "mae_rho_positive_lcb": item["mae_rho"] > 0 and item["mae_rho_ci95"][0] > 0,
+        "gross_breadth": item["positive_gross_folds"] >= 4 and item["positive_gross_years"] >= 2,
+        "mae_breadth": item["positive_mae_folds"] >= 4 and item["positive_mae_years"] >= 2,
+        "state_variation": item["occupancy_iqr"] >= 0.10 and len(low) >= 20 and len(high) >= 20,
     }
     item["gates"] = gates
     item["passes_all"] = all(gates.values())
@@ -287,8 +268,7 @@ def run(btc: Path, eth: Path) -> dict:
         "source_csv_sha256": HASHES,
         "protocol": {
             "frozen_text": (
-                "complete feature window and complete 168H target "
-                "lie strictly inside training"
+                "complete feature window and complete 168H target lie strictly inside training"
             ),
             "training": list(TRAIN),
             "lookback_hours": LOOKBACK,
@@ -307,9 +287,7 @@ def run(btc: Path, eth: Path) -> dict:
             "eligibility_rule": "anchor - 167 >= 2880",
             "markets": corrected,
             "common_index": corrected_common,
-            "markets_passing_all": sum(
-                corrected[key]["passes_all"] for key in HASHES
-            ),
+            "markets_passing_all": sum(corrected[key]["passes_all"] for key in HASHES),
             "verdict": "reject_trend_boundary_occupancy_opportunity_premise",
         },
         "excluded_rows": excluded,
