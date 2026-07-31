@@ -1,0 +1,92 @@
+name: Discounted Payoff Sign Evidence Sizing
+
+on:
+  push:
+    branches:
+      - auto/research/20260731-10-discounted-payoff-sign-sizing
+    paths:
+      - .github/workflows/discounted-payoff-sign-evidence-sizing.yml
+      - scripts/run_discounted_payoff_sign_evidence_sizing.py
+      - reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/reproducer.py.gz.b64
+
+permissions:
+  contents: read
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact research head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==26.1.2"
+          python -m pip install -e .
+          python -m pip check
+      - name: Execute frozen public-data strategy experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/run
+          python scripts/run_discounted_payoff_sign_evidence_sizing.py \
+            --output-dir reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/run
+      - name: Verify terminal evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/run
+          test -s "$root/protocol.json"
+          test -s "$root/result.json"
+          test -s "$root/result-summary.json"
+          test -s "$root/report.md"
+          test -s "$root/data/ADA-USDT/candles.csv"
+          test -s "$root/data/AVAX-USDT/candles.csv"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/run")
+          result = json.loads((root / "result.json").read_text())
+          assert result["family_id"] == "discounted-payoff-sign-evidence-sizing-1h-v1"
+          assert result["candidate_count"] == 1
+          assert result["parameter_grid_count"] == 0
+          assert result["fee_one_way"] == 0.0005
+          assert set(result["markets"]) == {"ADA-USDT", "AVAX-USDT"}
+          assert result["verdict"] in {
+              "nominate_discounted_payoff_sign_evidence_sizing_for_research_review",
+              "reject_discounted_payoff_sign_evidence_sizing_family",
+          }
+          for market in result["markets"].values():
+              assert market["source"]["rows"] == 28081
+              assert all(market["validation"].values())
+          PY
+          (
+            cd "$root"
+            find . -type f ! -name artifact-manifest.sha256 -print0 \
+              | sort -z \
+              | xargs -0 sha256sum > artifact-manifest.sha256
+            sha256sum --check artifact-manifest.sha256
+          )
+      - name: Upload immutable strategy evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: discounted-payoff-sign-evidence-sizing-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: reports/research/discounted-payoff-sign-evidence-sizing-1h-v1/run/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 6
