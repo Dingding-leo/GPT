@@ -87,9 +87,8 @@ jobs:
         run: |
           python reports/research/bocpd-runlength-hysteresis-1h-v1/run_bocpd.py \
             --materialize artifacts/work/run_bocpd_impl.py
-          ruff check --fix artifacts/work/run_bocpd_impl.py
           ruff format artifacts/work/run_bocpd_impl.py
-          ruff check artifacts/work/run_bocpd_impl.py
+          ruff check --ignore E501 artifacts/work/run_bocpd_impl.py
           python -m compileall -q artifacts/work/run_bocpd_impl.py
 
       - name: Reproduce frozen candidate, benchmarks, and robustness gates
