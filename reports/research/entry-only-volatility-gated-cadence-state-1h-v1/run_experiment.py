@@ -36,13 +36,13 @@ _ENTRY_ONLY_STATE = b"""        if midnight:
         candidate[t] = current_candidate
 """
 
-_GATE_NEEDLE = b'''        "turnover_below_B0": c["turnover"] < b0["turnover"],
+_GATE_NEEDLE = b"""        "turnover_below_B0": c["turnover"] < b0["turnover"],
         "edge_per_turn_at_least_B1": c["edge_per_turn_bps"] >= b1["edge_per_turn_bps"],
-'''
-_GATE_REPLACEMENT = b'''        "turnover_below_B0": c["turnover"] < b0["turnover"],
+"""
+_GATE_REPLACEMENT = b"""        "turnover_below_B0": c["turnover"] < b0["turnover"],
         "turnover_no_greater_B1": c["turnover"] <= b1["turnover"],
         "edge_per_turn_at_least_B1": c["edge_per_turn_bps"] >= b1["edge_per_turn_bps"],
-'''
+"""
 
 _REPLACEMENTS = (
     (
