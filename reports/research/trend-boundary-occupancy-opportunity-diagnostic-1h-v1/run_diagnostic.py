@@ -124,8 +124,7 @@ def breadth(rows: pd.DataFrame) -> tuple[list[dict], list[dict]]:
     for fold in range(6):
         start = TRAIN[0] + fold * LOOKBACK
         part = rows[
-            (rows["anchor_index"] >= start)
-            & (rows["anchor_index"] + WEEK + 1 < start + LOOKBACK)
+            (rows["anchor_index"] >= start) & (rows["anchor_index"] + WEEK + 1 < start + LOOKBACK)
         ]
         folds.append(
             {
@@ -134,9 +133,7 @@ def breadth(rows: pd.DataFrame) -> tuple[list[dict], list[dict]]:
                 "gross_slope": finite(
                     slope(part["clearance"].to_numpy(), part["gross"].to_numpy())
                 ),
-                "mae_slope": finite(
-                    slope(part["clearance"].to_numpy(), part["mae"].to_numpy())
-                ),
+                "mae_slope": finite(slope(part["clearance"].to_numpy(), part["mae"].to_numpy())),
             }
         )
     years = []
@@ -148,9 +145,7 @@ def breadth(rows: pd.DataFrame) -> tuple[list[dict], list[dict]]:
                 "gross_slope": finite(
                     slope(part["clearance"].to_numpy(), part["gross"].to_numpy())
                 ),
-                "mae_slope": finite(
-                    slope(part["clearance"].to_numpy(), part["mae"].to_numpy())
-                ),
+                "mae_slope": finite(slope(part["clearance"].to_numpy(), part["mae"].to_numpy())),
             }
         )
     return folds, years
@@ -168,12 +163,8 @@ def summary(rows: pd.DataFrame, sampled: np.ndarray) -> tuple[dict, np.ndarray, 
     mae_draws = np.array([rho(x[index], mae[index]) for index in sampled])
     item = {
         "n_anchors": len(rows),
-        "occupancy_iqr": float(
-            rows["occupancy"].quantile(0.75) - rows["occupancy"].quantile(0.25)
-        ),
-        "occupancy_quartiles": [
-            float(rows["occupancy"].quantile(q)) for q in (0.25, 0.5, 0.75)
-        ],
+        "occupancy_iqr": float(rows["occupancy"].quantile(0.75) - rows["occupancy"].quantile(0.25)),
+        "occupancy_quartiles": [float(rows["occupancy"].quantile(q)) for q in (0.25, 0.5, 0.75)],
         "clearance_median": median,
         "low_n": len(low),
         "high_n": len(high),
@@ -193,24 +184,16 @@ def summary(rows: pd.DataFrame, sampled: np.ndarray) -> tuple[dict, np.ndarray, 
         "descriptive_no_boundary_minus_boundary": {
             "no_boundary_n": len(absent),
             "boundary_n": len(present),
-            "gross_mean_delta": float(
-                absent["gross"].mean() - present["gross"].mean()
-            ),
+            "gross_mean_delta": float(absent["gross"].mean() - present["gross"].mean()),
             "mae_mean_delta": float(absent["mae"].mean() - present["mae"].mean()),
-            "turnover_mean_delta": float(
-                absent["turnover"].mean() - present["turnover"].mean()
-            ),
+            "turnover_mean_delta": float(absent["turnover"].mean() - present["turnover"].mean()),
         },
         "folds": folds,
         "years": years,
     }
     if len(high):
-        item["high_minus_low_gross_mean"] = float(
-            high["gross"].mean() - low["gross"].mean()
-        )
-        item["high_minus_low_mae_mean"] = float(
-            high["mae"].mean() - low["mae"].mean()
-        )
+        item["high_minus_low_gross_mean"] = float(high["gross"].mean() - low["gross"].mean())
+        item["high_minus_low_mae_mean"] = float(high["mae"].mean() - low["mae"].mean())
     item["positive_gross_folds"] = sum(
         x["gross_slope"] is not None and x["gross_slope"] > 0 for x in folds
     )
@@ -224,22 +207,11 @@ def summary(rows: pd.DataFrame, sampled: np.ndarray) -> tuple[dict, np.ndarray, 
         x["mae_slope"] is not None and x["mae_slope"] > 0 for x in years
     )
     gates = {
-        "gross_rho_positive_lcb": (
-            item["gross_rho"] > 0 and item["gross_rho_ci95"][0] > 0
-        ),
-        "mae_rho_positive_lcb": (
-            item["mae_rho"] > 0 and item["mae_rho_ci95"][0] > 0
-        ),
-        "gross_breadth": (
-            item["positive_gross_folds"] >= 4
-            and item["positive_gross_years"] >= 2
-        ),
-        "mae_breadth": (
-            item["positive_mae_folds"] >= 4 and item["positive_mae_years"] >= 2
-        ),
-        "state_variation": (
-            item["occupancy_iqr"] >= 0.10 and len(low) >= 20 and len(high) >= 20
-        ),
+        "gross_rho_positive_lcb": item["gross_rho"] > 0 and item["gross_rho_ci95"][0] > 0,
+        "mae_rho_positive_lcb": item["mae_rho"] > 0 and item["mae_rho_ci95"][0] > 0,
+        "gross_breadth": (item["positive_gross_folds"] >= 4 and item["positive_gross_years"] >= 2),
+        "mae_breadth": item["positive_mae_folds"] >= 4 and item["positive_mae_years"] >= 2,
+        "state_variation": (item["occupancy_iqr"] >= 0.10 and len(low) >= 20 and len(high) >= 20),
         "half_ordering": (
             item["high_minus_low_gross_mean"] is not None
             and item["high_minus_low_gross_mean"] > 0
@@ -293,17 +265,13 @@ def run(btc: Path, eth: Path) -> dict:
         mae_draws.append(mae)
     result["common_index"] = {
         "median_gross_rho_point": float(
-            np.median(
-                [result["markets"][x]["summary"]["gross_rho"] for x in HASHES]
-            )
+            np.median([result["markets"][x]["summary"]["gross_rho"] for x in HASHES])
         ),
         "median_gross_rho_ci95": np.quantile(
             np.median(np.vstack(gross_draws), axis=0), [0.025, 0.975]
         ).tolist(),
         "median_mae_rho_point": float(
-            np.median(
-                [result["markets"][x]["summary"]["mae_rho"] for x in HASHES]
-            )
+            np.median([result["markets"][x]["summary"]["mae_rho"] for x in HASHES])
         ),
         "median_mae_rho_ci95": np.quantile(
             np.median(np.vstack(mae_draws), axis=0), [0.025, 0.975]
@@ -328,10 +296,7 @@ def main() -> None:
     args = parser.parse_args()
     args.output.write_text(
         json.dumps(
-            run(args.btc_csv, args.eth_csv),
-            indent=2,
-            sort_keys=True,
-            allow_nan=False,
+            run(args.btc_csv, args.eth_csv), indent=2, sort_keys=True, allow_nan=False
         )
         + "\n"
     )
