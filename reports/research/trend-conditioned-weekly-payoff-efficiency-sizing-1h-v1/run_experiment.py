@@ -407,7 +407,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "samples": {"train": fw.TRAIN, "oos": fw.OOS, "full": fw.FULL},
         "model": {
             "direction": "daily 2160H endpoint trend",
-            "label": "prior non-overlapping trend-positive Monday next-open 168H return less 10 bps",
+            "label": (
+                "prior non-overlapping trend-positive Monday next-open "
+                "168H return less 10 bps"
+            ),
             "efficiency": "sum(label) / sum(abs(label)), zero when denominator is zero",
             "weekly_size": "1.0 when efficiency >= 0 else 0.5",
             "history": "strictly expanding; no minimum and no rolling window",
