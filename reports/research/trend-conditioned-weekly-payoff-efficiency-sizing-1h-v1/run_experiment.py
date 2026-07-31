@@ -48,8 +48,7 @@ def build_paths(market: dict[str, Any]) -> dict[str, Any]:
     realized_label = np.full(length, np.nan)
 
     anchors = np.flatnonzero(
-        (timestamps.dt.dayofweek.to_numpy() == 0)
-        & (timestamps.dt.hour.to_numpy() == 0)
+        (timestamps.dt.dayofweek.to_numpy() == 0) & (timestamps.dt.hour.to_numpy() == 0)
     )
     anchor_set = set(int(value) for value in anchors)
     current_b1 = 0
@@ -60,9 +59,7 @@ def build_paths(market: dict[str, Any]) -> dict[str, Any]:
         if time_index in anchor_set:
             decision_mask[time_index] = True
             eligible = anchors[
-                (anchors >= 2_160)
-                & (anchors + 169 <= time_index)
-                & (base[anchors] == 1)
+                (anchors >= 2_160) & (anchors + 169 <= time_index) & (base[anchors] == 1)
             ]
             history_rows[time_index] = len(eligible)
             if time_index + 169 < length:
@@ -160,15 +157,9 @@ def state_diagnostics(built: dict[str, Any]) -> dict[str, Any]:
     if np.any(candidate_position > benchmark_position + 1e-12):
         raise ValueError("candidate exceeds B1 exposure")
     difference = benchmark_position - candidate_position
-    gross_timing = float(
-        np.sum(candidate["gross"][start:end] - benchmark["gross"][start:end])
-    )
-    fee_contribution = float(
-        np.sum(benchmark["fee"][start:end] - candidate["fee"][start:end])
-    )
-    net_residual = float(
-        np.sum(candidate["net"][start:end] - benchmark["net"][start:end])
-    )
+    gross_timing = float(np.sum(candidate["gross"][start:end] - benchmark["gross"][start:end]))
+    fee_contribution = float(np.sum(benchmark["fee"][start:end] - candidate["fee"][start:end]))
+    net_residual = float(np.sum(candidate["net"][start:end] - benchmark["net"][start:end]))
     if not np.isclose(gross_timing + fee_contribution, net_residual, atol=1e-12):
         raise ValueError("candidate-minus-B1 decomposition failure")
 
@@ -180,12 +171,8 @@ def state_diagnostics(built: dict[str, Any]) -> dict[str, Any]:
         "trend_positive_oos_weekly_decisions": int(np.sum(trend_positive)),
         "half_size_weekly_decisions": int(np.sum(half)),
         "half_size_frequency": float(np.mean(half[valid])) if np.any(valid) else 0.0,
-        "half_size_trend_positive": group_labels(
-            half_trend_positive, built["realized_label"]
-        ),
-        "full_size_trend_positive": group_labels(
-            full_trend_positive, built["realized_label"]
-        ),
+        "half_size_trend_positive": group_labels(half_trend_positive, built["realized_label"]),
+        "full_size_trend_positive": group_labels(full_trend_positive, built["realized_label"]),
         "efficiency_min_median_max": (
             [float(np.min(values)), float(np.median(values)), float(np.max(values))]
             if len(values)
@@ -212,10 +199,7 @@ def evaluate_market(
     paths = built["paths"]
     samples = {"train": fw.TRAIN, "oos": fw.OOS, "full": fw.FULL}
     performance = {
-        sample: {
-            name: fw.metrics(paths[name], *bounds)
-            for name in ("candidate", "B0", "B1")
-        }
+        sample: {name: fw.metrics(paths[name], *bounds) for name in ("candidate", "B0", "B1")}
         for sample, bounds in samples.items()
     }
     breadth = fw.fold_year_diagnostics(paths["candidate"], market["timestamps"])
@@ -229,9 +213,7 @@ def evaluate_market(
     concentration = breadth["positive_fold_concentration"]
     gates = {
         "positive_oos_return": candidate_metrics["net_return"] > 0,
-        "return_at_least_B1": (
-            candidate_metrics["net_return"] >= benchmark_metrics["net_return"]
-        ),
+        "return_at_least_B1": (candidate_metrics["net_return"] >= benchmark_metrics["net_return"]),
         "sharpe_at_least_B1": (
             candidate_metrics["sharpe"] is not None
             and benchmark_metrics["sharpe"] is not None
@@ -240,15 +222,12 @@ def evaluate_market(
         "drawdown_no_worse_B1": (
             candidate_metrics["max_drawdown"] >= benchmark_metrics["max_drawdown"]
         ),
-        "turnover_no_worse_B1": (
-            candidate_metrics["turnover"] <= benchmark_metrics["turnover"]
-        ),
+        "turnover_no_worse_B1": (candidate_metrics["turnover"] <= benchmark_metrics["turnover"]),
         "edge_per_turn_positive_and_at_least_B1": (
             candidate_metrics["edge_per_turn_bps"] is not None
             and benchmark_metrics["edge_per_turn_bps"] is not None
             and candidate_metrics["edge_per_turn_bps"] > 0
-            and candidate_metrics["edge_per_turn_bps"]
-            >= benchmark_metrics["edge_per_turn_bps"]
+            and candidate_metrics["edge_per_turn_bps"] >= benchmark_metrics["edge_per_turn_bps"]
         ),
         "profitable_folds_at_least_7": breadth["profitable_folds"] >= 7,
         "profitable_years_at_least_3": breadth["profitable_years"] >= 3,
@@ -259,9 +238,7 @@ def evaluate_market(
         "mean_delta_ci_lower_positive": fw.ci_lower_positive(
             bootstrap["annualized_mean_delta_ci95"]
         ),
-        "sharpe_delta_ci_lower_positive": fw.ci_lower_positive(
-            bootstrap["sharpe_delta_ci95"]
-        ),
+        "sharpe_delta_ci_lower_positive": fw.ci_lower_positive(bootstrap["sharpe_delta_ci95"]),
         "positive_full_return": performance["full"]["candidate"]["net_return"] > 0,
     }
     return {
@@ -376,14 +353,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         built = build_paths(market)
         raw_markets.append((instrument, market))
         built_markets.append(built)
-    starts = fw.bootstrap_starts(
-        fw.OOS[1] - fw.OOS[0], args.resamples, args.seed
-    )
+    starts = fw.bootstrap_starts(fw.OOS[1] - fw.OOS[0], args.resamples, args.seed)
     evaluated = [
         evaluate_market(instrument, market, built, starts)
-        for (instrument, market), built in zip(
-            raw_markets, built_markets, strict=True
-        )
+        for (instrument, market), built in zip(raw_markets, built_markets, strict=True)
     ]
     common = fw.common_bootstrap(built_markets, starts)
     accepted = (
@@ -407,19 +380,14 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "samples": {"train": fw.TRAIN, "oos": fw.OOS, "full": fw.FULL},
         "model": {
             "direction": "daily 2160H endpoint trend",
-            "label": (
-                "prior non-overlapping trend-positive Monday next-open "
-                "168H return less 10 bps"
-            ),
+            "label": "prior non-overlapping trend-positive Monday next-open 168H return less 10 bps",  # noqa: E501
             "efficiency": "sum(label) / sum(abs(label)), zero when denominator is zero",
             "weekly_size": "1.0 when efficiency >= 0 else 0.5",
             "history": "strictly expanding; no minimum and no rolling window",
         },
         "markets": evaluated,
         "common_bootstrap_vs_B1": common,
-        "markets_passing_every_gate": int(
-            sum(item["accepted"] for item in evaluated)
-        ),
+        "markets_passing_every_gate": int(sum(item["accepted"] for item in evaluated)),
         "accepted": accepted,
         "verdict": (
             "support_weekly_payoff_efficiency_sizing_research_nomination"
@@ -468,12 +436,8 @@ def main() -> None:
             for item in result["markets"]
         },
     }
-    (args.output_dir / "result-summary.json").write_bytes(
-        fw.canonical_bytes(summary)
-    )
-    (args.output_dir / "report.md").write_text(
-        report(result), encoding="utf-8"
-    )
+    (args.output_dir / "result-summary.json").write_bytes(fw.canonical_bytes(summary))
+    (args.output_dir / "report.md").write_text(report(result), encoding="utf-8")
 
 
 if __name__ == "__main__":
