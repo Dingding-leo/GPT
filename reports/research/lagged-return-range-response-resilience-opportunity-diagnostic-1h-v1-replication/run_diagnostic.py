@@ -4,6 +4,7 @@ import hashlib
 import json
 import subprocess
 import sys
+import types
 from pathlib import Path
 from typing import Any
 
@@ -37,6 +38,7 @@ REPLACEMENTS = {
     ),
     'period="2022-12..2023-12"': 'period="2024-12..2025-12"',
 }
+MODULE_NAME = "frozen_lagged_response_replication"
 
 
 def load_frozen_program() -> dict[str, Any]:
@@ -50,12 +52,11 @@ def load_frozen_program() -> dict[str, Any]:
         if source.count(old) != 1:
             raise RuntimeError(f"frozen source replacement count is not one: {old}")
         source = source.replace(old, new)
-    namespace: dict[str, Any] = {
-        "__file__": f"{SOURCE_COMMIT}:{SOURCE_PATH}",
-        "__name__": "frozen_lagged_response_replication",
-    }
-    exec(compile(source, namespace["__file__"], "exec"), namespace)
-    return namespace
+    module = types.ModuleType(MODULE_NAME)
+    module.__file__ = f"{SOURCE_COMMIT}:{SOURCE_PATH}"
+    sys.modules[MODULE_NAME] = module
+    exec(compile(source, module.__file__, "exec"), module.__dict__)
+    return module.__dict__
 
 
 def output_directory() -> Path:
