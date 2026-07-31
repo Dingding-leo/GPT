@@ -1,13 +1,14 @@
 {
   "schema_version": 1,
   "family_id": "lagged-realised-b1-payoff-state-sizing-1h-v1",
-  "issue": 790,
+  "issue": 792,
+  "cohort_contract": "revision_2_after_preperformance_acquisition_abort",
   "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
   "candidate_count": 1,
   "parameter_grid": 0,
   "markets_fixed_preperformance": [
-    "ZEC-USDT",
-    "DASH-USDT"
+    "MKR-USDT",
+    "YFI-USDT"
   ],
   "provider": "OKX public confirmed SPOT",
   "bar": "1H",
