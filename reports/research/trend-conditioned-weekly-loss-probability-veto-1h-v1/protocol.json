@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "family_id": "trend-conditioned-weekly-loss-probability-veto-1h-v1",
+  "issue": 779,
+  "classification": "strategy experiment",
+  "candidate_count": 1,
+  "parameter_grid": 0,
+  "performance_seen_at_freeze": false,
+  "markets_fixed_preperformance": [
+    "NEAR-USDT",
+    "SAND-USDT"
+  ],
+  "provider": "OKX public confirmed SPOT",
+  "bar": "1H",
+  "fee_bps_one_way": 5.0,
+  "position_domain": [
+    0,
+    1
+  ],
+  "execution": "completed daily 00:00 UTC decision to next hourly open",
+  "sample": {
+    "acquisition_start": "2021-07-24T00:00:00Z",
+    "frozen_prefix_rows": 43441,
+    "train": [
+      2880,
+      17520
+    ],
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "full": [
+      2880,
+      43440
+    ],
+    "fold_hours": 2160,
+    "folds": 12,
+    "calendar_years": 4
+  },
+  "direction": {
+    "decision_cadence": "daily completed 00:00 UTC",
+    "rule": "close_t > close_(t-2160H)"
+  },
+  "weekly_veto": {
+    "decision_cadence": "completed Monday 00:00 UTC",
+    "label": "open_(u+169H) / open_(u+1H) - 1",
+    "loss_definition": "label <= 0.001",
+    "minimum_history": 64,
+    "neighbours": 32,
+    "normalization": "causal historical median and MAD",
+    "distance": "Euclidean with earlier-timestamp tie break",
+    "probability_estimator": "one-sided Wilson lower confidence bound",
+    "wilson_z": 1.6448536269514722,
+    "veto_boundary": 0.5,
+    "rule": "veto when Wilson lower bound is strictly greater than 0.5"
+  },
+  "features": [
+    "168H log return",
+    "720H log return",
+    "2160H log return",
+    "168H to 2160H RMS-volatility ratio minus one",
+    "168H to 2160H downside-RMS ratio minus one",
+    "drawdown from trailing 720H closing high"
+  ],
+  "benchmarks": [
+    "B0 hourly 2160H endpoint trend",
+    "B1 daily 00:00 UTC 2160H endpoint trend"
+  ],
+  "uncertainty": {
+    "method": "paired non-circular moving-block bootstrap",
+    "block_hours": 168,
+    "resamples": 5000,
+    "seed": 20260731,
+    "common_indices_across_markets": true
+  },
+  "acceptance": "Both markets must pass every frozen absolute, B1-relative, breadth, concentration, residual-Sharpe, dependence-aware confidence-bound, full-sample and causal-integrity gate.",
+  "paper_trading_authorized": false,
+  "live_trading_authorized": false
+}
