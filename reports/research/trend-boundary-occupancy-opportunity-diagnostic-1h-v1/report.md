@@ -98,12 +98,12 @@ Two folds in each market had no clearance variation and therefore no defined slo
 
 ## Failure mechanism
 
-The exact state was strongly zer-inflated. Median occupancy was zero in both markets, so median clearance was `1.0`; all 86 observations fell on the preregistered low side and none on the high side. BTC also failed the minimum occupancy-IQR requirement (`0.0387 < 0.10`). Thus the state could not support the intended ordered exposure groups.
+The exact state was strongly zero-inflated. Median occupancy was zero in both markets, so median clearance was `1.0`; all 86 observations fell on the preregistered low side and none on the high side. BTC also failed the minimum occupancy-IQR requirement (`0.0387 < 0.10`). Thus the state could not support the intended ordered exposure groups.
 
 A descriptive, non-authorising audit compared weeks with no near-boundary hour against weeks with at least one such hour:
 
 | Market | No-boundary / boundary weeks | Gross mean delta | Adverse-excursion mean delta | Turnover mean delta |
-|---|---:|---:|---:|---|
+|---|---:|---:|---:|---:|
 | BTC | 62 / 24 | +1.2423 pp | +1.3127 pp | -0.976 |
 | ETH | 50 / 36 | +0.2311 pp | +0.6491 pp | -0.524 |
 
@@ -134,8 +134,8 @@ The turnover and fee totals above belong only to the self-contained weekly B1 ta
 Two independent executions of the deterministic reproducer were byte-identical.
 
 ```text
-Reproducer SHA-256  a1195ed2829d0aaa12ddd7eaf93263a85b20aa01b8c0e78e8f7d077dfc215eed
-Evidence SHA-256    d89fc33e213e3dcf546ad5c8de27b37f13e719f12818f7cee0e2025a891f5acb
+Reproducer SHA-256  88378b63d4842e95d13f48872a11615acc426797a743d3d18605160845023fa6
+Evidence SHA-256    9f119b4b87eb291ec4412451791857ad525335b22f81c5fc9ae74656c6250394
 Summary SHA-256     698b52dba59ed4a99ae7fae9f28a1b29351a88ad376d78da8d7e09893dc00c6b
 ```
 

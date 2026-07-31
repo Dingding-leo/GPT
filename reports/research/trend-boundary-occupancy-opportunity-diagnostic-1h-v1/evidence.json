@@ -19,228 +19,102 @@
   "issue": 798,
   "markets": {
     "BTC-USDT": {
-      "source_csv_sha256": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0",
-      "summary": {
-        "clearance_median": 1.0,
-        "descriptive_no_boundary_minus_boundary": {
-          "boundary_n": 24,
-          "gross_mean_delta": 0.012423041421065994,
-          "mae_mean_delta": 0.013126901366832432,
-          "no_boundary_n": 62,
-          "turnover_mean_delta": -0.9758064516129032
-        },
-        "folds": [
-          {
-            "fold": 0,
-            "gross_slope": -0.013290937137196797,
-            "mae_slope": 0.00048615130017752844,
-            "n": 12
-          },
-          {
-            "fold": 1,
-            "gross_slope": 0.027260170073558597,
-            "mae_slope": 0.029224148233341574,
-            "n": 12
-          },
-          {
-            "fold": 2,
-            "gross_slope": null,
-            "mae_slope": null,
-            "n": 12
-          },
-          {
-            "fold": 3,
-            "gross_slope": -0.005000093352455896,
-            "mae_slope": -0.005475501428202059,
-            "n": 12
-          },
-          {
-            "fold": 4,
-            "gross_slope": -0.027954640380500852,
-            "mae_slope": 0.00011189974071052966,
-            "n": 12
-          },
-          {
-            "fold": 5,
-            "gross_slope": null,
-            "mae_slope": null,
-            "n": 11
-          }
-        ],
-        "gates": {
-          "gross_breadth": false,
-          "gross_rho_positive_lcb": false,
-          "half_ordering": false,
-          "mae_breadth": false,
-          "mae_rho_positive_lcb": false,
-          "state_variation": false
-        },
-        "gross_opportunity_mean": -0.004726711955792161,
-        "gross_rho": 0.16119260156983245,
-        "gross_rho_ci95": [
-          -0.15768966929700995,
-          0.4504887847132558
-        ],
-        "gross_slope": 0.004664440287204892,
-        "high_minus_low_gross_mean": null,
-        "high_minus_low_mae_mean": null,
-        "high_n": 0,
-        "low_n": 86,
-        "mae_rho": 0.2255549911722802,
-        "mae_rho_ci95": [
-          -0.08108299768418074,
-          0.5126160201690411
-        ],
-        "mae_slope": 0.005486682747732538,
-        "n_anchors": 86,
-        "net_payoff_mean": -0.0052499677697456495,
-        "occupancy_iqr": 0.03869047619047619,
-        "occupancy_quartiles": [
-          0.0,
-          0.0,
-          0.03869047619047619
-        ],
-        "passes_all": false,
-        "positive_gross_folds": 1,
-        "positive_gross_weeks": 15,
-        "positive_gross_years": 1,
-        "positive_mae_folds": 3,
-        "positive_mae_years": 1,
-        "turnover_sum": 90.0,
-        "years": [
-          {
-            "gross_slope": -0.03937280771755169,
-            "mae_slope": -0.03287039507665841,
-            "n": 6,
-            "year": 2021
-          },
-          {
-            "gross_slope": 0.010991955990266549,
-            "mae_slope": 0.0119762627524265,
-            "n": 52,
-            "year": 2022
-          },
-          {
-            "gross_slope": -0.017180787093308086,
-            "mae_slope": -0.011172606405701854,
-            "n": 28,
-            "year": 2023
-          }
-        ],
-        "zero_gross_weeks": 45
-      }
+      "clearance_median": 1.0,
+      "descriptive_no_boundary_minus_boundary": {
+        "boundary_n": 24,
+        "gross_mean_delta": 0.012423041421065994,
+        "mae_mean_delta": 0.013126901366832432,
+        "no_boundary_n": 62,
+        "turnover_mean_delta": -0.9758064516129032
+      },
+      "gates": {
+        "gross_breadth": false,
+        "gross_rho_positive_lcb": false,
+        "half_ordering": false,
+        "mae_breadth": false,
+        "mae_rho_positive_lcb": false,
+        "state_variation": false
+      },
+      "gross_opportunity_mean": -0.004726711955792161,
+      "gross_rho": 0.16119260156983245,
+      "gross_rho_ci95": [
+        -0.15768966929700995,
+        0.4504887847132558
+      ],
+      "gross_slope": 0.004664440287204892,
+      "high_n": 0,
+      "low_n": 86,
+      "mae_rho": 0.2255549911722802,
+      "mae_rho_ci95": [
+        -0.08108299768418074,
+        0.5126160201690411
+      ],
+      "mae_slope": 0.005486682747732538,
+      "n_anchors": 86,
+      "net_payoff_mean": -0.0052499677697456495,
+      "occupancy_iqr": 0.03869047619047619,
+      "occupancy_quartiles": [
+        0.0,
+        0.0,
+        0.03869047619047619
+      ],
+      "passes_all": false,
+      "positive_gross_folds": 1,
+      "positive_gross_weeks": 15,
+      "positive_gross_years": 1,
+      "positive_mae_folds": 3,
+      "positive_mae_years": 1,
+      "turnover_sum": 90.0,
+      "zero_gross_weeks": 45
     },
     "ETH-USDT": {
-      "source_csv_sha256": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8",
-      "summary": {
-        "clearance_median": 1.0,
-        "descriptive_no_boundary_minus_boundary": {
-          "boundary_n": 36,
-          "gross_mean_delta": 0.0023112556016959837,
-          "mae_mean_delta": 0.006491060027298535,
-          "no_boundary_n": 50,
-          "turnover_mean_delta": -0.5244444444444444
-        },
-        "folds": [
-          {
-            "fold": 0,
-            "gross_slope": -0.010896779471428867,
-            "mae_slope": -0.011502081665309052,
-            "n": 12
-          },
-          {
-            "fold": 1,
-            "gross_slope": 0.019723019414788573,
-            "mae_slope": 0.022999116420900873,
-            "n": 12
-          },
-          {
-            "fold": 2,
-            "gross_slope": null,
-            "mae_slope": null,
-            "n": 12
-          },
-          {
-            "fold": 3,
-            "gross_slope": -0.00012559603842864255,
-            "mae_slope": -0.013204188619048417,
-            "n": 12
-          },
-          {
-            "fold": 4,
-            "gross_slope": 0.022512144057772257,
-            "mae_slope": 0.023003559189724396,
-            "n": 12
-          },
-          {
-            "fold": 5,
-            "gross_slope": null,
-            "mae_slope": null,
-            "n": 11
-          }
-        ],
-        "gates": {
-          "gross_breadth": false,
-          "gross_rho_positive_lcb": false,
-          "half_ordering": false,
-          "mae_breadth": false,
-          "mae_rho_positive_lcb": false,
-          "state_variation": false
-        },
-        "gross_opportunity_mean": -0.003728949516766812,
-        "gross_rho": 0.11433175928748086,
-        "gross_rho_ci95": [
-          -0.11629157137435187,
-          0.33219276956105626
-        ],
-        "gross_slope": 0.007533938936151301,
-        "high_minus_low_gross_mean": null,
-        "high_minus_low_mae_mean": null,
-        "high_n": 0,
-        "low_n": 86,
-        "mae_rho": 0.10164066820134983,
-        "mae_rho_ci95": [
-          -0.1503745896123925,
-          0.384534422197455
-        ],
-        "mae_slope": 0.0031142912360635085,
-        "n_anchors": 86,
-        "net_payoff_mean": -0.0042987169586272776,
-        "occupancy_iqr": 0.23065476190476192,
-        "occupancy_quartiles": [
-          0.0,
-          0.0,
-          0.23065476190476192
-        ],
-        "passes_all": false,
-        "positive_gross_folds": 2,
-        "positive_gross_weeks": 19,
-        "positive_gross_years": 2,
-        "positive_mae_folds": 2,
+      "clearance_median": 1.0,
+      "descriptive_no_boundary_minus_boundary": {
+        "boundary_n": 36,
+        "gross_mean_delta": 0.0023112556016959837,
+        "mae_mean_delta": 0.006491060027298535,
+        "no_boundary_n": 50,
+        "turnover_mean_delta": -0.5244444444444444
+      },
+      "gates": {
+        "gross_breadth": false,
+        "gross_rho_positive_lcb": false,
+        "half_ordering": false,
+        "mae_breadth": false,
+        "mae_rho_positive_lcb": false,
+        "state_variation": false
+      },
+      "gross_opportunity_mean": -0.003728949516766812,
+      "gross_rho": 0.11433175928748086,
+      "gross_rho_ci95": [
+        -0.11629157137435187,
+        0.33219276956105626
+      ],
+      "gross_slope": 0.007533938936151301,
+      "high_n": 0,
+      "low_n": 86,
+      "mae_rho": 0.10164066820134983,
+      "mae_rho_ci95": [
+        -0.1503745896123925,
+        0.384534422197455
+      ],
+      "mae_slope": 0.0031142912360635085,
+      "n_anchors": 86,
+      "net_payoff_mean": -0.0042987169586272776,
+      "occupancy_iqr": 0.23065476190476192,
+      "occupancy_quartiles": [
+        0.0,
+        0.0,
+        0.23065476190476192
+      ],
+      "passes_all": false,
+      "positive_gross_folds": 2,
+      "positive_gross_weeks": 19,
+      "positive_gross_years": 2,
+      "positive_mae_folds": 2,
       "positive_mae_years": 1,
-        "turnover_sum": 98.0,
-        "years": [
-          {
-            "gross_slope": -0.015235120638337627,
-            "mae_slope": -0.02246321849070033,
-            "n": 6,
-            "year": 2021
-          },
-          {
-            "gross_slope": 0.008227422217258095,
-            "mae_slope": 0.008263157205445616,
-            "n": 52,
-            "year": 2022
-          },
-          {
-            "gross_slope": 0.011515541983315586,
-            "mae_slope": -0.0024305038829028447,
-            "n": 28,
-            "year": 2023
-          }
-        ],
-        "zero_gross_weeks": 42
-      }
+      "turnover_sum": 98.0,
+      "zero_gross_weeks": 42
     }
   },
   "markets_passing_all": 0,
@@ -260,5 +134,18 @@
     ]
   },
   "schema_version": 1,
+  "source": {
+    "BTC-USDT": {
+      "artifact_id": 8769605568,
+      "csv_sha256": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0"
+    },
+    "ETH-USDT": {
+      "artifact_id": 8769619607,
+      "csv_sha256": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8"
+    },
+    "frozen_end_utc": "2026-07-08T00:00:00Z",
+    "frozen_rows": 43441,
+    "frozen_start_utc": "2021-07-24T00:00:00Z"
+  },
   "verdict": "reject_trend_boundary_occupancy_opportunity_premise"
 }
