@@ -1,0 +1,93 @@
+{
+  "acceptance": {
+    "bilateral": true,
+    "full_net_gt": 0,
+    "mean_delta_ci_lower_gt": 0,
+    "oos_candidate_edge_per_turnover_ge_b1": true,
+    "oos_candidate_max_drawdown_ge_b1": true,
+    "oos_candidate_net_ge_b1": true,
+    "oos_candidate_sharpe_ge_b1": true,
+    "oos_candidate_turnover_le_b1": true,
+    "oos_profitable_folds_min": 7,
+    "oos_profitable_years_min": 3,
+    "oos_residual_sharpe_gt": 0,
+    "sharpe_delta_ci_lower_gt": 0
+  },
+  "bar": "1H",
+  "base_signal": {
+    "decision": "completed daily candle whose timestamp hour is 00 UTC",
+    "execution": "next hourly open",
+    "lookback_hours": 2160,
+    "rule": "close[t] > close[t-2160]"
+  },
+  "benchmarks": [
+    "hourly-2160H-endpoint-trend-B0",
+    "daily-2160H-endpoint-trend-B1"
+  ],
+  "candidate_count": 1,
+  "family": "beta-sign-soft-exit-sleeve-1h-v1",
+  "fee": {
+    "formula": "0.0005 * abs(exposure[t] - exposure[t-1])",
+    "one_way": 0.0005
+  },
+  "frozen_prefix_rows": 43441,
+  "issue": 757,
+  "main_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "markets": [
+    "SOL-USDT",
+    "XRP-USDT"
+  ],
+  "parameter_grid_count": 0,
+  "prohibitions": [
+    "cross-sectional ranking or selection",
+    "pairs or spreads",
+    "cointegration or statistical arbitrage",
+    "market-neutral long-short",
+    "current relative-rank signals",
+    "post-hoc asset filtering",
+    "private endpoints",
+    "credentials",
+    "accounts",
+    "orders",
+    "leverage",
+    "enabled adapters",
+    "synthetic data",
+    "15m"
+  ],
+  "provider": "OKX public SPOT",
+  "sample": {
+    "development_oos": [
+      17520,
+      43440
+    ],
+    "full": [
+      2880,
+      43440
+    ],
+    "oos_fold_count": 12,
+    "oos_fold_hours": 2160,
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "schema_version": 1,
+  "soft_exit_sleeve": {
+    "episode_target": "0.5 * arithmetic open-to-open carry + 0.0005 if terminal is a base recross",
+    "exposure": "0.5 * (wins + 1) / (episodes + 2)",
+    "history_reset": false,
+    "max_duration_hours": 168,
+    "posterior": "Beta(1,1) over signs of prior completed unit-half-sleeve targets",
+    "terminal": "first positive daily base recross at or before 168H, otherwise exact 168H expiry",
+    "trigger": "first positive-to-non-positive base transition per positive regime",
+    "update_timing": "after terminal execution only"
+  },
+  "source_start_utc": "2021-07-24T00:00:00Z",
+  "uncertainty": {
+    "block_hours": 168,
+    "confidence": 0.95,
+    "method": "paired non-circular moving-block bootstrap",
+    "resamples": 5000,
+    "seed": 20260731
+  }
+}
