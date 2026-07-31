@@ -22,9 +22,7 @@ def _finite(value: float) -> float:
     return value
 
 
-def build_market_diagnostic(
-    market: dict[str, Any], oos_start: int, oos_end: int
-) -> dict[str, Any]:
+def build_market_diagnostic(market: dict[str, Any], oos_start: int, oos_end: int) -> dict[str, Any]:
     episodes = market["diagnostic"]["episodes"]
     oos_indices = [
         index
@@ -78,21 +76,13 @@ def build_market_diagnostic(
             transitions[transition_key] += 1
 
     nonzero_count = (
-        confusion["nonzero_realized_positive"]
-        + confusion["nonzero_realized_nonpositive"]
+        confusion["nonzero_realized_positive"] + confusion["nonzero_realized_nonpositive"]
     )
-    zero_count = (
-        confusion["zero_realized_positive"] + confusion["zero_realized_nonpositive"]
-    )
+    zero_count = confusion["zero_realized_positive"] + confusion["zero_realized_nonpositive"]
     transition_count = sum(transitions.values())
-    same_sign = (
-        transitions["positive_to_positive"]
-        + transitions["nonpositive_to_nonpositive"]
-    )
+    same_sign = transitions["positive_to_positive"] + transitions["nonpositive_to_nonpositive"]
 
-    expected_weighted = float(
-        market["diagnostic"]["oos_exposure_weighted_target_sum"]
-    )
+    expected_weighted = float(market["diagnostic"]["oos_exposure_weighted_target_sum"])
     if abs(nonzero_weighted_target_sum - expected_weighted) > 1e-12:
         raise AssertionError("exposure-weighted target reconstruction mismatch")
     if nonzero_count != int(market["diagnostic"]["oos_nonzero_sleeves"]):
@@ -108,9 +98,7 @@ def build_market_diagnostic(
         "confusion_matrix": confusion,
         "nonzero_fixed_half_target_sum": _finite(nonzero_half_target_sum),
         "nonzero_hit_rate": _finite(
-            confusion["nonzero_realized_positive"] / nonzero_count
-            if nonzero_count
-            else 0.0
+            confusion["nonzero_realized_positive"] / nonzero_count if nonzero_count else 0.0
         ),
         "nonzero_weighted_target_sum": _finite(nonzero_weighted_target_sum),
         "oos_episode_count": len(oos_indices),
