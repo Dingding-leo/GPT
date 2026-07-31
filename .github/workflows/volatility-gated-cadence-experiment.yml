@@ -11,7 +11,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: volatility-gated-cadence-${{ github.event.pull_request.head.sha || github.sha }}
+  group: >-
+    volatility-gated-cadence-${{ github.event_name }}-${{
+    github.event.pull_request.head.sha || github.sha }}
   cancel-in-progress: false
 
 jobs:
