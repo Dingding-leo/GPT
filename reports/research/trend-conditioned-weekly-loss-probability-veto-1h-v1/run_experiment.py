@@ -139,8 +139,7 @@ def wilson_lower(loss_count: int, sample_size: int) -> float:
     half_width = (
         WILSON_Z
         * math.sqrt(
-            proportion * (1.0 - proportion) / sample_size
-            + z_squared / (4.0 * sample_size**2)
+            proportion * (1.0 - proportion) / sample_size + z_squared / (4.0 * sample_size**2)
         )
         / denominator
     )
@@ -180,9 +179,7 @@ def build_paths(market: dict[str, Any]) -> dict[str, Any]:
             eligible = anchors[(anchors >= 2_160) & (anchors + 169 <= time_index)]
             history_rows[time_index] = len(eligible)
             if time_index + 169 < length:
-                realized_label[time_index] = (
-                    opens[time_index + 169] / opens[time_index + 1] - 1.0
-                )
+                realized_label[time_index] = opens[time_index + 169] / opens[time_index + 1] - 1.0
             if len(eligible) >= MIN_HISTORY:
                 historical_features = feature_values[eligible]
                 centre = np.median(historical_features, axis=0)
@@ -260,9 +257,7 @@ def metrics(path: dict[str, np.ndarray], start: int, end: int) -> dict[str, Any]
     fee = path["fee"][start:end]
     changes = path["changes"][start:end]
     position = path["position"][start:end]
-    if not (
-        len(net) == len(gross) == len(fee) == len(changes) == len(position) == end - start
-    ):
+    if not (len(net) == len(gross) == len(fee) == len(changes) == len(position) == end - start):
         raise ValueError("metric slice length mismatch")
     if np.any(1.0 + net <= 0):
         raise ValueError("non-positive wealth factor")
@@ -287,9 +282,7 @@ def metrics(path: dict[str, np.ndarray], start: int, end: int) -> dict[str, Any]
     }
 
 
-def fold_year_diagnostics(
-    path: dict[str, np.ndarray], timestamps: pd.Series
-) -> dict[str, Any]:
+def fold_year_diagnostics(path: dict[str, np.ndarray], timestamps: pd.Series) -> dict[str, Any]:
     start, end = OOS
     fold_returns = []
     for fold_start in range(start, end, FOLD_HOURS):
@@ -350,28 +343,18 @@ def paired_bootstrap(
         indices = sampled_indices(block_starts, len(candidate))
         candidate_sample = candidate[indices]
         benchmark_sample = benchmark[indices]
-        sampled_mean[index] = float(
-            np.mean(candidate_sample - benchmark_sample) * ANNUAL_HOURS
-        )
-        sampled_sharpe[index] = sharpe_value(candidate_sample) - sharpe_value(
-            benchmark_sample
-        )
+        sampled_mean[index] = float(np.mean(candidate_sample - benchmark_sample) * ANNUAL_HOURS)
+        sampled_sharpe[index] = sharpe_value(candidate_sample) - sharpe_value(benchmark_sample)
     finite_sharpe = sampled_sharpe[np.isfinite(sampled_sharpe)]
     sharpe_interval = [None, None]
     if len(finite_sharpe):
-        sharpe_interval = [
-            float(value) for value in np.quantile(finite_sharpe, [0.025, 0.975])
-        ]
+        sharpe_interval = [float(value) for value in np.quantile(finite_sharpe, [0.025, 0.975])]
     return {
-        "annualized_mean_delta_point": float(
-            np.mean(candidate - benchmark) * ANNUAL_HOURS
-        ),
+        "annualized_mean_delta_point": float(np.mean(candidate - benchmark) * ANNUAL_HOURS),
         "annualized_mean_delta_ci95": [
             float(value) for value in np.quantile(sampled_mean, [0.025, 0.975])
         ],
-        "sharpe_delta_point": finite_or_none(
-            sharpe_value(candidate) - sharpe_value(benchmark)
-        ),
+        "sharpe_delta_point": finite_or_none(sharpe_value(candidate) - sharpe_value(benchmark)),
         "sharpe_delta_ci95": sharpe_interval,
         "finite_sharpe_resamples": int(len(finite_sharpe)),
     }
@@ -383,9 +366,7 @@ def group_labels(mask: np.ndarray, labels: np.ndarray) -> dict[str, Any]:
         "count": int(np.sum(mask)),
         "mean_realized_168h": finite_or_none(float(np.mean(values))) if len(values) else None,
         "positive_fraction": float(np.mean(values > 0)) if len(values) else None,
-        "fee_hurdle_success_fraction": (
-            float(np.mean(values > HURDLE)) if len(values) else None
-        ),
+        "fee_hurdle_success_fraction": (float(np.mean(values > HURDLE)) if len(values) else None),
         "sum_realized_168h": float(np.sum(values)),
     }
 
@@ -419,15 +400,9 @@ def veto_diagnostics(built: dict[str, Any]) -> dict[str, Any]:
     benchmark_only = (candidate_position == 0) & (benchmark_position == 1)
     if np.any(candidate_only):
         raise ValueError("candidate-only exposure violates veto architecture")
-    gross_timing = float(
-        np.sum(candidate["gross"][start:end] - benchmark["gross"][start:end])
-    )
-    fee_contribution = float(
-        np.sum(benchmark["fee"][start:end] - candidate["fee"][start:end])
-    )
-    net_residual = float(
-        np.sum(candidate["net"][start:end] - benchmark["net"][start:end])
-    )
+    gross_timing = float(np.sum(candidate["gross"][start:end] - benchmark["gross"][start:end]))
+    fee_contribution = float(np.sum(benchmark["fee"][start:end] - candidate["fee"][start:end]))
+    net_residual = float(np.sum(candidate["net"][start:end] - benchmark["net"][start:end]))
     if not np.isclose(gross_timing + fee_contribution, net_residual, atol=1e-12):
         raise ValueError("candidate-minus-B1 decomposition failure")
 
@@ -474,9 +449,7 @@ def evaluate_market(
     paths = built["paths"]
     samples = {"train": TRAIN, "oos": OOS, "full": FULL}
     performance = {
-        sample: {
-            name: metrics(paths[name], *bounds) for name in ("candidate", "B0", "B1")
-        }
+        sample: {name: metrics(paths[name], *bounds) for name in ("candidate", "B0", "B1")}
         for sample, bounds in samples.items()
     }
     breadth = fold_year_diagnostics(paths["candidate"], market["timestamps"])
@@ -490,9 +463,7 @@ def evaluate_market(
     concentration = breadth["positive_fold_concentration"]
     gates = {
         "positive_oos_return": candidate_metrics["net_return"] > 0,
-        "return_at_least_B1": (
-            candidate_metrics["net_return"] >= benchmark_metrics["net_return"]
-        ),
+        "return_at_least_B1": (candidate_metrics["net_return"] >= benchmark_metrics["net_return"]),
         "sharpe_at_least_B1": (
             candidate_metrics["sharpe"] is not None
             and benchmark_metrics["sharpe"] is not None
@@ -501,15 +472,12 @@ def evaluate_market(
         "drawdown_no_worse_B1": (
             candidate_metrics["max_drawdown"] >= benchmark_metrics["max_drawdown"]
         ),
-        "turnover_no_worse_B1": (
-            candidate_metrics["turnover"] <= benchmark_metrics["turnover"]
-        ),
+        "turnover_no_worse_B1": (candidate_metrics["turnover"] <= benchmark_metrics["turnover"]),
         "edge_per_turn_positive_and_at_least_B1": (
             candidate_metrics["edge_per_turn_bps"] is not None
             and benchmark_metrics["edge_per_turn_bps"] is not None
             and candidate_metrics["edge_per_turn_bps"] > 0
-            and candidate_metrics["edge_per_turn_bps"]
-            >= benchmark_metrics["edge_per_turn_bps"]
+            and candidate_metrics["edge_per_turn_bps"] >= benchmark_metrics["edge_per_turn_bps"]
         ),
         "profitable_folds_at_least_7": breadth["profitable_folds"] >= 7,
         "profitable_years_at_least_3": breadth["profitable_years"] >= 3,
@@ -517,12 +485,8 @@ def evaluate_market(
             concentration is not None and concentration <= 0.5
         ),
         "positive_residual_sharpe": residual is not None and residual > 0,
-        "mean_delta_ci_lower_positive": ci_lower_positive(
-            bootstrap["annualized_mean_delta_ci95"]
-        ),
-        "sharpe_delta_ci_lower_positive": ci_lower_positive(
-            bootstrap["sharpe_delta_ci95"]
-        ),
+        "mean_delta_ci_lower_positive": ci_lower_positive(bootstrap["annualized_mean_delta_ci95"]),
+        "sharpe_delta_ci_lower_positive": ci_lower_positive(bootstrap["sharpe_delta_ci95"]),
         "positive_full_return": performance["full"]["candidate"]["net_return"] > 0,
     }
     return {
@@ -545,9 +509,7 @@ def evaluate_market(
     }
 
 
-def common_bootstrap(
-    built_markets: list[dict[str, Any]], starts: np.ndarray
-) -> dict[str, Any]:
+def common_bootstrap(built_markets: list[dict[str, Any]], starts: np.ndarray) -> dict[str, Any]:
     start, end = OOS
     point_means = []
     point_sharpes = []
@@ -574,9 +536,7 @@ def common_bootstrap(
     finite_sharpe = sampled_sharpe[np.isfinite(sampled_sharpe)]
     sharpe_interval: list[float | None] = [None, None]
     if len(finite_sharpe):
-        sharpe_interval = [
-            float(value) for value in np.quantile(finite_sharpe, [0.025, 0.975])
-        ]
+        sharpe_interval = [float(value) for value in np.quantile(finite_sharpe, [0.025, 0.975])]
     return {
         "annualized_mean_delta_point": float(np.median(point_means)),
         "annualized_mean_delta_ci95": [
@@ -683,9 +643,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     starts = bootstrap_starts(OOS[1] - OOS[0], args.resamples, args.seed)
     evaluated = [
         evaluate_market(instrument, market, built, starts)
-        for (instrument, market), built in zip(
-            raw_markets, built_markets, strict=True
-        )
+        for (instrument, market), built in zip(raw_markets, built_markets, strict=True)
     ]
     common = common_bootstrap(built_markets, starts)
     accepted = (
