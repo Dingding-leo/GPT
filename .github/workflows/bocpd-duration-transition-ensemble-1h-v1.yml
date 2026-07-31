@@ -40,6 +40,8 @@ jobs:
             --output-dir /tmp/bocpd-duration-output \
             --cache-dir /tmp/bocpd-duration-cache \
             | tee /tmp/bocpd-duration-output/stdout.json
+          cp /tmp/run_duration_ensemble.py \
+            /tmp/bocpd-duration-output/materialized_source.py
           sha256sum /tmp/bocpd-duration-output/* | sort \
             > /tmp/bocpd-duration-output/artifact-files.sha256
 
