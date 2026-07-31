@@ -39,9 +39,7 @@ def run(args: argparse.Namespace) -> dict:
     starts = bootstrap_starts(OOS[1] - OOS[0], args.resamples, args.seed)
     evaluated = [
         evaluate_market(instrument, market, built, starts)
-        for (instrument, market), (_, built) in zip(
-            markets_raw, markets_built, strict=True
-        )
+        for (instrument, market), (_, built) in zip(markets_raw, markets_built, strict=True)
     ]
     accepted = all(item["accepted"] for item in evaluated)
     verdict = (
