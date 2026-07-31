@@ -88,7 +88,7 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
         "prospective_performance_consumed": False,
         "correction_permitted": False,
         "markets_passing_all_gates": 0,
-        "workflow_run": 30625959020,
+        "workflow_run": 30625205060,
         "artifact_id": 8791167598,
         "artifact_sha256": "9e2861743648542d88f6b908478c2914fe449122d596ead8a0cca6ff39af518d",
         "result_sha256": "920cfdb6c6830ded27be0d2bdcb10ea908858cbaf37a27fd2b6424fce5a54f1b",
