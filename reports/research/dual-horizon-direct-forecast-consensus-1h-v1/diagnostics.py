@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
-
 from common import ANNUAL_HOURS, FULL, OOS, TRAIN, finite_or_none
 from metrics import (
     fold_year_diagnostics,
