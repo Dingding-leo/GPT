@@ -437,8 +437,12 @@ def run(btc: Path, eth: Path) -> dict[str, Any]:
             "oos": "not accessed",
             "full": "not computed; candidate_count=0",
             "benchmark_comparison": "not applicable; diagnostic active-B1 target sleeves only",
-            "maximum_drawdown": "not applicable to candidate; adverse excursion reported per target sleeve",
-            "edge_per_turnover": "not applicable to candidate; target gross/net and turnover reported",
+            "maximum_drawdown": (
+                "not applicable to candidate; adverse excursion reported per target sleeve"
+            ),
+            "edge_per_turnover": (
+                "not applicable to candidate; target gross/net and turnover reported"
+            ),
         },
     }
 
