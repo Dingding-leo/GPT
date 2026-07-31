@@ -40,7 +40,20 @@ def write_report(output_dir: Path, result: dict[str, Any]) -> None:
             lines.append("# Prospective simple-trend shadow update through 03:00 UTC on 31 July 2026")
         else:
             lines.append(line)
-    report_path.write_text("\n".join(lines) + "\n")
+    report = "\n".join(lines) + "\n"
+    correction_start = report.index("Issue #753 and closed evidence PR #754")
+    correction_end = report.index("\n\n## Abort conditions and verdict", correction_start)
+    active_correction = (
+        "Issue #757 and closed evidence PR #758 contain terminal rejection evidence for the exact "
+        "`beta-sign-soft-exit-sleeve-1h-v1` candidate on the fresh preregistered SOL-USDT and XRP-USDT cohort. "
+        "The posterior sleeve improved benchmark-relative return, Sharpe, drawdown, turnover and edge per "
+        "turnover in both markets, but XRP remained negative in development OOS, both candidates were negative "
+        "over the full scored sample, profitable-fold/year breadth and concentration gates failed, and every "
+        "per-market dependence-aware lower confidence bound remained non-positive. No training-authorized "
+        "correction trigger exists, and this new BTC/ETH forward interval was not consumed to revise or rescue "
+        "the rejected family."
+    )
+    report_path.write_text(report[:correction_start] + active_correction + report[correction_end:])
 
 
 def run(output_dir: Path, base_url: str) -> dict[str, Any]:
