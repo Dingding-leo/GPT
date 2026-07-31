@@ -1,0 +1,394 @@
+{
+  "accepted": false,
+  "bar": "immutable public confirmed OKX SPOT 1H",
+  "candidate_count": 0,
+  "classification": "training-only architecture-eligibility diagnostic",
+  "common_index": {
+    "adverse_slope_ci95": [
+      -0.011771242799985562,
+      0.012482415414254022
+    ],
+    "adverse_slope_point": 0.002305629746023642,
+    "adverse_spearman_ci95": [
+      -0.24474803098095743,
+      0.43594053076398487
+    ],
+    "adverse_spearman_point": 0.10083286832013488,
+    "gross_slope_ci95": [
+      -0.02013152945092557,
+      0.028384833335554548
+    ],
+    "gross_slope_point": 0.005920164003424394,
+    "gross_spearman_ci95": [
+      -0.2966431555035584,
+      0.41894584959908815
+    ],
+    "gross_spearman_point": 0.06407164567181546,
+    "valid_draws": 4612,
+    "valid_fraction": 0.9224
+  },
+  "common_index_gate": false,
+  "diagnostic_count": 1,
+  "family_id": "signed-path-coherence-opportunity-diagnostic-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 803,
+  "markets": [
+    {
+      "active_anchors": 32,
+      "artifact_id": 8769605568,
+      "breadth": {
+        "active_observations_in_six_complete_folds": 24,
+        "active_observations_in_training_remainder": 8,
+        "folds": [
+          {
+            "adverse_slope": -0.007456114880466616,
+            "end_index_exclusive": 5040,
+            "fold": 1,
+            "gross_slope": -0.04325381846224154,
+            "observations": 4,
+            "start_index": 2880
+          },
+          {
+            "adverse_slope": 0.015083501616137255,
+            "end_index_exclusive": 7200,
+            "fold": 2,
+            "gross_slope": 0.01900619032568032,
+            "observations": 3,
+            "start_index": 5040
+          },
+          {
+            "adverse_slope": null,
+            "end_index_exclusive": 9360,
+            "fold": 3,
+            "gross_slope": null,
+            "observations": 0,
+            "start_index": 7200
+          },
+          {
+            "adverse_slope": null,
+            "end_index_exclusive": 11520,
+            "fold": 4,
+            "gross_slope": null,
+            "observations": 0,
+            "start_index": 9360
+          },
+          {
+            "adverse_slope": 0.010149172233371131,
+            "end_index_exclusive": 13680,
+            "fold": 5,
+            "gross_slope": 0.013500729998570968,
+            "observations": 5,
+            "start_index": 11520
+          },
+          {
+            "adverse_slope": 0.004712654911499501,
+            "end_index_exclusive": 15840,
+            "fold": 6,
+            "gross_slope": -0.014100960506640513,
+            "observations": 12,
+            "start_index": 13680
+          }
+        ],
+        "positive_adverse_folds": 3,
+        "positive_adverse_years": 2,
+        "positive_gross_folds": 2,
+        "positive_gross_years": 2,
+        "years": [
+          {
+            "adverse_slope": -0.007456114880466616,
+            "gross_slope": -0.04325381846224154,
+            "observations": 4,
+            "year": 2021
+          },
+          {
+            "adverse_slope": 0.015083501616137255,
+            "gross_slope": 0.01900619032568032,
+            "observations": 3,
+            "year": 2022
+          },
+          {
+            "adverse_slope": 0.005463466922415511,
+            "gross_slope": 0.0014516069166980344,
+            "observations": 25,
+            "year": 2023
+          }
+        ]
+      },
+      "calendar_anchors": 85,
+      "ci95": {
+        "adverse_slope_per_state_sd": [
+          -0.0091030454528745,
+          0.014443351673246634
+        ],
+        "adverse_spearman": [
+          -0.3342625000552147,
+          0.5129153383829431
+        ],
+        "gross_slope_per_state_sd": [
+          -0.024420509355700348,
+          0.021267796750578747
+        ],
+        "gross_spearman": [
+          -0.4333514219415604,
+          0.4226652203753112
+        ]
+      },
+      "csv_sha256": "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0",
+      "distribution": {
+        "adverse_mean": -0.05009462229791546,
+        "adverse_median": -0.04252682074573755,
+        "fees_total": 0.035,
+        "gross_mean": -0.004728562332277801,
+        "gross_median": -0.01735326653412933,
+        "gross_positive_weeks": 13,
+        "gross_zero_weeks": 0,
+        "long_hours_total": 4872,
+        "max_absolute_gross_share": 0.13475108103046857,
+        "max_absolute_net_share": 0.13340670367921154,
+        "mean_target_exposure": 0.90625,
+        "net_mean": -0.005822312332277802,
+        "net_median": -0.01835326653412933,
+        "net_positive_weeks": 13,
+        "state_iqr": 0.15672362740967205,
+        "state_quantiles": {
+          "max": 0.34346340183216334,
+          "median": -0.003426446129259148,
+          "min": -0.1514962645126402,
+          "q25": -0.06498913820017911,
+          "q75": 0.09173448920949295
+        },
+        "turnover_total": 70.0
+      },
+      "first_anchor": "2021-11-29T00:00:00+00:00",
+      "gates": {
+        "adverse_positive_lower_bound": false,
+        "fold_breadth": false,
+        "gross_positive_lower_bound": false,
+        "median_partition_economics": true,
+        "median_partition_support": false,
+        "positive_economic_slopes": true,
+        "state_dispersion": true,
+        "valid_bootstrap_fraction": false,
+        "year_breadth": true
+      },
+      "instrument": "BTC-USDT",
+      "last_anchor": "2023-07-10T00:00:00+00:00",
+      "median_split": {
+        "high_adverse_mean": -0.04215795346889724,
+        "high_gross_mean": 0.004244737452499529,
+        "high_minus_low_adverse": 0.015873337658036446,
+        "high_minus_low_gross": 0.01794659956955466,
+        "high_minus_low_net": 0.01800909956955466,
+        "high_net_mean": 0.0031822374524995284,
+        "high_observations": 16,
+        "low_adverse_mean": -0.058031291126933685,
+        "low_gross_mean": -0.013701862117055132,
+        "low_net_mean": -0.014826862117055133,
+        "low_observations": 16,
+        "state_median": -0.003426446129259148
+      },
+      "passes_market_gates": false,
+      "point": {
+        "adverse_slope_per_state_sd": 0.005171252022213765,
+        "adverse_spearman": 0.1158357771260997,
+        "gross_slope_per_state_sd": 0.002225482639402705,
+        "gross_spearman": 0.007697947214076245
+      },
+      "valid_bootstrap_draws": 4612,
+      "valid_bootstrap_fraction": 0.9224
+    },
+    {
+      "active_anchors": 39,
+      "artifact_id": 8769619607,
+      "breadth": {
+        "active_observations_in_six_complete_folds": 32,
+        "active_observations_in_training_remainder": 7,
+        "folds": [
+          {
+            "adverse_slope": -0.021007835059912043,
+            "end_index_exclusive": 5040,
+            "fold": 1,
+            "gross_slope": -0.001710678735953623,
+            "observations": 6,
+            "start_index": 2880
+          },
+          {
+            "adverse_slope": 0.018352511954879767,
+            "end_index_exclusive": 7200,
+            "fold": 2,
+            "gross_slope": 0.01636448079038519,
+            "observations": 3,
+            "start_index": 5040
+          },
+          {
+            "adverse_slope": null,
+            "end_index_exclusive": 9360,
+            "fold": 3,
+            "gross_slope": null,
+            "observations": 0,
+            "start_index": 7200
+          },
+          {
+            "adverse_slope": -0.04626784309806663,
+            "end_index_exclusive": 11520,
+            "fold": 4,
+            "gross_slope": -0.049577654862662975,
+            "observations": 5,
+            "start_index": 9360
+          },
+          {
+            "adverse_slope": 0.015379399493641298,
+            "end_index_exclusive": 13680,
+            "fold": 5,
+            "gross_slope": 0.03721589912672076,
+            "observations": 6,
+            "start_index": 11520
+          },
+          {
+            "adverse_slope": -0.003840011941630269,
+            "end_index_exclusive": 15840,
+            "fold": 6,
+            "gross_slope": -0.01211286074271872,
+            "observations": 12,
+            "start_index": 13680
+          }
+        ],
+        "positive_adverse_folds": 2,
+        "positive_adverse_years": 1,
+        "positive_gross_folds": 2,
+        "positive_gross_years": 1,
+        "years": [
+          {
+            "adverse_slope": -0.028385944336144935,
+            "gross_slope": -0.029051384154756006,
+            "observations": 5,
+            "year": 2021
+          },
+          {
+            "adverse_slope": -0.0311808304568704,
+            "gross_slope": -0.030227816421543617,
+            "observations": 9,
+            "year": 2022
+          },
+          {
+            "adverse_slope": 0.00414952088718783,
+            "gross_slope": 0.013515832734360803,
+            "observations": 25,
+            "year": 2023
+          }
+        ]
+      },
+      "calendar_anchors": 85,
+      "ci95": {
+        "adverse_slope_per_state_sd": [
+          -0.018452290527710632,
+          0.012885540133180188
+        ],
+        "adverse_spearman": [
+          -0.262753990846171,
+          0.42383133518554456
+        ],
+        "gross_slope_per_state_sd": [
+          -0.022000063045427225,
+          0.03982189402151484
+        ],
+        "gross_spearman": [
+          -0.2171403503970602,
+          0.4737526888205199
+        ]
+      },
+      "csv_sha256": "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8",
+      "distribution": {
+        "adverse_mean": -0.05895636285905262,
+        "adverse_median": -0.050837171569589445,
+        "fees_total": 0.04400000000000001,
+        "gross_mean": -0.008613027271840728,
+        "gross_median": -0.01648875181063325,
+        "gross_positive_weeks": 16,
+        "gross_zero_weeks": 0,
+        "long_hours_total": 5976,
+        "max_absolute_gross_share": 0.12423189425702848,
+        "max_absolute_net_share": 0.12386788062344094,
+        "mean_target_exposure": 0.9120879120879121,
+        "net_mean": -0.009741232400045857,
+        "net_median": -0.017488751810633252,
+        "net_positive_weeks": 15,
+        "state_iqr": 0.12432363850011462,
+        "state_quantiles": {
+          "max": 0.27370064775625985,
+          "median": 0.0050413352841946575,
+          "min": -0.23289025253769713,
+          "q25": -0.049383544758043435,
+          "q75": 0.07494009374207118
+        },
+        "turnover_total": 88.0
+      },
+      "first_anchor": "2021-11-29T00:00:00+00:00",
+      "gates": {
+        "adverse_positive_lower_bound": false,
+        "fold_breadth": false,
+        "gross_positive_lower_bound": false,
+        "median_partition_economics": false,
+        "median_partition_support": false,
+        "positive_economic_slopes": false,
+        "state_dispersion": true,
+        "valid_bootstrap_fraction": true,
+        "year_breadth": false
+      },
+      "instrument": "ETH-USDT",
+      "last_anchor": "2023-07-10T00:00:00+00:00",
+      "median_split": {
+        "high_adverse_mean": -0.06250186841525475,
+        "high_gross_mean": -0.0015206108364252664,
+        "high_minus_low_adverse": -0.006913735834594148,
+        "high_minus_low_gross": 0.01383021204906015,
+        "high_minus_low_net": 0.013567054154323306,
+        "high_net_mean": -0.00278376873116211,
+        "high_observations": 19,
+        "low_adverse_mean": -0.0555881325806606,
+        "low_gross_mean": -0.015350822885485416,
+        "low_net_mean": -0.016350822885485415,
+        "low_observations": 20,
+        "state_median": 0.0050413352841946575
+      },
+      "passes_market_gates": false,
+      "point": {
+        "adverse_slope_per_state_sd": -0.0005599925301664802,
+        "adverse_spearman": 0.08582995951417005,
+        "gross_slope_per_state_sd": 0.009614845367446083,
+        "gross_spearman": 0.12044534412955467
+      },
+      "valid_bootstrap_draws": 4962,
+      "valid_bootstrap_fraction": 0.9924
+    }
+  ],
+  "markets_passing": 0,
+  "parameter_grid_count": 0,
+  "sample": {
+    "block_calendar_weeks": 4,
+    "frozen_prefix_rows": 43441,
+    "oos_values_parsed_or_accessed": false,
+    "parsed_rows_per_market": 17520,
+    "resamples": 5000,
+    "seed": 20260731,
+    "training": [
+      2880,
+      17520
+    ]
+  },
+  "state": {
+    "cadence": "completed Monday 00:00 UTC",
+    "conditioning": "carried daily 2160H B1 target is long at Monday anchor",
+    "formula": "log(close_t/close_t-168)/sum(abs(hourly_log_return),168H)",
+    "hours": 168
+  },
+  "strategy_metrics": {
+    "benchmark_comparison": "not applicable; diagnostic active-B1 target sleeves only",
+    "edge_per_turnover": "not applicable to candidate; target gross/net and turnover reported",
+    "full": "not computed; candidate_count=0",
+    "maximum_drawdown": "not applicable to candidate; adverse excursion reported per target sleeve",
+    "oos": "not accessed",
+    "train": "not computed; candidate_count=0"
+  },
+  "verdict": "reject_signed_path_coherence_opportunity_premise"
+}
