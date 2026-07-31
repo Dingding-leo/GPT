@@ -1,0 +1,69 @@
+{
+  "family_id": "discounted-payoff-sign-evidence-sizing-1h-v1",
+  "later_suffix_rerun": {
+    "artifact_digest": "sha256:d119fda9b01ede97eec0fa71e3533727964ca3e2a310e4c52c286d66c1dd9216",
+    "artifact_id": 8780040860,
+    "exact_head": "806d40bba40c7f33acddeffe4a089bdada9b298d",
+    "raw_response_bytes_changed_only_after_frozen_end": true,
+    "scored_candle_hashes_unchanged": true,
+    "strategy_metrics_unchanged": true,
+    "workflow_run": 30595595738
+  },
+  "markets": {
+    "ADA-USDT": {
+      "confusion_matrix": {
+        "nonzero_realized_nonpositive": 5,
+        "nonzero_realized_positive": 3,
+        "zero_realized_nonpositive": 2,
+        "zero_realized_positive": 5
+      },
+      "nonzero_fixed_half_target_sum": -0.08810193723079235,
+      "nonzero_hit_rate": 0.375,
+      "nonzero_weighted_target_sum": -0.006083546793525867,
+      "oos_episode_count": 15,
+      "sign_persistence_rate": 0.3333333333333333,
+      "sign_transitions": {
+        "nonpositive_to_nonpositive": 2,
+        "nonpositive_to_positive": 5,
+        "positive_to_nonpositive": 5,
+        "positive_to_positive": 3
+      },
+      "validation": {
+        "confusion_counts_match": true,
+        "exposure_weighted_target_matches": true,
+        "prior_episode_available_for_every_oos_exit": true
+      },
+      "zero_fixed_half_target_sum": 0.05804871763354186,
+      "zero_missed_positive_rate": 0.7142857142857143
+    },
+    "AVAX-USDT": {
+      "confusion_matrix": {
+        "nonzero_realized_nonpositive": 5,
+        "nonzero_realized_positive": 6,
+        "zero_realized_nonpositive": 6,
+        "zero_realized_positive": 5
+      },
+      "nonzero_fixed_half_target_sum": 0.10799537390885522,
+      "nonzero_hit_rate": 0.5454545454545454,
+      "nonzero_weighted_target_sum": 0.02790944840666891,
+      "oos_episode_count": 22,
+      "sign_persistence_rate": 0.5454545454545454,
+      "sign_transitions": {
+        "nonpositive_to_nonpositive": 6,
+        "nonpositive_to_positive": 5,
+        "positive_to_nonpositive": 5,
+        "positive_to_positive": 6
+      },
+      "validation": {
+        "confusion_counts_match": true,
+        "exposure_weighted_target_matches": true,
+        "prior_episode_available_for_every_oos_exit": true
+      },
+      "zero_fixed_half_target_sum": -0.05136557703526057,
+      "zero_missed_positive_rate": 0.45454545454545453
+    }
+  },
+  "result_payload_sha256": "8b55fbd35f9ffe0391c9372128aaa03752be36a9e659592b5aed8f7ec0f19d0d",
+  "strategy_outputs_changed": false,
+  "verdict": "reject_discounted_payoff_sign_evidence_sizing_family"
+}
