@@ -1,0 +1,91 @@
+name: Fresh SOL XRP 1h Source
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acquire:
+    strategy:
+      fail-fast: false
+      matrix:
+        inst_id: [SOL-USDT, XRP-USDT]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      PIP_BOOTSTRAP_VERSION: "26.1.2"
+      SOURCE_ROOT: "reports/okx/1h/fresh-source/${{ matrix.inst_id }}"
+      ARTIFACT_NAME: "fresh-${{ matrix.inst_id }}-1h-${{ github.run_number }}-attempt-${{ github.run_attempt }}"
+
+    steps:
+      - name: Check out exact research head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e .
+          python -m pip check
+
+      - name: Acquire replay-verifiable exact-byte 1h source
+        env:
+          OKX_BASE_URL: https://www.okx.com
+        run: |
+          python scripts/run_okx_1h_coverage.py \
+            --output-dir "$SOURCE_ROOT" \
+            --start "2021-07-24T00:00:00Z" \
+            --instrument "${{ matrix.inst_id }}"
+
+      - name: Verify frozen source integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          snapshot="$SOURCE_ROOT/${{ matrix.inst_id }}/snapshot/okx-${{ matrix.inst_id }}-1H.csv"
+          metadata="$SOURCE_ROOT/${{ matrix.inst_id }}/snapshot/okx-${{ matrix.inst_id }}-1H.metadata.json"
+          test -s "$snapshot"
+          test -s "$metadata"
+          python - "$snapshot" <<'PY'
+          import csv
+          import hashlib
+          import pathlib
+          import sys
+
+          path = pathlib.Path(sys.argv[1])
+          rows = list(csv.DictReader(path.open(newline="", encoding="utf-8")))
+          assert len(rows) >= 43441, len(rows)
+          prefix = rows[:43441]
+          assert all(row["confirm"] == "1" for row in prefix)
+          print(f"rows={len(rows)}")
+          print(f"full_sha256={hashlib.sha256(path.read_bytes()).hexdigest()}")
+          PY
+
+      - name: Upload immutable fresh 1h source
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.SOURCE_ROOT }}/
+          if-no-files-found: error
+          retention-days: 14
