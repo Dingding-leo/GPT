@@ -95,9 +95,7 @@ def build_table(
             previous_age = 0
 
     anchors = indices[
-        (times.dt.hour.to_numpy() == 0)
-        & (indices >= TRAIN[0])
-        & (indices + 25 < TRAIN[1])
+        (times.dt.hour.to_numpy() == 0) & (indices >= TRAIN[0]) & (indices + 25 < TRAIN[1])
     ]
     if not np.all(np.diff(anchors) == DAY):
         raise ValueError("eligible daily calendar changed")
@@ -165,10 +163,7 @@ def breadth(rows: pd.DataFrame) -> dict[str, Any]:
     fold_rows: list[dict[str, Any]] = []
     for number in range(6):
         start = TRAIN[0] + number * TREND
-        part = rows[
-            (rows["anchor_index"] >= start)
-            & (rows["anchor_index"] < start + TREND)
-        ]
+        part = rows[(rows["anchor_index"] >= start) & (rows["anchor_index"] < start + TREND)]
         fold_rows.append(
             {
                 "fold": number + 1,
@@ -285,9 +280,7 @@ def common_calendar_samples(length: int) -> np.ndarray:
         length - BLOCK + 1,
         size=(RESAMPLES, block_count),
     )
-    return (starts[..., None] + np.arange(BLOCK)).reshape(RESAMPLES, -1)[
-        :, :length
-    ]
+    return (starts[..., None] + np.arange(BLOCK)).reshape(RESAMPLES, -1)[:, :length]
 
 
 def bootstrap_draws(table: pd.DataFrame, samples: np.ndarray) -> np.ndarray:
@@ -322,8 +315,7 @@ def summarize_market(
     temporal = breadth(rows)
     required_years = math.ceil(2 * len(temporal["years"]) / 3)
     gates = {
-        "gross_positive_lower_bound": point["gross_spearman"] > 0
-        and ci95["gross_spearman"][0] > 0,
+        "gross_positive_lower_bound": point["gross_spearman"] > 0 and ci95["gross_spearman"][0] > 0,
         "adverse_positive_lower_bound": point["adverse_spearman"] > 0
         and ci95["adverse_spearman"][0] > 0,
         "positive_economic_slopes": point["gross_slope_per_state_sd"] > 0
@@ -359,9 +351,7 @@ def common_summary(
     bitcoin_draws: np.ndarray,
     ether_draws: np.ndarray,
 ) -> dict[str, Any]:
-    valid = np.all(np.isfinite(bitcoin_draws), axis=1) & np.all(
-        np.isfinite(ether_draws), axis=1
-    )
+    valid = np.all(np.isfinite(bitcoin_draws), axis=1) & np.all(np.isfinite(ether_draws), axis=1)
     common_draws = np.median(
         np.stack((bitcoin_draws, ether_draws), axis=2),
         axis=2,
@@ -409,9 +399,7 @@ def run(btc_path: Path, eth_path: Path) -> dict[str, Any]:
         and common["adverse_spearman_ci95"][0] > 0
     )
     accepted = (
-        btc_summary["passes_market_gates"]
-        and eth_summary["passes_market_gates"]
-        and common_gate
+        btc_summary["passes_market_gates"] and eth_summary["passes_market_gates"] and common_gate
     )
     return {
         "family_id": "daily-positive-trend-age-opportunity-diagnostic-1h-v1",
