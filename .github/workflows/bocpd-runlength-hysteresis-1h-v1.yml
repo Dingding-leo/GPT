@@ -1,0 +1,151 @@
+name: BOCPD Run-Length Hysteresis 1H Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/bocpd-runlength-hysteresis-1h-v1.yml"
+      - "reports/research/bocpd-runlength-hysteresis-1h-v1/**"
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: bocpd-runlength-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      BTC_ARTIFACT_ID: "8769605568"
+      ETH_ARTIFACT_ID: "8769619607"
+      BTC_CSV_SHA256: "40c7ba3dbf64b8b31c634a79e1a2d5e2fa9d60b024c1fd62848d37ed967c13a0"
+      ETH_CSV_SHA256: "0164a5cc1730f70ad9817980d67d6350cf71013cdb759c1a153a66890127d6f8"
+
+    steps:
+      - name: Check out exact evidence head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact revision and research parent
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          git cat-file -e "5a0fcc97d1a882f8223656c51f5bb8055f534e38^{commit}"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install standalone research dependencies
+        run: python -m pip install --disable-pip-version-check "numpy>=1.26,<3" "pandas>=2.1,<3" "scipy>=1.14,<2" "ruff>=0.9,<1"
+
+      - name: Download immutable source artifacts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/source/btc artifacts/source/eth
+          for spec in "btc:$BTC_ARTIFACT_ID" "eth:$ETH_ARTIFACT_ID"; do
+            name="${spec%%:*}"
+            artifact_id="${spec##*:}"
+            curl \
+              --fail \
+              --location \
+              --retry 3 \
+              --retry-all-errors \
+              --header "Authorization: Bearer $GITHUB_TOKEN" \
+              --header "Accept: application/vnd.github+json" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id/zip" \
+              --output "artifacts/source/$name.zip"
+            unzip -q "artifacts/source/$name.zip" -d "artifacts/source/$name"
+          done
+          printf '%s  %s\n' "$BTC_CSV_SHA256" \
+            "artifacts/source/btc/snapshot/okx-BTC-USDT-1H.csv" | sha256sum --check --strict
+          printf '%s  %s\n' "$ETH_CSV_SHA256" \
+            "artifacts/source/eth/snapshot/okx-ETH-USDT-1H.csv" | sha256sum --check --strict
+
+      - name: Format and lint standalone reproducer
+        run: |
+          ruff check --fix reports/research/bocpd-runlength-hysteresis-1h-v1/run_bocpd.py
+          ruff format reports/research/bocpd-runlength-hysteresis-1h-v1/run_bocpd.py
+          ruff check reports/research/bocpd-runlength-hysteresis-1h-v1/run_bocpd.py
+
+      - name: Reproduce frozen candidate, benchmarks, and robustness gates
+        run: |
+          python -m compileall -q reports/research/bocpd-runlength-hysteresis-1h-v1
+          python reports/research/bocpd-runlength-hysteresis-1h-v1/run_bocpd.py \
+            --btc-csv artifacts/source/btc/snapshot/okx-BTC-USDT-1H.csv \
+            --eth-csv artifacts/source/eth/snapshot/okx-ETH-USDT-1H.csv \
+            --output-dir artifacts/bocpd-runlength-hysteresis \
+            --self-test
+
+      - name: Verify immutable evidence and rejected verdict
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          def normalize(value):
+              if isinstance(value, float):
+                  return round(value, 11)
+              if isinstance(value, list):
+                  return [normalize(item) for item in value]
+              if isinstance(value, dict):
+                  return {key: normalize(item) for key, item in value.items()}
+              return value
+
+          source = Path("reports/research/bocpd-runlength-hysteresis-1h-v1")
+          generated = Path("artifacts/bocpd-runlength-hysteresis")
+          committed = json.loads((source / "evidence.json").read_text(encoding="utf-8"))
+          replayed = json.loads((generated / "evidence.json").read_text(encoding="utf-8"))
+          assert normalize(committed) == normalize(replayed)
+          assert (source / "report.md").read_text(encoding="utf-8") == (
+              generated / "report.md"
+          ).read_text(encoding="utf-8")
+          assert replayed["candidate_count"] == 1
+          assert replayed["parameter_grid_count"] == 0
+          assert replayed["fee_one_way"] == 0.0005
+          assert replayed["oos_accessed"] is True
+          assert replayed["accepted"] is False
+          assert replayed["verdict"] == "reject_bocpd_runlength_hysteresis_architecture_v1"
+          assert all(
+              market["segments"]["oos"]["candidate"]["net_total_return"] < 0
+              for market in replayed["markets"].values()
+          )
+          PY
+
+      - name: Publish terminal report
+        run: cat artifacts/bocpd-runlength-hysteresis/report.md
+
+      - name: Preserve formatted source in evidence artifact
+        run: |
+          cp reports/research/bocpd-runlength-hysteresis-1h-v1/run_bocpd.py \
+            artifacts/bocpd-runlength-hysteresis/run_bocpd.formatted.py
+
+      - name: Upload immutable research artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: bocpd-runlength-hysteresis-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: artifacts/bocpd-runlength-hysteresis
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 30
