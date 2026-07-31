@@ -55,11 +55,7 @@ def build_signals(market: dict[str, Any]) -> dict[str, Any]:
                 training_rows[horizon][t] = diagnostic["rows"]
                 fit_status[horizon][t] = int(diagnostic["status"] == "fit")
                 okay = okay and np.isfinite(prediction)
-            current_candidate = int(
-                okay
-                and predictions[24][t] > 0.0
-                and predictions[168][t] > 0.0
-            )
+            current_candidate = int(okay and predictions[24][t] > 0.0 and predictions[168][t] > 0.0)
         b1[t] = current_b1
         candidate[t] = current_candidate
 
