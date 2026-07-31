@@ -1,0 +1,93 @@
+name: Volatility-Gated Cadence Experiment
+
+on:
+  push:
+    branches:
+      - auto/research/20260731-05-volatility-gated-cadence
+
+permissions:
+  contents: read
+
+concurrency:
+  group: volatility-gated-cadence-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  experiment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      OKX_BASE_URL: https://www.okx.com
+      SOURCE_DIR: /tmp/volatility-gated-cadence-source
+      OUTPUT_DIR: reports/research/volatility-gated-cadence-state-1h-v1/generated
+      ARTIFACT_NAME: volatility-gated-cadence-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact branch head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF" = "refs/heads/auto/research/20260731-05-volatility-gated-cadence"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install -e ".[dev]"
+          python -m pip check
+          python -m py_compile reports/research/volatility-gated-cadence-state-1h-v1/run_experiment.py
+
+      - name: Acquire immutable public OKX 1H source
+        run: |
+          set -euo pipefail
+          python scripts/run_okx_1h_coverage.py \
+            --start 2021-07-24T00:00:00Z \
+            --output-dir "$SOURCE_DIR" \
+            --instrument ALGO-USDT \
+            --instrument ATOM-USDT \
+            --pause-seconds 0.08
+          test -s "$SOURCE_DIR/coverage-manifest.json"
+          test -s "$SOURCE_DIR/ALGO-USDT/snapshot/okx-ALGO-USDT-1H.normalized.csv"
+          test -s "$SOURCE_DIR/ATOM-USDT/snapshot/okx-ATOM-USDT-1H.normalized.csv"
+
+      - name: Run frozen strategy experiment
+        run: |
+          set -euo pipefail
+          python reports/research/volatility-gated-cadence-state-1h-v1/run_experiment.py \
+            --data-root "$SOURCE_DIR" \
+            --output-dir "$OUTPUT_DIR" \
+            --instrument ALGO-USDT \
+            --instrument ATOM-USDT \
+            --resamples 5000 \
+            --seed 20260731 \
+            --source-workflow-run "$GITHUB_RUN_ID" \
+            --tested-sha "$GITHUB_SHA"
+          cp "$SOURCE_DIR/coverage-manifest.json" "$OUTPUT_DIR/coverage-manifest.json"
+          printf '%s\n' "$GITHUB_SHA" > "$OUTPUT_DIR/tested-sha.txt"
+          test -s "$OUTPUT_DIR/result.json"
+          test -s "$OUTPUT_DIR/result-summary.json"
+          test -s "$OUTPUT_DIR/report.md"
+          sha256sum "$OUTPUT_DIR"/* > "$OUTPUT_DIR/artifact-manifest.sha256"
+
+      - name: Upload immutable source and result evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: |
+            ${{ env.SOURCE_DIR }}/
+            ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
