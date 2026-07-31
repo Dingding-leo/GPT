@@ -1,0 +1,85 @@
+{
+  "accepted": false,
+  "artifact_id": 8780233710,
+  "artifact_sha256": "5f36d6756a287932302b2ee385621937ffb5f78251a629781467a16a341c2a02",
+  "bar": "1H",
+  "candidate_count": 1,
+  "candidate_rule": "at daily 00:00 UTC, long iff 2160H margin > 0 and margin minus its 24H-lagged value > 0; execute next open",
+  "common_index_gate": {
+    "median_annualized_mean_delta_lower_bound": -0.4053634905929461,
+    "median_sharpe_delta_lower_bound": -0.8320316906993119,
+    "passed": false
+  },
+  "family_id": "daily-margin-acceleration-confirmation-1h-v1",
+  "fee_one_way": 0.0005,
+  "issue": 753,
+  "live_trading_authorized": false,
+  "markets": [
+    {
+      "candidate_oos": {
+        "annualized_sharpe": 0.8818863771543036,
+        "compounded_net_return": 0.709747404187858,
+        "edge_per_turnover_bps": 21.638640371581037,
+        "loss_clustering": {"cluster_count": 2120, "loss_count": 3814, "maximum_consecutive_losses": 13},
+        "maximum_drawdown": -0.2850893534622789,
+        "modeled_fees": 0.164,
+        "signal_frequency": 0.28888888888888886,
+        "turnover": 328.0
+      },
+      "daily_B1_oos": {
+        "annualized_sharpe": 0.9715960523337496,
+        "compounded_net_return": 1.2362140242971802,
+        "edge_per_turnover_bps": 274.7142276215956,
+        "loss_clustering": {"cluster_count": 3933, "loss_count": 7308, "maximum_consecutive_losses": 13},
+        "maximum_drawdown": -0.25867363427583956,
+        "modeled_fees": 0.0225,
+        "signal_frequency": 0.5740740740740741,
+        "turnover": 45.0
+      },
+      "diagnostic": {"base_long_hours": 14880, "base_only_arithmetic_return": 0.35544126622061173, "base_only_long_hours": 7392, "candidate_long_hours": 7488, "candidate_only_long_hours": 0},
+      "gates": {"drawdown": false, "edge_per_turnover": false, "fold_breadth": false, "mean_uncertainty": false, "residual_sharpe": false, "return": false, "sharpe": false, "sharpe_uncertainty": false, "turnover": false, "year_breadth": false},
+      "inference": {"annualized_mean_delta_ci95": [-0.3891538073329003, 0.14961761908724303], "sharpe_delta_ci95": [-0.9811148695763278, 0.847957427618527]},
+      "instrument": "BTC-USDT",
+      "profitable_folds": 4,
+      "profitable_years": 1,
+      "residual_sharpe": -0.4956830060816137
+    },
+    {
+      "candidate_oos": {
+        "annualized_sharpe": 0.9212670623355532,
+        "compounded_net_return": 0.9596211104638868,
+        "edge_per_turnover_bps": 35.28018788470172,
+        "loss_clustering": {"cluster_count": 1878, "loss_count": 3446, "maximum_consecutive_losses": 9},
+        "maximum_drawdown": -0.23058819548846354,
+        "modeled_fees": 0.136,
+        "signal_frequency": 0.2611111111111111,
+        "turnover": 272.0
+      },
+      "daily_B1_oos": {
+        "annualized_sharpe": 0.6978791993519183,
+        "compounded_net_return": 0.8691284017576391,
+        "edge_per_turnover_bps": 280.36400056698034,
+        "loss_clustering": {"cluster_count": 3380, "loss_count": 6323, "maximum_consecutive_losses": 9},
+        "maximum_drawdown": -0.4724783668460425,
+        "modeled_fees": 0.0155,
+        "signal_frequency": 0.49722222222222223,
+        "turnover": 31.0
+      },
+      "diagnostic": {"base_long_hours": 12888, "base_only_arithmetic_return": 0.11935359002017465, "base_only_long_hours": 6120, "candidate_long_hours": 6768, "candidate_only_long_hours": 0},
+      "gates": {"drawdown": true, "edge_per_turnover": false, "fold_breadth": false, "mean_uncertainty": false, "residual_sharpe": false, "return": true, "sharpe": true, "sharpe_uncertainty": false, "turnover": false, "year_breadth": false},
+      "inference": {"annualized_mean_delta_ci95": [-0.42157317385299187, 0.34666727178003887], "sharpe_delta_ci95": [-0.682948511822296, 1.1735290919876185]},
+      "instrument": "ETH-USDT",
+      "profitable_folds": 6,
+      "profitable_years": 2,
+      "residual_sharpe": -0.12043672210289805
+    }
+  ],
+  "paper_trading_authorized": false,
+  "parameter_grid_count": 0,
+  "pull_request": 754,
+  "result_sha256": "df73a87ea587212a30e31234df0d264ac95d5a5bfb08f951455a96958fa0819b",
+  "sample": {"development_oos": [17520, 43440], "full_scored": [2880, 43440], "training": [2880, 17520], "warmup": [0, 2880]},
+  "schema_version": 1,
+  "verdict": "reject_daily_margin_acceleration_confirmation_family",
+  "workflow_run": 30596226600
+}
