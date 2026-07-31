@@ -25,6 +25,7 @@ SPEC.loader.exec_module(parent)
 FAMILY_ID = "lagged-realised-b1-payoff-state-sizing-1h-v1"
 ISSUE = 790
 FIXED_MARKETS = ["ZEC-USDT", "DASH-USDT"]
+ORIGINAL_EVALUATE = parent.evaluate_market
 
 
 def trailing_completed_b1_payoff(
@@ -172,7 +173,7 @@ def evaluate_market(
     starts: np.ndarray,
 ) -> dict[str, Any]:
     """Evaluate frozen gates and direct one-lag payoff calibration."""
-    result = parent.evaluate_market(instrument, market, built, starts)
+    result = ORIGINAL_EVALUATE(instrument, market, built, starts)
     start, end = parent.parent.fw.OOS
     indices = np.arange(len(built["decision_mask"]))
     valid = (
