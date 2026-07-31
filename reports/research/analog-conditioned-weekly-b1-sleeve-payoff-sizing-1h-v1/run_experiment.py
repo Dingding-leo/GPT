@@ -272,7 +272,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         "history": "all strictly prior Monday anchors with fully observed self-contained labels",
         "minimum_history": MIN_HISTORY,
         "neighbors": NEIGHBOURS,
-        "label": "self-contained next-168H daily-B1 sleeve net payoff including start, internal and terminal 5-bps turnover",
+        "label": (
+            "self-contained next-168H daily-B1 sleeve net payoff including start, "
+            "internal and terminal 5-bps turnover"
+        ),
         "efficiency": "sum(label) / sum(abs(label))",
         "weekly_size": "clip((1 + efficiency) / 2, 0, 1); fallback 1",
     }
