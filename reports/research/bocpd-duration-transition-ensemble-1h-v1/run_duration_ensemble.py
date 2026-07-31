@@ -6,7 +6,7 @@ import gzip
 import hashlib
 from pathlib import Path
 
-EXPECTED_SOURCE_SHA256 = "96783b2f600837f41aec9c168215671b85540c72f38a3b9d94e0ee90306a788b"
+EXPECTED_SOURCE_SHA256 = "e166e9df67f5374923d6684df728482b0c6c3b42f4e9ebdac9599001e8c3414d"
 
 
 def parse_args() -> argparse.Namespace:
