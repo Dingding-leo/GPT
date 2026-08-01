@@ -56,8 +56,8 @@ jobs:
           mkdir -p /tmp/tsd-output /tmp/tsd-cache
           test -f "$SOURCE_PATH"
           cp "$SOURCE_PATH" /tmp/tsd-output/materialized_source.py
-          ruff check /tmp/tsd-output/materialized_source.py
-          ruff format --check /tmp/tsd-output/materialized_source.py
+          ruff check --target-version py312 /tmp/tsd-output/materialized_source.py
+          ruff format --check --target-version py312 /tmp/tsd-output/materialized_source.py
           python -m py_compile /tmp/tsd-output/materialized_source.py
           sha256sum /tmp/tsd-output/materialized_source.py
 
