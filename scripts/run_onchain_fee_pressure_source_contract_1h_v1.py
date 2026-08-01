@@ -16,8 +16,7 @@ from typing import Any
 
 FAMILY_ID = "causal-onchain-fee-pressure-source-contract-1h-v1"
 PASS_VERDICT = (
-    "accept_onchain_fee_pressure_1h_source_contract_for_separate_"
-    "training_only_predeclaration"
+    "accept_onchain_fee_pressure_1h_source_contract_for_separate_training_only_predeclaration"
 )
 FAIL_VERDICT = "reject_causal_onchain_fee_pressure_source_contract_1h_v1"
 REPOSITORY_MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
@@ -73,8 +72,7 @@ class TransientFailure(RuntimeError):
 
 def canonical(value: Any) -> bytes:
     return (
-        json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
-        + "\n"
+        json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
     ).encode()
 
 
@@ -94,9 +92,7 @@ def parse_time(value: Any) -> int:
     match = TIME_RE.fullmatch(value)
     if match is None:
         raise SourceFailure(f"off-grid timestamp {value!r}")
-    dt = datetime.fromisoformat(
-        f"{match.group(1)}T{match.group(2)}:00:00+00:00"
-    )
+    dt = datetime.fromisoformat(f"{match.group(1)}T{match.group(2)}:00:00+00:00")
     return int(dt.timestamp() * 1000)
 
 
@@ -128,15 +124,19 @@ def request_bytes(url: str) -> tuple[bytes, dict[str, Any], int]:
                 if len(body) > MAX_BYTES:
                     raise TransientFailure("response exceeds byte cap")
                 status = int(getattr(response, "status", 200))
-                return body, {
-                    "request_url": url,
-                    "final_url": response.geturl(),
-                    "http_status": status,
-                    "content_type": response.headers.get("Content-Type"),
-                    "bytes": len(body),
-                    "sha256": digest(body),
-                    "attempt": attempt,
-                }, status
+                return (
+                    body,
+                    {
+                        "request_url": url,
+                        "final_url": response.geturl(),
+                        "http_status": status,
+                        "content_type": response.headers.get("Content-Type"),
+                        "bytes": len(body),
+                        "sha256": digest(body),
+                        "attempt": attempt,
+                    },
+                    status,
+                )
         except urllib.error.HTTPError as exc:
             body = exc.read(MAX_BYTES + 1)
             status = int(exc.code)
@@ -144,9 +144,7 @@ def request_bytes(url: str) -> tuple[bytes, dict[str, Any], int]:
                 "request_url": url,
                 "final_url": exc.geturl(),
                 "http_status": status,
-                "content_type": (
-                    exc.headers.get("Content-Type") if exc.headers else None
-                ),
+                "content_type": (exc.headers.get("Content-Type") if exc.headers else None),
                 "bytes": len(body),
                 "sha256": digest(body),
                 "attempt": attempt,
@@ -236,11 +234,7 @@ def metadata_snapshot(root: Path) -> dict[str, Any]:
 
     reference = records["metric_reference"].get("parsed", {})
     rows = reference.get("data", []) if isinstance(reference, dict) else []
-    matching = [
-        row
-        for row in rows
-        if isinstance(row, dict) and row.get("metric") == METRIC
-    ]
+    matching = [row for row in rows if isinstance(row, dict) and row.get("metric") == METRIC]
     semantic_text = " ".join(
         str(row.get(key, ""))
         for row in matching
@@ -249,8 +243,7 @@ def metadata_snapshot(root: Path) -> dict[str, Any]:
     records["semantic_gate"] = {
         "matching_records": len(matching),
         "defines_total_fees": (
-            "fee" in semantic_text
-            and ("total" in semantic_text or "sum" in semantic_text)
+            "fee" in semantic_text and ("total" in semantic_text or "sum" in semantic_text)
         ),
         "defines_usd_unit": "usd" in semantic_text,
         "passed": bool(
@@ -276,9 +269,7 @@ def parse_row(row: Any, asset: str) -> tuple[int, float, int | None, dict[str, A
     if not math.isfinite(value) or value < 0:
         raise SourceFailure(f"{asset}: non-finite or negative {METRIC}")
     status_time_value = row.get(f"{METRIC}-status-time")
-    status_ms = (
-        None if status_time_value is None else parse_status_time(status_time_value)
-    )
+    status_ms = None if status_time_value is None else parse_status_time(status_time_value)
     return timestamp, value, status_ms, row
 
 
@@ -313,10 +304,7 @@ def acquire(root: Path, asset: str, label: str, end_time: str) -> dict[str, Any]
                 raise SourceFailure("empty or invalid data page")
             parsed = [parse_row(row, asset) for row in data]
             times = [item[0] for item in parsed]
-            if any(
-                left >= right
-                for left, right in zip(times, times[1:], strict=False)
-            ):
+            if any(left >= right for left, right in zip(times, times[1:], strict=False)):
                 raise SourceFailure("page rows are not strictly ascending")
             if prior_last is not None and times[0] <= prior_last:
                 raise SourceFailure("pagination overlaps or reverses chronology")
@@ -359,10 +347,7 @@ def acquire(root: Path, asset: str, label: str, end_time: str) -> dict[str, Any]
     duplicate_count = duplicate_occurrences + sum(
         count - 1 for count in Counter(observed).values() if count > 1
     )
-    normalized = [
-        {"asset": asset, "time": iso(ts), METRIC: rows_by_time[ts][0]}
-        for ts in observed
-    ]
+    normalized = [{"asset": asset, "time": iso(ts), METRIC: rows_by_time[ts][0]} for ts in observed]
     normalized_bytes = canonical(normalized)
     normalized_path = root / "normalized" / f"{asset}-{label}.json"
     normalized_path.parent.mkdir(parents=True, exist_ok=True)
@@ -423,8 +408,7 @@ def longest_gap(times: list[int]) -> int:
     if len(times) < 2:
         return 0
     return max(
-        max((right - left) // HOUR_MS - 1, 0)
-        for left, right in zip(times, times[1:], strict=False)
+        max((right - left) // HOUR_MS - 1, 0) for left, right in zip(times, times[1:], strict=False)
     )
 
 
@@ -439,8 +423,7 @@ def arm_result(root: Path, asset: str, semantic_pass: bool) -> dict[str, Any]:
         repeat = acquire(root, asset, "repeat", END)
         suffix = acquire(root, asset, "suffix", SUFFIX_END)
         repeat_identical = bool(
-            repeat["coverage_passed"]
-            and repeat["normalized_sha256"] == first["normalized_sha256"]
+            repeat["coverage_passed"] and repeat["normalized_sha256"] == first["normalized_sha256"]
         )
         prefix = suffix["normalized_rows"][:EXPECTED_ROWS] if suffix else []
         prefix_identical = bool(
@@ -499,15 +482,9 @@ def write_outputs(root: Path, evidence: dict[str, Any]) -> None:
         f"- Exact evidence head: `{evidence['tested_head']}`",
         f"- Source arms passing: `{evidence['markets_passing_source_contract']}/2`",
         f"- Verdict: `{evidence['verdict']}`",
-        (
-            "- Target spot prices, features, returns, performance, and OOS "
-            "were not accessed."
-        ),
+        ("- Target spot prices, features, returns, performance, and OOS were not accessed."),
         "",
-        (
-            "| Asset | Rows | Pages | Missing | 24H availability | Repeat | "
-            "Suffix prefix | Pass |"
-        ),
+        ("| Asset | Rows | Pages | Missing | 24H availability | Repeat | Suffix prefix | Pass |"),
         "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for arm in evidence["market_arms"]:
@@ -547,9 +524,7 @@ def main() -> None:
         "family_id": FAMILY_ID,
         "tested_head": args.tested_head,
         "repository_main": REPOSITORY_MAIN,
-        "classification": (
-            "source-contract-first orthogonal exogenous-information experiment"
-        ),
+        "classification": ("source-contract-first orthogonal exogenous-information experiment"),
         "bar": "1H",
         "canonical_fee_bps_one_way": 5.0,
         "candidate_count": 0,
