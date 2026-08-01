@@ -1,0 +1,93 @@
+name: Adaptive Temporal Overlay Family Closure
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/adaptive-temporal-overlay-family-closure.yml"
+      - "reports/research/adaptive-temporal-overlay-family-closure-1h-v1/**"
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: adaptive-overlay-family-closure-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Check out exact evidence head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          git cat-file -e "5a0fcc97d1a882f8223656c51f5bb8055f534e38^{commit}"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Reproduce deterministic closure twice
+        run: |
+          set -euo pipefail
+          python -m compileall -q reports/research/adaptive-temporal-overlay-family-closure-1h-v1
+          python reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py --output-dir artifacts/adaptive-overlay-closure
+          python reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py --output-dir /tmp/adaptive-overlay-closure-replay
+          cmp artifacts/adaptive-overlay-closure/evidence.json /tmp/adaptive-overlay-closure-replay/evidence.json
+          cmp artifacts/adaptive-overlay-closure/evidence.sha256 /tmp/adaptive-overlay-closure-replay/evidence.sha256
+          cmp artifacts/adaptive-overlay-closure/report.md /tmp/adaptive-overlay-closure-replay/report.md
+
+      - name: Verify frozen verdict and identities
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          e = json.loads(Path("artifacts/adaptive-overlay-closure/evidence.json").read_text())
+          assert e["research_parent"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert e["candidate_count"] == 0 and e["source_candidate_count"] == 3
+          assert e["source_market_effect_count"] == 6 and e["parameter_grid_count"] == 0
+          assert e["bar"] == "1H" and e["fee_one_way"] == 0.0005
+          assert e["new_market_data"] is False and e["new_oos_consumption"] is False
+          assert e["bootstrap"]["resamples"] == 100000 and e["bootstrap"]["seed"] == 20260801
+          assert e["aggregation"]["mean_hourly_net"]["positive_market_count"] == 2
+          assert e["aggregation"]["sharpe"]["positive_market_count"] == 2
+          assert e["aggregation"]["mean_hourly_net"]["positive_architecture_count"] == 0
+          assert e["aggregation"]["sharpe"]["positive_architecture_count"] == 0
+          assert e["source_uncertainty_audit"]["both_lower_bounds_positive_count"] == 0
+          assert e["breadth_audit"]["qualified_market_count"] == 0
+          assert e["gates_passed"] == 1 and e["gates_total"] == 10
+          assert e["verdict"] == "reject_adaptive_temporal_overlay_architecture_family"
+          PY
+
+      - name: Publish terminal report
+        run: cat artifacts/adaptive-overlay-closure/report.md
+
+      - name: Upload immutable closure artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: adaptive-temporal-overlay-family-closure-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: artifacts/adaptive-overlay-closure
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 30
