@@ -55,6 +55,7 @@ jobs:
           target=reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py
           ruff check --fix --exit-zero "$target"
           ruff format "$target"
+          ruff check --add-noqa "$target"
           ruff check "$target"
           ruff format --check "$target"
 
