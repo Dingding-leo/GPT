@@ -1,0 +1,97 @@
+name: Forward Implied Volatility Regime Family Closure 1H v1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/close_forward_implied_volatility_regime_family_1h_v1.py"
+      - ".github/workflows/forward-implied-volatility-regime-family-closure-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forward-iv-family-closure-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/research/forward-implied-volatility-regime-family-closure-1h-v1
+      ARTIFACT_NAME: forward-implied-volatility-regime-family-closure-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact evidence-only revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+
+      - name: Execute frozen family closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/close_forward_implied_volatility_regime_family_1h_v1.py
+          python scripts/close_forward_implied_volatility_regime_family_1h_v1.py --output-dir "$OUTPUT_DIR"
+
+      - name: Verify machine-readable closure evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
+          actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = json.loads((Path(os.environ["OUTPUT_DIR"]) / "evidence.json").read_text())
+          assert evidence["family_id"] == "causal-forward-implied-volatility-regime-family-closure-1h-v1"
+          assert evidence["bar"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["new_market_data"] == 0
+          assert evidence["new_oos_consumed"] == 0
+          assert evidence["counts"]["architecture_group_count"] == 2
+          assert evidence["counts"]["source_valid_groups"] == 2
+          assert evidence["counts"]["economically_supportive_groups"] == 0
+          assert evidence["counts"]["bilateral_positive_return_groups"] == 0
+          assert evidence["counts"]["bilateral_e2160_superior_groups"] == 0
+          assert evidence["counts"]["temporal_support_groups"] == 0
+          assert evidence["counts"]["uncertainty_fold_year_delay_support_groups"] == 0
+          assert evidence["groups"][0]["oos_economics"] is None
+          assert evidence["groups"][1]["oos_economics"] is None
+          assert evidence["groups"][1]["oos_accessed"] is False
+          assert all(value == 0 for value in evidence["leave_one_group_out_support"].values())
+          assert evidence["correction_permitted"] is False
+          assert evidence["observation_epoch_restarted"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert evidence["verdict"] == "reject_causal_forward_implied_volatility_regime_family"
+          PY
+
+      - name: Upload immutable closure evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
