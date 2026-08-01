@@ -172,6 +172,7 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
         "proper-score weights, and one turnover-cost-aware hysteretic long/cash rule"
     )
     base.write_outputs(output_dir, result)
+    prior.write_report(output_dir, result)
     rewrite_report(output_dir)
     return result
 
