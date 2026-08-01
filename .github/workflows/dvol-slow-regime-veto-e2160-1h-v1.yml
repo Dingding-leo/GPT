@@ -69,10 +69,11 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Verify focused implementation quality
+      - name: Canonicalize and verify focused implementation
         shell: bash
         run: |
           set -euo pipefail
+          python -m ruff format /tmp/run_dvol_slow_regime_veto_e2160_1h_v1.py
           python -m py_compile \
             scripts/run_dvol_source_contract_1h_v1.py \
             /tmp/run_dvol_slow_regime_veto_e2160_1h_v1.py
@@ -87,6 +88,8 @@ jobs:
             python /tmp/run_dvol_slow_regime_veto_e2160_1h_v1.py \
             --tested-head "$EXPECTED_TESTED_SHA" \
             --output-dir "$OUTPUT_DIR"
+          cp /tmp/run_dvol_slow_regime_veto_e2160_1h_v1.py "$OUTPUT_DIR/strategy.py"
+          sha256sum "$OUTPUT_DIR/strategy.py" | awk '{print $1}' > "$OUTPUT_DIR/strategy.sha256"
 
       - name: Verify machine-readable evidence and fail-closed policy
         shell: bash
@@ -97,9 +100,14 @@ jobs:
           test -s "$OUTPUT_DIR/protocol.json"
           test -s "$OUTPUT_DIR/protocol.sha256"
           test -s "$OUTPUT_DIR/report.md"
+          test -s "$OUTPUT_DIR/strategy.py"
+          test -s "$OUTPUT_DIR/strategy.sha256"
           expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
           actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
           test "$actual" = "$expected"
+          expected_strategy="$(cat "$OUTPUT_DIR/strategy.sha256")"
+          actual_strategy="$(sha256sum "$OUTPUT_DIR/strategy.py" | awk '{print $1}')"
+          test "$actual_strategy" = "$expected_strategy"
           python - <<'PY'
           import json
           import os
