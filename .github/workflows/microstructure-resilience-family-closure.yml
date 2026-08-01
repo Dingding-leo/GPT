@@ -1,0 +1,86 @@
+name: Microstructure Resilience Family Closure
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "reports/research/microstructure-resilience-family-closure/source-records.json"
+      - "scripts/run_microstructure_resilience_family_closure.py"
+      - ".github/workflows/microstructure-resilience-family-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: microstructure-resilience-closure-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  ARTIFACT_NAME: microstructure-resilience-family-closure-${{ github.run_number }}-${{ github.run_attempt }}
+
+jobs:
+  closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+      - name: Verify exact head
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Reproduce frozen family closure
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/run_microstructure_resilience_family_closure.py
+          python scripts/run_microstructure_resilience_family_closure.py \
+            --source reports/research/microstructure-resilience-family-closure/source-records.json \
+            --output-dir closure-evidence
+      - name: Verify terminal evidence
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("closure-evidence")
+          evidence_bytes = (root / "evidence.json").read_bytes()
+          evidence = json.loads(evidence_bytes)
+          source_bytes = (root / "source-records.json").read_bytes()
+          sums = json.loads((root / "sha256sums.json").read_text())
+          assert evidence["architecture_family_id"] == "causal-microstructure-resilience-family-closure-1h-v1"
+          assert evidence["frozen_at_main"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["architecture_group_count"] == 4
+          assert evidence["new_candidates"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["new_oos_consumed"] == 0
+          assert evidence["new_market_data_acquired"] == 0
+          assert evidence["fee_one_way_where_executable"] == 0.0005
+          assert evidence["supportive_group_count"] == 0
+          assert evidence["dimension_pass_counts"] == {
+              "dependence_aware_support": 0,
+              "positive_economics_or_information": 0,
+              "replication_or_latency": 0,
+              "source_executable": 3,
+              "temporal_breadth": 1,
+          }
+          assert all(row["retained_supportive_groups"] == 0 for row in evidence["leave_one_group_out"])
+          assert evidence["accepted"] is False
+          assert evidence["verdict"] == "reject_causal_microstructure_resilience_family"
+          assert evidence["no_recomputation_or_selection"] is True
+          assert evidence["source_records_sha256"] == hashlib.sha256(source_bytes).hexdigest()
+          for name in ("source-records.json", "evidence.json", "report.md"):
+              assert sums[name] == hashlib.sha256((root / name).read_bytes()).hexdigest()
+          print("evidence_sha256", hashlib.sha256(evidence_bytes).hexdigest())
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: closure-evidence/
+          if-no-files-found: error
+          retention-days: 30
