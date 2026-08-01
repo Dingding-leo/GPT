@@ -1034,10 +1034,10 @@ def main() -> None:
         "markets_passing": markets_passing,
         "verdict": verdict,
     }
-    evidence_bytes = canonical_json_bytes(evidence)
+    evidence_bytes = canonical_json_bytes(evidence) + b"\n"
     evidence_sha = sha256_bytes(evidence_bytes)
     report = render_report(evidence)
-    (args.output_dir / "evidence.json").write_bytes(evidence_bytes + b"\n")
+    (args.output_dir / "evidence.json").write_bytes(evidence_bytes)
     (args.output_dir / "evidence.sha256").write_text(
         f"{evidence_sha}  evidence.json\n", encoding="utf-8"
     )
