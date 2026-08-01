@@ -1,0 +1,360 @@
+        raise SourceContractError(f"{inst_id}: page budget exhausted")
+
+    expected_timestamps = np.arange(START_MS, END_MS, HOUR_MS, dtype=np.int64)
+    if len(expected_timestamps) != EXPECTED_ROWS:
+        raise RuntimeError("internal expected-row contract mismatch")
+    missing = [int(timestamp) for timestamp in expected_timestamps if int(timestamp) not in values]
+    observed_in_range = sorted(
+        timestamp for timestamp in values if START_MS <= timestamp < END_MS
+    )
+    if missing or len(observed_in_range) != EXPECTED_ROWS:
+        raise SourceContractError(
+            f"{inst_id}: exact-grid failure observed={len(observed_in_range)} "
+            f"expected={EXPECTED_ROWS} missing={len(missing)} "
+            f"first_missing={utc_iso(missing[0]) if missing else None}"
+        )
+    matrix = np.asarray(
+        [values[int(timestamp)] for timestamp in expected_timestamps], dtype=np.float64
+    )
+    normalized_rows = [
+        [int(timestamp), *[float(value) for value in row]]
+        for timestamp, row in zip(expected_timestamps, matrix, strict=True)
+    ]
+    normalized_payload = canonical_bytes(normalized_rows)
+    normalized_path = series_dir / "normalized.json"
+    normalized_path.write_bytes(normalized_payload)
+    normalized_hash = sha256_bytes(normalized_payload)
+    return Series(
+        inst_id=inst_id,
+        open_ms=expected_timestamps,
+        opens=matrix[:, 0],
+        highs=matrix[:, 1],
+        lows=matrix[:, 2],
+        closes=matrix[:, 3],
+        normalized_sha256=normalized_hash,
+        manifest=tuple(manifest),
+        instrument_evidence=instrument_evidence,
+    )
+
+
+def first_decision_at_or_after(start: int) -> int:
+    earliest = max(start, 2_161)
+    offset = earliest - WARMUP_END
+    return WARMUP_END + math.ceil(offset / 24) * 24
+
+
+def signal_values(spot: Series, exogenous: Series, t: int) -> dict[str, Any]:
+    if t < 2_161:
+        raise ValueError("E2160 decision lacks 2,160 completed hourly intervals")
+    spot_margin = math.log(spot.closes[t - 1] / spot.closes[t - 2_161])
+    dislocation = np.abs(np.log(exogenous.closes))
+    old_values = dislocation[t - 1_464 : t - 744]
+    new_values = dislocation[t - 744 : t - 24]
+    if len(old_values) != 720 or len(new_values) != 720:
+        raise ValueError("stablecoin dislocation windows do not match frozen lengths")
+    if not np.isfinite(old_values).all() or not np.isfinite(new_values).all():
+        raise ValueError("stablecoin dislocation windows contain non-finite values")
+    old_level = float(np.median(old_values))
+    new_level = float(np.median(new_values))
+    acceleration = new_level - old_level
+    return {
+        "spot_margin": spot_margin,
+        "old_dislocation": old_level,
+        "new_dislocation": new_level,
+        "acceleration": acceleration,
+        "base_positive": bool(spot_margin > 0.0),
+        "worsening": bool(acceleration > 0.0),
+    }
+
+
+def build_path(
+    spot: Series,
+    exogenous: Series,
+    start: int,
+    end: int,
+    *,
+    kind: str,
+) -> tuple[np.ndarray, list[dict[str, Any]]]:
+    if not 0 <= start < end <= len(spot.opens):
+        raise ValueError("path boundaries are invalid")
+    positions = np.zeros(end - start, dtype=np.int8)
+    current = 0
+    pending_deferred_entry = False
+    events: list[dict[str, Any]] = []
+    for t in range(first_decision_at_or_after(start), end, 24):
+        signal = signal_values(spot, exogenous, t)
+        base_positive = bool(signal["base_positive"])
+        worsening = bool(signal["worsening"])
+        entry_veto = False
+        deferred_authorization = False
+        if kind == "candidate":
+            if not base_positive:
+                current = 0
+                pending_deferred_entry = False
+            elif current == 1:
+                current = 1
+            elif worsening:
+                current = 0
+                entry_veto = True
+                pending_deferred_entry = True
+            else:
+                current = 1
+                deferred_authorization = pending_deferred_entry
+                pending_deferred_entry = False
+        elif kind == "e2160":
+            current = int(base_positive)
+        elif kind == "cash":
+            current = 0
+        else:
+            raise ValueError(f"unknown path kind {kind!r}")
+        low, high = max(t, start), min(t + 24, end)
+        if low < high:
+            positions[low - start : high - start] = current
+        events.append(
+            {
+                "decision_index": t,
+                "execution_open": utc_iso(int(spot.open_ms[t])),
+                **signal,
+                "target": current,
+                "entry_veto": entry_veto,
+                "deferred_authorization": deferred_authorization,
+                "quarter": quarter_key(int(spot.open_ms[t])),
+                "year": year_key(int(spot.open_ms[t])),
+            }
+        )
+    return positions, events
+
+
+def finite_or_none(value: float | None) -> float | None:
+    if value is None or not math.isfinite(float(value)):
+        return None
+    return float(value)
+
+
+def max_drawdown(hourly_returns: np.ndarray) -> float:
+    equity = np.concatenate(([1.0], np.cumprod(1.0 + hourly_returns)))
+    peaks = np.maximum.accumulate(equity)
+    return float(np.min(equity / peaks - 1.0))
+
+
+def evaluate_positions(
+    spot: Series,
+    positions: np.ndarray,
+    start: int,
+    end: int,
+) -> dict[str, Any]:
+    if len(positions) != end - start:
+        raise ValueError("position path length mismatch")
+    asset_returns = spot.opens[start + 1 : end + 1] / spot.opens[start:end] - 1.0
+    if len(asset_returns) != len(positions):
+        raise ValueError("execution-open payoff boundary is unavailable")
+    previous = np.concatenate((np.zeros(1, dtype=np.int8), positions[:-1]))
+    changes = np.abs(positions - previous).astype(float)
+    gross_returns = positions.astype(float) * asset_returns
+    net_returns = (1.0 + gross_returns) * (1.0 - FEE * changes) - 1.0
+    terminal_change = float(positions[-1]) if len(positions) else 0.0
+    if terminal_change:
+        net_returns[-1] = (1.0 + net_returns[-1]) * (1.0 - FEE) - 1.0
+    turnover = float(np.sum(changes) + terminal_change)
+    gross_compound = float(np.prod(1.0 + gross_returns) - 1.0)
+    net_compound = float(np.prod(1.0 + net_returns) - 1.0)
+    mean = float(np.mean(net_returns))
+    standard_deviation = float(np.std(net_returns, ddof=1)) if len(net_returns) > 1 else 0.0
+    sharpe = (
+        mean / standard_deviation * math.sqrt(ANNUAL_HOURS)
+        if standard_deviation > 0
+        else None
+    )
+    metrics = {
+        "start_index": start,
+        "end_index": end,
+        "start_open": utc_iso(int(spot.open_ms[start])),
+        "end_open": utc_iso(int(spot.open_ms[end])),
+        "hours": end - start,
+        "gross_compound_return": gross_compound,
+        "net_compound_return": net_compound,
+        "annualised_arithmetic_mean": mean * ANNUAL_HOURS,
+        "annualised_hourly_sharpe": finite_or_none(sharpe),
+        "maximum_drawdown": max_drawdown(net_returns),
+        "exposure_hours": int(np.sum(positions)),
+        "exposure_fraction": float(np.mean(positions)),
+        "one_way_turnover": turnover,
+        "transition_count": int(np.count_nonzero(changes) + bool(terminal_change)),
+        "modeled_fee_units": turnover,
+        "modeled_fee_fraction_linear_reference": turnover * FEE,
+        "compound_fee_drag": gross_compound - net_compound,
+        "edge_per_turnover_bps": finite_or_none(
+            net_compound / turnover * 10_000.0 if turnover else None
+        ),
+    }
+    return {
+        "metrics": metrics,
+        "positions": positions,
+        "gross_returns": gross_returns,
+        "net_returns": net_returns,
+        "asset_returns": asset_returns,
+    }
+
+
+def simulate_kind(
+    spot: Series,
+    exogenous: Series,
+    start: int,
+    end: int,
+    kind: str,
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    if kind == "always_long":
+        positions = np.ones(end - start, dtype=np.int8)
+        events: list[dict[str, Any]] = []
+    else:
+        positions, events = build_path(spot, exogenous, start, end, kind=kind)
+    return evaluate_positions(spot, positions, start, end), events
+
+
+def support_record(spot: Series, exogenous: Series) -> dict[str, Any]:
+    candidate_positions, events = build_path(
+        spot, exogenous, WARMUP_END, TRAIN_END, kind="candidate"
+    )
+    base_positions, _ = build_path(
+        spot, exogenous, WARMUP_END, TRAIN_END, kind="e2160"
+    )
+    vetoes = [event for event in events if event["entry_veto"]]
+    deferred = [event for event in events if event["deferred_authorization"]]
+    quarters = Counter(event["quarter"] for event in vetoes)
+    largest_quarter_share = (
+        max(quarters.values()) / len(vetoes) if vetoes else None
+    )
+    worsening_rate = float(np.mean([event["worsening"] for event in events]))
+    all_finite = all(
+        all(
+            math.isfinite(float(event[field]))
+            for field in (
+                "spot_margin",
+                "old_dislocation",
+                "new_dislocation",
+                "acceleration",
+            )
+        )
+        for event in events
+    )
+    gates = {
+        "all_feature_decisions_finite": all_finite,
+        "worsening_state_rate_20_to_80_percent": 0.20 <= worsening_rate <= 0.80,
+        "at_least_20_e2160_entry_opportunities_vetoed": len(vetoes) >= 20,
+        "vetoes_in_at_least_4_training_quarters": len(quarters) >= 4,
+        "largest_veto_quarter_share_at_most_40_percent": bool(
+            largest_quarter_share is not None and largest_quarter_share <= 0.40
+        ),
+        "at_least_10_deferred_entries_later_authorised": len(deferred) >= 10,
+        "candidate_training_path_differs_from_e2160": bool(
+            np.any(candidate_positions != base_positions)
+        ),
+    }
+    event_identity = sha256_bytes(canonical_bytes(events))
+    return {
+        "training_decisions": len(events),
+        "first_decision_index": events[0]["decision_index"] if events else None,
+        "first_decision_open": events[0]["execution_open"] if events else None,
+        "worsening_state_rate": worsening_rate,
+        "entry_vetoes": len(vetoes),
+        "vetoes_by_quarter": dict(sorted(quarters.items())),
+        "distinct_veto_quarters": len(quarters),
+        "largest_veto_quarter_share": finite_or_none(largest_quarter_share),
+        "deferred_entries_later_authorised": len(deferred),
+        "candidate_difference_hours": int(np.count_nonzero(candidate_positions != base_positions)),
+        "candidate_position_sha256": sha256_bytes(
+            canonical_bytes(candidate_positions.tolist())
+        ),
+        "e2160_position_sha256": sha256_bytes(canonical_bytes(base_positions.tolist())),
+        "training_event_sha256": event_identity,
+        "gates": gates,
+        "passes": all(gates.values()),
+    }
+
+
+def vector_sharpe(matrix: np.ndarray) -> np.ndarray:
+    means = np.mean(matrix, axis=1)
+    standard_deviations = np.std(matrix, axis=1, ddof=1)
+    return (
+        np.divide(
+            means,
+            standard_deviations,
+            out=np.zeros_like(means),
+            where=standard_deviations > 0,
+        )
+        * math.sqrt(ANNUAL_HOURS)
+    )
+
+
+def paired_bootstrap(candidate: np.ndarray, benchmark: np.ndarray) -> dict[str, Any]:
+    if len(candidate) != len(benchmark):
+        raise ValueError("bootstrap paths are not aligned")
+    observations = len(candidate)
+    blocks = math.ceil(observations / BOOTSTRAP_BLOCK)
+    rng = np.random.default_rng(BOOTSTRAP_SEED)
+    annualised_mean_deltas: list[np.ndarray] = []
+    sharpe_deltas: list[np.ndarray] = []
+    for offset in range(0, BOOTSTRAP_DRAWS, 50):
+        batch = min(50, BOOTSTRAP_DRAWS - offset)
+        starts = rng.integers(
+            0,
+            observations - BOOTSTRAP_BLOCK + 1,
+            size=(batch, blocks),
+        )
+        indices = (
+            starts[:, :, None] + np.arange(BOOTSTRAP_BLOCK)[None, None, :]
+        ).reshape(batch, -1)[:, :observations]
+        candidate_draws = candidate[indices]
+        benchmark_draws = benchmark[indices]
+        annualised_mean_deltas.append(
+            np.mean(candidate_draws - benchmark_draws, axis=1) * ANNUAL_HOURS
+        )
+        sharpe_deltas.append(
+            vector_sharpe(candidate_draws) - vector_sharpe(benchmark_draws)
+        )
+
+    def summarize(chunks: list[np.ndarray]) -> dict[str, float]:
+        values = np.concatenate(chunks)
+        lower, median, upper = np.percentile(values, [2.5, 50.0, 97.5])
+        return {
+            "lower_95": float(lower),
+            "median": float(median),
+            "upper_95": float(upper),
+            "nonpositive_mass": float(np.mean(values <= 0.0)),
+        }
+
+    return {
+        "draws": BOOTSTRAP_DRAWS,
+        "block_hours": BOOTSTRAP_BLOCK,
+        "seed": BOOTSTRAP_SEED,
+        "non_circular_common_index": True,
+        "annualised_mean_return_difference": summarize(annualised_mean_deltas),
+        "annualised_sharpe_difference": summarize(sharpe_deltas),
+    }
+
+
+def shifted_positions(positions: np.ndarray) -> np.ndarray:
+    delayed = np.zeros_like(positions)
+    if len(positions) > 1:
+        delayed[1:] = positions[:-1]
+    return delayed
+
+
+def conditional_daily_effect(
+    spot: Series,
+    events: list[dict[str, Any]],
+    *,
+    end: int,
+) -> dict[str, Any]:
+    worsening_returns: list[float] = []
+    stable_returns: list[float] = []
+    vetoes = 0
+    for event in events:
+        t = int(event["decision_index"])
+        if t + 24 > end or not event["base_positive"]:
+            continue
+        gross_24h = float(spot.opens[t + 24] / spot.opens[t] - 1.0)
+        if event["worsening"]:
+            worsening_returns.append(gross_24h)
+        else:
+            stable_returns.append(gross_24h)
