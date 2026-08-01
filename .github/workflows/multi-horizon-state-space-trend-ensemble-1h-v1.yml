@@ -26,10 +26,12 @@ jobs:
       - name: Install fixed research dependencies
         run: python -m pip install --disable-pip-version-check "numpy==2.2.6"
 
-      - name: Materialize and compile deterministic reproducer
+      - name: Materialize, repair audit, and compile deterministic reproducer
         run: |
           python reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_state_space_ensemble.py \
             --materialize /tmp/run_state_space_ensemble.py
+          python reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/apply_suffix_audit_patch.py \
+            /tmp/run_state_space_ensemble.py
           python -m py_compile /tmp/run_state_space_ensemble.py
           sha256sum /tmp/run_state_space_ensemble.py
 
