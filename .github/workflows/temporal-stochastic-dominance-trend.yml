@@ -1,0 +1,73 @@
+name: Temporal Stochastic Dominance Trend 1H
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_temporal_stochastic_dominance_trend.py'
+      - '.github/workflows/temporal-stochastic-dominance-trend.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Bind evidence to the exact PR head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_SHA" = "${{ github.event.pull_request.head.sha }}"
+          git diff --quiet
+          git status --porcelain=v1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install numerical dependency
+        run: python -m pip install --disable-pip-version-check --no-cache-dir 'numpy==2.2.6'
+      - name: Prove forbidden runtime inputs are absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          env | cut -d= -f1 | grep -Eiq '(BINANCE|OKX).*(API|SECRET|TOKEN|KEY)' && exit 1 || true
+          ! grep -RInE 'api[-_]?key|secret[-_]?key|place_order|create_order|submit_order|send_order' scripts/run_temporal_stochastic_dominance_trend.py
+      - name: Execute frozen public-data experiment
+        run: python scripts/run_temporal_stochastic_dominance_trend.py
+      - name: Validate machine-readable contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path('reports/experiments/temporal-stochastic-dominance-trend-1h-v1')
+          p = root / 'evidence.json'
+          d = json.loads(p.read_text())
+          assert d['family_id'] == 'causal-temporal-stochastic-dominance-trend-1h-v1'
+          assert d['canonical_fee_bps_one_way'] == 5.0
+          assert d['bar_interval'] == '1H'
+          assert d['public_data_only'] is True
+          assert d['credentials_private_endpoints_accounts_orders_adapters_leverage_funds'] is False
+          assert d['cross_sectional_or_contemporaneous_selection'] is False
+          assert d['candidate_count'] == 2 and d['parameter_grid_count'] == 0
+          assert d['source_contract']['objects_verified'] == 132
+          assert len(d['markets']) == 2
+          assert d['paper_trading_authorized'] is False
+          assert d['live_trading_authorized'] is False
+          observed = hashlib.sha256(p.read_bytes()).hexdigest()
+          expected = (root / 'evidence.sha256').read_text().strip()
+          assert observed == expected
+          print(json.dumps({'exact_head': d['exact_head'], 'verdict': d['verdict'], 'markets_passing_all_gates': d['markets_passing_all_gates'], 'evidence_sha256': observed}, sort_keys=True))
+          PY
+      - name: Upload immutable strategy evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporal-stochastic-dominance-trend-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: reports/experiments/temporal-stochastic-dominance-trend-1h-v1
+          if-no-files-found: error
+          retention-days: 14
