@@ -12,8 +12,7 @@ from typing import Any
 
 FAMILY_ID = "causal-options-implied-downside-skew-confirmed-e2160-entry-1h-v1"
 VERDICT = (
-    "reject_causal_options_implied_downside_skew_confirmed_e2160_entry_1h_v1"
-    "_at_source_contract"
+    "reject_causal_options_implied_downside_skew_confirmed_e2160_entry_1h_v1_at_source_contract"
 )
 REPOSITORY_MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
 CANONICAL_FEE_BPS_ONE_WAY = 5.0
@@ -31,8 +30,7 @@ SOURCES: tuple[dict[str, Any], ...] = (
         "id": "deribit_volatility_index",
         "provider": "Deribit",
         "url": (
-            "https://docs.deribit.com/api-reference/market-data/"
-            "public-get_volatility_index_data.md"
+            "https://docs.deribit.com/api-reference/market-data/public-get_volatility_index_data.md"
         ),
         "official": True,
         "role": "official volatility-index candle semantics",
@@ -81,8 +79,7 @@ PROVIDER_AUDIT: tuple[dict[str, Any], ...] = (
                 "data": "BTC/ETH volatility-index OHLC candles",
                 "supports_1h": True,
                 "why_not_contract": (
-                    "provider semantics are aggregate implied-volatility index, "
-                    "not downside skew"
+                    "provider semantics are aggregate implied-volatility index, not downside skew"
                 ),
             },
             {
@@ -111,9 +108,7 @@ PROVIDER_AUDIT: tuple[dict[str, Any], ...] = (
         "direct_historical_1h_downside_skew_series": False,
         "available_public_alternatives": [
             {
-                "endpoint_class": (
-                    "public option tickers, instruments, trades and candles"
-                ),
+                "endpoint_class": ("public option tickers, instruments, trades and candles"),
                 "why_not_contract": (
                     "no provider-defined direct historical hourly downside-skew "
                     "series; local option-chain reconstruction is prohibited"
@@ -182,8 +177,7 @@ NULL_ECONOMICS = {
 
 def canonical_bytes(value: Any) -> bytes:
     return (
-        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-        + "\n"
+        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n"
     ).encode()
 
 
@@ -200,10 +194,7 @@ def fetch_source(source: dict[str, Any], source_dir: Path) -> dict[str, Any]:
         source["url"],
         headers={
             "User-Agent": "Dingding-leo-GPT-research-source-audit/1.0",
-            "Accept": (
-                "text/plain,text/markdown,text/html,"
-                "application/json;q=0.9,*/*;q=0.8"
-            ),
+            "Accept": ("text/plain,text/markdown,text/html,application/json;q=0.9,*/*;q=0.8"),
         },
     )
     record = {
@@ -225,9 +216,7 @@ def fetch_source(source: dict[str, Any], source_dir: Path) -> dict[str, Any]:
         with urllib.request.urlopen(request, timeout=45) as response:
             body = response.read(MAX_SOURCE_BYTES + 1)
             if len(body) > MAX_SOURCE_BYTES:
-                raise ValueError(
-                    f"official document exceeded {MAX_SOURCE_BYTES} byte audit cap"
-                )
+                raise ValueError(f"official document exceeded {MAX_SOURCE_BYTES} byte audit cap")
             record["http_status"] = getattr(response, "status", 200)
             record["content_type"] = response.headers.get("Content-Type")
     except (OSError, ValueError, urllib.error.URLError) as exc:
@@ -261,9 +250,7 @@ def fetch_source(source: dict[str, Any], source_dir: Path) -> dict[str, Any]:
             "bytes": len(body),
             "sha256": sha256_bytes(body),
             "saved_path": str(path.as_posix()),
-            "semantic_marker_counts": {
-                phrase: lowered.count(phrase) for phrase in phrases
-            },
+            "semantic_marker_counts": {phrase: lowered.count(phrase) for phrase in phrases},
         }
     )
     return record
@@ -293,10 +280,7 @@ def source_gate() -> list[dict[str, Any]]:
             "name": "sufficient_common_historical_calendar",
             "BTC": False,
             "ETH": False,
-            "reason": (
-                "no qualifying dataset exists from which a common calendar "
-                "can be frozen"
-            ),
+            "reason": ("no qualifying dataset exists from which a common calendar can be frozen"),
         },
         {
             "gate": 4,
@@ -327,18 +311,14 @@ def source_gate() -> list[dict[str, Any]]:
             "name": "response_metadata_rows_and_coverage_hashes",
             "BTC": False,
             "ETH": False,
-            "reason": (
-                "documentation bytes are hashed, but no qualifying skew dataset exists"
-            ),
+            "reason": ("documentation bytes are hashed, but no qualifying skew dataset exists"),
         },
         {
             "gate": 8,
             "name": "historical_prefix_invariance",
             "BTC": False,
             "ETH": False,
-            "reason": (
-                "cannot test prefix invariance without a qualifying paginated series"
-            ),
+            "reason": ("cannot test prefix invariance without a qualifying paginated series"),
         },
         {
             "gate": 9,
@@ -355,16 +335,12 @@ def source_gate() -> list[dict[str, Any]]:
             "name": "fail_closed_on_missing_or_ambiguous_source",
             "BTC": True,
             "ETH": True,
-            "reason": (
-                "the architecture rejects before feature, candidate or return access"
-            ),
+            "reason": ("the architecture rejects before feature, candidate or return access"),
         },
     ]
 
 
-def build_evidence(
-    tested_head: str, source_records: list[dict[str, Any]]
-) -> dict[str, Any]:
+def build_evidence(tested_head: str, source_records: list[dict[str, Any]]) -> dict[str, Any]:
     gates = source_gate()
     market_arms = []
     for market in ("BTC-USDT", "ETH-USDT"):
@@ -423,15 +399,12 @@ def build_evidence(
         "provider_audit": list(PROVIDER_AUDIT),
         "source_gate": gates,
         "source_gate_passes_by_market": {
-            market: sum(1 for gate in gates if gate[market])
-            for market in ("BTC", "ETH")
+            market: sum(1 for gate in gates if gate[market]) for market in ("BTC", "ETH")
         },
         "market_arms": market_arms,
         "source_contract_passed": False,
         "markets_passing_source_contract": 0,
-        "documents_retrieved": sum(
-            1 for record in source_records if record["retrieval_succeeded"]
-        ),
+        "documents_retrieved": sum(1 for record in source_records if record["retrieval_succeeded"]),
         "documents_expected": len(source_records),
         "decision_basis": {
             "highest_value_failure": (
@@ -448,9 +421,7 @@ def build_evidence(
             "other_official_provider_catalogs": (
                 "no direct historical hourly BTC/ETH downside-skew endpoint identified"
             ),
-            "paid_or_keyed_historical_skew": (
-                "excluded by frozen credential-free contract"
-            ),
+            "paid_or_keyed_historical_skew": ("excluded by frozen credential-free contract"),
         },
         "closed_rescues": [
             "Deribit DVOL or another aggregate volatility index as a skew proxy",
@@ -555,9 +526,7 @@ def main() -> None:
     source_records = [fetch_source(source, source_dir) for source in SOURCES]
     manifest_bytes = canonical_bytes(source_records)
     (output_dir / "source_manifest.json").write_bytes(manifest_bytes)
-    (output_dir / "source_manifest.sha256").write_text(
-        sha256_bytes(manifest_bytes) + "\n"
-    )
+    (output_dir / "source_manifest.sha256").write_text(sha256_bytes(manifest_bytes) + "\n")
 
     evidence = build_evidence(args.tested_head, source_records)
     evidence_bytes = canonical_bytes(evidence)
@@ -565,9 +534,7 @@ def main() -> None:
     (output_dir / "evidence.sha256").write_text(sha256_bytes(evidence_bytes) + "\n")
     report = render_report(evidence)
     (output_dir / "report.md").write_text(report, encoding="utf-8")
-    (output_dir / "report.sha256").write_text(
-        sha256_bytes(report.encode()) + "\n"
-    )
+    (output_dir / "report.sha256").write_text(sha256_bytes(report.encode()) + "\n")
 
     print(
         json.dumps(
