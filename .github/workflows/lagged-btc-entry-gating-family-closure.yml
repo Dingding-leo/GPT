@@ -1,0 +1,37 @@
+name: Lagged BTC Entry Gating Family Closure
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/lagged-btc-entry-gating-family-closure.yml"
+      - "scripts/verify_lagged_btc_entry_gating_family_closure.py"
+      - "reports/research/causal-lagged-btc-entry-gating-family-closure-1h-v1/**"
+
+permissions:
+  contents: read
+
+jobs:
+  close-family:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Replay architecture-level closure gates
+        run: python scripts/verify_lagged_btc_entry_gating_family_closure.py
+      - name: Record exact identities
+        run: |
+          sha256sum \
+            reports/research/causal-lagged-btc-entry-gating-family-closure-1h-v1/source_group_a.json \
+            reports/research/causal-lagged-btc-entry-gating-family-closure-1h-v1/source_group_b.json \
+            reports/research/causal-lagged-btc-entry-gating-family-closure-1h-v1/source_group_c.json \
+            reports/research/causal-lagged-btc-entry-gating-family-closure-1h-v1/evidence.json \
+            reports/research/causal-lagged-btc-entry-gating-family-closure-1h-v1/report.md \
+            > reports/research/causal-lagged-btc-entry-gating-family-closure-1h-v1/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lagged-btc-entry-gating-family-closure
+          path: reports/research/causal-lagged-btc-entry-gating-family-closure-1h-v1/
+          if-no-files-found: error
