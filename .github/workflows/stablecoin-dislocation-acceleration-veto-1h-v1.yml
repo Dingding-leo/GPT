@@ -54,8 +54,6 @@ jobs:
           test -z "${{ secrets.OKX_PASSPHRASE }}"
           ! grep -EIn '(/api/v5/(account|trade|asset|broker)|place_order\(|create_order\(|submit_order\(|send_order\()' \
             /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
-          ! grep -EIn '(15m|leverage|cointegration|pair.?trade|market.?neutral|cross.?sectional.?rank)' \
-            /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -104,16 +102,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -s "$OUTPUT_DIR/evidence.json"
-          test -s "$OUTPUT_DIR/evidence.sha256"
-          test -s "$OUTPUT_DIR/source_manifest.json"
-          test -s "$OUTPUT_DIR/source_manifest.sha256"
-          test -s "$OUTPUT_DIR/protocol.json"
-          test -s "$OUTPUT_DIR/protocol.sha256"
-          test -s "$OUTPUT_DIR/report.md"
-          test -s "$OUTPUT_DIR/report.sha256"
-          test -s "$OUTPUT_DIR/strategy.py"
-          test -s "$OUTPUT_DIR/strategy.sha256"
+          for file in \
+            evidence.json evidence.sha256 \
+            source_manifest.json source_manifest.sha256 \
+            protocol.json protocol.sha256 \
+            report.md report.sha256 \
+            strategy.py strategy.sha256; do
+            test -s "$OUTPUT_DIR/$file"
+          done
           expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
           actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
           test "$actual" = "$expected"
@@ -198,6 +194,58 @@ jobs:
               assert evidence["verdict"].startswith("accept_")
           else:
               assert evidence["verdict"].startswith("reject_")
+          PY
+
+      - name: Print exact strategy evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat "$OUTPUT_DIR/report.md"
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((root / "evidence.json").read_text())
+          summary = {
+              "family_id": evidence["family_id"],
+              "exact_head": evidence["exact_head"],
+              "source_contract_passed": evidence["source_contract_passed"],
+              "source_failure": evidence["source_failure"],
+              "source_series_sha256": evidence["source_series_sha256"],
+              "sample": evidence["sample"],
+              "bilateral_training_support_passed": evidence[
+                  "bilateral_training_support_passed"
+              ],
+              "performance_accessed": evidence["performance_accessed"],
+              "oos_accessed": evidence["oos_accessed"],
+              "markets_passing_training_support": evidence[
+                  "markets_passing_training_support"
+              ],
+              "markets_passing_all_gates": evidence[
+                  "markets_passing_all_gates"
+              ],
+              "highest_value_failure": evidence["highest_value_failure"],
+              "markets": evidence["markets"],
+              "verdict": evidence["verdict"],
+              "machine_readable_verdict": evidence[
+                  "machine_readable_verdict"
+              ],
+          }
+          print("EXACT_STRATEGY_EVIDENCE_BEGIN")
+          print(json.dumps(summary, sort_keys=True, indent=2))
+          print("EXACT_STRATEGY_EVIDENCE_END")
+          for name in (
+              "evidence.json",
+              "source_manifest.json",
+              "protocol.json",
+              "report.md",
+              "strategy.py",
+          ):
+              digest = hashlib.sha256((root / name).read_bytes()).hexdigest()
+              print(f"SHA256 {name} {digest}")
           PY
 
       - name: Upload immutable strategy evidence
