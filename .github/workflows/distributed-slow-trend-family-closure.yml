@@ -1,0 +1,148 @@
+name: Distributed Slow Trend Family Closure 1H
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_distributed_slow_trend_family_closure.py'
+      - '.github/workflows/distributed-slow-trend-family-closure.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  close-family:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Bind evidence to exact PR head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --quiet
+          test -z "$(git status --porcelain=v1)"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prove prohibited strategy inputs are absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -RInE 'urllib|requests|httpx|websocket|api[-_]?key|secret[-_]?key|place_order|create_order|submit_order|send_order' scripts/run_distributed_slow_trend_family_closure.py
+
+      - name: Generate deterministic family-closure evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA='${{ github.event.pull_request.head.sha }}'
+          python scripts/run_distributed_slow_trend_family_closure.py
+
+      - name: Validate machine-readable strategy contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path(
+              'reports/experiments/'
+              'distributed-slow-trend-representation-family-closure-1h-v1'
+          )
+          evidence_path = root / 'evidence.json'
+          source_path = root / 'source-records.json'
+          evidence = json.loads(evidence_path.read_text())
+          source_records = json.loads(source_path.read_text())
+
+          assert evidence['family_id'] == (
+              'causal-distributed-slow-trend-representation-'
+              'family-closure-1h-v1'
+          )
+          assert evidence['exact_head'] == '${{ github.event.pull_request.head.sha }}'
+          assert evidence['research_parent'] == (
+              '5a0fcc97d1a882f8223656c51f5bb8055f534e38'
+          )
+          assert evidence['architecture_group_count'] == 4
+          assert evidence['candidate_count'] == 0
+          assert evidence['parameter_grid_count'] == 0
+          assert evidence['new_market_data'] == 0
+          assert evidence['new_oos_consumed'] == 0
+          assert evidence['bar_interval'] == '1H'
+          assert evidence['canonical_fee_bps_one_way'] == 5.0
+          assert evidence['performance_recomputed'] is False
+          assert evidence['market_sleeves_counted_as_independent_architectures'] is False
+          assert evidence['cross_sectional_or_contemporaneous_selection'] is False
+          assert evidence[
+              'credentials_private_endpoints_accounts_orders_adapters_leverage_funds'
+          ] is False
+          assert len(source_records) == 4
+          assert [row['group'] for row in source_records] == ['A', 'B', 'C', 'D']
+          assert evidence['support_counts'] == {
+              'source_complete_causal_exact_fee': 4,
+              'bilateral_positive_oos': 3,
+              'bilateral_e2160_return_and_sharpe_superiority': 1,
+              'bilateral_positive_dependence_bounds': 0,
+              'bilateral_breadth_and_concentration': 0,
+              'bilateral_turnover_and_edge_efficiency': 0,
+              'latency_or_transport_support': 0,
+          }
+          assert evidence['supportive_groups'] == 0
+          assert evidence['family_gates_passed'] == 2
+          assert evidence['family_gate_count'] == 9
+          assert all(
+              row['supportive_groups'] == 0
+              and row['passes_minimum_two'] is False
+              for row in evidence['leave_one_group_out']
+          )
+          assert evidence['accepted'] is False
+          assert evidence['verdict'] == (
+              'reject_causal_distributed_slow_trend_representation_family'
+          )
+          assert evidence['canonical_strategy_changed'] is False
+          assert evidence['paper_trading_authorized'] is False
+          assert evidence['live_trading_authorized'] is False
+
+          observed_evidence = hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+          expected_evidence = (root / 'evidence.sha256').read_text().strip()
+          assert observed_evidence == expected_evidence
+          observed_source = hashlib.sha256(source_path.read_bytes()).hexdigest()
+          expected_source = (root / 'source-records.sha256').read_text().strip()
+          assert observed_source == expected_source
+          assert observed_source == evidence['source_records_sha256']
+
+          manifest = json.loads((root / 'manifest.json').read_text())
+          for name, expected_hash in manifest.items():
+              observed_hash = hashlib.sha256((root / name).read_bytes()).hexdigest()
+              assert observed_hash == expected_hash
+
+          print(
+              json.dumps(
+                  {
+                      'exact_head': evidence['exact_head'],
+                      'supportive_groups': evidence['supportive_groups'],
+                      'family_gates_passed': evidence['family_gates_passed'],
+                      'verdict': evidence['verdict'],
+                      'evidence_sha256': observed_evidence,
+                      'source_records_sha256': observed_source,
+                  },
+                  sort_keys=True,
+              )
+          )
+          PY
+
+      - name: Upload immutable closure artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: distributed-slow-trend-family-closure-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: reports/experiments/distributed-slow-trend-representation-family-closure-1h-v1
+          if-no-files-found: error
+          retention-days: 14
