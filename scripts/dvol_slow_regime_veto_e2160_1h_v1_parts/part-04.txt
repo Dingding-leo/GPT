@@ -72,12 +72,14 @@ def report(evidence: dict[str, Any]) -> str:
         "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for arm in evidence["market_arms"]:
-        train_candidate = arm.get("training", {}).get("candidate", {}).get("net_compounded_return")
-        train_benchmark = arm.get("training", {}).get("e2160", {}).get("net_compounded_return")
+        training = arm.get("training") or {}
+        support = arm.get("training_support") or {}
+        train_candidate = (training.get("candidate") or {}).get("net_compounded_return")
+        train_benchmark = (training.get("e2160") or {}).get("net_compounded_return")
         lines.append(
             f"| {arm['market']} | {arm['source_contract_passed']} | "
-            f"{arm.get('training_support', {}).get('veto_decisions')} | "
-            f"{arm.get('training_support', {}).get('reauthorization_decisions')} | "
+            f"{support.get('veto_decisions')} | "
+            f"{support.get('reauthorization_decisions')} | "
             f"{train_candidate} | {train_benchmark} | {arm.get('training_gate_passed')} |"
         )
     if evidence["oos_accessed"]:
