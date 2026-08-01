@@ -1,0 +1,116 @@
+name: Price-Adjusted Trade-Size Confirmed E2160 1H Research
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "reports/research/causal-price-adjusted-trade-size-confirmed-e2160-entry-1h-v1/**"
+      - ".github/workflows/price-adjusted-trade-size-confirmed-e2160-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: price-adjusted-trade-size-e2160-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/evidence/causal-price-adjusted-trade-size-confirmed-e2160-entry-1h-v1
+      ARTIFACT_NAME: price-adjusted-trade-size-confirmed-e2160-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify public-only exact revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.BINANCE_API_KEY }}"
+          test -z "${{ secrets.BINANCE_SECRET_KEY }}"
+
+      - name: Install frozen package dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check -e .
+
+      - name: Execute frozen strategy experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile reports/research/causal-price-adjusted-trade-size-confirmed-e2160-entry-1h-v1/run_research.py
+          python reports/research/causal-price-adjusted-trade-size-confirmed-e2160-entry-1h-v1/run_research.py --output-dir "$OUTPUT_DIR"
+
+      - name: Verify machine-readable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          test -s "$OUTPUT_DIR/source/manifest.json"
+          expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
+          actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          result = json.loads((Path(os.environ["OUTPUT_DIR"]) / "evidence.json").read_text())
+          assert result["family_id"] == "causal-price-adjusted-trade-size-confirmed-e2160-entry-1h-v1"
+          assert result["candidate_count"] == 2
+          assert result["parameter_grid_count"] == 0
+          assert result["bar"] == "1H"
+          assert result["canonical_fee_bps_one_way"] == 5.0
+          assert result["cross_sectional_selection"] is False
+          assert result["pairs_or_spreads"] is False
+          assert result["market_neutral"] is False
+          assert result["credentials_used"] is False
+          assert result["private_endpoints_used"] is False
+          assert result["synthetic_market_data_used"] is False
+          assert result["actual_orders"] is False
+          assert result["leverage_used"] is False
+          assert result["paper_trading_authorized"] is False
+          assert result["live_trading_authorized"] is False
+          assert result["source_contract"]["expected_objects"] == 132
+          assert result["source_contract"]["expected_rows_per_market"] == 24144
+          assert len(result["markets"]) == 2
+          assert {market["symbol"] for market in result["markets"]} == {"ATOMUSDT", "NEARUSDT"}
+          if result["performance_accessed"]:
+              assert result["oos_accessed"] is True
+              assert all(market["support"]["passed"] for market in result["markets"])
+              assert all(market["performance"] is not None for market in result["markets"])
+          else:
+              assert result["oos_accessed"] is False
+              assert all(market["performance"] is None for market in result["markets"])
+          assert result["correction_applied"] is False
+          assert result["observation_epoch_restarted"] is False
+          assert result["verdict"] in {
+              "accept_causal_price_adjusted_trade_size_confirmed_e2160_entry_1h_v1",
+              "reject_causal_price_adjusted_trade_size_confirmed_e2160_entry_1h_v1",
+          }
+          assert result["machine_readable_verdict"]["live_trading_authorized"] is False
+          PY
+
+      - name: Upload immutable strategy evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
