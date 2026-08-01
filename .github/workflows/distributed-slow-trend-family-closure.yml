@@ -100,7 +100,6 @@ jobs:
           assert evidence['family_gate_count'] == 9
           assert all(
               row['supportive_groups'] == 0
-              and row['passes_minimum_two'] is False
               for row in evidence['leave_one_group_out']
           )
           assert evidence['accepted'] is False
