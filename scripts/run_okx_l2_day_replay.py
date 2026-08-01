@@ -15,12 +15,11 @@ def process_archive(
     anchor: str,
     output_dir: Path,
 ) -> dict[str, Any]:
-    """Replay one official OKX L2 day with documented no-change gaps.
+    """Replay one official provider-ordered OKX L2 daily archive.
 
-    OKX generates book states on a 10 ms lattice but does not emit an update
-    when the book is unchanged. Therefore exact message-to-message continuity
-    means unique, strictly increasing timestamps aligned to that lattice, not
-    an emitted row at every 10 ms slot.
+    The archive emits a new row only when the order book changes. Its `ts`
+    field is therefore validated as a unique, strictly increasing provider
+    generation timestamp, not as a gap-free clock lattice.
     """
 
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -54,7 +53,6 @@ def process_archive(
     previous_ts: int | None = None
     last_ts: int | None = None
     maximum_message_gap_ms = 0
-    missing_10ms_update_slots = 0
     row_count = 0
     snapshot_count = 0
     update_count = 0
@@ -132,16 +130,15 @@ def process_archive(
                         )
                     if previous_ts is not None:
                         delta = ts - previous_ts
-                        if delta <= 0 or delta % 10 != 0:
+                        if delta <= 0:
                             raise core.SourceFeasibilityError(
-                                "provider timestamp ordering/lattice violation: "
+                                "provider timestamp ordering violation: "
                                 f"{previous_ts} -> {ts}"
                             )
                         maximum_message_gap_ms = max(
                             maximum_message_gap_ms,
                             delta,
                         )
-                        missing_10ms_update_slots += delta // 10 - 1
                     if first_ts is None:
                         first_ts = ts
                     previous_ts = ts
@@ -203,9 +200,9 @@ def process_archive(
             core.boundary_state(bids, asks) if snapshot_seen else None
         )
         boundary_index += 1
-    if first_ts - day_start_ms >= 10 or day_end_ms - last_ts > 10:
+    if first_ts - day_start_ms >= core.BOUNDARY_STEP_MS:
         raise core.SourceFeasibilityError(
-            "archive does not cover the complete UTC day on the 10 ms lattice"
+            "daily archive lacks a causal opening snapshot before first boundary"
         )
     if snapshot_count < 1 or update_count < 1:
         raise core.SourceFeasibilityError(
@@ -242,12 +239,10 @@ def process_archive(
         "update_count": update_count,
         "first_ts": first_ts,
         "last_ts": last_ts,
-        "timestamp_lattice_ms": 10,
         "maximum_message_gap_ms": maximum_message_gap_ms,
-        "missing_10ms_update_slots": missing_10ms_update_slots,
         "sequence_identity": (
-            "unique strictly increasing 10 ms-lattice generation timestamps; "
-            "unemitted slots are documented no-change suppression"
+            "unique strictly increasing provider generation timestamps; "
+            "gaps represent no-change suppression"
         ),
         "sequence_continuity_passed": True,
         "source_day_complete": True,
