@@ -1,0 +1,229 @@
+name: OKX L2 Bid Replenishment Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/run_okx_l2_bid_replenishment_diagnostic.py"
+      - "scripts/run_okx_l2_day_replay.py"
+      - ".github/workflows/okx-l2-bid-replenishment-research.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: okx-l2-bid-replenishment-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  PIP_BOOTSTRAP_VERSION: "26.1.2"
+  METADATA_ARTIFACT: okx-l2-frozen-metadata-${{ github.run_number }}-${{ github.run_attempt }}
+  DAY_PREFIX: okx-l2-day-${{ github.run_number }}-${{ github.run_attempt }}
+  FINAL_ARTIFACT: okx-l2-bid-replenishment-${{ github.run_number }}-${{ github.run_attempt }}
+
+jobs:
+  metadata:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+      - run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install and verify focused code
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e ".[dev]"
+          python -m pip check
+          ruff check --ignore E501 \
+            scripts/run_okx_l2_bid_replenishment_diagnostic.py \
+            scripts/run_okx_l2_day_replay.py
+          python -m py_compile \
+            scripts/run_okx_l2_bid_replenishment_diagnostic.py \
+            scripts/run_okx_l2_day_replay.py
+      - name: Freeze official source cohort
+        run: |
+          python scripts/run_okx_l2_bid_replenishment_diagnostic.py metadata \
+            --base-url https://www.okx.com \
+            --output-dir frozen-metadata
+      - name: Verify preregistered byte gate
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("frozen-metadata/source-manifest.json").read_text())
+          assert data["family_id"] == "okx-l2-bid-replenishment-resilience-opportunity-diagnostic-1h-v1"
+          assert data["source_object_count"] == 24
+          assert data["byte_gate_passed"] is True
+          assert data["economic_values_read"] is False
+          assert data["largest_object_bytes"] <= data["per_object_ceiling_bytes"]
+          assert data["declared_compressed_bytes"] <= data["cumulative_ceiling_bytes"]
+          assert len(data["metadata_responses"]) == 24
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.METADATA_ARTIFACT }}
+          path: frozen-metadata/
+          if-no-files-found: error
+          retention-days: 30
+
+  process_day:
+    needs: metadata
+    strategy:
+      fail-fast: false
+      max-parallel: 24
+      matrix:
+        market: [BTC-USDT, ETH-USDT]
+        anchor:
+          - "2025-01-07"
+          - "2025-02-04"
+          - "2025-03-04"
+          - "2025-04-01"
+          - "2025-05-06"
+          - "2025-06-03"
+          - "2025-07-01"
+          - "2025-08-05"
+          - "2025-09-02"
+          - "2025-10-07"
+          - "2025-11-04"
+          - "2025-12-02"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+      - run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e .
+          python -m pip check
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ env.METADATA_ARTIFACT }}
+          path: frozen-metadata
+      - name: Replay provider-ordered L2 archive
+        run: |
+          python scripts/run_okx_l2_day_replay.py \
+            --manifest-path frozen-metadata/source-manifest.json \
+            --market "${{ matrix.market }}" \
+            --anchor "${{ matrix.anchor }}" \
+            --output-dir day-result
+      - name: Verify exact day evidence
+        env:
+          MARKET: ${{ matrix.market }}
+          ANCHOR: ${{ matrix.anchor }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path("day-result") / f"{os.environ['MARKET']}-{os.environ['ANCHOR']}.json"
+          data = json.loads(path.read_text())
+          assert data["family_id"] == "okx-l2-bid-replenishment-resilience-opportunity-diagnostic-1h-v1"
+          assert data["market"] == os.environ["MARKET"]
+          assert data["anchor_date_utc"] == os.environ["ANCHOR"]
+          assert data["sequence_continuity_passed"] is True
+          assert data["source_day_complete"] is True
+          assert data["boundary_count"] == 289
+          assert data["valid_hour_count"] >= 23
+          assert data["maximum_message_gap_ms"] > 0
+          assert data["compressed_bytes"] > 0
+          assert len(data["compressed_sha256"]) == 64
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.DAY_PREFIX }}-${{ matrix.market }}-${{ matrix.anchor }}
+          path: day-result/
+          if-no-files-found: error
+          retention-days: 30
+
+  aggregate:
+    needs: [metadata, process_day]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+      - run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install "pip==${PIP_BOOTSTRAP_VERSION}"
+          python -m pip install -e .
+          python -m pip check
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ env.METADATA_ARTIFACT }}
+          path: frozen-metadata
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: ${{ env.DAY_PREFIX }}-*
+          path: processed-days
+          merge-multiple: true
+      - name: Compute labels, uncertainty, delay and verdict
+        run: |
+          python scripts/run_okx_l2_bid_replenishment_diagnostic.py aggregate \
+            --manifest-path frozen-metadata/source-manifest.json \
+            --days-root processed-days \
+            --output-dir final-evidence
+      - name: Verify terminal strategy evidence
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("final-evidence")
+          evidence_bytes = (root / "evidence.json").read_bytes()
+          evidence = json.loads(evidence_bytes)
+          manifest_bytes = (root / "source-manifest.json").read_bytes()
+          assert evidence["family_id"] == "okx-l2-bid-replenishment-resilience-opportunity-diagnostic-1h-v1"
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["new_oos_consumed"] is False
+          assert evidence["fee_one_way"] == 0.0005
+          assert evidence["round_trip_label_fee"] == 0.001
+          assert evidence["source"]["object_count"] == 24
+          assert evidence["source"]["source_days_complete"] == 24
+          assert evidence["source_manifest_sha256"] == hashlib.sha256(manifest_bytes).hexdigest()
+          for market in ("BTC-USDT", "ETH-USDT"):
+              assert evidence["primary"][market]["observations"] >= 264
+              assert evidence["one_hour_delay"][market]["observations"] >= 264
+          assert evidence["verdict"] in {
+              "accept_okx_l2_bid_replenishment_resilience_information_premise",
+              "reject_okx_l2_bid_replenishment_resilience_information_premise",
+          }
+          for name in ("report.md", "evidence.json", "source-manifest.json"):
+              assert (root / name).is_file()
+          print("evidence_sha256", hashlib.sha256(evidence_bytes).hexdigest())
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.FINAL_ARTIFACT }}
+          path: final-evidence/
+          if-no-files-found: error
+          retention-days: 30
