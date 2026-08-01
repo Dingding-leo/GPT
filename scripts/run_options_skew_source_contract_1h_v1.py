@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import re
 import urllib.error
 import urllib.request
@@ -112,7 +111,9 @@ PROVIDER_AUDIT: tuple[dict[str, Any], ...] = (
         "direct_historical_1h_downside_skew_series": False,
         "available_public_alternatives": [
             {
-                "endpoint_class": "public option tickers, instruments, trades and candles",
+                "endpoint_class": (
+                    "public option tickers, instruments, trades and candles"
+                ),
                 "why_not_contract": (
                     "no provider-defined direct historical hourly downside-skew "
                     "series; local option-chain reconstruction is prohibited"
@@ -126,7 +127,9 @@ PROVIDER_AUDIT: tuple[dict[str, Any], ...] = (
         "direct_historical_1h_downside_skew_series": False,
         "available_public_alternatives": [
             {
-                "endpoint_class": "current option tickers, recent trades and historical volatility",
+                "endpoint_class": (
+                    "current option tickers, recent trades and historical volatility"
+                ),
                 "why_not_contract": (
                     "no provider-defined direct historical hourly downside-skew "
                     "series; aggregate volatility is not skew"
@@ -197,7 +200,10 @@ def fetch_source(source: dict[str, Any], source_dir: Path) -> dict[str, Any]:
         source["url"],
         headers={
             "User-Agent": "Dingding-leo-GPT-research-source-audit/1.0",
-            "Accept": "text/plain,text/markdown,text/html,application/json;q=0.9,*/*;q=0.8",
+            "Accept": (
+                "text/plain,text/markdown,text/html,"
+                "application/json;q=0.9,*/*;q=0.8"
+            ),
         },
     )
     record = {
@@ -287,7 +293,10 @@ def source_gate() -> list[dict[str, Any]]:
             "name": "sufficient_common_historical_calendar",
             "BTC": False,
             "ETH": False,
-            "reason": "no qualifying dataset exists from which a common calendar can be frozen",
+            "reason": (
+                "no qualifying dataset exists from which a common calendar "
+                "can be frozen"
+            ),
         },
         {
             "gate": 4,
@@ -318,14 +327,18 @@ def source_gate() -> list[dict[str, Any]]:
             "name": "response_metadata_rows_and_coverage_hashes",
             "BTC": False,
             "ETH": False,
-            "reason": "documentation bytes are hashed, but no qualifying skew dataset exists",
+            "reason": (
+                "documentation bytes are hashed, but no qualifying skew dataset exists"
+            ),
         },
         {
             "gate": 8,
             "name": "historical_prefix_invariance",
             "BTC": False,
             "ETH": False,
-            "reason": "cannot test prefix invariance without a qualifying paginated series",
+            "reason": (
+                "cannot test prefix invariance without a qualifying paginated series"
+            ),
         },
         {
             "gate": 9,
@@ -342,12 +355,16 @@ def source_gate() -> list[dict[str, Any]]:
             "name": "fail_closed_on_missing_or_ambiguous_source",
             "BTC": True,
             "ETH": True,
-            "reason": "the architecture rejects before feature, candidate or return access",
+            "reason": (
+                "the architecture rejects before feature, candidate or return access"
+            ),
         },
     ]
 
 
-def build_evidence(tested_head: str, source_records: list[dict[str, Any]]) -> dict[str, Any]:
+def build_evidence(
+    tested_head: str, source_records: list[dict[str, Any]]
+) -> dict[str, Any]:
     gates = source_gate()
     market_arms = []
     for market in ("BTC-USDT", "ETH-USDT"):
@@ -431,7 +448,9 @@ def build_evidence(tested_head: str, source_records: list[dict[str, Any]]) -> di
             "other_official_provider_catalogs": (
                 "no direct historical hourly BTC/ETH downside-skew endpoint identified"
             ),
-            "paid_or_keyed_historical_skew": "excluded by frozen credential-free contract",
+            "paid_or_keyed_historical_skew": (
+                "excluded by frozen credential-free contract"
+            ),
         },
         "closed_rescues": [
             "Deribit DVOL or another aggregate volatility index as a skew proxy",
@@ -467,7 +486,10 @@ def render_report(evidence: dict[str, Any]) -> str:
         f"Tested head            {evidence['tested_head']}",
         f"Candidate count        {evidence['candidate_count']}",
         f"Parameter grid         {evidence['parameter_grid_count']}",
-        f"Documents retrieved    {evidence['documents_retrieved']}/{evidence['documents_expected']}",
+        (
+            "Documents retrieved    "
+            f"{evidence['documents_retrieved']}/{evidence['documents_expected']}"
+        ),
         f"Source arms passing    {evidence['markets_passing_source_contract']}/2",
         f"Performance accessed   {str(evidence['performance_accessed']).lower()}",
         f"OOS accessed           {str(evidence['oos_accessed']).lower()}",
@@ -480,7 +502,8 @@ def render_report(evidence: dict[str, Any]) -> str:
         "BTC and ETH downside-skew series at exact UTC 1H resolution. Deribit's "
         "public 1H volatility-index candles are aggregate implied volatility, not "
         "downside skew. Its public option-trade IV history is limited to recent "
-        "trades and would require prohibited strike/expiry cross-section reconstruction.",
+        "trades and would require prohibited strike/expiry cross-section "
+        "reconstruction.",
         "",
         "## Frozen gate matrix",
         "",
