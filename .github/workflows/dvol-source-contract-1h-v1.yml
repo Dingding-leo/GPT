@@ -1,0 +1,124 @@
+name: DVOL Source Contract 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_dvol_source_contract_1h_v1.py"
+      - ".github/workflows/dvol-source-contract-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dvol-source-contract-1h-v1-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/research/dvol-source-contract-1h-v1
+      ARTIFACT_NAME: dvol-source-contract-1h-v1-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify public source-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.DERIBIT_CLIENT_ID }}"
+          test -z "${{ secrets.DERIBIT_CLIENT_SECRET }}"
+          ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\(|send_order\()' scripts/run_dvol_source_contract_1h_v1.py
+
+      - name: Acquire and audit frozen bilateral DVOL histories
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/run_dvol_source_contract_1h_v1.py
+          python scripts/run_dvol_source_contract_1h_v1.py \
+            --tested-head "$EXPECTED_TESTED_SHA" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify machine-readable source verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/source_manifest.json"
+          test -s "$OUTPUT_DIR/source_manifest.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
+          actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((root / "evidence.json").read_text())
+          assert evidence["family_id"] == "causal-dvol-regime-adaptive-e2160-sizing-source-contract-1h-v1"
+          assert evidence["tested_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["repository_main"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["bar"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["target_spot_data_downloaded"] is False
+          assert evidence["target_returns_downloaded"] is False
+          assert evidence["feature_defined"] is False
+          assert evidence["regime_mapping_defined"] is False
+          assert evidence["candidate_created"] is False
+          assert evidence["performance_accessed"] is False
+          assert evidence["oos_accessed"] is False
+          assert evidence["synthetic_data_used"] is False
+          assert evidence["cross_sectional_selection"] is False
+          assert evidence["pairs_or_spreads"] is False
+          assert evidence["market_neutral_or_long_short"] is False
+          assert evidence["credentials_used"] is False
+          assert evidence["private_endpoints_used"] is False
+          assert evidence["accounts_or_orders"] is False
+          assert evidence["enabled_adapters"] is False
+          assert evidence["leverage_used"] is False
+          assert len(evidence["market_arms"]) == 2
+          assert {arm["currency"] for arm in evidence["market_arms"]} == {"BTC", "ETH"}
+          assert all(arm["expected_rows"] == 41664 for arm in evidence["market_arms"])
+          assert all(all(value is None for value in arm["economics"].values()) for arm in evidence["market_arms"])
+          expected_pass = all(arm["source_contract_passed"] for arm in evidence["market_arms"])
+          assert evidence["source_contract_passed"] is expected_pass
+          assert evidence["markets_passing_source_contract"] == sum(
+              arm["source_contract_passed"] for arm in evidence["market_arms"]
+          )
+          if expected_pass:
+              assert evidence["verdict"] == "accept_dvol_1h_source_contract_for_separate_training_only_predeclaration"
+          else:
+              assert evidence["verdict"] == "reject_causal_dvol_regime_adaptive_e2160_sizing_source_contract_1h_v1"
+          assert evidence["canonical_strategy_changed"] is False
+          assert evidence["correction_permitted"] is False
+          assert evidence["correction_applied"] is False
+          assert evidence["observation_epoch_restarted"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          PY
+
+      - name: Upload immutable source-contract evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
