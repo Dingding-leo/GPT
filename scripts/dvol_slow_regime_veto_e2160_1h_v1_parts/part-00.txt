@@ -1,0 +1,180 @@
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import pandas as pd
+
+from gpt_quant import write_okx_snapshot
+from gpt_quant.okx_1h import fetch_okx_one_hour_candles
+from run_dvol_source_contract_1h_v1 import (
+    END_MS as DVOL_END_MS,
+    HOUR_MS,
+    acquire as acquire_dvol,
+    canonical,
+)
+
+FAMILY_ID = "causal-lagged-dvol-slow-regime-veto-e2160-1h-v1"
+REJECT_VERDICT = "reject_causal_lagged_dvol_slow_regime_veto_e2160_1h_v1"
+ACCEPT_VERDICT = (
+    "accept_causal_lagged_dvol_slow_regime_veto_e2160_1h_v1_"
+    "for_separate_prospective_shadow"
+)
+REPOSITORY_MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+SOURCE_EVIDENCE_HEAD = "8dde5f71876a0062d1bab5d2f03471f207687ca0"
+SOURCE_WORKFLOW_RUN = 30_719_081_752
+SOURCE_ARTIFACT_ID = 8_824_279_802
+SOURCE_ARTIFACT_SHA256 = "8481aa7d4fe72bb3254c430e009b6d15e91274afea503a08f19a60b39330d454"
+SOURCE_EVIDENCE_SHA256 = "a92cab98833e9b98e08f12317856eeb06760dce1e127754d5040ac99c0c46d23"
+EXPECTED_DVOL_SHA256 = {
+    "BTC": "e50b9a5c5195ae58542eb4b916694646094675d1b359e36990f9821f95dcb06e",
+    "ETH": "66630a58385e9fdece6be3f22e09325a753a912a1f04cbd2352e933165355e79",
+}
+SOURCE_START = pd.Timestamp("2021-04-01T00:00:00Z")
+SIGNAL_END = pd.Timestamp("2025-12-31T23:00:00Z")
+PAYOFF_BOUNDARY = pd.Timestamp("2026-01-01T00:00:00Z")
+TRAIN_START = pd.Timestamp("2021-07-01T00:00:00Z")
+OOS_START = pd.Timestamp("2024-01-01T00:00:00Z")
+SAMPLE_END = PAYOFF_BOUNDARY
+FEE = 0.0005
+ANNUAL_HOURS = 8_760.0
+BOOTSTRAP_DRAWS = 5_000
+BOOTSTRAP_BLOCK = 168
+BOOTSTRAP_SEED = 20_260_802
+EXPECTED_SIGNAL_ROWS = 41_664
+EXPECTED_TARGET_ROWS = 41_665
+
+
+def digest(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def quarter_label(timestamp: pd.Timestamp) -> str:
+    quarter = (timestamp.month - 1) // 3 + 1
+    return f"{timestamp.year}-Q{quarter}"
+
+
+def json_ready(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): json_ready(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_ready(item) for item in value]
+    if isinstance(value, np.ndarray):
+        return [json_ready(item) for item in value.tolist()]
+    if isinstance(value, (np.integer,)):
+        return int(value)
+    if isinstance(value, (np.floating,)):
+        number = float(value)
+        return number if math.isfinite(number) else None
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, pd.Timestamp):
+        return value.isoformat().replace("+00:00", "Z")
+    if isinstance(value, Path):
+        return value.as_posix()
+    return value
+
+
+def utc_index(milliseconds: list[int]) -> pd.DatetimeIndex:
+    return pd.to_datetime(milliseconds, unit="ms", utc=True)
+
+
+def persist_json(path: Path, value: Any) -> str:
+    payload = (
+        json.dumps(json_ready(value), sort_keys=True, indent=2, allow_nan=False).encode()
+        + b"\n"
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    return digest(payload)
+
+
+def source_arm(currency: str, output: Path) -> dict[str, Any]:
+    market = f"{currency}-USDT"
+    dvol_root = output / "source" / "deribit"
+    primary = acquire_dvol(currency, DVOL_END_MS, dvol_root, "fixed-primary")
+    suffix = acquire_dvol(currency, DVOL_END_MS + HOUR_MS, dvol_root, "future-suffix")
+    primary_rows = primary.pop("rows")
+    suffix_rows = suffix.pop("rows")
+    normalized_hash = digest(canonical(primary_rows))
+    expected_hash = EXPECTED_DVOL_SHA256[currency]
+    prefix_hash = digest(canonical([row for row in suffix_rows if row[0] <= DVOL_END_MS]))
+    suffix_present = any(row[0] == DVOL_END_MS + HOUR_MS for row in suffix_rows)
+
+    snapshot = fetch_okx_one_hour_candles(
+        inst_id=market,
+        start=SOURCE_START,
+        end=PAYOFF_BOUNDARY,
+        limit=100,
+        pause_seconds=0.12,
+        timeout=30.0,
+        safety_pages=3,
+    )
+    paths = write_okx_snapshot(snapshot, output / "source" / "okx" / market)
+    candles = snapshot.candles.copy()
+    if candles.index.tz is None:
+        candles.index = candles.index.tz_localize("UTC")
+    else:
+        candles.index = candles.index.tz_convert("UTC")
+    candles = candles.sort_index()
+    signal_candles = candles.loc[SOURCE_START:SIGNAL_END]
+    dvol_index = utc_index([int(row[0]) for row in primary_rows])
+    target_grid = signal_candles.index
+    common_grid = target_grid.equals(dvol_index)
+    source_conditions = {
+        "dvol_hash_matches_accepted_contract": normalized_hash == expected_hash,
+        "dvol_exact_signal_row_count": len(primary_rows) == EXPECTED_SIGNAL_ROWS,
+        "dvol_future_suffix_prefix_identity": normalized_hash == prefix_hash and suffix_present,
+        "target_exact_row_count_with_payoff_boundary": len(candles) == EXPECTED_TARGET_ROWS,
+        "target_exact_boundaries": bool(
+            len(candles)
+            and candles.index[0] == SOURCE_START
+            and candles.index[-1] == PAYOFF_BOUNDARY
+        ),
+        "target_signal_grid_matches_dvol": common_grid,
+        "target_metadata_identity": bool(
+            snapshot.metadata.get("instrument_id") == market
+            and snapshot.metadata.get("bar") == "1H"
+        ),
+        "target_pagination_complete": bool(
+            snapshot.metadata.get("pagination_complete")
+            and snapshot.metadata.get("requested_start_reached")
+        ),
+        "target_missing_intervals_zero": snapshot.metadata.get("missing_intervals") in (0, None),
+        "target_values_finite_positive": bool(
+            np.isfinite(candles[["open", "high", "low", "close"]].to_numpy(dtype=float)).all()
+            and (candles[["open", "high", "low", "close"]].to_numpy(dtype=float) > 0).all()
+        ),
+    }
+    dvol_close = pd.Series(
+        [float(row[4]) for row in primary_rows],
+        index=dvol_index,
+        name=f"{currency}_dvol_close",
+        dtype=float,
+    )
+    return {
+        "currency": currency,
+        "market": market,
+        "source_contract_passed": all(source_conditions.values()),
+        "source_conditions": source_conditions,
+        "dvol_normalized_sha256": normalized_hash,
+        "dvol_expected_sha256": expected_hash,
+        "dvol_fixed_primary": primary,
+        "dvol_future_suffix": suffix,
+        "okx_normalized_csv_sha256": snapshot.metadata.get("normalized_csv_sha256"),
+        "okx_raw_pages_sha256": snapshot.metadata.get("raw_pages_sha256"),
+        "okx_source_response_count": snapshot.metadata.get("source_response_count"),
+        "okx_source_response_total_bytes": snapshot.metadata.get("source_response_total_bytes"),
+        "okx_snapshot_paths": {key: value.as_posix() for key, value in paths.items()},
+        "candles": candles,
+        "dvol_close": dvol_close,
+    }
+
+
+def decision_table(candles: pd.DataFrame, dvol_close: pd.Series) -> pd.DataFrame:
