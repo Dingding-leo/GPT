@@ -9,16 +9,12 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-  RESEARCH_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
   REPORT_DIR: reports/research/causal-historical-analog-consensus-abstention-1h-v1
   SOURCE_PATH: reports/research/causal-historical-analog-consensus-abstention-1h-v1/run_historical_analog.py
-  SOURCE_B64_PATH: reports/research/causal-historical-analog-consensus-abstention-1h-v1/run_historical_analog.py.gz.b64
-  PATCH_PATH: reports/research/causal-historical-analog-consensus-abstention-1h-v1/apply_breadth_repair.py
-  FROZEN_SOURCE_SHA: 6267b0a1be676bacb390dbd5f3ae75b8db82c6b3
   PYTHONHASHSEED: "0"
   OPENBLAS_NUM_THREADS: "1"
   OMP_NUM_THREADS: "1"
@@ -30,11 +26,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - name: Check out exact evidence head
+      - name: Check out exact evidence head without credentials
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.EXPECTED_TESTED_SHA }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Verify exact checked-out revision
         run: |
@@ -52,15 +49,13 @@ jobs:
           python -m pip install --disable-pip-version-check \
             "numpy==2.2.6" "ruff==0.16.1"
 
-      - name: Materialize repaired deterministic reproducer
+      - name: Verify committed deterministic reproducer
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/analog-output /tmp/analog-cache
-          test -f "$PATCH_PATH"
-          git fetch --no-tags --depth=1 origin "$FROZEN_SOURCE_SHA"
-          git show "$FROZEN_SOURCE_SHA:$SOURCE_PATH" > /tmp/analog-output/materialized_source.py
-          python "$PATCH_PATH" /tmp/analog-output/materialized_source.py
+          test -f "$SOURCE_PATH"
+          cp "$SOURCE_PATH" /tmp/analog-output/materialized_source.py
           ruff check /tmp/analog-output/materialized_source.py
           ruff format --check /tmp/analog-output/materialized_source.py
           python -m py_compile /tmp/analog-output/materialized_source.py
@@ -88,6 +83,7 @@ jobs:
             --cache-dir /tmp/analog-cache
           for file in source-manifest.json source-manifest.sha256 training-freeze.json training-freeze.sha256 evidence.json evidence.sha256 report.md; do
             cmp "/tmp/analog-output/$file" "/tmp/analog-replay/$file"
+            cmp "/tmp/analog-output/$file" "$REPORT_DIR/$file"
           done
 
       - name: Verify frozen protocol and evidence identity
@@ -123,26 +119,6 @@ jobs:
               assert market["segments"]["oos"]["decision_count"] == 540
               assert market["segments"]["full"]["decision_count"] == 900
           PY
-
-      - name: Persist corrected reproducer and terminal evidence
-        if: github.event_name == 'pull_request'
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp /tmp/analog-output/materialized_source.py "$SOURCE_PATH"
-          rm -f "$SOURCE_B64_PATH"
-          for file in source-manifest.json source-manifest.sha256 training-freeze.json training-freeze.sha256 evidence.json evidence.sha256 report.md; do
-            cp "/tmp/analog-output/$file" "$REPORT_DIR/$file"
-          done
-          git add -A "$REPORT_DIR"
-          if git diff --cached --quiet; then
-            echo 'Exact corrected strategy evidence already persisted.'
-            exit 0
-          fi
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'research: persist corrected analog breadth evidence'
-          git push origin "HEAD:$RESEARCH_BRANCH"
 
       - name: Build immutable artifact manifest
         if: always()
