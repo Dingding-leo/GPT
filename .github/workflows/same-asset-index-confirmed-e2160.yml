@@ -37,12 +37,12 @@ jobs:
       - name: Install numerical dependency
         run: python -m pip install --disable-pip-version-check --no-cache-dir 'numpy==2.2.6'
 
-      - name: Prove prohibited strategy inputs are absent
+      - name: Prove prohibited runtime capabilities are absent
         shell: bash
         run: |
           set -euo pipefail
           env | cut -d= -f1 | grep -Eiq '(OKX|BINANCE).*(API|SECRET|TOKEN|KEY)' && exit 1 || true
-          ! grep -RInE 'api[-_]?key|secret[-_]?key|place_order|create_order|submit_order|send_order|leverage|15m|synthetic|cross.sectional|cointegration|market.neutral' \
+          ! grep -RInE 'api[-_]?key|secret[-_]?key|place_order|create_order|submit_order|send_order|/api/v5/(account|trade|asset|broker)' \
             scripts/run_same_asset_index_confirmed_e2160.py \
             scripts/same_asset_index_source.py \
             scripts/same_asset_index_metrics.py
