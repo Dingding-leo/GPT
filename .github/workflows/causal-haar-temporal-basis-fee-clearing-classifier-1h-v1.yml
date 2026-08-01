@@ -1,0 +1,163 @@
+name: Causal Haar Temporal Basis 1H Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/causal-haar-temporal-basis-fee-clearing-classifier-1h-v1.yml"
+      - "reports/research/causal-haar-temporal-basis-fee-clearing-classifier-1h-v1/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  RESEARCH_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+  REPORT_DIR: reports/research/causal-haar-temporal-basis-fee-clearing-classifier-1h-v1
+  SOURCE_PATH: reports/research/causal-haar-temporal-basis-fee-clearing-classifier-1h-v1/run_haar_classifier.py
+  SOURCE_B64_PATH: reports/research/causal-haar-temporal-basis-fee-clearing-classifier-1h-v1/run_haar_classifier.py.gz.b64
+  PYTHONHASHSEED: "0"
+  OPENBLAS_NUM_THREADS: "1"
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact evidence head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 1
+
+      - name: Verify exact checked-out revision
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+
+      - name: Set up fixed Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install fixed research dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            "numpy==2.2.6" "ruff==0.16.1"
+
+      - name: Materialize deterministic reproducer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/haar-output /tmp/haar-cache
+          if test -f "$SOURCE_PATH"; then
+            cp "$SOURCE_PATH" /tmp/haar-output/materialized_source.py
+          else
+            test -f "$SOURCE_B64_PATH"
+            base64 --decode "$SOURCE_B64_PATH" | gzip --decompress > /tmp/haar-output/materialized_source.py
+          fi
+          ruff check --fix /tmp/haar-output/materialized_source.py
+          ruff format /tmp/haar-output/materialized_source.py
+          ruff check /tmp/haar-output/materialized_source.py
+          ruff format --check /tmp/haar-output/materialized_source.py
+          python -m py_compile /tmp/haar-output/materialized_source.py
+          sha256sum /tmp/haar-output/materialized_source.py
+
+      - name: Run immutable public-data strategy experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python /tmp/haar-output/materialized_source.py \
+            --output-dir /tmp/haar-output \
+            --cache-dir /tmp/haar-cache \
+            | tee /tmp/haar-output/stdout.json
+          (cd /tmp/haar-output && sha256sum -c source-manifest.sha256)
+          (cd /tmp/haar-output && sha256sum -c training-freeze.sha256)
+          (cd /tmp/haar-output && sha256sum -c evidence.sha256)
+
+      - name: Reproduce exact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/haar-replay
+          python /tmp/haar-output/materialized_source.py \
+            --output-dir /tmp/haar-replay \
+            --cache-dir /tmp/haar-cache
+          for file in source-manifest.json source-manifest.sha256 training-freeze.json training-freeze.sha256 evidence.json evidence.sha256 report.md; do
+            cmp "/tmp/haar-output/$file" "/tmp/haar-replay/$file"
+          done
+
+      - name: Verify frozen protocol and verdict identity
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence = json.loads(Path("/tmp/haar-output/evidence.json").read_text())
+          assert evidence["family_id"] == "causal-haar-temporal-basis-fee-clearing-classifier-1h-v1"
+          assert evidence["candidate_count"] == 2
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["symbols"] == ["NEOUSDT", "IOTAUSDT"]
+          assert evidence["bar"] == "1h"
+          assert evidence["fee_one_way"] == 0.0005
+          assert evidence["feature_window"] == 512
+          assert evidence["feature_count"] == 32
+          assert evidence["haar_depths"] == [0, 1, 2, 3, 4]
+          assert evidence["target_hurdle"] == 0.001
+          assert evidence["ridge_lambda"] == 1.0
+          assert evidence["threshold"] == 0.5
+          assert evidence["bootstrap"] == {"draws": 5000, "block_hours": 168, "seed": 20260801}
+          assert evidence["oos_opened_after_training_freeze"] is True
+          for market in evidence["markets"].values():
+              assert market["integrity"]["all"] is True
+              assert market["model"]["diagnostics"]["converged"] is True
+              assert market["segments"]["training"]["decision_count"] == 360
+              assert market["segments"]["oos"]["decision_count"] == 540
+              assert market["segments"]["full"]["decision_count"] == 900
+          PY
+
+      - name: Persist exact reproducer and terminal evidence
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp /tmp/haar-output/materialized_source.py "$SOURCE_PATH"
+          rm -f "$SOURCE_B64_PATH"
+          for file in source-manifest.json source-manifest.sha256 training-freeze.json training-freeze.sha256 evidence.json evidence.sha256 report.md; do
+            cp "/tmp/haar-output/$file" "$REPORT_DIR/$file"
+          done
+          git add -A "$REPORT_DIR"
+          if git diff --cached --quiet; then
+            echo 'Exact strategy evidence already persisted.'
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'research: persist causal Haar strategy evidence'
+          git push origin "HEAD:$RESEARCH_BRANCH"
+
+      - name: Build immutable artifact manifest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          find /tmp/haar-output -maxdepth 1 -type f \
+            ! -name artifact-files.sha256 -print0 \
+            | sort -z | xargs -0 sha256sum \
+            > /tmp/haar-output/artifact-files.sha256
+
+      - name: Upload immutable strategy evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: causal-haar-temporal-basis-fee-clearing-classifier-1h-v1
+          path: /tmp/haar-output
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 90
