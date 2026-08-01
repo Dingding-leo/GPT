@@ -56,7 +56,9 @@ jobs:
           base64 --decode "$SOURCE_B64" | gzip --decompress > "$SCRIPT"
           python -m pip install --disable-pip-version-check "ruff==0.16.1"
           ruff check "$SCRIPT"
+          ruff format "$SCRIPT"
           ruff format --check "$SCRIPT"
+          ruff check "$SCRIPT"
           python -m py_compile "$SCRIPT"
           git diff --exit-code
 
