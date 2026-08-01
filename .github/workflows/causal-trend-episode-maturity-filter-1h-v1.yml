@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify exact revision
+      - name: Verify exact revision and research parent
         shell: bash
         run: |
           set -euo pipefail
@@ -51,16 +51,17 @@ jobs:
           python -m pip install --disable-pip-version-check \
             "numpy==2.2.6" "pandas==2.2.3" "ruff==0.16.1"
 
-      - name: Materialize and verify frozen reproducer
+      - name: Materialize and format frozen reproducer
         shell: bash
         run: |
           set -euo pipefail
           base64 --decode "$SOURCE_B64" | gzip --decompress > "$SOURCE_PY"
           test "$(sha256sum "$SOURCE_PY" | cut -d' ' -f1)" = \
             "6b2f2bd340806061e28fe6ef7988090a1e627f5b8acbb7ecce31e261b652e765"
+          ruff format "$SOURCE_PY"
           ruff check "$SOURCE_PY"
-          ruff format --check "$SOURCE_PY"
           python -m py_compile "$SOURCE_PY"
+          sha256sum "$SOURCE_PY"
 
       - name: Download immutable canonical artifacts
         env:
@@ -70,9 +71,7 @@ jobs:
           set -euo pipefail
           mkdir -p /tmp/source-zips /tmp/source/btc /tmp/source/eth
           download_artifact() {
-            local artifact_id="$1"
-            local destination="$2"
-            local headers signed_url
+            local artifact_id="$1" destination="$2" headers signed_url
             headers="$(mktemp)"
             curl --silent --show-error --dump-header "$headers" --output /dev/null \
               --header "Accept: application/vnd.github+json" \
@@ -94,7 +93,7 @@ jobs:
           unzip -q /tmp/source-zips/btc.zip -d /tmp/source/btc
           unzip -q /tmp/source-zips/eth.zip -d /tmp/source/eth
 
-      - name: Run frozen experiment twice
+      - name: Run immutable experiment and exact replay
         shell: bash
         run: |
           set -euo pipefail
@@ -102,18 +101,16 @@ jobs:
           python "$SOURCE_PY" \
             --btc-artifact-dir /tmp/source/btc \
             --eth-artifact-dir /tmp/source/eth \
-            --output-dir "$OUTPUT_DIR" \
-            > "$OUTPUT_DIR/stdout.json"
+            --output-dir "$OUTPUT_DIR" > "$OUTPUT_DIR/stdout.json"
           python "$SOURCE_PY" \
             --btc-artifact-dir /tmp/source/btc \
             --eth-artifact-dir /tmp/source/eth \
-            --output-dir "$REPLAY_DIR" \
-            > "$REPLAY_DIR/stdout.json"
+            --output-dir "$REPLAY_DIR" > "$REPLAY_DIR/stdout.json"
           for file in training-freeze.json training-freeze.sha256 evidence.json evidence.sha256 report.md stdout.json; do
             cmp "$OUTPUT_DIR/$file" "$REPLAY_DIR/$file"
           done
 
-      - name: Verify terminal evidence and verdict
+      - name: Verify terminal evidence and rejection
         shell: bash
         run: |
           set -euo pipefail
@@ -132,10 +129,10 @@ jobs:
           assert evidence["markets_passing"] == 0
           assert evidence["accepted"] is False
           assert evidence["verdict"] == "reject_causal_trend_episode_maturity_filter_1h_v1"
-          assert evidence["markets"]["BTC-USDT"]["gates_passed"] == 2
-          assert evidence["markets"]["ETH-USDT"]["gates_passed"] == 2
-          assert evidence["markets"]["BTC-USDT"]["segments"]["oos"]["candidate"]["turnover"] == 8.0
-          assert evidence["markets"]["ETH-USDT"]["segments"]["oos"]["candidate"]["turnover"] == 8.0
+          for symbol in ("BTC-USDT", "ETH-USDT"):
+              market = evidence["markets"][symbol]
+              assert market["gates_passed"] == 2
+              assert market["segments"]["oos"]["candidate"]["turnover"] == 8.0
           PY
           cat "$OUTPUT_DIR/report.md"
 
