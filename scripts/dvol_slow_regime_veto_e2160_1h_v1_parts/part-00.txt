@@ -27,7 +27,7 @@ from gpt_quant.okx_1h import fetch_okx_one_hour_candles
 FAMILY_ID = "causal-lagged-dvol-slow-regime-veto-e2160-1h-v1"
 REJECT_VERDICT = "reject_causal_lagged_dvol_slow_regime_veto_e2160_1h_v1"
 ACCEPT_VERDICT = (
-    "accept_causal_lagged-dvol-slow-regime-veto-e2160-1h-v1_"
+    "accept_causal_lagged_dvol_slow_regime_veto_e2160_1h_v1_"
     "for_separate_prospective_shadow"
 )
 REPOSITORY_MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
