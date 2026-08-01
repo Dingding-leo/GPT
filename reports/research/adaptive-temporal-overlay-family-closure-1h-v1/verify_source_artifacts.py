@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Verify frozen source artifacts and checked-in metric extraction for family closure."""
+
 from __future__ import annotations
 
 import argparse
@@ -84,9 +85,7 @@ def parse_hash_line(raw: bytes, expected_name: str) -> str:
 def verify_zip(spec: dict[str, Any], raw_zip: bytes) -> tuple[dict[str, Any], dict[str, Any]]:
     actual_zip_sha = sha256(raw_zip)
     if actual_zip_sha != spec["artifact_zip_sha256"]:
-        raise AssertionError(
-            f"artifact {spec['artifact_id']} ZIP SHA mismatch: {actual_zip_sha}"
-        )
+        raise AssertionError(f"artifact {spec['artifact_id']} ZIP SHA mismatch: {actual_zip_sha}")
     with tempfile.TemporaryDirectory() as temporary:
         archive_path = Path(temporary, "artifact.zip")
         archive_path.write_bytes(raw_zip)
@@ -141,9 +140,7 @@ def verify_zip(spec: dict[str, Any], raw_zip: bytes) -> tuple[dict[str, Any], di
                     raise AssertionError(
                         f"artifact {spec['artifact_id']} internal SHA mismatch for {basename}"
                     )
-                manifest_results.append(
-                    {"file": basename, "sha256": actual, "verified": True}
-                )
+                manifest_results.append({"file": basename, "sha256": actual, "verified": True})
             evidence = json.loads(evidence_bytes)
     verification = {
         "architecture": spec["architecture"],
@@ -208,9 +205,7 @@ def normalise_bocpd(evidence: dict[str, Any]) -> list[dict[str, Any]]:
                 "benchmark_oos": compact_metrics(segments["oos"]["trend"]),
                 "breadth": {
                     "fold_count": len(breadth["fold_returns"]),
-                    "positive_fold_concentration": concentration(
-                        breadth["fold_returns"]
-                    ),
+                    "positive_fold_concentration": concentration(breadth["fold_returns"]),
                     "positive_folds": breadth["positive_folds"],
                     "positive_years": breadth["positive_years"],
                     "year_count": breadth["year_count"],
@@ -247,9 +242,7 @@ def normalise_local_linear(evidence: dict[str, Any]) -> list[dict[str, Any]]:
                 "benchmark_oos": compact_metrics(market["oos"]["trend"]),
                 "breadth": {
                     "fold_count": len(breadth["fold_returns"]),
-                    "positive_fold_concentration": breadth[
-                        "positive_fold_concentration"
-                    ],
+                    "positive_fold_concentration": breadth["positive_fold_concentration"],
                     "positive_folds": breadth["positive_folds"],
                     "positive_years": breadth["positive_years"],
                     "year_count": breadth["year_count"],
@@ -263,15 +256,13 @@ def normalise_local_linear(evidence: dict[str, Any]) -> list[dict[str, Any]]:
                     "fee_drag_difference": market["candidate_minus_trend_decomposition"][
                         "arithmetic_fee_drag_delta"
                     ],
-                    "gross_timing_return_difference": market[
-                        "candidate_minus_trend_decomposition"
-                    ]["arithmetic_gross_timing_delta"],
-                    "net_return_difference": market[
-                        "candidate_minus_trend_decomposition"
-                    ]["arithmetic_gross_timing_delta"]
-                    - market["candidate_minus_trend_decomposition"][
-                        "arithmetic_fee_drag_delta"
+                    "gross_timing_return_difference": market["candidate_minus_trend_decomposition"][
+                        "arithmetic_gross_timing_delta"
                     ],
+                    "net_return_difference": market["candidate_minus_trend_decomposition"][
+                        "arithmetic_gross_timing_delta"
+                    ]
+                    - market["candidate_minus_trend_decomposition"]["arithmetic_fee_drag_delta"],
                 },
                 "paired_mean_ci95": [
                     value / 10_000 for value in bootstrap["mean_hourly_delta_ci_bps"]
@@ -305,9 +296,7 @@ def normalise_arbitration(evidence: dict[str, Any]) -> list[dict[str, Any]]:
                 ),
                 "breadth": {
                     "fold_count": len(breadth["folds"]),
-                    "positive_fold_concentration": breadth[
-                        "positive_fold_concentration"
-                    ],
+                    "positive_fold_concentration": breadth["positive_fold_concentration"],
                     "positive_folds": breadth["positive_folds"],
                     "positive_years": breadth["positive_years"],
                     "year_count": len(years),
@@ -318,12 +307,8 @@ def normalise_arbitration(evidence: dict[str, Any]) -> list[dict[str, Any]]:
                     "train": brief_metrics(train, arbitration=True),
                 },
                 "decomposition": segments["oos"]["decomposition_vs_static"]["E2160"],
-                "paired_mean_ci95": uncertainty[
-                    "mean_hourly_net_difference_ci95"
-                ],
-                "paired_sharpe_ci95": uncertainty[
-                    "annualised_sharpe_difference_ci95"
-                ],
+                "paired_mean_ci95": uncertainty["mean_hourly_net_difference_ci95"],
+                "paired_sharpe_ci95": uncertainty["annualised_sharpe_difference_ci95"],
                 "rows": source["rows"],
                 "sign_reversal": train["net_total_return"] * oos["net_total_return"] < 0,
                 "source_sha256": source["normalized_rows_sha256"],
@@ -356,8 +341,7 @@ def assert_equal(actual: Any, expected: Any, path: str = "root") -> int:
         if missing:
             raise AssertionError(f"{path}: missing keys {sorted(missing)}")
         return sum(
-            assert_equal(actual[key], value, f"{path}.{key}")
-            for key, value in expected.items()
+            assert_equal(actual[key], value, f"{path}.{key}") for key, value in expected.items()
         )
     raise TypeError(f"unsupported value at {path}: {type(expected)}")
 
@@ -382,9 +366,7 @@ def architecture_identity(spec: dict[str, Any], row: dict[str, Any]) -> dict[str
 def verify_source_metrics(
     source_metrics: dict[str, Any], evidences: dict[str, dict[str, Any]]
 ) -> tuple[int, list[dict[str, Any]]]:
-    architecture_rows = {
-        row["architecture"]: row for row in source_metrics["architectures"]
-    }
+    architecture_rows = {row["architecture"]: row for row in source_metrics["architectures"]}
     if set(architecture_rows) != {spec["architecture"] for spec in EXPECTED}:
         raise AssertionError("source_metrics architecture set changed")
     identities = []
@@ -397,10 +379,7 @@ def verify_source_metrics(
         + normalise_local_linear(evidences["multi_horizon_local_linear"])
         + normalise_arbitration(evidences["online_specialist_arbitration"])
     )
-    expected_rows = {
-        (row["architecture"], row["symbol"]): row
-        for row in source_metrics["markets"]
-    }
+    expected_rows = {(row["architecture"], row["symbol"]): row for row in source_metrics["markets"]}
     actual_rows = {(row["architecture"], row["symbol"]): row for row in extracted}
     if set(expected_rows) != set(actual_rows):
         raise AssertionError("source_metrics market set changed")
@@ -441,9 +420,7 @@ def main() -> None:
             source = "local_artifact_dir"
         evidence, verification = verify_zip(spec, raw_zip)
         if evidence["family_id"] != spec["family_id"]:
-            raise AssertionError(
-                f"artifact {spec['artifact_id']} family identity mismatch"
-            )
+            raise AssertionError(f"artifact {spec['artifact_id']} family identity mismatch")
         verification["source"] = source
         artifacts.append(verification)
         evidences[spec["architecture"]] = evidence
