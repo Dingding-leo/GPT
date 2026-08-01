@@ -9,7 +9,7 @@ def main() -> None:
     source = path.read_text()
     start = source.index("def breadth(")
     end = source.index("\n\ndef forecast_diagnostics", start)
-    replacement = '''def compounded_return(values: np.ndarray) -> float:
+    replacement = """def compounded_return(values: np.ndarray) -> float:
     return float(np.prod(1.0 + values) - 1.0)
 
 
@@ -77,7 +77,7 @@ def breadth(data: MarketData, candidate: PathResult, benchmark: PathResult) -> d
         "positive_relative_years": int(sum(item["relative_net_effect"] > 0 for item in years)),
         "positive_fold_concentration": float(concentration),
     }
-'''
+"""
     source = source[:start] + replacement + source[end:]
     old_call = 'breadth_result = breadth(data, forecasts["oos"])'
     new_call = 'breadth_result = breadth(data, oos["candidate"], oos["e2160"])'
