@@ -4,6 +4,7 @@
 Public confirmed OKX SPOT 1H candles only. No credentials, accounts, orders,
 leverage, adapters, synthetic observations, cross-sectional selection, or OOS refit.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,9 +19,10 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 import numpy as np
 
@@ -31,8 +33,8 @@ FROZEN_AT_MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
 MARKETS = ("SUSHI-USDT", "CRV-USDT")
 BAR = "1H"
 FEE = 0.0005
-START_UTC = dt.datetime(2021, 7, 24, tzinfo=dt.timezone.utc)
-FINAL_UTC = dt.datetime(2026, 7, 8, tzinfo=dt.timezone.utc)
+START_UTC = dt.datetime(2021, 7, 24, tzinfo=dt.UTC)
+FINAL_UTC = dt.datetime(2026, 7, 8, tzinfo=dt.UTC)
 EXPECTED_ROWS = 43_441
 CALIB_START, CALIB_END = 2_160, 10_080
 TRAIN_START, TRAIN_END = 10_080, 17_520
@@ -49,8 +51,7 @@ USER_AGENT = "Dingding-leo-GPT-causal-1H-research/1.0"
 
 def canonical_json_bytes(obj: Any) -> bytes:
     return (
-        json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-        + "\n"
+        json.dumps(obj, sort_keys=True, separators=(",", ":"), ensure_ascii=False) + "\n"
     ).encode()
 
 
@@ -117,20 +118,28 @@ def parse_candle(row: list[str]) -> Candle:
     vals = [float(row[i]) for i in range(1, 8)]
     if not all(math.isfinite(v) for v in vals):
         raise ValueError("non-finite candle field")
-    o, h, l, c, vol, vol_ccy, vol_quote = vals
-    if min(o, h, l, c) <= 0 or min(vol, vol_ccy, vol_quote) < 0:
+    open_px, high_px, low_px, close_px, vol, vol_ccy, vol_quote = vals
+    if min(open_px, high_px, low_px, close_px) <= 0 or min(vol, vol_ccy, vol_quote) < 0:
         raise ValueError("invalid non-positive price or negative volume")
-    if h < max(o, l, c) or l > min(o, h, c):
+    if high_px < max(open_px, low_px, close_px) or low_px > min(open_px, high_px, close_px):
         raise ValueError("invalid OHLC ordering")
     confirm = int(row[8])
     if confirm != 1:
         raise ValueError("unconfirmed candle")
-    return Candle(int(row[0]), o, h, l, c, vol, vol_ccy, vol_quote, confirm)
+    return Candle(
+        int(row[0]),
+        open_px,
+        high_px,
+        low_px,
+        close_px,
+        vol,
+        vol_ccy,
+        vol_quote,
+        confirm,
+    )
 
 
-def acquire_market(
-    inst_id: str, source_dir: Path
-) -> tuple[list[Candle], dict[str, Any]]:
+def acquire_market(inst_id: str, source_dir: Path) -> tuple[list[Candle], dict[str, Any]]:
     start_ms = int(START_UTC.timestamp() * 1000)
     final_ms = int(FINAL_UTC.timestamp() * 1000)
     cursor = final_ms + 3_600_000
@@ -156,19 +165,14 @@ def acquire_market(
             data = obj.get("data")
             if not isinstance(data, list) or not data:
                 raise RuntimeError(
-                    f"empty OKX page before reaching start for {inst_id}; "
-                    f"cursor={cursor}"
+                    f"empty OKX page before reaching start for {inst_id}; cursor={cursor}"
                 )
             parsed = [parse_candle(row) for row in data]
             timestamps = [c.ts_ms for c in parsed]
             if timestamps != sorted(timestamps, reverse=True):
-                raise ValueError(
-                    f"provider page not descending for {inst_id} page {page}"
-                )
+                raise ValueError(f"provider page not descending for {inst_id} page {page}")
             if len(set(timestamps)) != len(timestamps):
-                raise ValueError(
-                    f"duplicate timestamp inside provider page for {inst_id}"
-                )
+                raise ValueError(f"duplicate timestamp inside provider page for {inst_id}")
             oldest = min(timestamps)
             newest = max(timestamps)
             if oldest >= cursor:
@@ -190,9 +194,7 @@ def acquire_market(
                 if start_ms <= candle.ts_ms <= final_ms:
                     prior = rows.get(candle.ts_ms)
                     if prior is not None and prior != candle:
-                        raise ValueError(
-                            f"conflicting duplicate candle {inst_id} {candle.ts_ms}"
-                        )
+                        raise ValueError(f"conflicting duplicate candle {inst_id} {candle.ts_ms}")
                     rows[candle.ts_ms] = candle
             if oldest <= start_ms:
                 break
@@ -214,9 +216,7 @@ def acquire_market(
     candles = [rows[t] for t in expected_ts]
     normalized_path = source_dir / f"{inst_id}-normalized.csv"
     with normalized_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(
-            f, fieldnames=list(candles[0].normalized())
-        )
+        writer = csv.DictWriter(f, fieldnames=list(candles[0].normalized()))
         writer.writeheader()
         writer.writerows(c.normalized() for c in candles)
     manifest = {
@@ -238,7 +238,7 @@ def acquire_market(
 
 
 def phase_for_ms(ts_ms: int) -> int:
-    x = dt.datetime.fromtimestamp(ts_ms / 1000, tz=dt.timezone.utc)
+    x = dt.datetime.fromtimestamp(ts_ms / 1000, tz=dt.UTC)
     return 4 * x.weekday() + x.hour // 6
 
 
@@ -262,11 +262,7 @@ def sharpe(returns: np.ndarray) -> float:
     if returns.size < 2:
         return 0.0
     sd = float(np.std(returns, ddof=1))
-    return (
-        0.0
-        if sd == 0.0
-        else float(np.mean(returns) / sd * math.sqrt(8_760.0))
-    )
+    return 0.0 if sd == 0.0 else float(np.mean(returns) / sd * math.sqrt(8_760.0))
 
 
 def max_drawdown(returns: np.ndarray) -> float:
@@ -299,8 +295,8 @@ def episodes(position: np.ndarray) -> dict[str, Any]:
             prev, run = iv, 1
     vals.append(prev)
     lens.append(run)
-    longs = [n for v, n in zip(vals, lens) if v == 1]
-    cash = [n for v, n in zip(vals, lens) if v == 0]
+    longs = [n for v, n in zip(vals, lens, strict=False) if v == 1]
+    cash = [n for v, n in zip(vals, lens, strict=False) if v == 0]
 
     def stats(xs: list[int]) -> dict[str, Any]:
         return {
@@ -328,18 +324,14 @@ class PathResult:
         return {
             "gross_return": gross,
             "net_return": net,
-            "annualized_arithmetic_mean": float(
-                np.mean(self.net_returns) * 8_760.0
-            ),
+            "annualized_arithmetic_mean": float(np.mean(self.net_returns) * 8_760.0),
             "sharpe": sharpe(self.net_returns),
             "max_drawdown": max_drawdown(self.net_returns),
             "exposure_fraction": float(np.mean(self.position)),
             "turnover": self.turnover,
             "transitions": self.transitions,
             "arithmetic_fee_drag": float(np.sum(self.fee_events)),
-            "edge_per_turnover": (
-                net / self.turnover if self.turnover > 0 else 0.0
-            ),
+            "edge_per_turnover": (net / self.turnover if self.turnover > 0 else 0.0),
             "episodes": episodes(self.position),
         }
 
@@ -409,9 +401,7 @@ def compute_profile(
     closes = np.array([c.close for c in candles], dtype=np.float64)
     returns = np.full(len(candles), np.nan, dtype=np.float64)
     returns[1:] = np.log(closes[1:] / closes[:-1])
-    phases = np.array(
-        [phase_for_ms(c.ts_ms) for c in candles], dtype=np.int16
-    )
+    phases = np.array([phase_for_ms(c.ts_ms) for c in candles], dtype=np.int16)
     idx = np.arange(CALIB_START, CALIB_END)
     mu_all = float(np.mean(returns[idx]))
     counts: list[int] = []
@@ -425,9 +415,7 @@ def compute_profile(
     if min(counts) < 280:
         raise ValueError(f"insufficient calibration phase support: {counts}")
     if abs(float(np.average(profile, weights=counts))) > 1e-15:
-        raise AssertionError(
-            "weighted profile deviations do not preserve calibration mean"
-        )
+        raise AssertionError("weighted profile deviations do not preserve calibration mean")
     payload = {
         "counts": counts,
         "means": means,
@@ -449,9 +437,7 @@ def targets_for_market(
     closes = np.array([c.close for c in candles], dtype=np.float64)
     returns = np.full(len(candles), np.nan, dtype=np.float64)
     returns[1:] = np.log(closes[1:] / closes[:-1])
-    phases = np.array(
-        [phase_for_ms(c.ts_ms) for c in candles], dtype=np.int16
-    )
+    phases = np.array([phase_for_ms(c.ts_ms) for c in candles], dtype=np.int16)
     adjusted = returns.copy()
     adjusted[1:] -= profile[phases[1:]]
     csum = np.nancumsum(np.nan_to_num(adjusted, nan=0.0))
@@ -459,14 +445,10 @@ def targets_for_market(
     raw: dict[int, int] = {}
     for t in range(FULL_START, FULL_END, 24):
         lo = t - 2_159
-        adjusted_margin = float(
-            csum[t] - (csum[lo - 1] if lo > 0 else 0.0)
-        )
+        adjusted_margin = float(csum[t] - (csum[lo - 1] if lo > 0 else 0.0))
         raw_margin = float(math.log(closes[t] / closes[t - 2_160]))
         explicit = float(np.sum(adjusted[lo : t + 1]))
-        if not math.isclose(
-            adjusted_margin, explicit, rel_tol=0, abs_tol=2e-14
-        ):
+        if not math.isclose(adjusted_margin, explicit, rel_tol=0, abs_tol=2e-14):
             raise AssertionError("adjusted margin identity failed")
         cand[t] = int(adjusted_margin > 0.0)
         raw[t] = int(raw_margin > 0.0)
@@ -478,17 +460,13 @@ def targets_for_market(
     alt_csum = np.nancumsum(np.nan_to_num(altered, nan=0.0))
     for t in range(FULL_START, cutoff, 24):
         lo = t - 2_159
-        alt_margin = float(
-            alt_csum[t] - (alt_csum[lo - 1] if lo > 0 else 0.0)
-        )
+        alt_margin = float(alt_csum[t] - (alt_csum[lo - 1] if lo > 0 else 0.0))
         if int(alt_margin > 0.0) != cand[t]:
             raise AssertionError("future suffix altered an earlier target")
     return cand, raw, returns
 
 
-def slice_return(
-    arr: np.ndarray, start_offset: int, end_offset: int
-) -> float:
+def slice_return(arr: np.ndarray, start_offset: int, end_offset: int) -> float:
     return compounded(arr[start_offset:end_offset])
 
 
@@ -512,16 +490,12 @@ def fold_and_year_breadth(
         )
         if rel > 0:
             positive_rel.append(rel)
-    concentration = (
-        max(positive_rel) / sum(positive_rel) if positive_rel else 1.0
-    )
+    concentration = max(positive_rel) / sum(positive_rel) if positive_rel else 1.0
 
     years: list[dict[str, Any]] = []
     by_year: dict[int, list[int]] = defaultdict(list)
     for offset, i in enumerate(range(OOS_START, OOS_END)):
-        year = dt.datetime.fromtimestamp(
-            candles[i].ts_ms / 1000, tz=dt.timezone.utc
-        ).year
+        year = dt.datetime.fromtimestamp(candles[i].ts_ms / 1000, tz=dt.UTC).year
         by_year[year].append(offset)
     for year, offsets in sorted(by_year.items()):
         a, b = min(offsets), max(offsets) + 1
@@ -538,9 +512,7 @@ def fold_and_year_breadth(
     return folds, years, concentration
 
 
-def moving_block_uncertainty(
-    candidate: np.ndarray, benchmark: np.ndarray
-) -> dict[str, Any]:
+def moving_block_uncertainty(candidate: np.ndarray, benchmark: np.ndarray) -> dict[str, Any]:
     if candidate.shape != benchmark.shape:
         raise ValueError("paired paths misaligned")
     n = candidate.size
@@ -551,12 +523,8 @@ def moving_block_uncertainty(
     sharpe_delta = np.empty(ECON_DRAWS)
     mdd_delta = np.empty(ECON_DRAWS)
     for d in range(ECON_DRAWS):
-        starts = rng.integers(
-            0, starts_max + 1, size=blocks_needed
-        )
-        idx = np.concatenate(
-            [np.arange(s, s + BLOCK_HOURS) for s in starts]
-        )[:n]
+        starts = rng.integers(0, starts_max + 1, size=blocks_needed)
+        idx = np.concatenate([np.arange(s, s + BLOCK_HOURS) for s in starts])[:n]
         c = candidate[idx]
         b = benchmark[idx]
         mean_delta[d] = float(np.mean(c - b))
@@ -566,32 +534,22 @@ def moving_block_uncertainty(
         "draws": ECON_DRAWS,
         "block_hours": BLOCK_HOURS,
         "seed": ECON_SEED,
-        "mean_hourly_net_difference_point": float(
-            np.mean(candidate - benchmark)
-        ),
+        "mean_hourly_net_difference_point": float(np.mean(candidate - benchmark)),
         "mean_hourly_net_difference_95": percentile_ci(mean_delta),
-        "annualized_sharpe_difference_point": (
-            sharpe(candidate) - sharpe(benchmark)
-        ),
+        "annualized_sharpe_difference_point": (sharpe(candidate) - sharpe(benchmark)),
         "annualized_sharpe_difference_95": percentile_ci(sharpe_delta),
-        "max_drawdown_difference_point": (
-            max_drawdown(candidate) - max_drawdown(benchmark)
-        ),
+        "max_drawdown_difference_point": (max_drawdown(candidate) - max_drawdown(benchmark)),
         "max_drawdown_difference_95": percentile_ci(mdd_delta),
     }
 
 
-def profile_transport(
-    candles: list[Candle], calibration: np.ndarray
-) -> dict[str, Any]:
+def profile_transport(candles: list[Candle], calibration: np.ndarray) -> dict[str, Any]:
     closes = np.array([c.close for c in candles], dtype=np.float64)
     returns = np.full(len(candles), np.nan, dtype=np.float64)
     returns[1:] = np.log(closes[1:] / closes[:-1])
     week_rows: dict[str, list[int]] = defaultdict(list)
     for i in range(OOS_START, OOS_END):
-        x = dt.datetime.fromtimestamp(
-            candles[i].ts_ms / 1000, tz=dt.timezone.utc
-        )
+        x = dt.datetime.fromtimestamp(candles[i].ts_ms / 1000, tz=dt.UTC)
         monday = x - dt.timedelta(
             days=x.weekday(),
             hours=x.hour,
@@ -604,19 +562,13 @@ def profile_transport(
     for key in sorted(week_rows):
         idx = week_rows[key]
         contiguous = all(
-            candles[i].ts_ms
-            == candles[idx[0]].ts_ms + (i - idx[0]) * 3_600_000
-            for i in idx
+            candles[i].ts_ms == candles[idx[0]].ts_ms + (i - idx[0]) * 3_600_000 for i in idx
         )
         if len(idx) == 168 and contiguous:
             complete.append(idx)
     if len(complete) < 100:
-        raise ValueError(
-            f"insufficient complete OOS weeks: {len(complete)}"
-        )
-    week_phase_sums = np.zeros(
-        (len(complete), 28), dtype=np.float64
-    )
+        raise ValueError(f"insufficient complete OOS weeks: {len(complete)}")
+    week_phase_sums = np.zeros((len(complete), 28), dtype=np.float64)
     week_counts = np.zeros((len(complete), 28), dtype=np.int64)
     for w, idx in enumerate(complete):
         for i in idx:
@@ -624,23 +576,17 @@ def profile_transport(
             week_phase_sums[w, p] += returns[i]
             week_counts[w, p] += 1
     if not np.all(week_counts == 6):
-        raise AssertionError(
-            "complete UTC week does not contain six hourly observations per phase"
-        )
+        raise AssertionError("complete UTC week does not contain six hourly observations per phase")
     total_sums = week_phase_sums.sum(axis=0)
     total_counts = week_counts.sum(axis=0)
     means = total_sums / total_counts
     oos_profile = means - float(total_sums.sum() / total_counts.sum())
     point = float(np.corrcoef(calibration, oos_profile)[0, 1])
-    sign_agreement = float(
-        np.mean(np.sign(calibration) == np.sign(oos_profile))
-    )
+    sign_agreement = float(np.mean(np.sign(calibration) == np.sign(oos_profile)))
     rng = np.random.default_rng(PROFILE_SEED)
     corrs = np.empty(PROFILE_DRAWS)
     for d in range(PROFILE_DRAWS):
-        sample = rng.integers(
-            0, len(complete), size=len(complete)
-        )
+        sample = rng.integers(0, len(complete), size=len(complete))
         sums = week_phase_sums[sample].sum(axis=0)
         counts = week_counts[sample].sum(axis=0)
         means_d = sums / counts
@@ -657,13 +603,9 @@ def profile_transport(
     }
 
 
-def transition_attribution(
-    candidate: dict[int, int], benchmark: dict[int, int]
-) -> dict[str, Any]:
+def transition_attribution(candidate: dict[int, int], benchmark: dict[int, int]) -> dict[str, Any]:
     decisions = list(range(OOS_START, OOS_END, 24))
-    disagreement = [
-        t for t in decisions if candidate[t] != benchmark[t]
-    ]
+    disagreement = [t for t in decisions if candidate[t] != benchmark[t]]
     cand_changes: list[int] = []
     bench_changes: list[int] = []
     prev_c = prev_b = 0
@@ -679,15 +621,9 @@ def transition_attribution(
         "disagreement_fraction": len(disagreement) / len(decisions),
         "candidate_decision_changes": len(cand_changes),
         "e2160_decision_changes": len(bench_changes),
-        "candidate_only_change_count": len(
-            set(cand_changes) - set(bench_changes)
-        ),
-        "e2160_only_change_count": len(
-            set(bench_changes) - set(cand_changes)
-        ),
-        "simultaneous_change_count": len(
-            set(cand_changes) & set(bench_changes)
-        ),
+        "candidate_only_change_count": len(set(cand_changes) - set(bench_changes)),
+        "e2160_only_change_count": len(set(bench_changes) - set(cand_changes)),
+        "simultaneous_change_count": len(set(cand_changes) & set(bench_changes)),
     }
 
 
@@ -704,41 +640,24 @@ def metric_gate(
 ) -> dict[str, bool]:
     return {
         "oos_positive": m["net_return"] > 0 and m["sharpe"] > 0,
-        "beats_e2160": (
-            m["net_return"] > e["net_return"]
-            and m["sharpe"] > e["sharpe"]
-        ),
-        "beats_always_long": (
-            m["net_return"] > a["net_return"]
-            and m["sharpe"] > a["sharpe"]
-        ),
+        "beats_e2160": (m["net_return"] > e["net_return"] and m["sharpe"] > e["sharpe"]),
+        "beats_always_long": (m["net_return"] > a["net_return"] and m["sharpe"] > a["sharpe"]),
         "paired_lower_bounds_positive": (
             u["mean_hourly_net_difference_95"][0] > 0
             and u["annualized_sharpe_difference_95"][0] > 0
         ),
         "drawdown": (
-            m["max_drawdown"] >= e["max_drawdown"] - 0.05
-            and m["max_drawdown"] > a["max_drawdown"]
+            m["max_drawdown"] >= e["max_drawdown"] - 0.05 and m["max_drawdown"] > a["max_drawdown"]
         ),
-        "turnover": (
-            m["turnover"] <= 1.5 * e["turnover"]
-            and m["turnover"] <= 80
-        ),
+        "turnover": (m["turnover"] <= 1.5 * e["turnover"] and m["turnover"] <= 80),
         "edge_per_turnover": (
-            m["edge_per_turnover"] > 0
-            and m["edge_per_turnover"] > e["edge_per_turnover"]
+            m["edge_per_turnover"] > 0 and m["edge_per_turnover"] > e["edge_per_turnover"]
         ),
-        "fold_breadth": (
-            sum(row["relative"] > 0 for row in folds) >= 8
-        ),
-        "year_breadth": all(
-            row["candidate_net"] > 0 and row["relative"] > 0
-            for row in years
-        ),
+        "fold_breadth": (sum(row["relative"] > 0 for row in folds) >= 8),
+        "year_breadth": all(row["candidate_net"] > 0 and row["relative"] > 0 for row in years),
         "fold_concentration": concentration <= 0.5,
         "profile_transport": (
-            transport["pearson_correlation"] > 0
-            and transport["pearson_correlation_95"][0] > 0
+            transport["pearson_correlation"] > 0 and transport["pearson_correlation_95"][0] > 0
         ),
         "delay": (
             delay["net_return"] > 0
@@ -748,9 +667,7 @@ def metric_gate(
     }
 
 
-def run_market(
-    inst: str, candles: list[Candle], manifest: dict[str, Any]
-) -> dict[str, Any]:
+def run_market(inst: str, candles: list[Candle], manifest: dict[str, Any]) -> dict[str, Any]:
     profile, counts, means, mu_all, profile_hash = compute_profile(candles)
     cand_targets, raw_targets, _ = targets_for_market(candles, profile)
     opens = np.array([c.open for c in candles], dtype=np.float64)
@@ -772,9 +689,7 @@ def run_market(
             "always_long": always_long,
             "cash": cash,
         }
-        perf[name] = {
-            key: value.metrics() for key, value in paths[name].items()
-        }
+        perf[name] = {key: value.metrics() for key, value in paths[name].items()}
     delay_path = simulate(
         opens,
         cand_targets,
@@ -795,16 +710,10 @@ def run_market(
     transport = profile_transport(candles, profile)
     attribution = transition_attribution(cand_targets, raw_targets)
     gross_timing = float(
-        np.sum(
-            paths["oos"]["candidate"].gross_returns
-            - paths["oos"]["e2160"].gross_returns
-        )
+        np.sum(paths["oos"]["candidate"].gross_returns - paths["oos"]["e2160"].gross_returns)
     )
     relative_fee = float(
-        -np.sum(
-            paths["oos"]["candidate"].fee_events
-            - paths["oos"]["e2160"].fee_events
-        )
+        -np.sum(paths["oos"]["candidate"].fee_events - paths["oos"]["e2160"].fee_events)
     )
     gates = metric_gate(
         perf["oos"]["candidate"],
@@ -818,9 +727,7 @@ def run_market(
         delay_metrics,
     )
     gates["source_and_integrity"] = True
-    gates["full_positive"] = (
-        perf["full"]["candidate"]["net_return"] > 0
-    )
+    gates["full_positive"] = perf["full"]["candidate"]["net_return"] > 0
     return {
         "instrument": inst,
         "source": manifest,
@@ -846,8 +753,7 @@ def run_market(
             "arithmetic_relative_fee_contribution": relative_fee,
             "arithmetic_sum": gross_timing + relative_fee,
             "compounded_net_return_difference": (
-                perf["oos"]["candidate"]["net_return"]
-                - perf["oos"]["e2160"]["net_return"]
+                perf["oos"]["candidate"]["net_return"] - perf["oos"]["e2160"]["net_return"]
             ),
         },
         "gates": gates,
@@ -913,12 +819,9 @@ def build_report(evidence: dict[str, Any]) -> str:
     for inst in MARKETS:
         market = evidence["markets"][inst]
         u = market["uncertainty"]
-        folds = sum(
-            x["relative"] > 0 for x in market["oos_fold_results"]
-        )
+        folds = sum(x["relative"] > 0 for x in market["oos_fold_results"])
         years = sum(
-            x["candidate_net"] > 0 and x["relative"] > 0
-            for x in market["oos_year_results"]
+            x["candidate_net"] > 0 and x["relative"] > 0 for x in market["oos_year_results"]
         )
         lines += [
             f"### {inst}",
@@ -928,10 +831,7 @@ def build_report(evidence: dict[str, Any]) -> str:
                 f"candidate-and-relative years: {years}/"
                 f"{len(market['oos_year_results'])}."
             ),
-            (
-                "- Positive-fold concentration: "
-                f"{market['positive_fold_concentration']:.4f}."
-            ),
+            (f"- Positive-fold concentration: {market['positive_fold_concentration']:.4f}."),
             (
                 "- Mean hourly net delta 95% CI: "
                 f"[{u['mean_hourly_net_difference_95'][0] * 10_000:+.4f}, "
@@ -1004,9 +904,7 @@ def main() -> None:
     }
     source_manifest_path = out / "source-manifest.json"
     source_manifest_path.write_bytes(canonical_json_bytes(source_manifest))
-    bilateral = all(
-        market_results[m]["passed_all_market_gates"] for m in MARKETS
-    )
+    bilateral = all(market_results[m]["passed_all_market_gates"] for m in MARKETS)
     evidence = {
         "family_id": FAMILY_ID,
         "classification": "executable base-signal representation experiment",
@@ -1035,14 +933,8 @@ def main() -> None:
         "source_manifest_sha256": sha256_file(source_manifest_path),
         "closed_rescue_paths": [
             "market substitution or subset promotion",
-            (
-                "phase count, bucket boundaries, calibration interval, "
-                "estimator or profile sign"
-            ),
-            (
-                "trend horizon, cadence, threshold, execution timing, "
-                "fee or sizing"
-            ),
+            ("phase count, bucket boundaries, calibration interval, estimator or profile sign"),
+            ("trend horizon, cadence, threshold, execution timing, fee or sizing"),
             "benchmark, bootstrap, delay or acceptance-gate changes",
             "OOS refit, profile pooling or favourable-phase selection",
         ],
@@ -1062,17 +954,11 @@ def main() -> None:
                 "accepted": bilateral,
                 "verdict": evidence["verdict"],
                 "evidence_sha256": sha256_file(evidence_path),
-                "source_manifest_sha256": sha256_file(
-                    source_manifest_path
-                ),
+                "source_manifest_sha256": sha256_file(source_manifest_path),
                 "markets": {
                     market: {
-                        "oos_candidate": market_results[market][
-                            "performance"
-                        ]["oos"]["candidate"],
-                        "oos_e2160": market_results[market][
-                            "performance"
-                        ]["oos"]["e2160"],
+                        "oos_candidate": market_results[market]["performance"]["oos"]["candidate"],
+                        "oos_e2160": market_results[market]["performance"]["oos"]["e2160"],
                         "gates": market_results[market]["gates"],
                     }
                     for market in MARKETS
