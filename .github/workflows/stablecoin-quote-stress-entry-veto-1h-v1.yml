@@ -1,0 +1,105 @@
+name: Stablecoin Quote Stress Entry Veto 1H V1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/run_stablecoin_quote_stress_entry_veto_1h_v1.py"
+      - ".github/workflows/stablecoin-quote-stress-entry-veto-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stablecoin-quote-stress-entry-veto-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  strategy-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/research/stablecoin-quote-stress-entry-veto-1h-v1
+      ARTIFACT_NAME: stablecoin-quote-stress-entry-veto-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact public-only revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.BINANCE_API_KEY }}"
+          test -z "${{ secrets.BINANCE_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+
+      - name: Execute frozen candidate and robustness gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/run_stablecoin_quote_stress_entry_veto_1h_v1.py
+          python scripts/run_stablecoin_quote_stress_entry_veto_1h_v1.py --output-dir "$OUTPUT_DIR"
+
+      - name: Verify machine-readable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          test -s "$OUTPUT_DIR/source_manifest.json"
+          expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
+          actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
+          test "$expected" = "$actual"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = json.loads((Path(os.environ["OUTPUT_DIR"]) / "evidence.json").read_text())
+          assert evidence["family_id"] == "causal-stablecoin-quote-stress-entry-veto-1h-v1"
+          assert evidence["candidate_count"] == 2
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["bar"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["markets"] == ["SOLUSDT", "XRPUSDT"]
+          assert evidence["fixed_lagged_exogenous_series"] == "USDCUSDT"
+          assert evidence["source"]["source_object_count"] == 144
+          assert evidence["source"]["checksum_object_count"] == 144
+          assert evidence["source"]["rows_per_symbol"] == 35064
+          assert evidence["source"]["coverage_pass"] is True
+          assert evidence["source"]["checksum_pass"] is True
+          assert evidence["source"]["common_calendar_pass"] is True
+          assert evidence["sample"]["sealed_oos"] == [17520, 34800]
+          assert evidence["sample"]["oos_fold_count"] == 8
+          assert len(evidence["targets"]) == 2
+          assert all(len(target["gates"]) == 11 for target in evidence["targets"])
+          assert all(target["segments"]["oos"]["candidate_minus_b1_identity"]["identity_pass"] for target in evidence["targets"])
+          assert all(target["one_hour_delay"]["identity"]["identity_pass"] for target in evidence["targets"])
+          assert all(value is False for value in evidence["hard_boundary"].values())
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert evidence["verdict"] in {
+              "reject_causal_stablecoin_quote_stress_entry_veto_1h_v1",
+              "support_causal_stablecoin_quote_stress_entry_veto_for_new_shadow_epoch_only",
+          }
+          PY
+
+      - name: Upload immutable source and strategy evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
