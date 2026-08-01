@@ -118,7 +118,7 @@ def source_arm(currency: str, output: Path) -> dict[str, Any]:
         limit=100,
         pause_seconds=0.12,
         timeout=30.0,
-        safety_pages=3,
+        safety_pages=5,
     )
     paths = write_okx_snapshot(snapshot, output / "source" / "okx" / market)
     candles = snapshot.candles.copy()
