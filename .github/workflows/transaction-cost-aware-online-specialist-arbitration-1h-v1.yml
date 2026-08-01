@@ -55,11 +55,17 @@ jobs:
           else
             python - <<'PY'
           import base64
+          import hashlib
           import zlib
           from pathlib import Path
 
           root = Path("reports/research/transaction-cost-aware-online-specialist-arbitration-1h-v1")
-          encoded = "".join((root / f"payload.part.{index:02d}").read_text(encoding="utf-8") for index in range(2))
+          encoded = "".join((root / f"payload.chunk.{index:02d}").read_text(encoding="utf-8") for index in range(15))
+          if len(encoded) != 14_288:
+              raise RuntimeError(f"payload length mismatch: {len(encoded)}")
+          digest = hashlib.sha256(encoded.encode("ascii")).hexdigest()
+          if digest != "20683925b788e5da3d49488aa3241446a07ce779fcc536079f0fda99b02d2f62":
+              raise RuntimeError(f"payload checksum mismatch: {digest}")
           Path("/tmp/specialist-output/materialized_source.py").write_bytes(zlib.decompress(base64.b64decode(encoded)))
           PY
           fi
@@ -94,7 +100,7 @@ jobs:
           cp /tmp/specialist-output/evidence.json "$REPORT_DIR/evidence.json"
           cp /tmp/specialist-output/evidence.sha256 "$REPORT_DIR/evidence.sha256"
           cp /tmp/specialist-output/report.md "$REPORT_DIR/report.md"
-          rm -f "$REPORT_DIR"/payload.part.*
+          rm -f "$REPORT_DIR"/payload.part.* "$REPORT_DIR"/payload.chunk.*
           git add -A "$REPORT_DIR"
           if git diff --cached --quiet; then
             echo 'Terminal evidence already persisted.'
