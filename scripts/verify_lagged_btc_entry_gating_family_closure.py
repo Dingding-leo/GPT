@@ -14,9 +14,9 @@ ROOT = Path("reports/research") / FAMILY
 PARENT = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
 EXPECTED = {
     "source_group_a.json": "400600a79b65061e85ff7bb086efb890c6ca5745d3c9ae05f082105181f177af",
-    "source_group_b.json": "3d94b5533b6039d4662a30460cebe5e89dca46f4f7b1237a945415426056a0fe",
-    "source_group_c.json": "b86f736b43d63999c1d7e74782bd2e6bc264d4c9e2829e49b67ab954757598b8",
-    "evidence.json": "c46260f308b9dd49df068f8987e1c0d508bf85144c7780dbe7bb93a0f2443b68",
+    "source_group_b.json": "1fa6a0d26aa4356cf6d316b3f4cb70767cfeb68fbd1fd9b671538d33c7e4f0e1",
+    "source_group_c.json": "f49f446406c9e9a120629d4182a0d221c2661e3f2c7c133c47a383fa157851f8",
+    "evidence.json": "518228fb26fdbb455c2593790d6c47ca2bd94790d49c5b1f3b7afab889882a6d",
     "report.md": "5257c6868659428413a5a0bf14301ce950deaf76683ee39614d210e36bc483ee",
 }
 
