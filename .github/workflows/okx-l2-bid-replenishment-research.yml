@@ -51,6 +51,63 @@ jobs:
             --base-url https://www.okx.com \
             --output-dir "$OUTPUT_DIR"
 
+      - name: Probe official archive schema without reading economics
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import tarfile
+          import urllib.request
+          from pathlib import Path
+          from urllib.parse import urlparse
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          manifest = json.loads((root / "source-manifest.json").read_text())
+          source = min(
+              manifest["source_objects"],
+              key=lambda item: item["declared_compressed_bytes_decimal_mb"],
+          )
+          url = source["url"]
+          request = urllib.request.Request(
+              url,
+              headers={
+                  "Accept": "application/gzip,application/octet-stream,*/*",
+                  "User-Agent": "gpt-quant-lab/0.2 (+https://github.com/Dingding-leo/GPT)",
+              },
+          )
+          with urllib.request.urlopen(request, timeout=90) as response:  # noqa: S310
+              final_url = response.geturl()
+              host = (urlparse(final_url).hostname or "").lower()
+              if not (host == "okx.com" or host.endswith(".okx.com") or host.endswith(".okxcdn.com")):
+                  raise SystemExit(f"untrusted archive redirect: {final_url}")
+              with tarfile.open(fileobj=response, mode="r|gz") as archive:
+                  member = next((item for item in archive if item.isfile()), None)
+                  if member is None:
+                      raise SystemExit("archive contains no regular file")
+                  extracted = archive.extractfile(member)
+                  if extracted is None:
+                      raise SystemExit("archive member cannot be read")
+                  prefix = extracted.read(256_000)
+
+          probe = {
+              "source_url": url,
+              "final_url": final_url,
+              "declared_size_mb": source["size_mb_decimal"],
+              "member_name": member.name,
+              "member_size": member.size,
+              "prefix_bytes": len(prefix),
+              "prefix_sha256": hashlib.sha256(prefix).hexdigest(),
+              "prefix_utf8": prefix.decode("utf-8", errors="strict"),
+          }
+          (root / "archive-probe.json").write_text(
+              json.dumps(probe, indent=2, sort_keys=True) + "\n"
+          )
+          print(json.dumps({key: value for key, value in probe.items() if key != "prefix_utf8"}, indent=2))
+          PY
+
       - name: Verify terminal evidence
         shell: bash
         run: |
@@ -65,7 +122,8 @@ jobs:
           summary_path = root / "result-summary.json"
           manifest_path = root / "source-manifest.json"
           report_path = root / "report.md"
-          for path in (summary_path, manifest_path, report_path):
+          probe_path = root / "archive-probe.json"
+          for path in (summary_path, manifest_path, report_path, probe_path):
               if not path.is_file() or path.stat().st_size == 0:
                   raise SystemExit(f"missing evidence: {path}")
 
