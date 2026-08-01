@@ -152,6 +152,19 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     result["new_public_observations_per_market"] = 1
     result["window"]["prior_cumulative_realized_hours"] = 589
     result["window"]["updated_cumulative_realized_hours"] = 590
+    realised = result["markets"][0]["realized_interval"]
+    result["window"]["realized_payoff_interval_start"] = realised["payoff_open_start"]
+    result["window"]["realized_payoff_interval_end"] = realised["payoff_open_end"]
+    total_intervals = sum(m["recent_forward_window"]["realized_interval_count"] for m in result["markets"])
+    total_longs = sum(m["recent_forward_window"]["long_decision_count"] for m in result["markets"])
+    signal_frequency = total_longs / total_intervals if total_intervals else None
+    result["aggregate_forward_scorecard"] = {
+        "market_count": len(result["markets"]),
+        "realized_interval_count": total_intervals,
+        "long_decision_count": total_longs,
+        "signal_frequency": signal_frequency,
+        "no_trade_frequency": None if signal_frequency is None else 1.0 - signal_frequency,
+    }
     result["nomination_status"] = "no_statistically_eligible_frozen_strategy"
     result["latest_terminal_candidate_context"] = {
         "issue": 889,
