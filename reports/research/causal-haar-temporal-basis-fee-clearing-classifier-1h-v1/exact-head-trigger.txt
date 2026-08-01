@@ -1,0 +1,1 @@
+Exact-head verification trigger after immutable evidence persistence. This file contains no strategy input, output, parameter, market data, or performance claim.
