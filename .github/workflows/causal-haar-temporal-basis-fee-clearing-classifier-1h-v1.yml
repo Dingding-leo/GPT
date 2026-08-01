@@ -61,6 +61,7 @@ jobs:
             test -f "$SOURCE_B64_PATH"
             base64 --decode "$SOURCE_B64_PATH" | gzip --decompress > /tmp/haar-output/materialized_source.py
           fi
+          # B007 is intentionally ignored: the completed IRLS loop index is recorded after convergence.
           ruff check --fix --ignore B007 /tmp/haar-output/materialized_source.py
           ruff format /tmp/haar-output/materialized_source.py
           ruff check --ignore B007 /tmp/haar-output/materialized_source.py
