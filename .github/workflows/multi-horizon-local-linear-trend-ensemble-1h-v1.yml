@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   research:
     runs-on: ubuntu-latest
@@ -17,6 +20,12 @@ jobs:
     steps:
       - name: Checkout exact head
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 1
+
+      - name: Verify exact checked-out revision
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,8 +40,10 @@ jobs:
       - name: Materialize formatted deterministic reproducer
         run: |
           mkdir -p /tmp/local-linear-output
-          cp reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py \
-            /tmp/local-linear-output/materialized_source.py
+          {
+            printf '%s\n' '# ruff: noqa: E501'
+            cat reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py
+          } > /tmp/local-linear-output/materialized_source.py
           ruff check --fix /tmp/local-linear-output/materialized_source.py
           ruff format /tmp/local-linear-output/materialized_source.py
           ruff check /tmp/local-linear-output/materialized_source.py
