@@ -14,8 +14,11 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    payload_path = Path(__file__).with_name("run_research_impl.py.gz.b64")
-    encoded = "".join(payload_path.read_text(encoding="ascii").splitlines())
+    root = Path(__file__).parent
+    payload_paths = [root / f"run_research_impl.py.gz.b64.part{i:02d}" for i in range(4)]
+    encoded = "".join(
+        "".join(path.read_text(encoding="ascii").splitlines()) for path in payload_paths
+    )
     source = gzip.decompress(base64.b64decode(encoded, validate=True))
     source.decode("utf-8")
     args.materialize.parent.mkdir(parents=True, exist_ok=True)
