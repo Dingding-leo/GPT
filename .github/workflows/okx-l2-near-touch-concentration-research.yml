@@ -4,10 +4,10 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "scripts/run_okx_l2_bid-replenishment-placeholder.py"
       - "scripts/run_okx_l2_bid_replenishment_diagnostic.py"
       - "scripts/run_okx_l2_day_replay.py"
       - "scripts/run_okx_l2_concentration_diagnostic.py"
+      - "scripts/run_okx_l2_concentration_source_gate.py"
       - "scripts/run_okx_l2_concentration_day_replay.py"
       - ".github/workflows/okx-l2-near-touch-concentration-research.yml"
   workflow_dispatch:
@@ -30,6 +30,8 @@ env:
 jobs:
   metadata:
     runs-on: ubuntu-24.04
+    outputs:
+      source_feasible: ${{ steps.contract.outputs.source_feasible }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -51,36 +53,54 @@ jobs:
             scripts/run_okx_l2_bid_replenishment_diagnostic.py \
             scripts/run_okx_l2_day_replay.py \
             scripts/run_okx_l2_concentration_diagnostic.py \
+            scripts/run_okx_l2_concentration_source_gate.py \
             scripts/run_okx_l2_concentration_day_replay.py
           python -m py_compile \
             scripts/run_okx_l2_bid_replenishment_diagnostic.py \
             scripts/run_okx_l2_day_replay.py \
             scripts/run_okx_l2_concentration_diagnostic.py \
+            scripts/run_okx_l2_concentration_source_gate.py \
             scripts/run_okx_l2_concentration_day_replay.py
       - name: Freeze fresh 2024 source metadata
         run: |
-          python scripts/run_okx_l2_concentration_diagnostic.py metadata \
+          python scripts/run_okx_l2_concentration_source_gate.py \
             --base-url https://www.okx.com \
             --output-dir frozen-metadata
-      - name: Verify metadata contract
+      - name: Verify metadata contract or terminal rejection
+        id: contract
         run: |
           python - <<'PY'
           import hashlib
           import json
+          import os
           from pathlib import Path
 
-          path = Path("frozen-metadata/source-manifest.json")
-          raw = path.read_bytes()
-          manifest = json.loads(raw)
+          root = Path("frozen-metadata")
+          manifest_raw = (root / "source-manifest.json").read_bytes()
+          manifest = json.loads(manifest_raw)
           assert manifest["family_id"] == "okx-l2-persistent-near-touch-concentration-asymmetry-1h-v1"
-          assert manifest["markets"] == ["BTC-USDT", "ETH-USDT"]
-          assert len(manifest["anchor_dates_utc"]) == 24
-          assert manifest["source_object_count"] == 48
-          assert manifest["byte_gate_passed"] is True
-          assert manifest["economic_values_read"] is False
-          assert manifest["largest_object_bytes"] <= manifest["per_object_ceiling_bytes"]
-          assert manifest["declared_compressed_bytes"] <= manifest["cumulative_ceiling_bytes"]
-          print("metadata_sha256", hashlib.sha256(raw).hexdigest())
+          feasible = bool(manifest.get("source_feasible"))
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"source_feasible={str(feasible).lower()}\n")
+          if feasible:
+              assert manifest["markets"] == ["BTC-USDT", "ETH-USDT"]
+              assert len(manifest["anchor_dates_utc"]) == 24
+              assert manifest["source_object_count"] == 48
+              assert manifest["byte_gate_passed"] is True
+              assert manifest["economic_values_read"] is False
+              assert manifest["largest_object_bytes"] <= manifest["per_object_ceiling_bytes"]
+              assert manifest["declared_compressed_bytes"] <= manifest["cumulative_ceiling_bytes"]
+          else:
+              raw = (root / "evidence.json").read_bytes()
+              evidence = json.loads(raw)
+              assert evidence["candidate_count"] == 0
+              assert evidence["source_feasible"] is False
+              assert evidence["economic_values_read"] is False
+              assert evidence["verdict"] == "reject_public_okx_l2_concentration_source_feasibility"
+              assert evidence["source_manifest_sha256"] == hashlib.sha256(manifest_raw).hexdigest()
+              assert (root / "report.md").is_file()
+              print("terminal_evidence_sha256", hashlib.sha256(raw).hexdigest())
+          print("metadata_sha256", hashlib.sha256(manifest_raw).hexdigest())
           PY
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -91,6 +111,7 @@ jobs:
 
   process-day:
     needs: metadata
+    if: needs.metadata.outputs.source_feasible == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     strategy:
@@ -181,7 +202,8 @@ jobs:
           retention-days: 30
 
   aggregate:
-    needs: process-day
+    needs: [metadata, process-day]
+    if: needs.metadata.outputs.source_feasible == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
