@@ -1,0 +1,111 @@
+name: Week Phase Deseasonalized Endpoint Trend 1H Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/run_week_phase_deseasonalized_endpoint_trend.py"
+      - ".github/workflows/week-phase-deseasonalized-endpoint-trend.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: week-phase-deseasonalized-trend-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+env:
+  EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  ARTIFACT_NAME: week-phase-deseasonalized-trend-${{ github.run_number }}-${{ github.run_attempt }}
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_SHA }}
+          persist-credentials: false
+      - name: Verify exact head
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install numeric dependency
+        run: python -m pip install --disable-pip-version-check numpy==2.2.6
+      - name: Execute frozen real-data experiment
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/run_week_phase_deseasonalized_endpoint_trend.py
+          python scripts/run_week_phase_deseasonalized_endpoint_trend.py \
+            --output-dir week-phase-evidence | tee terminal-summary.json
+      - name: Verify evidence contract
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("week-phase-evidence")
+          evidence_bytes = (root / "evidence.json").read_bytes()
+          evidence = json.loads(evidence_bytes)
+          manifest_bytes = (root / "source-manifest.json").read_bytes()
+          sums = json.loads((root / "sha256sums.json").read_text())
+
+          assert evidence["family_id"] == (
+              "causal-week-phase-deseasonalized-endpoint-trend-1h-v1"
+          )
+          assert evidence["frozen_at_main"] == (
+              "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          )
+          assert evidence["candidate_count"] == 2
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["markets_required"] == ["SUSHI-USDT", "CRV-USDT"]
+          assert evidence["bar"] == "1H"
+          assert evidence["fee_one_way"] == 0.0005
+          assert evidence["exposure_domain"] == [0, 1]
+          assert evidence["rows_per_market"] == 43441
+          assert evidence["segments"] == {
+              "calibration": [2160, 10080],
+              "training": [10080, 17520],
+              "oos": [17520, 43440],
+              "full": [10080, 43440],
+          }
+          assert evidence["canonical_strategy_changed"] is False
+          assert evidence["paper_or_live_authority"] is False
+          assert evidence["verdict"] in {
+              "accept_causal_week_phase_deseasonalized_endpoint_trend_1h_v1",
+              "reject_causal_week_phase_deseasonalized_endpoint_trend_1h_v1",
+          }
+          assert evidence["accepted"] == evidence["bilateral_replication"]
+          for market in evidence["markets_required"]:
+              row = evidence["markets"][market]
+              assert row["source"]["actual_rows"] == 43441
+              assert row["profile"]["phase_count"] == 28
+              assert min(row["profile"]["counts"]) >= 280
+              assert row["source"]["normalized_sha256"]
+              assert len(row["oos_fold_results"]) == 12
+              assert row["uncertainty"]["draws"] == 5000
+              assert row["profile_transport"]["draws"] == 5000
+              assert row["performance"]["oos"]["candidate"]["turnover"] <= 1080
+              assert row["passed_all_market_gates"] == all(row["gates"].values())
+          assert evidence["source_manifest_sha256"] == hashlib.sha256(
+              manifest_bytes
+          ).hexdigest()
+          for name, digest in sums.items():
+              path = root / name
+              assert path.is_file(), name
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == digest
+          print("evidence_sha256", hashlib.sha256(evidence_bytes).hexdigest())
+          print("source_manifest_sha256", hashlib.sha256(manifest_bytes).hexdigest())
+          PY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: |
+            week-phase-evidence/
+            terminal-summary.json
+          if-no-files-found: error
+          retention-days: 30
