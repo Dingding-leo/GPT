@@ -1,0 +1,94 @@
+name: OKX L2 Bid Replenishment Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/run_okx_l2_bid_replenishment_diagnostic.py"
+      - ".github/workflows/okx-l2-bid-replenishment-research.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: okx-l2-bid-replenishment-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      OUTPUT_DIR: reports/research/okx-l2-bid-replenishment-resilience-1h-v1
+      ARTIFACT_NAME: okx-l2-bid-replenishment-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Verify exact checkout
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+
+      - name: Execute frozen source-feasibility gate
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python scripts/run_okx_l2_bid_replenishment_diagnostic.py \
+            --base-url https://www.okx.com \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify terminal evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          summary_path = root / "result-summary.json"
+          manifest_path = root / "source-manifest.json"
+          report_path = root / "report.md"
+          for path in (summary_path, manifest_path, report_path):
+              if not path.is_file() or path.stat().st_size == 0:
+                  raise SystemExit(f"missing evidence: {path}")
+
+          summary = json.loads(summary_path.read_text())
+          manifest_bytes = manifest_path.read_bytes()
+          if summary["family_id"] != "okx-l2-bid-replenishment-resilience-opportunity-diagnostic-1h-v1":
+              raise SystemExit("wrong family id")
+          if summary["candidate_count"] != 0 or summary["new_oos_consumed"] is not False:
+              raise SystemExit("candidate/OOS contract changed")
+          if summary["fee_one_way"] != "0.0005" or summary["round_trip_label_fee"] != "0.001":
+              raise SystemExit("fee contract changed")
+          if summary["verdict"] != "reject_public_okx_l2_source_feasibility":
+              raise SystemExit("source gate did not terminate with frozen verdict")
+          digest = hashlib.sha256(manifest_bytes).hexdigest()
+          if summary["source_manifest_sha256"] != digest:
+              raise SystemExit("manifest digest mismatch")
+          print(json.dumps(summary, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload immutable research evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 30
