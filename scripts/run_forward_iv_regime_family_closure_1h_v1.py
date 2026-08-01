@@ -270,7 +270,7 @@ def write_report(output_dir: Path, evidence: dict[str, Any]) -> None:
         f"- Family: `{evidence['family_id']}`",
         f"- Exact tested head: `{evidence['tested_head']}`",
         f"- Architecture groups: `{counts['architecture_groups']}`",
-        f"- New candidates/data/OOS: `0 / 0 / 0`",
+        "- New candidates/data/OOS: `0 / 0 / 0`",
         f"- Verdict: `{evidence['verdict']}`",
         "",
         "## Architecture support matrix",
