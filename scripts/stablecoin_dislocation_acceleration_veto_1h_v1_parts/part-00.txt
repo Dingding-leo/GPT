@@ -1,0 +1,360 @@
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import math
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from collections import Counter
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+FAMILY_ID = "causal-stablecoin-dislocation-acceleration-confirmed-e2160-entry-1h-v1"
+ACCEPT_VERDICT = "accept_causal_stablecoin_dislocation_acceleration_confirmed_e2160_entry_1h_v1"
+REJECT_VERDICT = "reject_causal_stablecoin_dislocation_acceleration_confirmed_e2160_entry_1h_v1"
+REPOSITORY_MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+PROTOCOL_SIGNATURE = (
+    FAMILY_ID
+    + "|targets=BTC-USDT,ETH-USDT|exogenous=USDC-USDT-SPOT"
+    + "|d=abs(log(usdcusdt-close))|old=median[t-1464:t-744]"
+    + "|new=median[t-744:t-24]|worsening=new-old>0"
+    + "|entry=own-E2160-positive-and-not-worsening|exit=own-E2160-nonpositive"
+    + "|daily-00UTC|next-hour-open|segment-cash-reset|fee=5bps-one-way"
+    + "|source=OKX-public-SPOT-1H-2023-04-01-to-2025-12-31"
+    + "|candidate-count=2|parameter-grid=0"
+)
+BASE_URL = "https://www.okx.com"
+CANDLE_ENDPOINT = "/api/v5/market/history-candles"
+INSTRUMENT_ENDPOINT = "/api/v5/public/instruments"
+BAR = "1H"
+LIMIT = 100
+HOUR_MS = 3_600_000
+START_MS = int(datetime(2023, 4, 1, tzinfo=UTC).timestamp() * 1000)
+END_MS = int(datetime(2026, 1, 1, tzinfo=UTC).timestamp() * 1000)
+EXPECTED_ROWS = 24_144
+WARMUP_END = 2_160
+TRAIN_END = 10_800
+OOS_END = 23_760
+FULL_END = OOS_END
+FEE = 0.0005
+ANNUAL_HOURS = 8_760.0
+BOOTSTRAP_DRAWS = 5_000
+BOOTSTRAP_BLOCK = 168
+BOOTSTRAP_SEED = 20_260_802_11
+MARKETS = ("BTC-USDT", "ETH-USDT")
+EXOGENOUS = "USDC-USDT"
+SERIES_IDS = (*MARKETS, EXOGENOUS)
+MAX_RESPONSE_BYTES = 1_000_000
+MAX_PAGES = 300
+
+
+class SourceContractError(RuntimeError):
+    pass
+
+
+class FetchError(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class Series:
+    inst_id: str
+    open_ms: np.ndarray
+    opens: np.ndarray
+    highs: np.ndarray
+    lows: np.ndarray
+    closes: np.ndarray
+    normalized_sha256: str
+    manifest: tuple[dict[str, Any], ...]
+    instrument_evidence: dict[str, Any]
+
+
+def canonical_bytes(value: Any) -> bytes:
+    return (
+        json.dumps(json_ready(value), sort_keys=True, separators=(",", ":"), allow_nan=False)
+        + "\n"
+    ).encode()
+
+
+def sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def json_ready(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {str(key): json_ready(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_ready(item) for item in value]
+    if isinstance(value, np.ndarray):
+        return [json_ready(item) for item in value.tolist()]
+    if isinstance(value, (np.integer,)):
+        return int(value)
+    if isinstance(value, (np.floating,)):
+        number = float(value)
+        return number if math.isfinite(number) else None
+    if isinstance(value, float):
+        return value if math.isfinite(value) else None
+    if isinstance(value, Path):
+        return value.as_posix()
+    return value
+
+
+def persist_json(path: Path, value: Any) -> str:
+    payload = json.dumps(
+        json_ready(value), sort_keys=True, indent=2, allow_nan=False
+    ).encode() + b"\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    return sha256_bytes(payload)
+
+
+def utc_iso(milliseconds: int) -> str:
+    return (
+        datetime.fromtimestamp(milliseconds / 1000, tz=UTC)
+        .isoformat()
+        .replace("+00:00", "Z")
+    )
+
+
+def quarter_key(milliseconds: int) -> str:
+    timestamp = datetime.fromtimestamp(milliseconds / 1000, tz=UTC)
+    return f"{timestamp.year}-Q{(timestamp.month - 1) // 3 + 1}"
+
+
+def year_key(milliseconds: int) -> int:
+    return datetime.fromtimestamp(milliseconds / 1000, tz=UTC).year
+
+
+def reject_duplicate_fields(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise SourceContractError(f"duplicate JSON field {key!r}")
+        result[key] = value
+    return result
+
+
+def fetch(url: str, *, attempts: int = 7) -> tuple[bytes, dict[str, Any]]:
+    errors: list[str] = []
+    for attempt in range(1, attempts + 1):
+        request = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/json",
+                "User-Agent": "Dingding-leo-GPT-stablecoin-dislocation-research/1.0",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:  # noqa: S310
+                body = response.read(MAX_RESPONSE_BYTES + 1)
+                if response.status != 200:
+                    raise FetchError(f"HTTP {response.status}")
+                if response.geturl() != url:
+                    raise FetchError(f"redirect rejected: {url} -> {response.geturl()}")
+                if not body or len(body) > MAX_RESPONSE_BYTES:
+                    raise FetchError("empty or oversized response")
+                return body, {
+                    "request_url": url,
+                    "final_url": response.geturl(),
+                    "http_status": int(response.status),
+                    "content_type": response.headers.get("Content-Type"),
+                    "response_bytes": len(body),
+                    "response_sha256": sha256_bytes(body),
+                    "attempt": attempt,
+                }
+        except urllib.error.HTTPError as exc:
+            body = exc.read(MAX_RESPONSE_BYTES + 1)
+            errors.append(
+                f"attempt {attempt}: HTTP {exc.code} body={sha256_bytes(body)}"
+            )
+            if exc.code not in {408, 429, 500, 502, 503, 504}:
+                raise SourceContractError(
+                    f"non-retryable public HTTP {exc.code} for {url}; "
+                    f"body_sha256={sha256_bytes(body)}"
+                ) from exc
+        except (urllib.error.URLError, TimeoutError, OSError, FetchError) as exc:
+            errors.append(f"attempt {attempt}: {type(exc).__name__}: {exc}")
+        if attempt < attempts:
+            time.sleep(min(2 ** (attempt - 1), 12))
+    raise FetchError(f"public request failed after {attempts} attempts: {errors}")
+
+
+def parse_payload(raw: bytes, *, label: str) -> list[Any]:
+    try:
+        payload = json.loads(
+            raw.decode("utf-8"), object_pairs_hook=reject_duplicate_fields
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SourceContractError(f"{label}: invalid UTF-8 JSON") from exc
+    if not isinstance(payload, dict) or set(payload) != {"code", "msg", "data"}:
+        raise SourceContractError(f"{label}: top-level schema mismatch")
+    if payload["code"] != "0" or not isinstance(payload["msg"], str):
+        raise SourceContractError(
+            f"{label}: API code={payload['code']!r} msg={payload['msg']!r}"
+        )
+    if not isinstance(payload["data"], list):
+        raise SourceContractError(f"{label}: data is not a list")
+    return payload["data"]
+
+
+def acquire_instrument_identity(inst_id: str, root: Path) -> dict[str, Any]:
+    params = urllib.parse.urlencode({"instType": "SPOT", "instId": inst_id})
+    url = f"{BASE_URL}{INSTRUMENT_ENDPOINT}?{params}"
+    raw, metadata = fetch(url)
+    instrument_dir = root / inst_id
+    instrument_dir.mkdir(parents=True, exist_ok=True)
+    path = instrument_dir / "instrument.json"
+    path.write_bytes(raw)
+    rows = parse_payload(raw, label=f"{inst_id} instrument")
+    matching = [
+        row
+        for row in rows
+        if isinstance(row, dict)
+        and row.get("instId") == inst_id
+        and row.get("instType") == "SPOT"
+    ]
+    if len(matching) != 1:
+        raise SourceContractError(
+            f"{inst_id}: expected one exact public SPOT instrument row, got {len(matching)}"
+        )
+    row = matching[0]
+    if row.get("state") != "live":
+        raise SourceContractError(f"{inst_id}: public SPOT instrument is not live")
+    return {
+        **metadata,
+        "response_file": path.as_posix(),
+        "inst_id": inst_id,
+        "inst_type": row.get("instType"),
+        "state": row.get("state"),
+        "base_currency": row.get("baseCcy"),
+        "quote_currency": row.get("quoteCcy"),
+        "instrument_row_sha256": sha256_bytes(canonical_bytes(row)),
+    }
+
+
+def parse_candle_row(
+    row: Any, *, inst_id: str, page: int, row_number: int
+) -> tuple[int, float, float, float, float, tuple[str, ...]]:
+    if not isinstance(row, list) or len(row) != 9:
+        raise SourceContractError(
+            f"{inst_id} page {page} row {row_number}: expected 9 fields"
+        )
+    if not isinstance(row[0], str) or not row[0].isascii() or not row[0].isdigit():
+        raise SourceContractError(
+            f"{inst_id} page {page} row {row_number}: invalid timestamp"
+        )
+    timestamp = int(row[0])
+    if timestamp % HOUR_MS:
+        raise SourceContractError(
+            f"{inst_id} page {page} row {row_number}: off-hour timestamp"
+        )
+    if row[8] != "1":
+        raise SourceContractError(
+            f"{inst_id} page {page} row {row_number}: incomplete candle"
+        )
+    try:
+        open_value, high, low, close = (float(row[index]) for index in range(1, 5))
+        volumes = [float(row[index]) for index in (5, 6, 7)]
+    except (TypeError, ValueError) as exc:
+        raise SourceContractError(
+            f"{inst_id} page {page} row {row_number}: non-numeric candle"
+        ) from exc
+    if not all(
+        math.isfinite(value) and value > 0
+        for value in (open_value, high, low, close)
+    ):
+        raise SourceContractError(
+            f"{inst_id} page {page} row {row_number}: invalid OHLC"
+        )
+    if high < max(open_value, low, close) or low > min(open_value, high, close):
+        raise SourceContractError(
+            f"{inst_id} page {page} row {row_number}: OHLC invariant failure"
+        )
+    if not all(math.isfinite(value) and value >= 0 for value in volumes):
+        raise SourceContractError(
+            f"{inst_id} page {page} row {row_number}: invalid volume"
+        )
+    return timestamp, open_value, high, low, close, tuple(str(value) for value in row)
+
+
+def acquire_series(inst_id: str, root: Path) -> Series:
+    series_dir = root / inst_id
+    series_dir.mkdir(parents=True, exist_ok=True)
+    instrument_evidence = acquire_instrument_identity(inst_id, root)
+    cursor = END_MS
+    seen: dict[int, tuple[str, ...]] = {}
+    values: dict[int, tuple[float, float, float, float]] = {}
+    manifest: list[dict[str, Any]] = []
+    previous_oldest: int | None = None
+    for page in range(1, MAX_PAGES + 1):
+        params = urllib.parse.urlencode(
+            {
+                "instId": inst_id,
+                "bar": BAR,
+                "after": str(cursor),
+                "limit": str(LIMIT),
+            }
+        )
+        url = f"{BASE_URL}{CANDLE_ENDPOINT}?{params}"
+        raw, metadata = fetch(url)
+        page_path = series_dir / f"page-{page:04d}.json"
+        page_path.write_bytes(raw)
+        rows = parse_payload(raw, label=f"{inst_id} page {page}")
+        if not rows:
+            raise SourceContractError(
+                f"{inst_id}: empty page before requested start at cursor {cursor}"
+            )
+        parsed = [
+            parse_candle_row(
+                row,
+                inst_id=inst_id,
+                page=page,
+                row_number=row_number,
+            )
+            for row_number, row in enumerate(rows, start=1)
+        ]
+        timestamps = [item[0] for item in parsed]
+        if any(newer <= older for newer, older in zip(timestamps, timestamps[1:])):
+            raise SourceContractError(
+                f"{inst_id} page {page}: rows are not strictly newest-to-oldest"
+            )
+        newest, oldest = timestamps[0], timestamps[-1]
+        if newest >= cursor:
+            raise SourceContractError(
+                f"{inst_id} page {page}: timestamp is not older than after cursor"
+            )
+        if previous_oldest is not None and oldest >= previous_oldest:
+            raise SourceContractError(f"{inst_id}: pagination failed to move backward")
+        for timestamp, open_value, high, low, close, raw_row in parsed:
+            prior = seen.get(timestamp)
+            if prior is not None and prior != raw_row:
+                raise SourceContractError(
+                    f"{inst_id}: conflicting row for {utc_iso(timestamp)}"
+                )
+            seen.setdefault(timestamp, raw_row)
+            values.setdefault(timestamp, (open_value, high, low, close))
+        manifest.append(
+            {
+                **metadata,
+                "inst_id": inst_id,
+                "endpoint": CANDLE_ENDPOINT,
+                "page": page,
+                "response_file": page_path.as_posix(),
+                "rows": len(rows),
+                "newest": utc_iso(newest),
+                "oldest": utc_iso(oldest),
+            }
+        )
+        previous_oldest = oldest
+        cursor = oldest
+        if oldest <= START_MS:
+            break
+        time.sleep(0.12)
+    else:
