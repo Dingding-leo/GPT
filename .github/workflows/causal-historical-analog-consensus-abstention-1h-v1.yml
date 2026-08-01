@@ -50,7 +50,7 @@ jobs:
           python -m pip install --disable-pip-version-check \
             "numpy==2.2.6" "ruff==0.16.1"
 
-      - name: Materialize deterministic reproducer
+      - name: Materialize and verify deterministic reproducer
         shell: bash
         run: |
           set -euo pipefail
@@ -61,8 +61,6 @@ jobs:
             test -f "$SOURCE_B64_PATH"
             base64 --decode "$SOURCE_B64_PATH" | gzip --decompress > /tmp/analog-output/materialized_source.py
           fi
-          ruff check --fix /tmp/analog-output/materialized_source.py
-          ruff format /tmp/analog-output/materialized_source.py
           ruff check /tmp/analog-output/materialized_source.py
           ruff format --check /tmp/analog-output/materialized_source.py
           python -m py_compile /tmp/analog-output/materialized_source.py
