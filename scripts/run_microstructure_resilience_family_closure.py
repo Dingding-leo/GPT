@@ -41,9 +41,7 @@ def validate(source: dict[str, Any]) -> None:
     for group in groups:
         votes = group["dimension_votes"]
         assert set(votes) == set(DIMENSIONS)
-        assert all(
-            vote in {"pass", "fail", "not_applicable"} for vote in votes.values()
-        )
+        assert all(vote in {"pass", "fail", "not_applicable"} for vote in votes.values())
         assert group["supportive"] is all(vote != "fail" for vote in votes.values())
         assert group["terminal_verdict"] and group["failure_mechanisms"]
 
@@ -60,10 +58,7 @@ def validate(source: dict[str, Any]) -> None:
     assert v2["residual_sharpe_vs_trend"] == -2.4403088029779063
     onset = by_id["onset_aggressive_flow_absorption"]["metrics"]
     assert onset["mean_delta_95"][0] == onset["sharpe_delta_95"][0] == 0.0
-    assert (
-        onset["largest_event_share"] > 0.5
-        and onset["price_only_shadow_identical"] is True
-    )
+    assert onset["largest_event_share"] > 0.5 and onset["price_only_shadow_identical"] is True
     l2 = by_id["l2_bid_replenishment_resilience"]["metrics"]
     assert l2["primary"]["ETH-USDT"]["net_rho"] < 0
     interval_names = (
@@ -82,9 +77,7 @@ def build(source: dict[str, Any], source_sha: str) -> dict[str, Any]:
     groups = source["groups"]
     supportive = sum(g["supportive"] for g in groups)
     counts = {
-        dimension: sum(
-            group["dimension_votes"][dimension] == "pass" for group in groups
-        )
+        dimension: sum(group["dimension_votes"][dimension] == "pass" for group in groups)
         for dimension in DIMENSIONS
     }
     leave_one_out = [
@@ -97,26 +90,18 @@ def build(source: dict[str, Any], source_sha: str) -> dict[str, Any]:
         for omitted in groups
     ]
     v2_group = next(
-        group
-        for group in groups
-        if group["group_id"] == "individual_trade_flow_response_residual"
+        group for group in groups if group["group_id"] == "individual_trade_flow_response_residual"
     )
     onset_group = next(
-        group
-        for group in groups
-        if group["group_id"] == "onset_aggressive_flow_absorption"
+        group for group in groups if group["group_id"] == "onset_aggressive_flow_absorption"
     )
     v2 = v2_group["metrics"]
     onset = onset_group["metrics"]
     gates = {
         "supportive_groups_at_least_3_of_4": supportive >= 3,
-        "dependence_support_at_least_3_of_4": (
-            counts["dependence_aware_support"] >= 3
-        ),
+        "dependence_support_at_least_3_of_4": (counts["dependence_aware_support"] >= 3),
         "temporal_breadth_at_least_3_of_4": counts["temporal_breadth"] >= 3,
-        "replication_latency_at_least_3_of_4": (
-            counts["replication_or_latency"] >= 3
-        ),
+        "replication_latency_at_least_3_of_4": (counts["replication_or_latency"] >= 3),
         "no_material_negative_executable_evidence": not (
             v2["net_return"] - v2["benchmark_net_return"] < -0.25
             and v2["residual_sharpe_vs_trend"] < 0
@@ -125,8 +110,7 @@ def build(source: dict[str, Any], source_sha: str) -> dict[str, Any]:
             row["retained_supportive_groups"] >= 2 for row in leave_one_out
         ),
         "not_shadow_or_single_event_explained": not (
-            onset["price_only_shadow_identical"]
-            or onset["largest_event_share"] > 0.5
+            onset["price_only_shadow_identical"] or onset["largest_event_share"] > 0.5
         ),
     }
     accepted = all(gates.values())
@@ -191,10 +175,7 @@ def report(evidence: dict[str, Any], source: dict[str, Any]) -> str:
         "",
         f"Verdict: `{evidence['verdict']}`",
         "",
-        (
-            "| Group | Source | Positive | Dependence | Breadth | "
-            "Replication/latency | Supportive |"
-        ),
+        ("| Group | Source | Positive | Dependence | Breadth | Replication/latency | Supportive |"),
         "|---|---:|---:|---:|---:|---:|---:|",
     ]
     for group in evidence["group_audit"]:
