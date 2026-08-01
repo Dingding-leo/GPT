@@ -55,7 +55,17 @@ def load():
     return d
 
 
-def compute():
+def load_source_verification(path):
+    verification = json.loads(path.read_text(encoding="utf-8"))
+    assert verification["passed"] is True
+    assert verification["artifact_count"] == 3
+    assert verification["market_count"] == 6
+    assert verification["metric_identity_checks"] > 100
+    assert len(verification["source_metrics_sha256"]) == 64
+    return verification
+
+
+def compute(source_verification):
     d = load()
     ms = d["markets"]
     arch = d["architectures"]
@@ -117,14 +127,35 @@ def compute():
         }
     breadth = sum(r["breadth_qualified"] for r in ms)
     paired = sum(r["paired_both_lower_positive"] for r in ms)
-    identity = all(
-        len(a["source_head"]) == 40
-        and len(a["artifact_zip_sha256"]) == 64
-        and len(a["evidence_sha256"]) == 64
+    verified_artifacts = {
+        (a["architecture"], a["artifact_id"]): (
+            a["artifact_zip_sha256"],
+            a["evidence_sha256"],
+        )
+        for a in source_verification["artifacts"]
+    }
+    expected_artifacts = {
+        (a["architecture"], a["artifact_id"]): (
+            a["artifact_zip_sha256"],
+            a["evidence_sha256"],
+        )
         for a in arch
-    ) and all(
-        r["rows"] == 24144 and len(r["source_sha256"]) == 64 and r["benchmark_oos"]["turnover"] > 0
-        for r in ms
+    }
+    identity = (
+        source_verification["passed"] is True
+        and verified_artifacts == expected_artifacts
+        and all(
+            len(a["source_head"]) == 40
+            and len(a["artifact_zip_sha256"]) == 64
+            and len(a["evidence_sha256"]) == 64
+            for a in arch
+        )
+        and all(
+            r["rows"] == 24144
+            and len(r["source_sha256"]) == 64
+            and r["benchmark_oos"]["turnover"] > 0
+            for r in ms
+        )
     )
     gates = {
         "market_net_5_of_6": agg["mean_hourly_net"]["positive_market_count"] >= 5,
@@ -174,6 +205,7 @@ def compute():
             "full": [2160, 23760],
             "suffix": [23760, 24144],
         },
+        "source_artifact_verification": source_verification,
         "source_artifacts": arch,
         "source_markets": ms,
         "aggregation": agg,
@@ -294,8 +326,9 @@ def render(e):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--output-dir", type=Path, required=True)
+    p.add_argument("--source-verification", type=Path, required=True)
     a = p.parse_args()
-    e = compute()
+    e = compute(load_source_verification(a.source_verification))
     a.output_dir.mkdir(parents=True, exist_ok=True)
     raw = (json.dumps(e, indent=2, sort_keys=True) + "\n").encode()
     (a.output_dir / "evidence.json").write_bytes(raw)
