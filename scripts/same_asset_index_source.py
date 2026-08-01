@@ -1,4 +1,5 @@
 """Compatibility names for the immutable reused temporal-metrics core."""
+import onchain_activity_source as source
 from onchain_activity_source import (
     BOOTSTRAP_BLOCK,
     BOOTSTRAP_DRAWS,
@@ -16,6 +17,9 @@ from onchain_activity_source import (
     utc_iso,
 )
 
+# The first immutable request was rejected before data access.  Retrying with a
+# smaller page is a transport repair only: it changes neither timestamps nor values.
+source.CM_PAGE_SIZE = 2_000
 Series = PriceSeries
 
 __all__ = [
