@@ -1,0 +1,220 @@
+{
+  "architecture_group": "weekly_phase_conditioned_trend_carry",
+  "bar": "1H",
+  "candidate_count": 1,
+  "family_id": "weekly-phase-conditioned-trend-carry-1h-v1",
+  "fee_one_way": 0.0005,
+  "markets": {
+    "BTC-USDT": {
+      "benchmark_e2160_daily": {
+        "full": {
+          "edge_per_turnover_bps": 70.63992202551525,
+          "fees": 0.0365,
+          "max_drawdown": -0.5592198563591378,
+          "net_return": 0.29720328370528426,
+          "sharpe": 0.33550630270724086,
+          "turnover": 73.0
+        },
+        "oos": {
+          "edge_per_turnover_bps": 213.28979424687475,
+          "fees": 0.0225,
+          "max_drawdown": -0.2654678573881655,
+          "net_return": 1.202156307296331,
+          "sharpe": 0.9561877759387446,
+          "turnover": 45.0
+        },
+        "training": {
+          "edge_per_turnover_bps": -158.6188011873839,
+          "fees": 0.014,
+          "max_drawdown": -0.5592198563591378,
+          "net_return": -0.4109395053351551,
+          "sharpe": -0.8340790661802613,
+          "turnover": 28.0
+        }
+      },
+      "breadth": {
+        "folds": 12,
+        "positive_fold_concentration": 0.4089156616544047,
+        "profitable_folds": 6,
+        "profitable_years": 3,
+        "years": 4
+      },
+      "candidate": {
+        "full": {
+          "edge_per_turnover_bps": 166.3648867601845,
+          "fees": 0.0205,
+          "max_drawdown": -0.3927395772964395,
+          "net_return": 0.5510194589623849,
+          "sharpe": 0.45486380561469103,
+          "turnover": 41.0
+        },
+        "oos": {
+          "edge_per_turnover_bps": 367.8977556625039,
+          "fees": 0.0115,
+          "max_drawdown": -0.25140045243732934,
+          "net_return": 0.9824660808897092,
+          "sharpe": 0.8650316382375346,
+          "turnover": 23.0
+        },
+        "training": {
+          "edge_per_turnover_bps": -91.1493346150014,
+          "fees": 0.009,
+          "max_drawdown": -0.3927395772964395,
+          "net_return": -0.21763127555438988,
+          "sharpe": -0.31505207191648893,
+          "turnover": 18.0
+        }
+      },
+      "delay_robustness": null,
+      "frozen_favourable_weekdays": [
+        "Sunday",
+        "Saturday"
+      ],
+      "phase_transport": {
+        "pearson": 0.3674125754995623,
+        "spearman": 0.07142857142857144
+      },
+      "realised_oos_top_two_weekdays": [
+        "Wednesday",
+        "Monday"
+      ],
+      "residual_sharpe": {
+        "vs_daily_e2160": -0.396577695862081,
+        "vs_hourly_e2160": -0.2430356918363608
+      },
+      "top_two_overlap": 0,
+      "uncertainty_vs_daily_e2160": {
+        "annualised_mean_delta_l95": -0.1697538071907353,
+        "sharpe_delta_l95": -0.4582189858662103
+      }
+    },
+    "ETH-USDT": {
+      "benchmark_e2160_daily": {
+        "full": {
+          "edge_per_turnover_bps": 88.14,
+          "fees": 0.0265,
+          "max_drawdown": -0.5695,
+          "net_return": 0.0416,
+          "sharpe": 0.235,
+          "turnover": 53.0
+        },
+        "oos": {
+          "edge_per_turnover_bps": 283.58,
+          "fees": 0.015,
+          "max_drawdown": -0.4777,
+          "net_return": 0.7451603410954828,
+          "sharpe": 0.646,
+          "turnover": 30.0
+        },
+        "training": {
+          "edge_per_turnover_bps": -166.79,
+          "fees": 0.0115,
+          "max_drawdown": -0.5695,
+          "net_return": -0.4032,
+          "sharpe": -0.577,
+          "turnover": 23.0
+        }
+      },
+      "breadth": {
+        "folds": 12,
+        "positive_fold_concentration": 0.2576,
+        "profitable_folds": 6,
+        "profitable_years": 3,
+        "years": 4
+      },
+      "candidate": {
+        "full": {
+          "edge_per_turnover_bps": -10.25,
+          "fees": 0.0195,
+          "max_drawdown": -0.573,
+          "net_return": -0.3876,
+          "sharpe": -0.02,
+          "turnover": 39.0
+        },
+        "oos": {
+          "edge_per_turnover_bps": 134.57,
+          "fees": 0.0115,
+          "max_drawdown": -0.573,
+          "net_return": -0.010459631859692675,
+          "sharpe": 0.225,
+          "turnover": 23.0
+        },
+        "training": {
+          "edge_per_turnover_bps": -218.43,
+          "fees": 0.008,
+          "max_drawdown": -0.5398,
+          "net_return": -0.3812,
+          "sharpe": -0.53,
+          "turnover": 16.0
+        }
+      },
+      "delay_robustness": null,
+      "frozen_favourable_weekdays": [
+        "Tuesday",
+        "Saturday"
+      ],
+      "phase_transport": {
+        "pearson": -0.1559,
+        "spearman": -0.10714285714285714
+      },
+      "realised_oos_top_two_weekdays": [
+        "Wednesday",
+        "Monday"
+      ],
+      "residual_sharpe": {
+        "vs_daily_e2160": -1.1789456671740681,
+        "vs_hourly_e2160": -1.005
+      },
+      "selected_weekday_oos_positive_trend_24h_log_return_mean": -0.003819,
+      "top_two_overlap": 0,
+      "uncertainty_vs_daily_e2160": {
+        "annualised_mean_delta_l95": -0.406476,
+        "sharpe_delta_l95": -0.898653
+      },
+      "unselected_weekday_oos_positive_trend_24h_log_return_mean": 0.003064
+    }
+  },
+  "parameter_grid_count": 0,
+  "record_schema": "completed_strategy_terminal_record_v1",
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "source": {
+    "confirmed": true,
+    "immutable_artifacts": {
+      "BTC-USDT": {
+        "artifact_id": 8704977298,
+        "artifact_zip_sha256": "22d6d0e7f5dbffe4e746f091a5ab2488e3edc7d8440fea393ee2862295cf208c",
+        "csv_sha256": "92bd223ce3898604700dd0d834b93b146ea2247cb72f8a57b112ed28e7fbbbe9"
+      },
+      "ETH-USDT": {
+        "artifact_id": 8704978112,
+        "artifact_zip_sha256": "e7107f83a4eb5059ada0bb2097aeb5ded976dc9c037f564538f5cf5b4a7dffe3",
+        "csv_sha256": "2845617652dd4017caa0447838e980da49c88d0328545a1fba5bf18554dc5726"
+      }
+    },
+    "market_type": "SPOT",
+    "provider": "OKX",
+    "sample": {
+      "fold_hours": 2160,
+      "later_suffix_unread": true,
+      "oos": [
+        17520,
+        43440
+      ],
+      "oos_folds": 12,
+      "training": [
+        2880,
+        17520
+      ],
+      "warmup": [
+        0,
+        2880
+      ]
+    }
+  },
+  "source_evidence_head": "29d1a1daaf1ffebf306328cfc82a04197aec526a",
+  "source_issue": 617,
+  "source_pr": 620,
+  "source_report_blob_sha": "5d5bf2df5e63e313e5b3a0e5d2f505e6072ec5a6",
+  "terminal_comment_id": 5116817853,
+  "verdict": "reject_exact_weekly_phase_conditioned_trend_carry_family"
+}
