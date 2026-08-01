@@ -9,13 +9,13 @@ from typing import Any
 import run_okx_l2_bid_replenishment_diagnostic as core
 
 
-def process_archive(
+def _process_archive_once(
     manifest_path: Path,
     market: str,
     anchor: str,
     output_dir: Path,
 ) -> dict[str, Any]:
-    """Replay one official provider-ordered OKX L2 daily archive.
+    """Replay one official provider-ordered OKX L2 daily archive once.
 
     The archive emits a new row only when the order book changes. Its `ts`
     field is therefore validated as a unique, strictly increasing provider
@@ -257,6 +257,41 @@ def process_archive(
     output_path = output_dir / f"{market}-{anchor}.json"
     output_path.write_bytes(core.canonical_json(result))
     return result
+
+
+def process_archive(
+    manifest_path: Path,
+    market: str,
+    anchor: str,
+    output_dir: Path,
+) -> dict[str, Any]:
+    """Replay an archive, restarting cleanly after transient stream truncation."""
+
+    transient_errors = (
+        core.tarfile.ReadError,
+        EOFError,
+        OSError,
+        TimeoutError,
+    )
+    last_error: BaseException | None = None
+    for attempt in range(3):
+        try:
+            result = _process_archive_once(
+                manifest_path,
+                market,
+                anchor,
+                output_dir,
+            )
+            result["archive_replay_attempts"] = attempt + 1
+            output_path = output_dir / f"{market}-{anchor}.json"
+            output_path.write_bytes(core.canonical_json(result))
+            return result
+        except transient_errors as exc:
+            last_error = exc
+            if attempt == 2:
+                raise
+            time.sleep(2**attempt)
+    raise RuntimeError("unreachable archive replay retry state") from last_error
 
 
 def main() -> None:
