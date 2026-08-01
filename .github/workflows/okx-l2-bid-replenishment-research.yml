@@ -6,6 +6,7 @@ on:
     paths:
       - "scripts/run_okx_l2_bid_replenishment_diagnostic.py"
       - "scripts/run_okx_l2_day_replay.py"
+      - "scripts/run_okx_l2_aggregate.py"
       - ".github/workflows/okx-l2-bid-replenishment-research.yml"
   workflow_dispatch:
 
@@ -45,10 +46,12 @@ jobs:
           python -m pip check
           ruff check --ignore E501 \
             scripts/run_okx_l2_bid_replenishment_diagnostic.py \
-            scripts/run_okx_l2_day_replay.py
+            scripts/run_okx_l2_day_replay.py \
+            scripts/run_okx_l2_aggregate.py
           python -m py_compile \
             scripts/run_okx_l2_bid_replenishment_diagnostic.py \
-            scripts/run_okx_l2_day_replay.py
+            scripts/run_okx_l2_day_replay.py \
+            scripts/run_okx_l2_aggregate.py
       - name: Freeze official source cohort
         run: |
           python scripts/run_okx_l2_bid_replenishment_diagnostic.py metadata \
@@ -186,7 +189,7 @@ jobs:
           merge-multiple: true
       - name: Compute labels, uncertainty, delay and verdict
         run: |
-          python scripts/run_okx_l2_bid_replenishment_diagnostic.py aggregate \
+          python scripts/run_okx_l2_aggregate.py \
             --manifest-path frozen-metadata/source-manifest.json \
             --days-root processed-days \
             --output-dir final-evidence
