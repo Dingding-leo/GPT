@@ -6,7 +6,6 @@ on:
     paths:
       - 'scripts/run_onchain_activity_confirmed_e2160.py'
       - 'scripts/onchain_activity_source.py'
-      - 'scripts/onchain_activity_metrics.py'
       - '.github/workflows/onchain-activity-confirmed-e2160.yml'
 
 permissions:
@@ -44,15 +43,13 @@ jobs:
           env | cut -d= -f1 | grep -Eiq '(OKX|COINMETRICS|BINANCE).*(SECRET|TOKEN|KEY)' && exit 1 || true
           ! grep -RInE 'place_order|create_order|submit_order|send_order|/api/v5/(account|trade|asset|broker)' \
             scripts/run_onchain_activity_confirmed_e2160.py \
-            scripts/onchain_activity_source.py \
-            scripts/onchain_activity_metrics.py
+            scripts/onchain_activity_source.py
 
       - name: Compile frozen experiment
         run: >-
           python -m py_compile
           scripts/run_onchain_activity_confirmed_e2160.py
           scripts/onchain_activity_source.py
-          scripts/onchain_activity_metrics.py
 
       - name: Execute immutable public-data experiment
         shell: bash
