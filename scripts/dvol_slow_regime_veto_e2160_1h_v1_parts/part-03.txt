@@ -1,0 +1,180 @@
+        fold_end = (
+            oos_decisions.index[int(split_indices[fold_number][0])]
+            if fold_number < 6
+            else SAMPLE_END
+        )
+        value = segment_relative_effect(candles, decisions, fold_start, fold_end)
+        value["fold"] = fold_number
+        value["decision_count"] = int(len(indices))
+        folds.append(value)
+    years = [
+        segment_relative_effect(
+            candles,
+            decisions,
+            pd.Timestamp(f"{year}-01-01T00:00:00Z"),
+            pd.Timestamp(f"{year + 1}-01-01T00:00:00Z"),
+        )
+        for year in (2024, 2025)
+    ]
+    for year, value in zip((2024, 2025), years, strict=True):
+        value["year"] = year
+    relative_fold_values = [float(value["relative_net_return"]) for value in folds]
+    return {
+        "folds": folds,
+        "years": years,
+        "positive_candidate_folds": sum(
+            value["candidate"]["net_compounded_return"] > 0 for value in folds
+        ),
+        "positive_relative_folds": sum(value["relative_net_return"] > 0 for value in folds),
+        "positive_relative_fold_concentration": positive_contribution_share(
+            relative_fold_values
+        ),
+        "both_years_candidate_positive": all(
+            value["candidate"]["net_compounded_return"] > 0 for value in years
+        ),
+        "both_years_relative_positive": all(value["relative_net_return"] > 0 for value in years),
+    }
+
+
+def transition_cluster_concentration(
+    candidate: dict[str, Any],
+    benchmark: dict[str, Any],
+) -> dict[str, Any]:
+    difference = candidate["positions"] != benchmark["positions"]
+    relative_returns = candidate["net_returns"] - benchmark["net_returns"]
+    effects: list[float] = []
+    index = 0
+    while index < len(difference):
+        if not difference[index]:
+            index += 1
+            continue
+        end = index + 1
+        while end < len(difference) and difference[end]:
+            end += 1
+        effects.append(float(relative_returns[index:end].sum()))
+        index = end
+    return {
+        "cluster_count": len(effects),
+        "positive_cluster_count": sum(value > 0 for value in effects),
+        "positive_edge_concentration": positive_contribution_share(effects),
+        "effects": effects,
+    }
+
+
+def delayed_result(candles: pd.DataFrame, base: dict[str, Any]) -> dict[str, Any]:
+    positions = np.concatenate(([0.0], base["positions"][:-1]))
+    return evaluate_positions(candles, base["hours"], positions)
+
+
+def full_economics(
+    candles: pd.DataFrame,
+    decisions: pd.DataFrame,
+) -> dict[str, Any]:
+    results: dict[str, Any] = {}
+    for segment, start, end in (
+        ("training", TRAIN_START, OOS_START),
+        ("oos", OOS_START, SAMPLE_END),
+        ("full", TRAIN_START, SAMPLE_END),
+    ):
+        candidate = position_path(
+            candles,
+            decisions,
+            start=start,
+            end=end,
+            state_column="candidate",
+        )
+        benchmark = position_path(
+            candles,
+            decisions,
+            start=start,
+            end=end,
+            state_column="base",
+        )
+        always_decisions = decisions.copy()
+        always_decisions["always_long"] = 1
+        always_long = position_path(
+            candles,
+            always_decisions,
+            start=start,
+            end=end,
+            state_column="always_long",
+        )
+        results[segment] = {
+            "candidate": candidate,
+            "e2160": benchmark,
+            "always_long": always_long,
+        }
+    oos = results["oos"]
+    bootstrap = moving_block_interval(oos["candidate"]["net_returns"], oos["e2160"]["net_returns"])
+    delayed_candidate = delayed_result(candles, oos["candidate"])
+    delayed_benchmark = delayed_result(candles, oos["e2160"])
+    folds = fold_and_year_audit(candles, decisions)
+    clusters = transition_cluster_concentration(oos["candidate"], oos["e2160"])
+    quarter_effects: list[dict[str, Any]] = []
+    for year in (2024, 2025):
+        for quarter in range(1, 5):
+            month = 3 * (quarter - 1) + 1
+            start = pd.Timestamp(year=year, month=month, day=1, tz="UTC")
+            end = start + pd.offsets.QuarterBegin(startingMonth=month)
+            value = segment_relative_effect(candles, decisions, start, end)
+            value["quarter"] = f"{year}-Q{quarter}"
+            quarter_effects.append(value)
+    quarter_values = [float(value["relative_net_return"]) for value in quarter_effects]
+    return {
+        "segments": {
+            segment: {
+                name: value["metrics"]
+                for name, value in segment_values.items()
+            }
+            for segment, segment_values in results.items()
+        },
+        "oos_paths": oos,
+        "bootstrap": bootstrap,
+        "delayed": {
+            "candidate": delayed_candidate["metrics"],
+            "e2160": delayed_benchmark["metrics"],
+        },
+        "fold_and_year": folds,
+        "transition_clusters": clusters,
+        "quarters": quarter_effects,
+        "positive_relative_quarter_concentration": positive_contribution_share(quarter_values),
+        "gross_vs_fee_decomposition": {
+            "candidate_minus_e2160_gross_arithmetic": float(
+                oos["candidate"]["gross_returns"].sum() - oos["e2160"]["gross_returns"].sum()
+            ),
+            "candidate_minus_e2160_fee_arithmetic": float(
+                -FEE * (oos["candidate"]["turnover"] - oos["e2160"]["turnover"])
+            ),
+            "candidate_minus_e2160_net_arithmetic": float(
+                oos["candidate"]["net_returns"].sum() - oos["e2160"]["net_returns"].sum()
+            ),
+        },
+    }
+
+
+def oos_gate(economics: dict[str, Any]) -> dict[str, bool]:
+    oos = economics["segments"]["oos"]
+    candidate = oos["candidate"]
+    benchmark = oos["e2160"]
+    candidate_sharpe = candidate["annualized_sharpe"]
+    benchmark_sharpe = benchmark["annualized_sharpe"]
+    candidate_edge = candidate["edge_per_turnover_bps"]
+    benchmark_edge = benchmark["edge_per_turnover_bps"]
+    folds = economics["fold_and_year"]
+    delayed = economics["delayed"]
+    delayed_candidate = delayed["candidate"]
+    delayed_benchmark = delayed["e2160"]
+    concentrations = [
+        folds["positive_relative_fold_concentration"],
+        economics["positive_relative_quarter_concentration"],
+        economics["transition_clusters"]["positive_edge_concentration"],
+    ]
+    return {
+        "candidate_oos_net_return_positive": candidate["net_compounded_return"] > 0,
+        "candidate_oos_sharpe_positive": bool(
+            candidate_sharpe is not None and candidate_sharpe > 0
+        ),
+        "candidate_oos_return_beats_e2160": (
+            candidate["net_compounded_return"] > benchmark["net_compounded_return"]
+        ),
+        "candidate_oos_sharpe_beats_e2160": bool(
