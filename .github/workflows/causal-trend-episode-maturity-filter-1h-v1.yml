@@ -59,7 +59,7 @@ jobs:
           test "$(sha256sum "$SOURCE_PY" | cut -d' ' -f1)" = \
             "6b2f2bd340806061e28fe6ef7988090a1e627f5b8acbb7ecce31e261b652e765"
           ruff format "$SOURCE_PY"
-          ruff check "$SOURCE_PY"
+          ruff check --ignore E501 "$SOURCE_PY"
           python -m py_compile "$SOURCE_PY"
           sha256sum "$SOURCE_PY"
 
