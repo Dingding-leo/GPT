@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -26,12 +26,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
-      - name: Check out exact evidence head without credentials
+      - name: Check out exact evidence head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ env.EXPECTED_TESTED_SHA }}
           fetch-depth: 1
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Verify exact checked-out revision
         run: |
@@ -136,6 +136,28 @@ jobs:
           else:
               assert evidence["performance_accessed"] is False
           PY
+
+      - name: Persist exact terminal evidence
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository }}
+        shell: bash
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$REPORT_DIR"
+          for file in evidence.json evidence.sha256 report.md source-manifest.json source-manifest.sha256 training-freeze.json training-freeze.sha256 report.sha256; do
+            if test -f "/tmp/tsd-output/$file"; then
+              cp "/tmp/tsd-output/$file" "$REPORT_DIR/$file"
+            fi
+          done
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$REPORT_DIR"
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "research: persist temporal-dominance evidence"
+          git push origin "HEAD:$HEAD_REF"
 
       - name: Build immutable artifact manifest
         if: always()
