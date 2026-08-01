@@ -1,0 +1,180 @@
+            candidate_sharpe is not None
+            and benchmark_sharpe is not None
+            and candidate_sharpe > benchmark_sharpe
+        ),
+        "candidate_oos_drawdown_less_severe": (
+            candidate["maximum_drawdown"] > benchmark["maximum_drawdown"]
+        ),
+        "candidate_oos_edge_per_turnover_positive": bool(
+            candidate_edge is not None and candidate_edge > 0
+        ),
+        "candidate_oos_edge_per_turnover_beats_e2160": bool(
+            candidate_edge is not None
+            and benchmark_edge is not None
+            and candidate_edge > benchmark_edge
+        ),
+        "candidate_oos_turnover_at_most_twice_e2160": (
+            candidate["one_way_turnover"] <= 2.0 * benchmark["one_way_turnover"]
+        ),
+        "minimum_4_of_6_positive_candidate_folds": folds["positive_candidate_folds"] >= 4,
+        "minimum_4_of_6_positive_relative_folds": folds["positive_relative_folds"] >= 4,
+        "both_oos_years_candidate_positive": folds["both_years_candidate_positive"],
+        "both_oos_years_relative_positive": folds["both_years_relative_positive"],
+        "mean_delta_lower_bound_positive": economics["bootstrap"]["mean_delta_lower_95"] > 0,
+        "sharpe_delta_lower_bound_positive": economics["bootstrap"]["sharpe_delta_lower_95"] > 0,
+        "delayed_candidate_positive": bool(
+            delayed_candidate["net_compounded_return"] > 0
+            and delayed_candidate["annualized_sharpe"] is not None
+            and delayed_candidate["annualized_sharpe"] > 0
+        ),
+        "delayed_candidate_beats_delayed_e2160": bool(
+            delayed_candidate["net_compounded_return"]
+            > delayed_benchmark["net_compounded_return"]
+            and delayed_candidate["annualized_sharpe"] is not None
+            and delayed_benchmark["annualized_sharpe"] is not None
+            and delayed_candidate["annualized_sharpe"]
+            > delayed_benchmark["annualized_sharpe"]
+        ),
+        "positive_edge_concentration_at_most_60_percent": all(
+            value is not None and value <= 0.60 for value in concentrations
+        ),
+    }
+
+
+def compact_path(value: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "metrics": value["metrics"],
+        "hour_count": len(value["hours"]),
+        "position_sha256": digest(canonical(value["positions"].astype(int).tolist())),
+        "net_return_path_sha256": digest(canonical(value["net_returns"].tolist())),
+    }
+
+
+def strip_paths(economics: dict[str, Any]) -> dict[str, Any]:
+    result = dict(economics)
+    result.pop("oos_paths", None)
+    return result
+
+
+def report(evidence: dict[str, Any]) -> str:
+    lines = [
+        "# Lagged DVOL slow-regime veto for E2160",
+        "",
+        f"- Family: `{FAMILY_ID}`",
+        f"- Tested head: `{evidence['tested_head']}`",
+        f"- Candidate count: `{evidence['candidate_count']}`",
+        f"- Fee: `{evidence['modeled_fee_bps_one_way']}` bps one way",
+        f"- Training gate passed bilaterally: `{evidence['bilateral_training_gate_passed']}`",
+        f"- OOS accessed: `{evidence['oos_accessed']}`",
+        f"- Verdict: `{evidence['verdict']}`",
+        "",
+        "| Market | Source | Vetoes | Reauth | Train candidate | Train E2160 | Training gate |",
+        "|---|---:|---:|---:|---:|---:|---:|",
+    ]
+    for arm in evidence["market_arms"]:
+        train_candidate = arm.get("training", {}).get("candidate", {}).get("net_compounded_return")
+        train_benchmark = arm.get("training", {}).get("e2160", {}).get("net_compounded_return")
+        lines.append(
+            f"| {arm['market']} | {arm['source_contract_passed']} | "
+            f"{arm.get('training_support', {}).get('veto_decisions')} | "
+            f"{arm.get('training_support', {}).get('reauthorization_decisions')} | "
+            f"{train_candidate} | {train_benchmark} | {arm.get('training_gate_passed')} |"
+        )
+    if evidence["oos_accessed"]:
+        lines += [
+            "",
+            "| Market | OOS candidate | OOS E2160 | Sharpe candidate / E2160 | "
+            "MDD candidate / E2160 | Turnover candidate / E2160 | OOS gate |",
+            "|---|---:|---:|---:|---:|---:|---:|",
+        ]
+        for arm in evidence["market_arms"]:
+            oos = arm["economics"]["segments"]["oos"]
+            lines.append(
+                f"| {arm['market']} | {oos['candidate']['net_compounded_return']} | "
+                f"{oos['e2160']['net_compounded_return']} | "
+                f"{oos['candidate']['annualized_sharpe']} / {oos['e2160']['annualized_sharpe']} | "
+                f"{oos['candidate']['maximum_drawdown']} / {oos['e2160']['maximum_drawdown']} | "
+                f"{oos['candidate']['one_way_turnover']} / {oos['e2160']['one_way_turnover']} | "
+                f"{arm['oos_gate_passed']} |"
+            )
+    else:
+        lines += [
+            "",
+            "Sealed OOS and full-sample economics remain null because the frozen bilateral "
+            "training gate failed.",
+        ]
+    lines += [
+        "",
+        "## Machine-readable verdict",
+        "",
+        "```json",
+        json.dumps(evidence["machine_readable_verdict"], sort_keys=True, indent=2),
+        "```",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tested-head", required=True)
+    parser.add_argument("--output-dir", required=True)
+    args = parser.parse_args()
+    if len(args.tested_head) != 40 or any(
+        character not in "0123456789abcdef" for character in args.tested_head
+    ):
+        raise ValueError("tested head must be a lowercase 40-character SHA")
+    output = Path(args.output_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    arms: list[dict[str, Any]] = []
+    source_errors: dict[str, str] = {}
+    runtime_values: dict[str, dict[str, Any]] = {}
+
+    for currency in ("BTC", "ETH"):
+        market = f"{currency}-USDT"
+        try:
+            source = source_arm(currency, output)
+            candles = source.pop("candles")
+            dvol_close = source.pop("dvol_close")
+            decisions = decision_table(candles, dvol_close)
+            train_decisions = decisions.loc[TRAIN_START : OOS_START - pd.Timedelta(hours=1)]
+            candidate_train = position_path(
+                candles,
+                decisions,
+                start=TRAIN_START,
+                end=OOS_START,
+                state_column="candidate",
+            )
+            benchmark_train = position_path(
+                candles,
+                decisions,
+                start=TRAIN_START,
+                end=OOS_START,
+                state_column="base",
+            )
+            support = training_support(train_decisions)
+            gate = training_gate(support, candidate_train, benchmark_train)
+            source_pass = bool(source["source_contract_passed"])
+            gate_pass = source_pass and all(gate.values())
+            arm = {
+                **source,
+                "training_support": support,
+                "training": {
+                    "candidate": candidate_train["metrics"],
+                    "e2160": benchmark_train["metrics"],
+                },
+                "training_conditional_returns": conditional_returns(candles, train_decisions),
+                "training_gate": gate,
+                "training_gate_passed": gate_pass,
+                "oos_gate": None,
+                "oos_gate_passed": None,
+                "economics": None,
+            }
+            runtime_values[currency] = {
+                "candles": candles,
+                "decisions": decisions,
+                "candidate_train": candidate_train,
+                "benchmark_train": benchmark_train,
+            }
+            arms.append(arm)
+        except Exception as exc:
