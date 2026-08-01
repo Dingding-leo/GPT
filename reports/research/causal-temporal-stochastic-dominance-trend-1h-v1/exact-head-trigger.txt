@@ -1,0 +1,2 @@
+Exact-head verification trigger after deterministic terminal evidence was persisted at commit 348650db1aeffc403cf5b29ed2eafbadf6be605a.
+No strategy, data, metric, fee, gate, or verdict value is changed by this file.
