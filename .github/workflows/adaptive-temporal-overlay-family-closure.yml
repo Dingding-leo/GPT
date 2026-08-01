@@ -14,6 +14,7 @@ on:
         type: string
 
 permissions:
+  actions: read
   contents: read
 
 concurrency:
@@ -48,35 +49,61 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Verify canonical formatting
+      - name: Verify committed formatter and lint state
         run: |
           set -euo pipefail
           python -m pip install "ruff==0.16.1"
-          target=reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py
-          ruff check "$target"
-          ruff format --check "$target"
+          targets=(
+            reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py
+            reports/research/adaptive-temporal-overlay-family-closure-1h-v1/verify_source_artifacts.py
+          )
+          ruff check "${targets[@]}"
+          ruff format --check "${targets[@]}"
+          git diff --exit-code
+
+      - name: Verify frozen source artifacts and metric extraction
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/adaptive-overlay-closure
+          python reports/research/adaptive-temporal-overlay-family-closure-1h-v1/verify_source_artifacts.py \
+            --output artifacts/adaptive-overlay-closure/source_artifact_verification.json
 
       - name: Reproduce deterministic closure twice
         run: |
           set -euo pipefail
           python -m compileall -q reports/research/adaptive-temporal-overlay-family-closure-1h-v1
-          python reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py --output-dir artifacts/adaptive-overlay-closure
-          python reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py --output-dir /tmp/adaptive-overlay-closure-replay
+          python reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py \
+            --source-verification artifacts/adaptive-overlay-closure/source_artifact_verification.json \
+            --output-dir artifacts/adaptive-overlay-closure
+          python reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py \
+            --source-verification artifacts/adaptive-overlay-closure/source_artifact_verification.json \
+            --output-dir /tmp/adaptive-overlay-closure-replay
           cmp artifacts/adaptive-overlay-closure/evidence.json /tmp/adaptive-overlay-closure-replay/evidence.json
           cmp artifacts/adaptive-overlay-closure/evidence.sha256 /tmp/adaptive-overlay-closure-replay/evidence.sha256
           cmp artifacts/adaptive-overlay-closure/report.md /tmp/adaptive-overlay-closure-replay/report.md
+          cp reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py \
+            artifacts/adaptive-overlay-closure/run_meta_analysis.py
+          cp reports/research/adaptive-temporal-overlay-family-closure-1h-v1/verify_source_artifacts.py \
+            artifacts/adaptive-overlay-closure/verify_source_artifacts.py
+          git diff --exit-code
 
       - name: Verify frozen verdict and identities
         run: |
           python - <<'PY'
           import json
           from pathlib import Path
+
           e = json.loads(Path("artifacts/adaptive-overlay-closure/evidence.json").read_text())
+          v = e["source_artifact_verification"]
           assert e["research_parent"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
           assert e["candidate_count"] == 0 and e["source_candidate_count"] == 3
           assert e["source_market_effect_count"] == 6 and e["parameter_grid_count"] == 0
           assert e["bar"] == "1H" and e["fee_one_way"] == 0.0005
           assert e["new_market_data"] is False and e["new_oos_consumption"] is False
+          assert v["passed"] is True and v["artifact_count"] == 3
+          assert v["market_count"] == 6 and v["metric_identity_checks"] > 100
           assert e["bootstrap"]["resamples"] == 100000 and e["bootstrap"]["seed"] == 20260801
           assert e["aggregation"]["mean_hourly_net"]["positive_market_count"] == 2
           assert e["aggregation"]["sharpe"]["positive_market_count"] == 2
