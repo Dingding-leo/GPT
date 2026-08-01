@@ -17,6 +17,8 @@ env:
   REPORT_DIR: reports/research/causal-historical-analog-consensus-abstention-1h-v1
   SOURCE_PATH: reports/research/causal-historical-analog-consensus-abstention-1h-v1/run_historical_analog.py
   SOURCE_B64_PATH: reports/research/causal-historical-analog-consensus-abstention-1h-v1/run_historical_analog.py.gz.b64
+  PATCH_PATH: reports/research/causal-historical-analog-consensus-abstention-1h-v1/apply_breadth_repair.py
+  FROZEN_SOURCE_SHA: 6267b0a1be676bacb390dbd5f3ae75b8db82c6b3
   PYTHONHASHSEED: "0"
   OPENBLAS_NUM_THREADS: "1"
   OMP_NUM_THREADS: "1"
@@ -50,17 +52,15 @@ jobs:
           python -m pip install --disable-pip-version-check \
             "numpy==2.2.6" "ruff==0.16.1"
 
-      - name: Materialize and verify deterministic reproducer
+      - name: Materialize repaired deterministic reproducer
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/analog-output /tmp/analog-cache
-          if test -f "$SOURCE_PATH"; then
-            cp "$SOURCE_PATH" /tmp/analog-output/materialized_source.py
-          else
-            test -f "$SOURCE_B64_PATH"
-            base64 --decode "$SOURCE_B64_PATH" | gzip --decompress > /tmp/analog-output/materialized_source.py
-          fi
+          test -f "$PATCH_PATH"
+          git fetch --no-tags --depth=1 origin "$FROZEN_SOURCE_SHA"
+          git show "$FROZEN_SOURCE_SHA:$SOURCE_PATH" > /tmp/analog-output/materialized_source.py
+          python "$PATCH_PATH" /tmp/analog-output/materialized_source.py
           ruff check /tmp/analog-output/materialized_source.py
           ruff format --check /tmp/analog-output/materialized_source.py
           python -m py_compile /tmp/analog-output/materialized_source.py
@@ -118,12 +118,13 @@ jobs:
               assert market["source"]["objects"] == 33
               assert market["source"]["rows"] == 24144
               assert market["integrity"]["all"] is True
+              assert market["oos_breadth"]["method"] == "contiguous slices of isolated continuous OOS paths"
               assert market["segments"]["training"]["decision_count"] == 360
               assert market["segments"]["oos"]["decision_count"] == 540
               assert market["segments"]["full"]["decision_count"] == 900
           PY
 
-      - name: Persist exact reproducer and terminal evidence
+      - name: Persist corrected reproducer and terminal evidence
         if: github.event_name == 'pull_request'
         shell: bash
         run: |
@@ -135,12 +136,12 @@ jobs:
           done
           git add -A "$REPORT_DIR"
           if git diff --cached --quiet; then
-            echo 'Exact strategy evidence already persisted.'
+            echo 'Exact corrected strategy evidence already persisted.'
             exit 0
           fi
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'research: persist historical-analog strategy evidence'
+          git commit -m 'research: persist corrected analog breadth evidence'
           git push origin "HEAD:$RESEARCH_BRANCH"
 
       - name: Build immutable artifact manifest
