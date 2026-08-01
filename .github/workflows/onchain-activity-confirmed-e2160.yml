@@ -1,0 +1,130 @@
+name: On-chain Activity Confirmed E2160 1H
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_onchain_activity_confirmed_e2160.py'
+      - 'scripts/onchain_activity_source.py'
+      - 'scripts/onchain_activity_metrics.py'
+      - '.github/workflows/onchain-activity-confirmed-e2160.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Bind evidence to exact PR head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --quiet
+          test -z "$(git status --porcelain=v1)"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install numerical dependency
+        run: python -m pip install --disable-pip-version-check --no-cache-dir 'numpy==2.2.6'
+
+      - name: Prove prohibited runtime capabilities are absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          env | cut -d= -f1 | grep -Eiq '(OKX|COINMETRICS|BINANCE).*(SECRET|TOKEN|KEY)' && exit 1 || true
+          ! grep -RInE 'place_order|create_order|submit_order|send_order|/api/v5/(account|trade|asset|broker)' \
+            scripts/run_onchain_activity_confirmed_e2160.py \
+            scripts/onchain_activity_source.py \
+            scripts/onchain_activity_metrics.py
+
+      - name: Compile frozen experiment
+        run: >-
+          python -m py_compile
+          scripts/run_onchain_activity_confirmed_e2160.py
+          scripts/onchain_activity_source.py
+          scripts/onchain_activity_metrics.py
+
+      - name: Execute immutable public-data experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA='${{ github.event.pull_request.head.sha }}'
+          python scripts/run_onchain_activity_confirmed_e2160.py
+
+      - name: Validate machine-readable strategy contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          family = 'causal-onchain-transaction-activity-confirmed-e2160-entry-1h-v1'
+          root = Path('reports/experiments') / family
+          evidence_path = root / 'evidence.json'
+          evidence = json.loads(evidence_path.read_text())
+          assert evidence['family_id'] == family
+          assert evidence['exact_head'] == '${{ github.event.pull_request.head.sha }}'
+          assert evidence['canonical_fee_bps_one_way'] == 5.0
+          assert evidence['bar_interval'] == '1H'
+          assert evidence['public_data_only'] is True
+          assert evidence['credentials_private_endpoints_accounts_orders_adapters_leverage_funds'] is False
+          assert evidence['cross_sectional_or_contemporaneous_selection'] is False
+          assert evidence['candidate_count'] == 2
+          assert evidence['parameter_grid_count'] == 0
+          assert len(evidence['markets']) == 2
+          assert evidence['canonical_strategy_changed'] is False
+          assert evidence['paper_trading_authorized'] is False
+          assert evidence['live_trading_authorized'] is False
+          allowed = {
+              'accept_causal_onchain_transaction_activity_confirmed_e2160_entry_1h_v1',
+              'reject_causal_onchain_transaction_activity_confirmed_e2160_entry_1h_v1',
+              'reject_causal_onchain_transaction_activity_confirmed_e2160_entry_source_contract',
+          }
+          assert evidence['verdict'] in allowed
+          if not evidence['source_contract_passed']:
+              assert evidence['performance_accessed'] is False
+              assert evidence['oos_accessed'] is False
+              assert all(m['strategies'] is None for m in evidence['markets'])
+          elif not evidence['bilateral_training_support_passed']:
+              assert evidence['performance_accessed'] is False
+              assert evidence['oos_accessed'] is False
+              assert all(m['strategies'] is None for m in evidence['markets'])
+              assert all(m['training_support'] is not None for m in evidence['markets'])
+          else:
+              assert evidence['performance_accessed'] is True
+              assert evidence['oos_accessed'] is True
+              assert all(m['strategies'] is not None for m in evidence['markets'])
+              assert all(len(m['oos_folds']) == 6 for m in evidence['markets'])
+              assert all(m['paired_uncertainty']['draws'] == 5000 for m in evidence['markets'])
+          observed = hashlib.sha256(evidence_path.read_bytes()).hexdigest()
+          expected = (root / 'evidence.sha256').read_text().strip()
+          assert observed == expected
+          print(json.dumps({
+              'exact_head': evidence['exact_head'],
+              'source_contract_passed': evidence['source_contract_passed'],
+              'performance_accessed': evidence['performance_accessed'],
+              'markets_passing_all_gates': evidence['markets_passing_all_gates'],
+              'verdict': evidence['verdict'],
+              'evidence_sha256': observed,
+          }, sort_keys=True))
+          PY
+
+      - name: Upload immutable strategy artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: onchain-activity-confirmed-e2160-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: reports/experiments/causal-onchain-transaction-activity-confirmed-e2160-entry-1h-v1
+          if-no-files-found: error
+          retention-days: 14
