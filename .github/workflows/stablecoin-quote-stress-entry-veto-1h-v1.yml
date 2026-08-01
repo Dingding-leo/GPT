@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "scripts/run_stablecoin_quote_stress_entry_veto_1h_v1.py"
+      - "scripts/run_stablecoin_quote_stress_entry_veto_1h_v1_fail_closed.py"
       - ".github/workflows/stablecoin-quote-stress-entry-veto-1h-v1.yml"
   workflow_dispatch:
 
@@ -49,16 +50,16 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile scripts/run_stablecoin_quote_stress_entry_veto_1h_v1.py
-          python scripts/run_stablecoin_quote_stress_entry_veto_1h_v1.py --output-dir "$OUTPUT_DIR"
+          python -m py_compile scripts/run_stablecoin_quote_stress_entry_veto_1h_v1_fail_closed.py
+          python scripts/run_stablecoin_quote_stress_entry_veto_1h_v1_fail_closed.py --output-dir "$OUTPUT_DIR"
 
-      - name: Verify machine-readable evidence
+      - name: Verify machine-readable strategy disposition
         shell: bash
         run: |
           set -euo pipefail
           test -s "$OUTPUT_DIR/evidence.json"
           test -s "$OUTPUT_DIR/evidence.sha256"
           test -s "$OUTPUT_DIR/report.md"
-          test -s "$OUTPUT_DIR/source_manifest.json"
           expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
           actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
           test "$expected" = "$actual"
@@ -75,18 +76,6 @@ jobs:
           assert evidence["canonical_fee_bps_one_way"] == 5.0
           assert evidence["markets"] == ["SOLUSDT", "XRPUSDT"]
           assert evidence["fixed_lagged_exogenous_series"] == "USDCUSDT"
-          assert evidence["source"]["source_object_count"] == 144
-          assert evidence["source"]["checksum_object_count"] == 144
-          assert evidence["source"]["rows_per_symbol"] == 35064
-          assert evidence["source"]["coverage_pass"] is True
-          assert evidence["source"]["checksum_pass"] is True
-          assert evidence["source"]["common_calendar_pass"] is True
-          assert evidence["sample"]["sealed_oos"] == [17520, 34800]
-          assert evidence["sample"]["oos_fold_count"] == 8
-          assert len(evidence["targets"]) == 2
-          assert all(len(target["gates"]) == 11 for target in evidence["targets"])
-          assert all(target["segments"]["oos"]["candidate_minus_b1_identity"]["identity_pass"] for target in evidence["targets"])
-          assert all(target["one_hour_delay"]["identity"]["identity_pass"] for target in evidence["targets"])
           assert all(value is False for value in evidence["hard_boundary"].values())
           assert evidence["paper_trading_authorized"] is False
           assert evidence["live_trading_authorized"] is False
@@ -94,6 +83,35 @@ jobs:
               "reject_causal_stablecoin_quote_stress_entry_veto_1h_v1",
               "support_causal_stablecoin_quote_stress_entry_veto_for_new_shadow_epoch_only",
           }
+
+          if evidence.get("abort_triggered"):
+              assert evidence["rejection_stage"] == "immutable_public_source_contract_before_performance"
+              assert evidence["source_contract"]["coverage_pass"] is False
+              assert evidence["source_contract"]["close_time_consistency_pass"] is False
+              assert evidence["performance"]["accessed"] is False
+              assert evidence["performance"]["bootstrap_draws_executed"] == 0
+              assert evidence["training_authorized_correction"]["permitted"] is False
+              assert evidence["training_authorized_correction"]["observation_epoch_restarted"] is False
+              assert evidence["verdict"] == "reject_causal_stablecoin_quote_stress_entry_veto_1h_v1"
+          else:
+              assert evidence["source"]["source_object_count"] == 144
+              assert evidence["source"]["checksum_object_count"] == 144
+              assert evidence["source"]["rows_per_symbol"] == 35064
+              assert evidence["source"]["coverage_pass"] is True
+              assert evidence["source"]["checksum_pass"] is True
+              assert evidence["source"]["common_calendar_pass"] is True
+              assert evidence["sample"]["sealed_oos"] == [17520, 34800]
+              assert evidence["sample"]["oos_fold_count"] == 8
+              assert len(evidence["targets"]) == 2
+              assert all(len(target["gates"]) == 11 for target in evidence["targets"])
+              assert all(
+                  target["segments"]["oos"]["candidate_minus_b1_identity"]["identity_pass"]
+                  for target in evidence["targets"]
+              )
+              assert all(
+                  target["one_hour_delay"]["identity"]["identity_pass"]
+                  for target in evidence["targets"]
+              )
           PY
 
       - name: Upload immutable source and strategy evidence
