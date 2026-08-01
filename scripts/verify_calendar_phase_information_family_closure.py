@@ -13,8 +13,8 @@ ROOT = Path("reports/research") / FAMILY
 EXPECTED = {
     "source_group_a.json": "944e288f9837183e672d821fbe61cfa034371c0b13d177ada3542f1d02f6f8e6",
     "source_group_b.json": "9cce7939e8c7755032dcbc388eda214621fe86f5906df012dbd0c5272b466832",
-    "evidence.json": "0ff9ecd8a7b7e0316c8e296fb1d13eda3ab6b2e420b96a140e3bdb73a53d7556",
-    "report.md": "62953f59f311d9b078876a9fb85fc8a5e76b7953ed697f4c54ecaf402001fbc0",
+    "evidence.json": "58951b6bd55e15faa0cd0076bc81d7d3f7e3ef11b90a94fbd0a8cfc5c300fb29",
+    "report.md": "15652eb2e308b02abbcd448d8e0fb03ff48544a9bcfb4c2d7d0ad42c48ba4aef",
 }
 
 
