@@ -23,23 +23,30 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install fixed research dependency
-        run: python -m pip install --disable-pip-version-check "numpy==2.2.6"
-
-      - name: Compile deterministic reproducer
+      - name: Install fixed research dependencies
         run: |
-          python -m py_compile reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py
-          sha256sum reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py
+          python -m pip install --disable-pip-version-check \
+            "numpy==2.2.6" "ruff==0.16.1"
+
+      - name: Materialize formatted deterministic reproducer
+        run: |
+          mkdir -p /tmp/local-linear-output
+          cp reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py \
+            /tmp/local-linear-output/materialized_source.py
+          ruff check --fix /tmp/local-linear-output/materialized_source.py
+          ruff format /tmp/local-linear-output/materialized_source.py
+          ruff check /tmp/local-linear-output/materialized_source.py
+          ruff format --check /tmp/local-linear-output/materialized_source.py
+          python -m py_compile /tmp/local-linear-output/materialized_source.py
+          sha256sum /tmp/local-linear-output/materialized_source.py
 
       - name: Run immutable public-data experiment
         run: |
-          mkdir -p /tmp/local-linear-output /tmp/local-linear-cache
-          python reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py \
+          mkdir -p /tmp/local-linear-cache
+          python /tmp/local-linear-output/materialized_source.py \
             --output-dir /tmp/local-linear-output \
             --cache-dir /tmp/local-linear-cache \
             | tee /tmp/local-linear-output/stdout.json
-          cp reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py \
-            /tmp/local-linear-output/materialized_source.py
           sha256sum /tmp/local-linear-output/* | sort \
             > /tmp/local-linear-output/artifact-files.sha256
 
