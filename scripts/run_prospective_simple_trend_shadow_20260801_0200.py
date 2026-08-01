@@ -108,8 +108,9 @@ def report(output_dir: Path, result: dict[str, Any]) -> None:
             "the architecture-cluster median candidate-minus-trend net effect was negative, no "
             "architecture had a positive median net or Sharpe effect, no paired market lower bounds "
             "were jointly positive, and no market met the frozen breadth contract. The latest "
-            "attestation-only PR head is red on committed Ruff formatting before source verification; "
-            "that does not authorise a strategy correction or same-family rescue.",
+            "attestation-only PR head passes committed Ruff state but fails while downloading the first "
+            "immutable source artifact with HTTP 401; that transport attestation failure does not "
+            "authorise a strategy correction or same-family rescue.",
             "",
             "## Machine-readable verdict",
             "",
@@ -162,9 +163,9 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
         "correction_permitted": False,
         "source_market_effect_count": 6,
         "source_evidence_head": "b15d3a545093d4125902777b5d87a903a24dbb38",
-        "latest_attestation_head": "d5a90aa2a8f9d142d12f755d64cec17a010c62b5",
-        "latest_attestation_workflow_run": 30681611344,
-        "latest_attestation_status": "failed_pre_strategy_on_committed_format_check",
+        "latest_attestation_head": "1b43d299ebe1fc3288f268839a4a6442b83e9c8f",
+        "latest_attestation_workflow_run": 30681818156,
+        "latest_attestation_status": "failed_source_artifact_download_http_401_after_formatter_pass",
         "artifact_id": 8812238496,
         "artifact_sha256": "aa0b1c136b7d8162c7d716525f8c1193b012f0a2d5b43ab7cae0b4b0a1b3754d",
         "evidence_sha256": "9a628a9c9998cb4828dc88d639391bffd7a9e938f09509796b337dd5df7a264f",
@@ -187,7 +188,8 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
         "observation_epoch_restarted": False,
         "reason": (
             "the frozen adaptive-overlay family evidence rejects all three source architectures; "
-            "the latest attestation failure is formatting-only and cannot authorise mutation"
+            "the latest attestation passes committed formatting but fails on source-artifact HTTP 401, "
+            "which cannot authorise mutation"
         ),
     }
     exposed = any(market["realized_interval"]["position"] == 1 for market in result["markets"])
