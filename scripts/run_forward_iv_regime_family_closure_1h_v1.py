@@ -22,12 +22,8 @@ def source_records() -> list[dict[str, Any]]:
             "exact_evidence_head": "8dde5f71876a0062d1bab5d2f03471f207687ca0",
             "focused_workflow_run": 30719081752,
             "artifact_id": 8824279802,
-            "artifact_sha256": (
-                "8481aa7d4fe72bb3254c430e009b6d15e91274afea503a08f19a60b39330d454"
-            ),
-            "evidence_sha256": (
-                "a92cab98833e9b98e08f12317856eeb06760dce1e127754d5040ac99c0c46d23"
-            ),
+            "artifact_sha256": ("8481aa7d4fe72bb3254c430e009b6d15e91274afea503a08f19a60b39330d454"),
+            "evidence_sha256": ("a92cab98833e9b98e08f12317856eeb06760dce1e127754d5040ac99c0c46d23"),
             "fixed_interval": "2021-04-01T00:00:00Z/2025-12-31T23:00:00Z",
             "rows_per_arm": 41664,
             "arms": {
@@ -54,12 +50,8 @@ def source_records() -> list[dict[str, Any]]:
             "exact_evidence_head": "24f58bbc978f108770a6b897af0930f1f42aa06b",
             "focused_workflow_run": 30720485693,
             "artifact_id": 8824768606,
-            "artifact_sha256": (
-                "cfea062e12961bb39d71f06d1abc1ddd0dfd6a57109c050cf67334021bb13475"
-            ),
-            "evidence_sha256": (
-                "9ebcda2aa5af3690a44609e4b5f9ce481dd7224ecc55e711929879283511aeea"
-            ),
+            "artifact_sha256": ("cfea062e12961bb39d71f06d1abc1ddd0dfd6a57109c050cf67334021bb13475"),
+            "evidence_sha256": ("9ebcda2aa5af3690a44609e4b5f9ce481dd7224ecc55e711929879283511aeea"),
             "candidate_count": 2,
             "parameter_grid_count": 0,
             "modeled_fee_bps_one_way": 5.0,
@@ -128,9 +120,7 @@ def source_records() -> list[dict[str, Any]]:
             "one_hour_delay": None,
             "economic_support": False,
             "support_classification": "active_but_bilaterally_negative_training_economics",
-            "source_verdict": (
-                "reject_causal_lagged_dvol_slow_regime_veto_e2160_1h_v1"
-            ),
+            "source_verdict": ("reject_causal_lagged_dvol_slow_regime_veto_e2160_1h_v1"),
         },
     ]
 
