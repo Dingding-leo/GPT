@@ -1,0 +1,209 @@
+name: Stablecoin Dislocation Acceleration Veto 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/stablecoin_dislocation_acceleration_veto_1h_v1_parts/**"
+      - ".github/workflows/stablecoin-dislocation-acceleration-veto-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stablecoin-dislocation-acceleration-veto-1h-v1-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  strategy-research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/research/stablecoin-dislocation-acceleration-veto-1h-v1
+      ARTIFACT_NAME: stablecoin-dislocation-acceleration-veto-1h-v1-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Materialize frozen strategy experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat scripts/stablecoin_dislocation_acceleration_veto_1h_v1_parts/part-*.txt \
+            > /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
+          test -s /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
+          sha256sum /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py \
+            | awk '{print $1}' > /tmp/materialized-source.sha256
+
+      - name: Verify exact public strategy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+          ! grep -EIn '(/api/v5/(account|trade|asset|broker)|place_order\(|create_order\(|submit_order\(|send_order\()' \
+            /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
+          ! grep -EIn '(15m|leverage|cointegration|pair.?trade|market.?neutral|cross.?sectional.?rank)' \
+            /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install exact research package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Canonicalize and verify focused implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m ruff check --fix --unsafe-fixes \
+            /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
+          python -m ruff format \
+            /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
+          python -m py_compile \
+            /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
+          python -m ruff check \
+            /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
+          python -m ruff format --check \
+            /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py
+
+      - name: Execute frozen bilateral strategy experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py \
+            --tested-head "$EXPECTED_TESTED_SHA" \
+            --output-dir "$OUTPUT_DIR"
+          cp /tmp/run_stablecoin_dislocation_acceleration_veto_1h_v1.py \
+            "$OUTPUT_DIR/strategy.py"
+          cp /tmp/materialized-source.sha256 \
+            "$OUTPUT_DIR/materialized-source.sha256"
+          sha256sum "$OUTPUT_DIR/strategy.py" | awk '{print $1}' \
+            > "$OUTPUT_DIR/strategy.sha256"
+
+      - name: Verify machine-readable strategy verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/source_manifest.json"
+          test -s "$OUTPUT_DIR/source_manifest.sha256"
+          test -s "$OUTPUT_DIR/protocol.json"
+          test -s "$OUTPUT_DIR/protocol.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          test -s "$OUTPUT_DIR/report.sha256"
+          test -s "$OUTPUT_DIR/strategy.py"
+          test -s "$OUTPUT_DIR/strategy.sha256"
+          expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
+          actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          expected_strategy="$(cat "$OUTPUT_DIR/strategy.sha256")"
+          actual_strategy="$(sha256sum "$OUTPUT_DIR/strategy.py" | awk '{print $1}')"
+          test "$actual_strategy" = "$expected_strategy"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((root / "evidence.json").read_text())
+          family = "causal-stablecoin-dislocation-acceleration-confirmed-e2160-entry-1h-v1"
+          assert evidence["family_id"] == family
+          assert evidence["exact_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["repository_main"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["bar_interval"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["candidate_count"] == 2
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["public_data_only"] is True
+          assert evidence["synthetic_market_data_used"] is False
+          assert evidence["interpolation_or_row_repair_used"] is False
+          assert evidence["cross_sectional_selection"] is False
+          assert evidence["pairs_or_spreads"] is False
+          assert evidence["cointegration_or_statistical_arbitrage"] is False
+          assert evidence["market_neutral_or_long_short"] is False
+          assert evidence["credentials_used"] is False
+          assert evidence["private_endpoints_used"] is False
+          assert evidence["accounts_or_orders"] is False
+          assert evidence["enabled_adapters"] is False
+          assert evidence["leverage_used"] is False
+          assert evidence["non_1h_or_15m_input_used"] is False
+          assert evidence["canonical_strategy_changed"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          allowed = {
+              "accept_causal_stablecoin_dislocation_acceleration_confirmed_e2160_entry_1h_v1",
+              "reject_causal_stablecoin_dislocation_acceleration_confirmed_e2160_entry_1h_v1",
+          }
+          assert evidence["verdict"] in allowed
+          if not evidence["source_contract_passed"]:
+              assert evidence["performance_accessed"] is False
+              assert evidence["oos_accessed"] is False
+              assert evidence["full_sample_accessed"] is False
+          else:
+              assert len(evidence["markets"]) == 2
+              assert {market["market"] for market in evidence["markets"]} == {
+                  "BTC-USDT",
+                  "ETH-USDT",
+              }
+              bilateral = all(
+                  market["training_support"]["passes"]
+                  for market in evidence["markets"]
+              )
+              assert evidence["bilateral_training_support_passed"] is bilateral
+              assert evidence["oos_accessed"] is bilateral
+              if not bilateral:
+                  assert all(
+                      market["strategies"] is None
+                      for market in evidence["markets"]
+                  )
+                  assert evidence["bootstrap_draws"] == 0
+              else:
+                  assert evidence["performance_accessed"] is True
+                  assert evidence["full_sample_accessed"] is True
+                  assert evidence["bootstrap_draws"] == 5000
+                  assert all(
+                      market["strategies"] is not None
+                      and len(market["oos_folds"]) == 6
+                      and len(market["oos_years"]) == 2
+                      and market["paired_uncertainty"]["draws"] == 5000
+                      for market in evidence["markets"]
+                  )
+          accepted = (
+              evidence["oos_accessed"]
+              and evidence["markets_passing_all_gates"] == 2
+          )
+          assert evidence["canonical_mutation_authorized"] is accepted
+          if accepted:
+              assert evidence["verdict"].startswith("accept_")
+          else:
+              assert evidence["verdict"].startswith("reject_")
+          PY
+
+      - name: Upload immutable strategy evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
