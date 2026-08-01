@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-
 import run_okx_l2_bid_replenishment_diagnostic as core
 
 _ORIGINAL_FETCH = core.fetch_okx_one_hour_candles
@@ -33,7 +32,9 @@ def _bucket_analysis(state: np.ndarray, target: np.ndarray) -> dict[str, Any]:
     for rank, position in enumerate(order):
         bucket[position] = min(4, rank * 5 // len(state))
     means = [float(np.mean(target[bucket == index])) for index in range(5)]
-    favourable = sum(right > left for left, right in zip(means, means[1:]))
+    favourable = sum(
+        right > left for left, right in zip(means, means[1:], strict=False)
+    )
     return {
         "means": means,
         "favourable_adjacent_changes": favourable,
