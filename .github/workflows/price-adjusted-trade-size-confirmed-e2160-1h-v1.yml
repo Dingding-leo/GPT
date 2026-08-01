@@ -48,12 +48,36 @@ jobs:
           set -euo pipefail
           python -m pip install --disable-pip-version-check -e .
 
-      - name: Execute frozen strategy experiment
+      - name: Materialize the single permitted correctness repair
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile reports/research/causal-price-adjusted-trade-size-confirmed-e2160-entry-1h-v1/run_research.py
-          python reports/research/causal-price-adjusted-trade-size-confirmed-e2160-entry-1h-v1/run_research.py --output-dir "$OUTPUT_DIR"
+          python - <<'PY'
+          from pathlib import Path
+
+          source_path = Path(
+              "reports/research/causal-price-adjusted-trade-size-confirmed-e2160-entry-1h-v1/run_research.py"
+          )
+          source = source_path.read_text()
+          old = (
+              "data_by_symbol.get(symbol, MarketData(symbol, np.array([]), np.array([]), "
+              "np.array([]), np.array([]), np.array([]), np.array([]), np.array([]), "
+              "np.array([]), [])).source_objects"
+          )
+          new = "(data_by_symbol[symbol].source_objects if symbol in data_by_symbol else [])"
+          assert source.count(old) == 1
+          repaired = source.replace(old, new)
+          output = Path("/tmp/run_price_adjusted_trade_size_research.py")
+          output.write_text(repaired)
+          assert "MarketData(symbol, np.array([])" not in repaired
+          PY
+
+      - name: Execute unchanged frozen strategy experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile /tmp/run_price_adjusted_trade_size_research.py
+          python /tmp/run_price_adjusted_trade_size_research.py --output-dir "$OUTPUT_DIR"
 
       - name: Verify machine-readable evidence
         shell: bash
