@@ -1,0 +1,180 @@
+    support: dict[str, Any],
+    candidate: dict[str, Any],
+    benchmark: dict[str, Any],
+) -> dict[str, bool]:
+    candidate_metrics = candidate["metrics"]
+    benchmark_metrics = benchmark["metrics"]
+    candidate_sharpe = candidate_metrics["annualized_sharpe"]
+    benchmark_sharpe = benchmark_metrics["annualized_sharpe"]
+    candidate_edge = candidate_metrics["edge_per_turnover_bps"]
+    benchmark_edge = benchmark_metrics["edge_per_turnover_bps"]
+    return {
+        "minimum_20_veto_decisions": support["veto_decisions"] >= 20,
+        "vetoes_in_at_least_4_quarters": support["veto_quarter_count"] >= 4,
+        "minimum_20_reauthorizations": support["reauthorization_decisions"] >= 20,
+        "difference_at_least_5_percent": support["difference_fraction_of_base_positive"] >= 0.05,
+        "veto_concentration_at_most_60_percent": bool(
+            support["largest_veto_quarter_share"] is not None
+            and support["largest_veto_quarter_share"] <= 0.60
+        ),
+        "reauthorization_concentration_at_most_60_percent": bool(
+            support["largest_reauthorization_quarter_share"] is not None
+            and support["largest_reauthorization_quarter_share"] <= 0.60
+        ),
+        "candidate_training_net_return_positive": candidate_metrics["net_compounded_return"] > 0,
+        "candidate_training_return_beats_e2160": (
+            candidate_metrics["net_compounded_return"]
+            > benchmark_metrics["net_compounded_return"]
+        ),
+        "candidate_training_sharpe_beats_e2160": bool(
+            candidate_sharpe is not None
+            and benchmark_sharpe is not None
+            and candidate_sharpe > benchmark_sharpe
+        ),
+        "candidate_training_drawdown_less_severe": (
+            candidate_metrics["maximum_drawdown"]
+            > benchmark_metrics["maximum_drawdown"]
+        ),
+        "candidate_training_edge_per_turnover_positive": bool(
+            candidate_edge is not None and candidate_edge > 0
+        ),
+        "candidate_training_edge_per_turnover_beats_e2160": bool(
+            candidate_edge is not None
+            and benchmark_edge is not None
+            and candidate_edge > benchmark_edge
+        ),
+    }
+
+
+def conditional_returns(
+    candles: pd.DataFrame,
+    decisions: pd.DataFrame,
+) -> dict[str, Any]:
+    values: list[dict[str, Any]] = []
+    for timestamp, row in decisions.iterrows():
+        exit_timestamp = timestamp + pd.Timedelta(hours=24)
+        if exit_timestamp not in candles.index:
+            continue
+        gross = float(candles.at[exit_timestamp, "open"] / candles.at[timestamp, "open"] - 1.0)
+        values.append(
+            {
+                "risk_off": bool(row["risk_off"]),
+                "base": int(row["base"]),
+                "gross_24h": gross,
+            }
+        )
+    frame = pd.DataFrame(values)
+    result: dict[str, Any] = {}
+    for name, mask in {
+        "base_positive_risk_off": (frame["base"] == 1) & frame["risk_off"],
+        "base_positive_risk_on": (frame["base"] == 1) & ~frame["risk_off"],
+        "all_risk_off": frame["risk_off"],
+        "all_risk_on": ~frame["risk_off"],
+    }.items():
+        sample = frame.loc[mask, "gross_24h"]
+        result[name] = {
+            "count": int(len(sample)),
+            "mean_gross_24h": float(sample.mean()) if len(sample) else None,
+            "median_gross_24h": float(sample.median()) if len(sample) else None,
+            "positive_rate": float((sample > 0).mean()) if len(sample) else None,
+        }
+    return result
+
+
+def moving_block_interval(
+    candidate_returns: np.ndarray,
+    benchmark_returns: np.ndarray,
+) -> dict[str, Any]:
+    if len(candidate_returns) != len(benchmark_returns):
+        raise ValueError("bootstrap paths are not aligned")
+    n = len(candidate_returns)
+    if n < BOOTSTRAP_BLOCK:
+        raise ValueError("bootstrap sample is shorter than one block")
+    rng = np.random.default_rng(BOOTSTRAP_SEED)
+    block_count = math.ceil(n / BOOTSTRAP_BLOCK)
+    maximum_start = n - BOOTSTRAP_BLOCK
+    mean_deltas = np.empty(BOOTSTRAP_DRAWS)
+    sharpe_deltas = np.empty(BOOTSTRAP_DRAWS)
+    for draw in range(BOOTSTRAP_DRAWS):
+        starts = rng.integers(0, maximum_start + 1, size=block_count)
+        indices = np.concatenate(
+            [np.arange(start, start + BOOTSTRAP_BLOCK, dtype=int) for start in starts]
+        )[:n]
+        candidate = candidate_returns[indices]
+        benchmark = benchmark_returns[indices]
+        mean_deltas[draw] = float(np.mean(candidate - benchmark))
+        candidate_sd = float(np.std(candidate, ddof=1))
+        benchmark_sd = float(np.std(benchmark, ddof=1))
+        candidate_sharpe = (
+            float(np.mean(candidate)) / candidate_sd * math.sqrt(ANNUAL_HOURS)
+            if candidate_sd > 0
+            else 0.0
+        )
+        benchmark_sharpe = (
+            float(np.mean(benchmark)) / benchmark_sd * math.sqrt(ANNUAL_HOURS)
+            if benchmark_sd > 0
+            else 0.0
+        )
+        sharpe_deltas[draw] = candidate_sharpe - benchmark_sharpe
+    mean_interval = np.quantile(mean_deltas, [0.025, 0.5, 0.975])
+    sharpe_interval = np.quantile(sharpe_deltas, [0.025, 0.5, 0.975])
+    return {
+        "draws": BOOTSTRAP_DRAWS,
+        "block_hours": BOOTSTRAP_BLOCK,
+        "seed": BOOTSTRAP_SEED,
+        "mean_hourly_net_return_delta_interval": mean_interval.tolist(),
+        "annualized_mean_delta_interval": (mean_interval * ANNUAL_HOURS).tolist(),
+        "annualized_sharpe_delta_interval": sharpe_interval.tolist(),
+        "mean_delta_lower_95": float(mean_interval[0]),
+        "sharpe_delta_lower_95": float(sharpe_interval[0]),
+    }
+
+
+def positive_contribution_share(values: list[float]) -> float | None:
+    positive = [value for value in values if value > 0]
+    if not positive:
+        return None
+    return max(positive) / sum(positive)
+
+
+def segment_relative_effect(
+    candles: pd.DataFrame,
+    decisions: pd.DataFrame,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+) -> dict[str, Any]:
+    candidate = position_path(
+        candles,
+        decisions,
+        start=start,
+        end=end,
+        state_column="candidate",
+    )
+    benchmark = position_path(
+        candles,
+        decisions,
+        start=start,
+        end=end,
+        state_column="base",
+    )
+    return {
+        "start": start,
+        "end": end,
+        "candidate": candidate["metrics"],
+        "e2160": benchmark["metrics"],
+        "relative_net_return": (
+            candidate["metrics"]["net_compounded_return"]
+            - benchmark["metrics"]["net_compounded_return"]
+        ),
+    }
+
+
+def fold_and_year_audit(
+    candles: pd.DataFrame,
+    decisions: pd.DataFrame,
+) -> dict[str, Any]:
+    oos_decisions = decisions.loc[OOS_START:SIGNAL_END]
+    folds: list[dict[str, Any]] = []
+    split_indices = np.array_split(np.arange(len(oos_decisions)), 6)
+    for fold_number, indices in enumerate(split_indices, start=1):
+        fold_start = oos_decisions.index[int(indices[0])]
