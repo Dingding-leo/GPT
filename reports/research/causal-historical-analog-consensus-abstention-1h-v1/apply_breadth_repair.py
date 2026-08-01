@@ -13,9 +13,7 @@ def main() -> None:
     return float(np.prod(1.0 + values) - 1.0)
 
 
-def breadth(
-    data: MarketData, candidate: PathResult, benchmark: PathResult
-) -> dict[str, Any]:
+def breadth(data: MarketData, candidate: PathResult, benchmark: PathResult) -> dict[str, Any]:
     if (
         len(candidate.net_returns) != OOS_END - OOS_START
         or len(benchmark.net_returns) != OOS_END - OOS_START
