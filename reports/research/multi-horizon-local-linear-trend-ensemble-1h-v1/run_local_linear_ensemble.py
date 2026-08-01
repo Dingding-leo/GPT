@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 from __future__ import annotations
 
 import argparse
@@ -6,16 +7,14 @@ import hashlib
 import io
 import json
 import math
-import os
 import re
 import statistics
-import sys
 import time
 import urllib.error
 import urllib.request
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +48,7 @@ BOOTSTRAP_DRAWS = 5_000
 BOOTSTRAP_BLOCK = 168
 BOOTSTRAP_SEED = 20_260_801
 EXPECTED_START_MS = 1_680_307_200_000
-EXPECTED_END_MS = 1_767_225_200_000
+EXPECTED_END_MS = 1_767_222_000_000
 MAX_DOWNLOAD_BYTES = 128 * 1024 * 1024
 USER_AGENT = "Dingding-leo-GPT-immutable-1h-research/1.0"
 
@@ -105,10 +104,10 @@ def month_sequence() -> list[tuple[int, int]]:
 
 def expected_month_hours(year: int, month: int) -> int:
     if month == 12:
-        next_dt = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        next_dt = datetime(year + 1, 1, 1, tzinfo=UTC)
     else:
-        next_dt = datetime(year, month + 1, 1, tzinfo=timezone.utc)
-    current_dt = datetime(year, month, 1, tzinfo=timezone.utc)
+        next_dt = datetime(year, month + 1, 1, tzinfo=UTC)
+    current_dt = datetime(year, month, 1, tzinfo=UTC)
     return int((next_dt - current_dt).total_seconds() // 3_600)
 
 
@@ -148,7 +147,9 @@ def parse_checksum(payload: bytes, expected_filename: str) -> str:
     return match.group(1).lower()
 
 
-def parse_archive(symbol: str, year: int, month: int, payload: bytes) -> tuple[list[list[str]], str]:
+def parse_archive(
+    symbol: str, year: int, month: int, payload: bytes
+) -> tuple[list[list[str]], str]:
     expected_member = f"{symbol}-1h-{year:04d}-{month:02d}.csv"
     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
         members = [info for info in archive.infolist() if not info.is_dir()]
@@ -221,7 +222,9 @@ def load_market(symbol: str, cache_dir: Path) -> MarketData:
             }
         )
     if len(rows_all) != EXPECTED_ROWS:
-        raise RuntimeError(f"full row count mismatch for {symbol}: {len(rows_all)} != {EXPECTED_ROWS}")
+        raise RuntimeError(
+            f"full row count mismatch for {symbol}: {len(rows_all)} != {EXPECTED_ROWS}"
+        )
 
     open_ms = np.empty(EXPECTED_ROWS, dtype=np.int64)
     opens = np.empty(EXPECTED_ROWS, dtype=np.float64)
@@ -264,9 +267,7 @@ def load_market(symbol: str, cache_dir: Path) -> MarketData:
         )
 
     if open_ms[0] != EXPECTED_START_MS or open_ms[-1] != EXPECTED_END_MS:
-        raise RuntimeError(
-            f"source boundary mismatch for {symbol}: {open_ms[0]}..{open_ms[-1]}"
-        )
+        raise RuntimeError(f"source boundary mismatch for {symbol}: {open_ms[0]}..{open_ms[-1]}")
     differences = np.diff(open_ms)
     if not np.all(differences == 3_600_000):
         bad = np.flatnonzero(differences != 3_600_000)
@@ -279,8 +280,8 @@ def load_market(symbol: str, cache_dir: Path) -> MarketData:
         "provider": PROVIDER,
         "symbol": symbol,
         "bar": "1h",
-        "start": datetime.fromtimestamp(open_ms[0] / 1000, tz=timezone.utc).isoformat(),
-        "end": datetime.fromtimestamp(open_ms[-1] / 1000, tz=timezone.utc).isoformat(),
+        "start": datetime.fromtimestamp(open_ms[0] / 1000, tz=UTC).isoformat(),
+        "end": datetime.fromtimestamp(open_ms[-1] / 1000, tz=UTC).isoformat(),
         "rows": EXPECTED_ROWS,
         "objects": len(source_objects),
         "object_manifest": source_objects,
@@ -332,7 +333,9 @@ def eligible_prediction_anchors(anchors: np.ndarray, start: int, end: int) -> np
 
 
 def fit_weights(forecasts: np.ndarray, opens: np.ndarray, anchors: np.ndarray) -> dict[str, Any]:
-    labels = np.asarray([label_for_anchor(opens, int(anchor)) for anchor in anchors], dtype=np.float64)
+    labels = np.asarray(
+        [label_for_anchor(opens, int(anchor)) for anchor in anchors], dtype=np.float64
+    )
     expert = forecasts[anchors]
     errors = labels[:, None] - expert
     variances = np.mean(errors**2, axis=0)
@@ -341,8 +344,10 @@ def fit_weights(forecasts: np.ndarray, opens: np.ndarray, anchors: np.ndarray) -
     scores = 0.5 * (np.log(2.0 * math.pi * variances) + np.mean(errors**2, axis=0) / variances)
     raw = np.exp(-scores - np.max(-scores))
     weights = raw / np.sum(raw)
-    if np.any(weights <= 0) or not np.all(np.isfinite(weights)) or not math.isclose(
-        float(np.sum(weights)), 1.0, rel_tol=0, abs_tol=1e-12
+    if (
+        np.any(weights <= 0)
+        or not np.all(np.isfinite(weights))
+        or not math.isclose(float(np.sum(weights)), 1.0, rel_tol=0, abs_tol=1e-12)
     ):
         raise RuntimeError("invalid weights")
     weighted = expert @ weights
@@ -383,7 +388,9 @@ def forecast_diagnostics(
     weighted_variance: float,
     equal_variance: float,
 ) -> dict[str, Any]:
-    labels = np.asarray([label_for_anchor(opens, int(anchor)) for anchor in anchors], dtype=np.float64)
+    labels = np.asarray(
+        [label_for_anchor(opens, int(anchor)) for anchor in anchors], dtype=np.float64
+    )
     expert = forecasts[anchors]
     weighted = expert @ weights
     equal = np.mean(expert, axis=1)
@@ -632,7 +639,9 @@ def annualised_sharpe(values: np.ndarray) -> float:
     return float(np.mean(values) / std * math.sqrt(ANNUAL_HOURS))
 
 
-def bootstrap_differences(candidate: np.ndarray, trend: np.ndarray, equal: np.ndarray) -> dict[str, Any]:
+def bootstrap_differences(
+    candidate: np.ndarray, trend: np.ndarray, equal: np.ndarray
+) -> dict[str, Any]:
     if not (len(candidate) == len(trend) == len(equal)):
         raise RuntimeError("bootstrap paths are not aligned")
     n = len(candidate)
@@ -693,11 +702,16 @@ def fold_and_year_breadth(data: MarketData, weighted_map: dict[int, float]) -> d
         folds.append({"fold": fold_index + 1, **result.metrics})
     positive_values = [max(0.0, fold["net_total_return"]) for fold in folds]
     positive_sum = sum(positive_values)
-    positive_fold_concentration = max(positive_values, default=0.0) / positive_sum if positive_sum > 0 else 1.0
+    positive_fold_concentration = (
+        max(positive_values, default=0.0) / positive_sum if positive_sum > 0 else 1.0
+    )
 
     years: list[dict[str, Any]] = []
     year_values = np.asarray(
-        [datetime.fromtimestamp(value / 1000, tz=timezone.utc).year for value in data.open_ms[OOS_START:OOS_END]],
+        [
+            datetime.fromtimestamp(value / 1000, tz=UTC).year
+            for value in data.open_ms[OOS_START:OOS_END]
+        ],
         dtype=np.int64,
     )
     for year in sorted(set(int(value) for value in year_values)):
@@ -874,8 +888,10 @@ def failure_mechanism(markets: dict[str, Any]) -> dict[str, Any]:
             "failed_gates": failed,
             "candidate_net_minus_trend": candidate["net_total_return"] - trend["net_total_return"],
             "candidate_net_minus_equal": candidate["net_total_return"] - equal["net_total_return"],
-            "candidate_sharpe_minus_trend": candidate["annualised_sharpe"] - trend["annualised_sharpe"],
-            "candidate_sharpe_minus_equal": candidate["annualised_sharpe"] - equal["annualised_sharpe"],
+            "candidate_sharpe_minus_trend": candidate["annualised_sharpe"]
+            - trend["annualised_sharpe"],
+            "candidate_sharpe_minus_equal": candidate["annualised_sharpe"]
+            - equal["annualised_sharpe"],
             "forecast_score_improvement": market["forecast_diagnostics"]["oos"]["equal_weight"][
                 "gaussian_log_score"
             ]
@@ -995,7 +1011,9 @@ def main() -> None:
         "canonical_strategy_changed": False,
         "paper_live_authority": False,
     }
-    evidence_bytes = json.dumps(evidence, indent=2, sort_keys=True, allow_nan=False).encode("utf-8") + b"\n"
+    evidence_bytes = (
+        json.dumps(evidence, indent=2, sort_keys=True, allow_nan=False).encode("utf-8") + b"\n"
+    )
     evidence_path = args.output_dir / "evidence.json"
     evidence_path.write_bytes(evidence_bytes)
     evidence_digest = sha256_bytes(evidence_bytes)
