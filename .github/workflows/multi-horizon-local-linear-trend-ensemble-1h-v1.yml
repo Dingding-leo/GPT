@@ -37,13 +37,14 @@ jobs:
           python -m pip install --disable-pip-version-check \
             "numpy==2.2.6" "ruff==0.16.1"
 
-      - name: Materialize formatted deterministic reproducer
+      - name: Materialize corrected deterministic reproducer
         run: |
           mkdir -p /tmp/local-linear-output
           {
             printf '%s\n' '# ruff: noqa: E501'
             cat reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py
-          } > /tmp/local-linear-output/materialized_source.py
+          } | sed 's/1_767_225_200_000/1_767_222_000_000/' \
+            > /tmp/local-linear-output/materialized_source.py
           ruff check --fix /tmp/local-linear-output/materialized_source.py
           ruff format /tmp/local-linear-output/materialized_source.py
           ruff check /tmp/local-linear-output/materialized_source.py
@@ -52,13 +53,17 @@ jobs:
           sha256sum /tmp/local-linear-output/materialized_source.py
 
       - name: Run immutable public-data experiment
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p /tmp/local-linear-cache
           python /tmp/local-linear-output/materialized_source.py \
             --output-dir /tmp/local-linear-output \
             --cache-dir /tmp/local-linear-cache \
             | tee /tmp/local-linear-output/stdout.json
-          sha256sum /tmp/local-linear-output/* | sort \
+          find /tmp/local-linear-output -maxdepth 1 -type f -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
             > /tmp/local-linear-output/artifact-files.sha256
 
       - name: Upload immutable evidence
