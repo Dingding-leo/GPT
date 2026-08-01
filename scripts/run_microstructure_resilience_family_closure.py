@@ -39,9 +39,12 @@ def validate(source: dict[str, Any]) -> None:
         "l2_bid_replenishment_resilience",
     ]
     for group in groups:
-        assert set(group["dimension_votes"]) == set(DIMENSIONS)
-        assert all(v in {"pass", "fail", "not_applicable"} for v in group["dimension_votes"].values())
-        assert group["supportive"] is all(v != "fail" for v in group["dimension_votes"].values())
+        votes = group["dimension_votes"]
+        assert set(votes) == set(DIMENSIONS)
+        assert all(
+            vote in {"pass", "fail", "not_applicable"} for vote in votes.values()
+        )
+        assert group["supportive"] is all(vote != "fail" for vote in votes.values())
         assert group["terminal_verdict"] and group["failure_mechanisms"]
 
     by_id = {g["group_id"]: g for g in groups}
@@ -57,11 +60,20 @@ def validate(source: dict[str, Any]) -> None:
     assert v2["residual_sharpe_vs_trend"] == -2.4403088029779063
     onset = by_id["onset_aggressive_flow_absorption"]["metrics"]
     assert onset["mean_delta_95"][0] == onset["sharpe_delta_95"][0] == 0.0
-    assert onset["largest_event_share"] > 0.5 and onset["price_only_shadow_identical"] is True
+    assert (
+        onset["largest_event_share"] > 0.5
+        and onset["price_only_shadow_identical"] is True
+    )
     l2 = by_id["l2_bid_replenishment_resilience"]["metrics"]
     assert l2["primary"]["ETH-USDT"]["net_rho"] < 0
+    interval_names = (
+        "net_rho_95",
+        "adverse_rho_95",
+        "net_slope_95",
+        "adverse_slope_95",
+    )
     for market in ("BTC-USDT", "ETH-USDT"):
-        for name in ("net_rho_95", "adverse_rho_95", "net_slope_95", "adverse_slope_95"):
+        for name in interval_names:
             assert l2["primary"][market][name][0] <= 0
             assert l2["one_hour_delay"][market][name][0] <= 0
 
@@ -69,31 +81,60 @@ def validate(source: dict[str, Any]) -> None:
 def build(source: dict[str, Any], source_sha: str) -> dict[str, Any]:
     groups = source["groups"]
     supportive = sum(g["supportive"] for g in groups)
-    counts = {d: sum(g["dimension_votes"][d] == "pass" for g in groups) for d in DIMENSIONS}
+    counts = {
+        dimension: sum(
+            group["dimension_votes"][dimension] == "pass" for group in groups
+        )
+        for dimension in DIMENSIONS
+    }
     leave_one_out = [
         {
             "omitted_group": omitted["group_id"],
-            "retained_supportive_groups": sum(g["supportive"] for g in groups if g is not omitted),
+            "retained_supportive_groups": sum(
+                group["supportive"] for group in groups if group is not omitted
+            ),
         }
         for omitted in groups
     ]
-    v2 = next(g for g in groups if g["group_id"] == "individual_trade_flow_response_residual")["metrics"]
-    onset = next(g for g in groups if g["group_id"] == "onset_aggressive_flow_absorption")["metrics"]
+    v2_group = next(
+        group
+        for group in groups
+        if group["group_id"] == "individual_trade_flow_response_residual"
+    )
+    onset_group = next(
+        group
+        for group in groups
+        if group["group_id"] == "onset_aggressive_flow_absorption"
+    )
+    v2 = v2_group["metrics"]
+    onset = onset_group["metrics"]
     gates = {
         "supportive_groups_at_least_3_of_4": supportive >= 3,
-        "dependence_support_at_least_3_of_4": counts["dependence_aware_support"] >= 3,
+        "dependence_support_at_least_3_of_4": (
+            counts["dependence_aware_support"] >= 3
+        ),
         "temporal_breadth_at_least_3_of_4": counts["temporal_breadth"] >= 3,
-        "replication_latency_at_least_3_of_4": counts["replication_or_latency"] >= 3,
+        "replication_latency_at_least_3_of_4": (
+            counts["replication_or_latency"] >= 3
+        ),
         "no_material_negative_executable_evidence": not (
             v2["net_return"] - v2["benchmark_net_return"] < -0.25
             and v2["residual_sharpe_vs_trend"] < 0
         ),
-        "all_leave_one_out_retain_two_supportive": all(x["retained_supportive_groups"] >= 2 for x in leave_one_out),
+        "all_leave_one_out_retain_two_supportive": all(
+            row["retained_supportive_groups"] >= 2 for row in leave_one_out
+        ),
         "not_shadow_or_single_event_explained": not (
-            onset["price_only_shadow_identical"] or onset["largest_event_share"] > 0.5
+            onset["price_only_shadow_identical"]
+            or onset["largest_event_share"] > 0.5
         ),
     }
     accepted = all(gates.values())
+    verdict = (
+        "accept_causal_microstructure_resilience_family_for_one_fresh_replication"
+        if accepted
+        else REJECT
+    )
     return {
         "architecture_family_id": FAMILY,
         "classification": "completed-evidence architecture-family closure",
@@ -107,24 +148,24 @@ def build(source: dict[str, Any], source_sha: str) -> dict[str, Any]:
         "fee_one_way_where_executable": 0.0005,
         "group_audit": [
             {
-                "group_id": g["group_id"],
-                "family_id": g["family_id"],
-                "source_issues": g["source_issues"],
-                "terminal_verdict": g["terminal_verdict"],
-                "markets_required": g["markets_required"],
-                "markets_evaluated": g["markets_evaluated"],
-                "dimension_votes": g["dimension_votes"],
-                "supportive": g["supportive"],
-                "failure_mechanisms": g["failure_mechanisms"],
+                "group_id": group["group_id"],
+                "family_id": group["family_id"],
+                "source_issues": group["source_issues"],
+                "terminal_verdict": group["terminal_verdict"],
+                "markets_required": group["markets_required"],
+                "markets_evaluated": group["markets_evaluated"],
+                "dimension_votes": group["dimension_votes"],
+                "supportive": group["supportive"],
+                "failure_mechanisms": group["failure_mechanisms"],
             }
-            for g in groups
+            for group in groups
         ],
         "dimension_pass_counts": counts,
         "supportive_group_count": supportive,
         "leave_one_group_out": leave_one_out,
         "family_gates": gates,
         "accepted": accepted,
-        "verdict": "accept_causal_microstructure_resilience_family_for_one_fresh_replication" if accepted else REJECT,
+        "verdict": verdict,
         "closed_hypothesis_paths": [
             "aggregate taker-flow residuals",
             "individual-trade signed-flow persistence and linear flow/price residuals",
@@ -134,14 +175,15 @@ def build(source: dict[str, Any], source_sha: str) -> dict[str, Any]:
             "post-hoc market-subset rescue",
         ],
         "open_hypothesis_paths": [
-            "materially different same-instrument temporal information architectures outside resilience/absorption"
+            "materially different same-instrument temporal information architectures "
+            "outside resilience/absorption"
         ],
         "no_recomputation_or_selection": True,
     }
 
 
 def report(evidence: dict[str, Any], source: dict[str, Any]) -> str:
-    groups = {g["group_id"]: g for g in source["groups"]}
+    groups = {group["group_id"]: group for group in source["groups"]}
     v2 = groups["individual_trade_flow_response_residual"]["metrics"]
     onset = groups["onset_aggressive_flow_absorption"]["metrics"]
     lines = [
@@ -149,47 +191,100 @@ def report(evidence: dict[str, Any], source: dict[str, Any]) -> str:
         "",
         f"Verdict: `{evidence['verdict']}`",
         "",
-        "| Group | Source | Positive | Dependence | Breadth | Replication/latency | Supportive |",
+        (
+            "| Group | Source | Positive | Dependence | Breadth | "
+            "Replication/latency | Supportive |"
+        ),
         "|---|---:|---:|---:|---:|---:|---:|",
     ]
-    for g in evidence["group_audit"]:
-        v = g["dimension_votes"]
-        lines.append(f"| {g['group_id']} | {v['source_executable']} | {v['positive_economics_or_information']} | {v['dependence_aware_support']} | {v['temporal_breadth']} | {v['replication_or_latency']} | {'yes' if g['supportive'] else 'no'} |")
+    for group in evidence["group_audit"]:
+        votes = group["dimension_votes"]
+        row = (
+            f"| {group['group_id']} | {votes['source_executable']} | "
+            f"{votes['positive_economics_or_information']} | "
+            f"{votes['dependence_aware_support']} | "
+            f"{votes['temporal_breadth']} | "
+            f"{votes['replication_or_latency']} | "
+            f"{'yes' if group['supportive'] else 'no'} |"
+        )
+        lines.append(row)
+
+    dimension_counts = evidence["dimension_pass_counts"]
     lines += [
         "",
-        f"Supportive groups: `{evidence['supportive_group_count']}/4`; dependence support: `{evidence['dimension_pass_counts']['dependence_aware_support']}/4`; breadth: `{evidence['dimension_pass_counts']['temporal_breadth']}/4`; replication/latency: `{evidence['dimension_pass_counts']['replication_or_latency']}/4`.",
+        (
+            f"Supportive groups: `{evidence['supportive_group_count']}/4`; "
+            f"dependence support: `{dimension_counts['dependence_aware_support']}/4`; "
+            f"breadth: `{dimension_counts['temporal_breadth']}/4`; "
+            f"replication/latency: `{dimension_counts['replication_or_latency']}/4`."
+        ),
         "",
-        f"V2 BTC: net `{v2['net_return']:.4%}`, Sharpe `{v2['sharpe']:.4f}`, drawdown `{v2['max_drawdown']:.4%}`, turnover `{v2['turnover']:.4f}`, edge/turn `{v2['edge_per_turnover_bps']:.4f} bps`; trend benchmark net `{v2['benchmark_net_return']:.4%}`, Sharpe `{v2['benchmark_sharpe']:.4f}`.",
-        f"Onset veto BTC OOS: net `{onset['oos']['candidate_net_return']:.4%}`, Sharpe `{onset['oos']['candidate_sharpe']:.4f}`, drawdown `{onset['oos']['candidate_max_drawdown']:.4%}`, turnover `{onset['oos']['candidate_turnover']:.0f}`, edge/turn `{onset['oos']['candidate_edge_per_turnover_bps']:.4f} bps`; both lower confidence bounds were zero, the price-only shadow was identical, and one event supplied `{onset['largest_event_share']:.2%}` of improvement.",
-        "Aggregate flow failed source feasibility before performance. L2 replenishment had no executable candidate and failed bilateral uncertainty, breadth, monotonicity and one-hour-delay gates.",
+        (
+            f"V2 BTC: net `{v2['net_return']:.4%}`, "
+            f"Sharpe `{v2['sharpe']:.4f}`, "
+            f"drawdown `{v2['max_drawdown']:.4%}`, "
+            f"turnover `{v2['turnover']:.4f}`, "
+            f"edge/turn `{v2['edge_per_turnover_bps']:.4f} bps`; "
+            f"trend benchmark net `{v2['benchmark_net_return']:.4%}`, "
+            f"Sharpe `{v2['benchmark_sharpe']:.4f}`."
+        ),
+        (
+            "Onset veto BTC OOS: "
+            f"net `{onset['oos']['candidate_net_return']:.4%}`, "
+            f"Sharpe `{onset['oos']['candidate_sharpe']:.4f}`, "
+            f"drawdown `{onset['oos']['candidate_max_drawdown']:.4%}`, "
+            f"turnover `{onset['oos']['candidate_turnover']:.0f}`, "
+            "edge/turn "
+            f"`{onset['oos']['candidate_edge_per_turnover_bps']:.4f} bps`; "
+            "both lower confidence bounds were zero, the price-only shadow was "
+            "identical, and one event supplied "
+            f"`{onset['largest_event_share']:.2%}` of improvement."
+        ),
+        (
+            "Aggregate flow failed source feasibility before performance. "
+            "L2 replenishment had no executable candidate and failed bilateral "
+            "uncertainty, breadth, monotonicity and one-hour-delay gates."
+        ),
         "",
-        "No new performance, candidate, OOS interval, market data, filtering, parameter search, family reweighting or sign reversal occurred.",
-        "The resilience/absorption family is closed; the next experiment must use a materially different causal temporal representation.",
+        (
+            "No new performance, candidate, OOS interval, market data, filtering, "
+            "parameter search, family reweighting or sign reversal occurred."
+        ),
+        (
+            "The resilience/absorption family is closed; the next experiment must "
+            "use a materially different causal temporal representation."
+        ),
         "",
     ]
     return "\n".join(lines)
 
 
 def main() -> None:
-    p = argparse.ArgumentParser()
-    p.add_argument("--source", type=Path, required=True)
-    p.add_argument("--output-dir", type=Path, required=True)
-    a = p.parse_args()
-    source_bytes = a.source.read_bytes()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--source", type=Path, required=True)
+    parser.add_argument("--output-dir", type=Path, required=True)
+    args = parser.parse_args()
+    source_bytes = args.source.read_bytes()
     source = json.loads(source_bytes)
     validate(source)
     evidence = build(source, digest(source_bytes))
-    a.output_dir.mkdir(parents=True, exist_ok=True)
+    args.output_dir.mkdir(parents=True, exist_ok=True)
     files = {
         "source-records.json": source_bytes,
         "evidence.json": canonical(evidence),
         "report.md": report(evidence, source).encode(),
     }
     for name, data in files.items():
-        (a.output_dir / name).write_bytes(data)
+        (args.output_dir / name).write_bytes(data)
     sums = {name: digest(data) for name, data in files.items()}
-    (a.output_dir / "sha256sums.json").write_bytes(canonical(sums))
-    print(json.dumps({"verdict": evidence["verdict"], "sha256": sums}, indent=2, sort_keys=True))
+    (args.output_dir / "sha256sums.json").write_bytes(canonical(sums))
+    print(
+        json.dumps(
+            {"verdict": evidence["verdict"], "sha256": sums},
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 if __name__ == "__main__":
