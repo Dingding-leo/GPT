@@ -1,0 +1,201 @@
+{
+  "architecture_group": "week_phase_deseasonalized_endpoint_trend",
+  "bar": "1H",
+  "candidate_count": 2,
+  "family_id": "causal-week-phase-deseasonalized-endpoint-trend-1h-v1",
+  "fee_one_way": 0.0005,
+  "markets": {
+    "CRV-USDT": {
+      "always_long_oos_net_return": -0.728061,
+      "benchmark_e2160_daily": {
+        "full": {
+          "net_return": -0.654258,
+          "sharpe": -0.0016
+        },
+        "oos": {
+          "max_drawdown": -0.821318,
+          "net_return": -0.568792,
+          "sharpe": 0.0243,
+          "turnover": 48.0
+        },
+        "training": {
+          "net_return": -0.198201,
+          "sharpe": -0.1151
+        }
+      },
+      "breadth": {
+        "folds": 12,
+        "positive_candidate_and_relative_years": 0,
+        "positive_fold_concentration": 1.0,
+        "positive_relative_folds": 1,
+        "years": 4
+      },
+      "candidate": {
+        "full": {
+          "edge_per_turnover_pct": -1.3074,
+          "max_drawdown": -0.821318,
+          "net_return": -0.653725,
+          "sharpe": -0.0019,
+          "turnover": 50.0
+        },
+        "oos": {
+          "edge_per_turnover_pct": -1.3527,
+          "max_drawdown": -0.821318,
+          "net_return": -0.568127,
+          "sharpe": 0.024,
+          "turnover": 42.0
+        },
+        "training": {
+          "edge_per_turnover_pct": -2.4775,
+          "max_drawdown": -0.381691,
+          "net_return": -0.198201,
+          "sharpe": -0.1151,
+          "turnover": 8.0
+        }
+      },
+      "daily_decisions": 1080,
+      "decision_differences_vs_e2160": 5,
+      "delayed_oos": {
+        "net_return": -0.617771,
+        "sharpe": -0.0287
+      },
+      "loss_decomposition_percentage_points": {
+        "gross_timing": -0.3899,
+        "relative_fee": 0.3
+      },
+      "profile_transport": {
+        "ci95": [
+          -0.196,
+          0.2637
+        ],
+        "correlation": 0.0479
+      },
+      "uncertainty_vs_e2160": {
+        "mean_net_delta_bp_per_hour_ci95": [
+          -0.0453,
+          0.0436
+        ],
+        "sharpe_delta_ci95": [
+          -0.0526,
+          0.05
+        ]
+      }
+    },
+    "SUSHI-USDT": {
+      "always_long_oos_net_return": -0.771487,
+      "benchmark_e2160_daily": {
+        "full": {
+          "net_return": -0.782341,
+          "sharpe": -0.1403
+        },
+        "oos": {
+          "max_drawdown": -0.84704,
+          "net_return": -0.384121,
+          "sharpe": 0.1959,
+          "turnover": 50.0
+        },
+        "training": {
+          "net_return": -0.646589,
+          "sharpe": -1.6631
+        }
+      },
+      "breadth": {
+        "folds": 12,
+        "positive_candidate_and_relative_years": 0,
+        "positive_fold_concentration": 0.8161,
+        "positive_relative_folds": 3,
+        "years": 4
+      },
+      "candidate": {
+        "full": {
+          "edge_per_turnover_pct": -0.915,
+          "max_drawdown": -0.832682,
+          "net_return": -0.786937,
+          "sharpe": -0.1552,
+          "turnover": 86.0
+        },
+        "oos": {
+          "edge_per_turnover_pct": -0.7442,
+          "max_drawdown": -0.832682,
+          "net_return": -0.416741,
+          "sharpe": 0.1677,
+          "turnover": 56.0
+        },
+        "training": {
+          "edge_per_turnover_pct": -2.1157,
+          "max_drawdown": -0.659056,
+          "net_return": -0.634703,
+          "sharpe": -1.6166,
+          "turnover": 30.0
+        }
+      },
+      "daily_decisions": 1080,
+      "decision_differences_vs_e2160": 8,
+      "delayed_oos": {
+        "net_return": -0.3233,
+        "sharpe": 0.2298
+      },
+      "loss_decomposition_percentage_points": {
+        "gross_timing": -6.7293,
+        "relative_fee": -0.3
+      },
+      "profile_transport": {
+        "ci95": [
+          -0.1994,
+          0.2611
+        ],
+        "correlation": 0.0486
+      },
+      "uncertainty_vs_e2160": {
+        "mean_net_delta_bp_per_hour_ci95": [
+          -0.1618,
+          0.1192
+        ],
+        "sharpe_delta_ci95": [
+          -0.181,
+          0.1316
+        ]
+      }
+    }
+  },
+  "parameter_grid_count": 0,
+  "record_schema": "completed_strategy_terminal_record_v1",
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "source": {
+    "artifact_id": 8818043573,
+    "artifact_zip_sha256": "f5437948d72ea677e96084a29f9acf0c1d35dbd2182676b9550c7b402df87071",
+    "confirmed": true,
+    "evidence_sha256": "b2e596c695f519d32229d4b7c90f47d616c2669a069dabee35bf6f6f20c1302c",
+    "market_type": "SPOT",
+    "provider": "OKX",
+    "sample": {
+      "calibration": [
+        2160,
+        10080
+      ],
+      "end": "2026-07-08T00:00:00Z",
+      "fold_hours": 2160,
+      "full": [
+        10080,
+        43440
+      ],
+      "oos": [
+        17520,
+        43440
+      ],
+      "oos_folds": 12,
+      "rows_per_market": 43441,
+      "start": "2021-07-24T00:00:00Z",
+      "training": [
+        10080,
+        17520
+      ]
+    },
+    "source_manifest_sha256": "95969a00a213cf00dac010561f00b42c20a3a87d56d13291b3cc1236900662bb"
+  },
+  "source_evidence_head": "22835773d6b02feec300795d5947fc40ffcebbd2",
+  "source_issue": 866,
+  "source_pr": 873,
+  "terminal_comment_id": 5151310867,
+  "verdict": "reject_causal_week_phase_deseasonalized_endpoint_trend_1h_v1"
+}
