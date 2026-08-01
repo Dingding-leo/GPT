@@ -146,7 +146,7 @@ def main() -> None:
     if evidence["new_candidate_count"] != 0 or evidence["new_oos_consumed"] != 0:
         raise ValueError("closure consumed a candidate or OOS")
     print(f"family={FAMILY}")
-    print(f"supportive_groups=0/2")
+    print("supportive_groups=0/2")
     print(f"failed_family_gates={len(failed_family_gates)}/7")
     print(f"verdict={evidence['verdict']}")
     for name, digest in EXPECTED.items():
