@@ -1,0 +1,159 @@
+name: Causal Trend Episode Maturity Filter 1H Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/causal-trend-episode-maturity-filter-1h-v1.yml"
+      - "reports/research/causal-trend-episode-maturity-filter-1h-v1/**"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+
+env:
+  EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  SOURCE_B64: reports/research/causal-trend-episode-maturity-filter-1h-v1/run_episode.py.gz.b64
+  SOURCE_PY: /tmp/run_episode.py
+  OUTPUT_DIR: /tmp/trend-episode-output
+  REPLAY_DIR: /tmp/trend-episode-replay
+  BTC_ZIP_SHA256: 647fa37932a7a1c13d909e84a43c30ec0a147386734195133b84c3a288747341
+  ETH_ZIP_SHA256: c533b386eff9fe3e963b02599158d5e0ea65693dbec0db656d8c5c4a51695d76
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Check out exact evidence head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          git cat-file -e "5a0fcc97d1a882f8223656c51f5bb8055f534e38^{commit}"
+
+      - name: Set up fixed Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install fixed research dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            "numpy==2.2.6" "pandas==2.2.3" "ruff==0.16.1"
+
+      - name: Materialize and verify frozen reproducer
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 --decode "$SOURCE_B64" | gzip --decompress > "$SOURCE_PY"
+          test "$(sha256sum "$SOURCE_PY" | cut -d' ' -f1)" = \
+            "6b2f2bd340806061e28fe6ef7988090a1e627f5b8acbb7ecce31e261b652e765"
+          ruff check "$SOURCE_PY"
+          ruff format --check "$SOURCE_PY"
+          python -m py_compile "$SOURCE_PY"
+
+      - name: Download immutable canonical artifacts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/source-zips /tmp/source/btc /tmp/source/eth
+          download_artifact() {
+            local artifact_id="$1"
+            local destination="$2"
+            local headers signed_url
+            headers="$(mktemp)"
+            curl --silent --show-error --dump-header "$headers" --output /dev/null \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer $GITHUB_TOKEN" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/Dingding-leo/GPT/actions/artifacts/${artifact_id}/zip"
+            signed_url="$(awk 'BEGIN { IGNORECASE = 1 } /^location:/ {
+              sub(/\r$/, ""); sub(/^[^:]*:[[:space:]]*/, ""); print
+            }' "$headers" | tail -n 1)"
+            rm -f "$headers"
+            test -n "$signed_url"
+            curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
+              "$signed_url" --output "$destination"
+          }
+          download_artifact 8811641671 /tmp/source-zips/btc.zip
+          download_artifact 8811641771 /tmp/source-zips/eth.zip
+          test "$(sha256sum /tmp/source-zips/btc.zip | cut -d' ' -f1)" = "$BTC_ZIP_SHA256"
+          test "$(sha256sum /tmp/source-zips/eth.zip | cut -d' ' -f1)" = "$ETH_ZIP_SHA256"
+          unzip -q /tmp/source-zips/btc.zip -d /tmp/source/btc
+          unzip -q /tmp/source-zips/eth.zip -d /tmp/source/eth
+
+      - name: Run frozen experiment twice
+        shell: bash
+        run: |
+          set -euo pipefail
+          python "$SOURCE_PY" \
+            --btc-artifact-dir /tmp/source/btc \
+            --eth-artifact-dir /tmp/source/eth \
+            --output-dir "$OUTPUT_DIR" \
+            > "$OUTPUT_DIR/stdout.json"
+          python "$SOURCE_PY" \
+            --btc-artifact-dir /tmp/source/btc \
+            --eth-artifact-dir /tmp/source/eth \
+            --output-dir "$REPLAY_DIR" \
+            > "$REPLAY_DIR/stdout.json"
+          for file in training-freeze.json training-freeze.sha256 evidence.json evidence.sha256 report.md stdout.json; do
+            cmp "$OUTPUT_DIR/$file" "$REPLAY_DIR/$file"
+          done
+
+      - name: Verify terminal evidence and verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence = json.loads(Path("/tmp/trend-episode-output/evidence.json").read_text())
+          assert evidence["research_parent"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["family_id"] == "causal-trend-episode-maturity-filter-1h-v1"
+          assert evidence["candidate_count"] == 2
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["bar"] == "1H"
+          assert evidence["fee_one_way"] == 0.0005
+          assert evidence["oos_opened_after_training_freeze"] is True
+          assert evidence["markets_passing"] == 0
+          assert evidence["accepted"] is False
+          assert evidence["verdict"] == "reject_causal_trend_episode_maturity_filter_1h_v1"
+          assert evidence["markets"]["BTC-USDT"]["gates_passed"] == 2
+          assert evidence["markets"]["ETH-USDT"]["gates_passed"] == 2
+          assert evidence["markets"]["BTC-USDT"]["segments"]["oos"]["candidate"]["turnover"] == 8.0
+          assert evidence["markets"]["ETH-USDT"]["segments"]["oos"]["candidate"]["turnover"] == 8.0
+          PY
+          cat "$OUTPUT_DIR/report.md"
+
+      - name: Build artifact manifest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp "$SOURCE_PY" "$OUTPUT_DIR/run_episode.py"
+          find "$OUTPUT_DIR" -maxdepth 1 -type f \
+            ! -name artifact-files.sha256 -print0 | sort -z | xargs -0 sha256sum \
+            > "$OUTPUT_DIR/artifact-files.sha256"
+
+      - name: Upload immutable strategy evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: causal-trend-episode-maturity-filter-1h-v1
+          path: /tmp/trend-episode-output
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 90
