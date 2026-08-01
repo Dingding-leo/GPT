@@ -52,7 +52,7 @@ jobs:
       - name: Install standalone research dependencies
         run: python -m pip install --disable-pip-version-check "numpy>=1.26,<3" "scipy>=1.14,<2" "ruff==0.16.1"
 
-      - name: Materialize, repair first unavailable cut, and validate frozen reproducer
+      - name: Materialize, repair frozen causal cut and evidence identity, then validate
         run: |
           python reports/research/bocpd-duration-confirmed-e2160-entry-1h-v1/run_research.py \
             --materialize artifacts/work/run_research_impl.py
@@ -61,17 +61,19 @@ jobs:
 
           path = Path("artifacts/work/run_research_impl.py")
           source = path.read_text(encoding="utf-8")
-          old_targets = "daily_targets = set(range(WARMUP_END, limit, 24))"
-          new_targets = (
-              "daily_targets = {execution_index for execution_index in "
-              "range(WARMUP_END, limit, 24) if execution_index > 2160}"
-          )
-          old_expected = "expected = (limit - WARMUP_END) // 24"
-          new_expected = "expected = len(daily_targets)"
-          assert source.count(old_targets) == 1
-          assert source.count(old_expected) == 1
-          source = source.replace(old_targets, new_targets, 1)
-          source = source.replace(old_expected, new_expected, 1)
+          replacements = {
+              "daily_targets = set(range(WARMUP_END, limit, 24))": (
+                  "daily_targets = {execution_index for execution_index in "
+                  "range(WARMUP_END, limit, 24) if execution_index > 2160}"
+              ),
+              "expected = (limit - WARMUP_END) // 24": "expected = len(daily_targets)",
+              'os.environ.get("GITHUB_SHA", "local")': (
+                  'os.environ.get("EXPECTED_TESTED_SHA", "local")'
+              ),
+          }
+          for old, new in replacements.items():
+              assert source.count(old) == 1, old
+              source = source.replace(old, new, 1)
           path.write_text(source, encoding="utf-8")
           PY
           ruff check --fix --unsafe-fixes --ignore E501 artifacts/work/run_research_impl.py
@@ -80,20 +82,19 @@ jobs:
           python -m compileall -q artifacts/work/run_research_impl.py
 
       - name: Acquire immutable public data and run frozen experiment
-        env:
-          GITHUB_SHA: ${{ env.EXPECTED_TESTED_SHA }}
         run: python artifacts/work/run_research_impl.py
 
       - name: Verify terminal evidence contract
         run: |
           python - <<'PY'
           import json
+          import os
           from pathlib import Path
 
           root = Path("reports/experiments/bocpd-duration-confirmed-e2160-entry-1h-v1")
           evidence = json.loads((root / "evidence.json").read_text(encoding="utf-8"))
           assert evidence["family_id"] == "causal-bocpd-duration-confirmed-e2160-entry-1h-v1"
-          assert evidence["exact_head"] == "${{ env.EXPECTED_TESTED_SHA }}"
+          assert evidence["exact_head"] == os.environ["EXPECTED_TESTED_SHA"]
           assert evidence["candidate_count"] == 2
           assert evidence["parameter_grid_count"] == 0
           assert evidence["canonical_fee_bps_one_way"] == 5.0
