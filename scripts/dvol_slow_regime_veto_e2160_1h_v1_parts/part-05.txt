@@ -1,0 +1,180 @@
+            source_errors[currency] = f"{type(exc).__name__}: {exc}"
+            arms.append(
+                {
+                    "currency": currency,
+                    "market": market,
+                    "source_contract_passed": False,
+                    "source_error": source_errors[currency],
+                    "training_support": None,
+                    "training": None,
+                    "training_conditional_returns": None,
+                    "training_gate": None,
+                    "training_gate_passed": False,
+                    "oos_gate": None,
+                    "oos_gate_passed": None,
+                    "economics": None,
+                }
+            )
+
+    bilateral_training = len(runtime_values) == 2 and all(
+        arm["training_gate_passed"] for arm in arms
+    )
+    oos_accessed = False
+    if bilateral_training:
+        oos_accessed = True
+        for arm in arms:
+            currency = arm["currency"]
+            values = runtime_values[currency]
+            economics = full_economics(values["candles"], values["decisions"])
+            gate = oos_gate(economics)
+            arm["oos_gate"] = gate
+            arm["oos_gate_passed"] = all(gate.values())
+            arm["economics"] = strip_paths(economics)
+            oos_decisions = values["decisions"].loc[OOS_START:SIGNAL_END]
+            arm["oos_conditional_returns"] = conditional_returns(
+                values["candles"], oos_decisions
+            )
+            arm["training_to_oos_drift"] = {
+                "training_dvol_margin_median": float(
+                    values["decisions"]
+                    .loc[
+                        TRAIN_START : OOS_START - pd.Timedelta(hours=1),
+                        "dvol_margin",
+                    ]
+                    .median()
+                ),
+                "oos_dvol_margin_median": float(
+                    values["decisions"].loc[OOS_START:SIGNAL_END, "dvol_margin"].median()
+                ),
+                "training_risk_off_rate": float(
+                    values["decisions"]
+                    .loc[
+                        TRAIN_START : OOS_START - pd.Timedelta(hours=1),
+                        "risk_off",
+                    ]
+                    .mean()
+                ),
+                "oos_risk_off_rate": float(
+                    values["decisions"].loc[OOS_START:SIGNAL_END, "risk_off"].mean()
+                ),
+                "training_veto_rate": float(
+                    values["decisions"]
+                    .loc[
+                        TRAIN_START : OOS_START - pd.Timedelta(hours=1),
+                        "veto",
+                    ]
+                    .mean()
+                ),
+                "oos_veto_rate": float(
+                    values["decisions"].loc[OOS_START:SIGNAL_END, "veto"].mean()
+                ),
+            }
+            paths = economics["oos_paths"]
+            arm["oos_path_identities"] = {
+                "candidate": compact_path(paths["candidate"]),
+                "e2160": compact_path(paths["e2160"]),
+                "always_long": compact_path(paths["always_long"]),
+            }
+
+    accepted = oos_accessed and all(arm["oos_gate_passed"] for arm in arms)
+    verdict = ACCEPT_VERDICT if accepted else REJECT_VERDICT
+    evidence = {
+        "family_id": FAMILY_ID,
+        "classification": "fixed exogenous forward-implied-volatility regime-veto experiment",
+        "tested_head": args.tested_head,
+        "repository_main": REPOSITORY_MAIN,
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "source_contract_lineage": {
+            "head": SOURCE_EVIDENCE_HEAD,
+            "workflow_run": SOURCE_WORKFLOW_RUN,
+            "artifact_id": SOURCE_ARTIFACT_ID,
+            "artifact_sha256": SOURCE_ARTIFACT_SHA256,
+            "evidence_sha256": SOURCE_EVIDENCE_SHA256,
+        },
+        "fixed_interval": {
+            "source_start": SOURCE_START,
+            "signal_end": SIGNAL_END,
+            "payoff_boundary": PAYOFF_BOUNDARY,
+            "training_start": TRAIN_START,
+            "oos_start": OOS_START,
+            "sample_end": SAMPLE_END,
+        },
+        "bar": "1H",
+        "decision_cadence": "daily 00:00 UTC",
+        "execution": "completed daily signal to next hourly open",
+        "modeled_fee_bps_one_way": 5.0,
+        "candidate_count": 2,
+        "parameter_grid_count": 0,
+        "bootstrap_draws": BOOTSTRAP_DRAWS if oos_accessed else 0,
+        "market_arms": arms,
+        "source_errors": source_errors,
+        "bilateral_training_gate_passed": bilateral_training,
+        "oos_accessed": oos_accessed,
+        "full_sample_accessed": oos_accessed,
+        "markets_passing_training_gate": sum(arm["training_gate_passed"] for arm in arms),
+        "markets_passing_oos_gate": sum(bool(arm["oos_gate_passed"]) for arm in arms),
+        "canonical_strategy_changed": False,
+        "prospective_shadow_authorized": accepted,
+        "paper_trading_authorized": False,
+        "live_trading_authorized": False,
+        "synthetic_market_data_used": False,
+        "cross_sectional_selection": False,
+        "pairs_or_spreads": False,
+        "market_neutral_or_long_short": False,
+        "credentials_used": False,
+        "private_endpoints_used": False,
+        "accounts_or_orders": False,
+        "enabled_adapters": False,
+        "leverage_used": False,
+        "verdict": verdict,
+        "machine_readable_verdict": {
+            "family_id": FAMILY_ID,
+            "candidate_count": 2,
+            "parameter_grid_count": 0,
+            "bilateral_training_gate_passed": bilateral_training,
+            "oos_accessed": oos_accessed,
+            "markets_passing_training_gate": sum(
+                arm["training_gate_passed"] for arm in arms
+            ),
+            "markets_passing_oos_gate": sum(
+                bool(arm["oos_gate_passed"]) for arm in arms
+            ),
+            "canonical_strategy_changed": False,
+            "prospective_shadow_authorized": accepted,
+            "paper_trading_authorized": False,
+            "live_trading_authorized": False,
+            "verdict": verdict,
+        },
+    }
+    evidence_hash = persist_json(output / "evidence.json", evidence)
+    (output / "evidence.sha256").write_text(evidence_hash + "\n")
+    protocol = {
+        "family_id": FAMILY_ID,
+        "source_lineage": evidence["source_contract_lineage"],
+        "signal": {
+            "base": "close[t-1] > close[t-2161]",
+            "recent_dvol": "median(log(DVOL close[t-168:t]))",
+            "prior_dvol": "median(log(DVOL close[t-888:t-168]))",
+            "risk_off": "recent_dvol > prior_dvol",
+            "candidate": "base AND NOT risk_off",
+        },
+        "training_gate": [
+            "minimum 20 veto decisions",
+            "vetoes in at least four quarters",
+            "minimum 20 reauthorizations",
+            "difference on at least five percent of base-positive decisions",
+            "veto and reauthorization quarter concentration at most 60 percent",
+            "positive candidate training return",
+            "candidate training return and Sharpe beat E2160",
+            "candidate training drawdown less severe than E2160",
+            "candidate training edge per turnover positive and above E2160",
+        ],
+        "fee": FEE,
+    }
+    protocol_hash = persist_json(output / "protocol.json", protocol)
+    (output / "protocol.sha256").write_text(protocol_hash + "\n")
+    (output / "report.md").write_text(report(evidence))
+    report_hash = digest((output / "report.md").read_bytes())
+    (output / "report.sha256").write_text(report_hash + "\n")
+
+
