@@ -7,16 +7,16 @@ from pathlib import Path
 INITIAL_SHA256 = "d92b9626a9429c2177f292ddef7555dbf4b2f3c713ccf120ef4708906c7c49c3"
 REPAIRED_SHA256 = "e279e1f24f5c90bea154833918874ec4ed33e5ed1635413fa98d7d25f652dd0b"
 
-OLD = '''    checks = {
+OLD = """    checks = {
         "deterministic_filter_weight_and_signal_replay": deterministic,
         "proper_score_weights_finite_positive_and_normalised": weight_valid,
         "daily_only_target_changes": bool(daily_only),
         "next_open_and_exact_fee_paths": bool(exact_paths),
         "segment_cash_reset_and_terminal_liquidation": bool(segment_reset),
         "source_endpoint_excludes_unscored_suffix": bool(OOS_END + 1 <= SOURCE_END),
-'''
+"""
 
-NEW = '''    truncated = MarketData(
+NEW = """    truncated = MarketData(
         symbol=data.symbol,
         timestamp_ms=data.timestamp_ms[: OOS_END + 1].copy(),
         open=data.open[: OOS_END + 1].copy(),
@@ -62,7 +62,7 @@ NEW = '''    truncated = MarketData(
         "next_open_and_exact_fee_paths": bool(exact_paths),
         "segment_cash_reset_and_terminal_liquidation": bool(segment_reset),
         "unscored_suffix_truncation_invariance": bool(suffix_invariant),
-'''
+"""
 
 
 def parse_args() -> argparse.Namespace:
