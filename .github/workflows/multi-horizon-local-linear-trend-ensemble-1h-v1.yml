@@ -1,0 +1,53 @@
+name: Multi Horizon Local Linear Trend Ensemble 1H Research
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/multi-horizon-local-linear-trend-ensemble-1h-v1.yml"
+      - "reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install fixed research dependency
+        run: python -m pip install --disable-pip-version-check "numpy==2.2.6"
+
+      - name: Compile deterministic reproducer
+        run: |
+          python -m py_compile reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py
+          sha256sum reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py
+
+      - name: Run immutable public-data experiment
+        run: |
+          mkdir -p /tmp/local-linear-output /tmp/local-linear-cache
+          python reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py \
+            --output-dir /tmp/local-linear-output \
+            --cache-dir /tmp/local-linear-cache \
+            | tee /tmp/local-linear-output/stdout.json
+          cp reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py \
+            /tmp/local-linear-output/materialized_source.py
+          sha256sum /tmp/local-linear-output/* | sort \
+            > /tmp/local-linear-output/artifact-files.sha256
+
+      - name: Upload immutable evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: multi-horizon-local-linear-trend-ensemble-1h-v1
+          path: /tmp/local-linear-output
+          if-no-files-found: error
+          retention-days: 90
