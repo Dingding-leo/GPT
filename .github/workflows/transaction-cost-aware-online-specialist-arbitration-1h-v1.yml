@@ -50,48 +50,23 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/specialist-output
-          if test -f "$SOURCE_PATH"; then
-            cp "$SOURCE_PATH" /tmp/specialist-output/materialized_source.py
-          else
-            python - <<'PY'
-          import base64
-          import hashlib
-          import zlib
+          test -f "$SOURCE_PATH"
+          cp "$SOURCE_PATH" /tmp/specialist-output/materialized_source.py
+          python - <<'PY'
           from pathlib import Path
 
-          expected = [
-              "45fd2d442d08496c732bc83a6ae96164096eb75bc3958b96197e24069957832b",
-              "6825e6b798aef44bffe7d78a34d523bc5b41fbf79a342e39c67643c513eb5921",
-              "8503d804a9ff081df5a1dc9a2b776e89f993f3aeb2f6a500888bb0621f9ebdc1",
-              "2cc89dc8a74607f1d73194f3fa84616d0a29a22b0445eb35f7a00e4031643b12",
-              "da59bf465410b4c316659f92cbb4698723bc862416e89dea5e54efd3f7fc3ee3",
-              "2d31c0416ca30e9d39822b5f684e7e4eb7bce76769e718925a55f8a0cd522d9b",
-              "0a09ea217178ccb7bb69368a7847593592729e24aaf8ee83ecc5c38e2d0e6a01",
-              "187b98c7f597c8c621d99a7e3c8d79f3a350c406aaa4ec1fc2ad52349d782525",
-              "92430232e82aee9034493db78831a3444ef94dd608b69eb02ca1adb97498f59e",
-              "221990d1e77e225d89f427f3f9a4b2c022afff92a8846422eac0e97763ca218d",
-              "c6455c9ca649aff0f64a3aaaabba4ea018b6d1c2429684378457fa238a69e13d",
-              "983270aeedc1fa76912b453db1de54b000c7b76fbfa3827a5cc7753291e95781",
-              "db43f37f8fb570e24e9b1428011fd4938b5212316d202afd2a6bde5f2464a019",
-              "b38c7d2c2c9f443207d6c3e3a33e894978b3d04f925d6305eed2b2054b6ae934",
-              "d010a37ea3a03652f62517ae2e6703028b236ca01c40f8c55745dc6f539f4dc8",
-          ]
-          root = Path("reports/research/transaction-cost-aware-online-specialist-arbitration-1h-v1")
-          chunks = [(root / f"payload.chunk.{index:02d}").read_text(encoding="utf-8") for index in range(15)]
-          mismatches = []
-          for index, (chunk, expected_digest) in enumerate(zip(chunks, expected, strict=True)):
-              actual = hashlib.sha256(chunk.encode("ascii")).hexdigest()
-              print(f"payload.chunk.{index:02d} bytes={len(chunk)} sha256={actual}")
-              if actual != expected_digest:
-                  mismatches.append(index)
-          if mismatches:
-              raise RuntimeError(f"payload chunk checksum mismatch: {mismatches}")
-          encoded = "".join(chunks)
-          if len(encoded) != 14_288 or hashlib.sha256(encoded.encode("ascii")).hexdigest() != "20683925b788e5da3d49488aa3241446a07ce779fcc536079f0fda99b02d2f62":
-              raise RuntimeError("aggregate payload mismatch")
-          Path("/tmp/specialist-output/materialized_source.py").write_bytes(zlib.decompress(base64.b64decode(encoded)))
+          path = Path("/tmp/specialist-output/materialized_source.py")
+          source = path.read_text(encoding="utf-8")
+          old_hash = "    evidence_bytes = canonical_json_bytes(evidence)\n"
+          new_hash = "    evidence_bytes = canonical_json_bytes(evidence) + b\"\\n\"\n"
+          old_write = '    (args.output_dir / "evidence.json").write_bytes(evidence_bytes + b"\\n")\n'
+          new_write = '    (args.output_dir / "evidence.json").write_bytes(evidence_bytes)\n'
+          if old_hash in source and old_write in source:
+              source = source.replace(old_hash, new_hash, 1).replace(old_write, new_write, 1)
+          elif new_hash not in source or new_write not in source:
+              raise RuntimeError("unexpected evidence serialization source")
+          path.write_text(source, encoding="utf-8")
           PY
-          fi
           ruff check --fix /tmp/specialist-output/materialized_source.py
           ruff format /tmp/specialist-output/materialized_source.py
           ruff check /tmp/specialist-output/materialized_source.py
@@ -108,6 +83,7 @@ jobs:
             --output-dir /tmp/specialist-output \
             --cache-dir /tmp/specialist-cache \
             | tee /tmp/specialist-output/stdout.json
+          (cd /tmp/specialist-output && sha256sum -c evidence.sha256)
           find /tmp/specialist-output -maxdepth 1 -type f \
             ! -name artifact-files.sha256 -print0 \
             | sort -z \
@@ -123,7 +99,6 @@ jobs:
           cp /tmp/specialist-output/evidence.json "$REPORT_DIR/evidence.json"
           cp /tmp/specialist-output/evidence.sha256 "$REPORT_DIR/evidence.sha256"
           cp /tmp/specialist-output/report.md "$REPORT_DIR/report.md"
-          rm -f "$REPORT_DIR"/payload.part.* "$REPORT_DIR"/payload.chunk.*
           git add -A "$REPORT_DIR"
           if git diff --cached --quiet; then
             echo 'Terminal evidence already persisted.'
@@ -131,7 +106,7 @@ jobs:
           fi
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git commit -m 'research: persist specialist arbitration evidence'
+          git commit -m 'research: repair terminal evidence checksum identity'
           git push origin "HEAD:$RESEARCH_BRANCH"
 
       - name: Upload immutable evidence
