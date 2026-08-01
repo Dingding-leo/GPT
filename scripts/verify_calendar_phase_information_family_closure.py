@@ -38,8 +38,7 @@ def group_gates(record: dict[str, Any]) -> dict[str, bool | None]:
     benchmark = [market["benchmark_e2160_daily"]["oos"] for market in markets]
     positive = all(item["net_return"] > 0 for item in candidate)
     superior = all(
-        cand["net_return"] > bench["net_return"]
-        and cand["sharpe"] > bench["sharpe"]
+        cand["net_return"] > bench["net_return"] and cand["sharpe"] > bench["sharpe"]
         for cand, bench in zip(candidate, benchmark, strict=True)
     )
 
@@ -59,8 +58,7 @@ def group_gates(record: dict[str, Any]) -> dict[str, bool | None]:
         )
         markets = record["markets"].values()
         transport = all(
-            market["top_two_overlap"] > 0
-            and market["phase_transport"]["spearman"] > 0
+            market["top_two_overlap"] > 0 and market["phase_transport"]["spearman"] > 0
             for market in markets
         )
         delay = None
@@ -85,8 +83,7 @@ def group_gates(record: dict[str, Any]) -> dict[str, bool | None]:
         )
         markets = record["markets"].values()
         delay = all(
-            market["delayed_oos"]["net_return"] > 0
-            and market["delayed_oos"]["sharpe"] > 0
+            market["delayed_oos"]["net_return"] > 0 and market["delayed_oos"]["sharpe"] > 0
             for market in markets
         )
 
@@ -96,12 +93,11 @@ def group_gates(record: dict[str, Any]) -> dict[str, bool | None]:
         and record["source"]["provider"] == "OKX"
         and record["source"]["market_type"] == "SPOT"
         and record["source"]["confirmed"] is True
-        and record["research_parent"]
-        == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+        and record["research_parent"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
     )
-    supportive = all(
-        [source_valid, positive, superior, dependence, breadth, transport]
-    ) and (delay is not False)
+    supportive = all([source_valid, positive, superior, dependence, breadth, transport]) and (
+        delay is not False
+    )
     return {
         "source_executable_causal_immutable_exact_fee": source_valid,
         "bilateral_positive_absolute_oos_net": positive,
@@ -134,11 +130,7 @@ def main() -> None:
         raise ValueError("support count mismatch")
     if evidence["family_gates"]["both_groups_source_valid"] is not True:
         raise ValueError("source validity gate must pass")
-    failed_family_gates = [
-        name
-        for name, passed in evidence["family_gates"].items()
-        if not passed
-    ]
+    failed_family_gates = [name for name, passed in evidence["family_gates"].items() if not passed]
     if len(failed_family_gates) != 6:
         raise ValueError(f"expected six failed family gates, got {failed_family_gates}")
     if evidence["verdict"] != "reject_causal_calendar_phase_timing_information_family":
