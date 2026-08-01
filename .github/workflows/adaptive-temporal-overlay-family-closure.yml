@@ -48,14 +48,11 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Produce formatter repair candidate
+      - name: Verify canonical formatting
         run: |
           set -euo pipefail
           python -m pip install "ruff==0.16.1"
           target=reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py
-          ruff check --fix --exit-zero "$target"
-          ruff format "$target"
-          ruff check --add-noqa "$target"
           ruff check "$target"
           ruff format --check "$target"
 
@@ -68,7 +65,6 @@ jobs:
           cmp artifacts/adaptive-overlay-closure/evidence.json /tmp/adaptive-overlay-closure-replay/evidence.json
           cmp artifacts/adaptive-overlay-closure/evidence.sha256 /tmp/adaptive-overlay-closure-replay/evidence.sha256
           cmp artifacts/adaptive-overlay-closure/report.md /tmp/adaptive-overlay-closure-replay/report.md
-          cp reports/research/adaptive-temporal-overlay-family-closure-1h-v1/run_meta_analysis.py artifacts/adaptive-overlay-closure/formatted_run_meta_analysis.py
 
       - name: Verify frozen verdict and identities
         run: |
