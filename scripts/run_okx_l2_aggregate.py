@@ -11,14 +11,15 @@ _ORIGINAL_FETCH = core.fetch_okx_one_hour_candles
 
 
 def _fetch_with_extended_safety(**kwargs: Any):
-    """Fetch the frozen 1H label interval with extra non-economic page margin.
+    """Fetch the frozen 1H label interval with a non-economic page margin.
 
-    The requested timestamps, venue, bar, values and exact-response evidence are
-    unchanged. The larger safety margin only permits more public API pages when
-    OKX returns fewer than the nominal 100 rows on some historical pages.
+    The canonical OKX reader starts at the provider's newest completed candle
+    and walks backward. The requested timestamps, venue, bar, values and exact
+    response evidence are unchanged; the larger bound only allows traversal
+    across post-sample history before reaching the frozen January 2025 start.
     """
 
-    kwargs["safety_pages"] = 32
+    kwargs["safety_pages"] = 256
     return _ORIGINAL_FETCH(**kwargs)
 
 
