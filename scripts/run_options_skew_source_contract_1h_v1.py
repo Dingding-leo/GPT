@@ -6,7 +6,7 @@ import json
 import re
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -57,7 +57,7 @@ SOURCES: tuple[dict[str, Any], ...] = (
     {
         "id": "bybit_market_api_catalog",
         "provider": "Bybit",
-        "url": "https://bybit-exchange.github.io/docs/v5/market",
+        "url": "https://bybit-exchange.github.io/docs/api-explorer/v5/market/market",
         "official": True,
         "role": "official public market-data endpoint inventory",
     },
@@ -398,7 +398,7 @@ def build_evidence(
         "classification": "source-contract-first information experiment",
         "tested_head": tested_head,
         "repository_main": REPOSITORY_MAIN,
-        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        "generated_at_utc": datetime.now(UTC).isoformat(),
         "bar": "1H",
         "canonical_fee_bps_one_way": CANONICAL_FEE_BPS_ONE_WAY,
         "fixed_targets": ["BTC-USDT", "ETH-USDT"],
