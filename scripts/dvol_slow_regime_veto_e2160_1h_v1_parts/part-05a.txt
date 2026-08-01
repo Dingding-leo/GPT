@@ -1,0 +1,15 @@
+
+# Transport-only repair: fetching a historical interval begins after the live
+# endpoint's newest page, so the deterministic budget must cover the current-to-
+# requested-end offset as well as the frozen sample. The interval and signal are
+# unchanged; the request remains bounded.
+_ORIGINAL_FETCH_OKX_ONE_HOUR_CANDLES = fetch_okx_one_hour_candles
+
+
+def _fetch_okx_one_hour_candles_with_historical_offset(**kwargs: Any) -> Any:
+    kwargs["safety_pages"] = max(int(kwargs.get("safety_pages", 0)), 64)
+    return _ORIGINAL_FETCH_OKX_ONE_HOUR_CANDLES(**kwargs)
+
+
+fetch_okx_one_hour_candles = _fetch_okx_one_hour_candles_with_historical_offset
+
