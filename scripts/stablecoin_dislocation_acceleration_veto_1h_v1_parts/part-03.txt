@@ -1,0 +1,347 @@
+        f"- Exact head: `{evidence['exact_head']}`",
+        f"- Fee: exactly `{evidence['canonical_fee_bps_one_way']}` bps one way",
+        f"- Candidate count: `{evidence['candidate_count']}`",
+        f"- Parameter grid: `{evidence['parameter_grid_count']}`",
+        f"- Source contract passed: `{evidence['source_contract_passed']}`",
+        f"- Bilateral training support passed: `{evidence['bilateral_training_support_passed']}`",
+        f"- OOS accessed: `{evidence['oos_accessed']}`",
+        f"- Verdict: `{evidence['verdict']}`",
+        "",
+    ]
+    if not evidence["source_contract_passed"]:
+        lines.extend(
+            [
+                "## Source-contract rejection",
+                "",
+                f"`{evidence['source_failure']}`",
+                "",
+                "All economic fields remain null; no target-return path was opened.",
+            ]
+        )
+        return "\n".join(lines) + "\n"
+    lines.extend(
+        [
+            "## Training-only selector support",
+            "",
+            "| Market | Decisions | Worsening | Vetoes | Quarters | Largest share | Deferred | Difference hours | Pass |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for market in evidence["markets"]:
+        support = market["training_support"]
+        lines.append(
+            f"| {market['market']} | {support['training_decisions']} | "
+            f"{support['worsening_state_rate']:.4%} | {support['entry_vetoes']} | "
+            f"{support['distinct_veto_quarters']} | "
+            f"{support['largest_veto_quarter_share']} | "
+            f"{support['deferred_entries_later_authorised']} | "
+            f"{support['candidate_difference_hours']} | {support['passes']} |"
+        )
+    if not evidence["oos_accessed"]:
+        lines.extend(
+            [
+                "",
+                "The bilateral support gate failed before any train, OOS, or full economic path was evaluated.",
+            ]
+        )
+        return "\n".join(lines) + "\n"
+    lines.extend(
+        [
+            "",
+            "## Economics",
+            "",
+            "| Market | OOS candidate return / Sharpe | OOS E2160 return / Sharpe | Always-long return / Sharpe | Turnover candidate / E2160 | Edge/turn candidate / E2160 | Max DD candidate / E2160 | Gates |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for market in evidence["markets"]:
+        oos = market["strategies"]["oos"]
+        candidate = oos["candidate"]
+        benchmark = oos["e2160"]
+        always = oos["always_long"]
+        lines.append(
+            f"| {market['market']} | {candidate['net_compound_return']:+.4%} / "
+            f"{candidate['annualised_hourly_sharpe']} | "
+            f"{benchmark['net_compound_return']:+.4%} / "
+            f"{benchmark['annualised_hourly_sharpe']} | "
+            f"{always['net_compound_return']:+.4%} / "
+            f"{always['annualised_hourly_sharpe']} | "
+            f"{candidate['one_way_turnover']} / {benchmark['one_way_turnover']} | "
+            f"{candidate['edge_per_turnover_bps']} / {benchmark['edge_per_turnover_bps']} | "
+            f"{candidate['maximum_drawdown']:+.4%} / {benchmark['maximum_drawdown']:+.4%} | "
+            f"{sum(market['gates'].values())}/{len(market['gates'])} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Highest-value failure",
+            "",
+            evidence["highest_value_failure"],
+            "",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
+def identify_failure(markets: list[dict[str, Any]], *, oos_accessed: bool) -> str:
+    if not oos_accessed:
+        failures: list[str] = []
+        for market in markets:
+            support = market["training_support"]
+            failed = [name for name, passed in support["gates"].items() if not passed]
+            failures.append(f"{market['market']}: {', '.join(failed) or 'none'}")
+        return "Training-only information support failed: " + "; ".join(failures)
+    failures = []
+    for market in markets:
+        failed = [name for name, passed in market["gates"].items() if not passed]
+        failures.append(f"{market['market']}: {', '.join(failed) or 'none'}")
+    return "Frozen economic/robustness gates failed: " + "; ".join(failures)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tested-head", required=True)
+    parser.add_argument("--output-dir", required=True)
+    args = parser.parse_args()
+    if len(args.tested_head) != 40 or any(
+        character not in "0123456789abcdef" for character in args.tested_head
+    ):
+        raise ValueError("tested head must be a lowercase 40-character SHA")
+    output = Path(args.output_dir)
+    source_root = output / "source"
+    output.mkdir(parents=True, exist_ok=True)
+
+    series_by_id: dict[str, Series] = {}
+    source_failure: str | None = None
+    try:
+        for inst_id in SERIES_IDS:
+            series_by_id[inst_id] = acquire_series(inst_id, source_root)
+        common_grid = all(
+            np.array_equal(series_by_id[SERIES_IDS[0]].open_ms, series_by_id[inst_id].open_ms)
+            for inst_id in SERIES_IDS[1:]
+        )
+        if not common_grid:
+            raise SourceContractError("the three public SPOT series do not share one exact grid")
+        if any(len(series_by_id[inst_id].open_ms) != EXPECTED_ROWS for inst_id in SERIES_IDS):
+            raise SourceContractError("one public SPOT series has an invalid row count")
+    except Exception as exc:
+        source_failure = f"{type(exc).__name__}: {exc}"
+
+    source_contract_passed = source_failure is None and len(series_by_id) == 3
+    source_manifest = {
+        "family_id": FAMILY_ID,
+        "provider": "OKX public market data",
+        "base_url": BASE_URL,
+        "bar": BAR,
+        "requested_start": utc_iso(START_MS),
+        "requested_end_exclusive": utc_iso(END_MS),
+        "expected_rows_per_series": EXPECTED_ROWS,
+        "series": {
+            inst_id: {
+                "instrument_evidence": series.instrument_evidence,
+                "normalized_sha256": series.normalized_sha256,
+                "rows": len(series.open_ms),
+                "first": utc_iso(int(series.open_ms[0])),
+                "last": utc_iso(int(series.open_ms[-1])),
+                "pages": list(series.manifest),
+            }
+            for inst_id, series in series_by_id.items()
+        },
+        "source_contract_passed": source_contract_passed,
+        "source_failure": source_failure,
+    }
+    source_manifest_hash = persist_json(output / "source_manifest.json", source_manifest)
+    (output / "source_manifest.sha256").write_text(source_manifest_hash + "\n")
+
+    markets: list[dict[str, Any]] = []
+    bilateral_support = False
+    invariance: dict[str, Any] = {}
+    if source_contract_passed:
+        exogenous = series_by_id[EXOGENOUS]
+        for market in MARKETS:
+            spot = series_by_id[market]
+            support = support_record(spot, exogenous)
+            invariance[market] = source_and_feature_invariance(spot, exogenous)
+            if not all(invariance[market][key] for key in ("event_prefix_identical", "position_prefix_identical")):
+                support["gates"]["future_suffix_and_feature_prefix_invariance"] = False
+                support["passes"] = False
+            else:
+                support["gates"]["future_suffix_and_feature_prefix_invariance"] = True
+                support["passes"] = all(support["gates"].values())
+            markets.append(null_market_record(market, support))
+        bilateral_support = all(market["training_support"]["passes"] for market in markets)
+
+    oos_accessed = False
+    if source_contract_passed and bilateral_support:
+        oos_accessed = True
+        exogenous = series_by_id[EXOGENOUS]
+        for market_record in markets:
+            market = market_record["market"]
+            economics = full_economics(series_by_id[market], exogenous)
+            gates = oos_gate(economics)
+            market_record.update(
+                {
+                    "performance_accessed": True,
+                    "strategies": economics["segments"],
+                    "oos_folds": economics["fold_and_year"]["folds"],
+                    "oos_years": economics["fold_and_year"]["years"],
+                    "paired_uncertainty": economics["bootstrap"],
+                    "one_hour_delay": economics["one_hour_delay"],
+                    "training_to_oos_transport": economics[
+                        "training_to_oos_transport"
+                    ],
+                    "oos_path_identities": economics["oos_path_identities"],
+                    "gross_vs_fee_decomposition": economics[
+                        "gross_vs_fee_decomposition"
+                    ],
+                    "gates": gates,
+                    "passes_all_gates": all(gates.values()),
+                }
+            )
+
+    accepted = bool(
+        oos_accessed and all(market["passes_all_gates"] for market in markets)
+    )
+    verdict = ACCEPT_VERDICT if accepted else REJECT_VERDICT
+    highest_value_failure = (
+        "No frozen gate failed; bilateral promotion evidence is complete."
+        if accepted
+        else identify_failure(markets, oos_accessed=oos_accessed)
+    )
+    evidence = {
+        "family_id": FAMILY_ID,
+        "protocol_signature": PROTOCOL_SIGNATURE,
+        "classification": "causal exogenous-regime entry-veto experiment",
+        "exact_head": args.tested_head,
+        "repository_main": REPOSITORY_MAIN,
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "canonical_fee_bps_one_way": 5.0,
+        "bar_interval": "1H",
+        "decision_cadence": "daily UTC",
+        "execution": "completed lagged history to next hourly open",
+        "future_exposure": "unlevered long/cash only",
+        "candidate_count": 2,
+        "parameter_grid_count": 0,
+        "source_contract_passed": source_contract_passed,
+        "source_failure": source_failure,
+        "source_manifest_sha256": source_manifest_hash,
+        "source_series_sha256": {
+            inst_id: series.normalized_sha256 for inst_id, series in series_by_id.items()
+        },
+        "sample": {
+            "rows_per_series": EXPECTED_ROWS,
+            "warmup": [0, WARMUP_END],
+            "training": [WARMUP_END, TRAIN_END],
+            "sealed_oos": [TRAIN_END, OOS_END],
+            "full_scored": [WARMUP_END, FULL_END],
+            "unscored_suffix": [FULL_END, EXPECTED_ROWS],
+            "folds": 6,
+            "fold_hours": 2_160,
+        },
+        "feature_and_suffix_invariance": invariance,
+        "markets": markets,
+        "bilateral_training_support_passed": bilateral_support,
+        "performance_accessed": oos_accessed,
+        "oos_accessed": oos_accessed,
+        "full_sample_accessed": oos_accessed,
+        "bootstrap_draws": BOOTSTRAP_DRAWS if oos_accessed else 0,
+        "markets_passing_training_support": sum(
+            bool(market["training_support"] and market["training_support"]["passes"])
+            for market in markets
+        ),
+        "markets_passing_all_gates": sum(
+            bool(market["passes_all_gates"]) for market in markets
+        ),
+        "highest_value_failure": highest_value_failure,
+        "canonical_strategy_changed": False,
+        "canonical_mutation_authorized": accepted,
+        "prospective_shadow_authorized": False,
+        "paper_trading_authorized": False,
+        "live_trading_authorized": False,
+        "public_data_only": True,
+        "synthetic_market_data_used": False,
+        "interpolation_or_row_repair_used": False,
+        "cross_sectional_selection": False,
+        "pairs_or_spreads": False,
+        "cointegration_or_statistical_arbitrage": False,
+        "market_neutral_or_long_short": False,
+        "credentials_used": False,
+        "private_endpoints_used": False,
+        "accounts_or_orders": False,
+        "enabled_adapters": False,
+        "leverage_used": False,
+        "non_1h_or_15m_input_used": False,
+        "verdict": verdict,
+        "machine_readable_verdict": {
+            "family_id": FAMILY_ID,
+            "candidate_count": 2,
+            "parameter_grid_count": 0,
+            "source_contract_passed": source_contract_passed,
+            "bilateral_training_support_passed": bilateral_support,
+            "oos_accessed": oos_accessed,
+            "markets_passing_all_gates": sum(
+                bool(market["passes_all_gates"]) for market in markets
+            ),
+            "canonical_strategy_changed": False,
+            "canonical_mutation_authorized": accepted,
+            "paper_trading_authorized": False,
+            "live_trading_authorized": False,
+            "verdict": verdict,
+        },
+    }
+    evidence_hash = persist_json(output / "evidence.json", evidence)
+    (output / "evidence.sha256").write_text(evidence_hash + "\n")
+    protocol = {
+        "family_id": FAMILY_ID,
+        "protocol_signature": PROTOCOL_SIGNATURE,
+        "source": {
+            "provider": "OKX public market data",
+            "series": list(SERIES_IDS),
+            "bar": BAR,
+            "start": utc_iso(START_MS),
+            "end_exclusive": utc_iso(END_MS),
+            "expected_rows": EXPECTED_ROWS,
+        },
+        "signal": {
+            "base": "log(target_close[t-1] / target_close[t-2161]) > 0",
+            "dislocation": "abs(log(USDC-USDT close))",
+            "old": "median(dislocation[t-1464:t-744])",
+            "new": "median(dislocation[t-744:t-24])",
+            "worsening": "new - old > 0",
+            "candidate_transition": (
+                "cash-to-long only when base and not worsening; long-to-cash only "
+                "when base becomes false; stablecoin state has no exit authority"
+            ),
+        },
+        "training_support_gate": [
+            "all feature decisions finite",
+            "worsening rate between 20 and 80 percent",
+            "at least 20 entry vetoes",
+            "vetoes in at least four quarters",
+            "largest veto quarter share at most 40 percent",
+            "at least 10 deferred entries later authorised while E2160 remains positive",
+            "candidate path differs from E2160",
+            "future suffix and feature prefix invariant",
+        ],
+        "transport_gate_operationalization": [
+            "training and OOS worsening rates each remain between 20 and 80 percent",
+            "entry veto activation is nonzero in training and OOS",
+            "not-worsening minus worsening conditional 24H effect is positive in training and OOS",
+        ],
+        "fee": FEE,
+        "bootstrap": {
+            "draws": BOOTSTRAP_DRAWS,
+            "block_hours": BOOTSTRAP_BLOCK,
+            "seed": BOOTSTRAP_SEED,
+        },
+    }
+    protocol_hash = persist_json(output / "protocol.json", protocol)
+    (output / "protocol.sha256").write_text(protocol_hash + "\n")
+    report_text = make_report(evidence)
+    (output / "report.md").write_text(report_text)
+    report_hash = sha256_bytes(report_text.encode())
+    (output / "report.sha256").write_text(report_hash + "\n")
+
+
+if __name__ == "__main__":
+    main()
