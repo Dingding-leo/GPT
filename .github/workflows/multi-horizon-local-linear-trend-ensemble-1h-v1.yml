@@ -15,6 +15,11 @@ env:
   RESEARCH_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
   SOURCE_PATH: reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py
   REPORT_DIR: reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1
+  PYTHONHASHSEED: "0"
+  OPENBLAS_NUM_THREADS: "1"
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
 
 jobs:
   research:
