@@ -1,0 +1,115 @@
+name: Transaction Cost Aware Online Specialist Arbitration 1H Research
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/transaction-cost-aware-online-specialist-arbitration-1h-v1.yml"
+      - "reports/research/transaction-cost-aware-online-specialist-arbitration-1h-v1/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  RESEARCH_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+  REPORT_DIR: reports/research/transaction-cost-aware-online-specialist-arbitration-1h-v1
+  SOURCE_PATH: reports/research/transaction-cost-aware-online-specialist-arbitration-1h-v1/run_specialist_arbitration.py
+  PYTHONHASHSEED: "0"
+  OPENBLAS_NUM_THREADS: "1"
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 1
+
+      - name: Verify exact checked-out revision
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install fixed research dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            "numpy==2.2.6" "ruff==0.16.1"
+
+      - name: Materialize and validate deterministic reproducer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/specialist-output
+          if test -f "$SOURCE_PATH"; then
+            cp "$SOURCE_PATH" /tmp/specialist-output/materialized_source.py
+          else
+            python - <<'PY'
+          import base64
+          import zlib
+          from pathlib import Path
+
+          root = Path("reports/research/transaction-cost-aware-online-specialist-arbitration-1h-v1")
+          encoded = "".join((root / f"payload.part.{index:02d}").read_text(encoding="utf-8") for index in range(2))
+          Path("/tmp/specialist-output/materialized_source.py").write_bytes(zlib.decompress(base64.b64decode(encoded)))
+          PY
+          fi
+          ruff check --fix /tmp/specialist-output/materialized_source.py
+          ruff format /tmp/specialist-output/materialized_source.py
+          ruff check /tmp/specialist-output/materialized_source.py
+          ruff format --check /tmp/specialist-output/materialized_source.py
+          python -m py_compile /tmp/specialist-output/materialized_source.py
+          sha256sum /tmp/specialist-output/materialized_source.py
+
+      - name: Run immutable public-data experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/specialist-cache
+          python /tmp/specialist-output/materialized_source.py \
+            --output-dir /tmp/specialist-output \
+            --cache-dir /tmp/specialist-cache \
+            | tee /tmp/specialist-output/stdout.json
+          find /tmp/specialist-output -maxdepth 1 -type f \
+            ! -name artifact-files.sha256 -print0 \
+            | sort -z \
+            | xargs -0 sha256sum \
+            > /tmp/specialist-output/artifact-files.sha256
+
+      - name: Persist exact reproducer and terminal evidence
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp /tmp/specialist-output/materialized_source.py "$SOURCE_PATH"
+          cp /tmp/specialist-output/evidence.json "$REPORT_DIR/evidence.json"
+          cp /tmp/specialist-output/evidence.sha256 "$REPORT_DIR/evidence.sha256"
+          cp /tmp/specialist-output/report.md "$REPORT_DIR/report.md"
+          rm -f "$REPORT_DIR"/payload.part.*
+          git add -A "$REPORT_DIR"
+          if git diff --cached --quiet; then
+            echo 'Terminal evidence already persisted.'
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'research: persist specialist arbitration evidence'
+          git push origin "HEAD:$RESEARCH_BRANCH"
+
+      - name: Upload immutable evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transaction-cost-aware-online-specialist-arbitration-1h-v1
+          path: /tmp/specialist-output
+          if-no-files-found: error
+          retention-days: 90
