@@ -17,14 +17,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - name: Bind evidence to the exact PR head
         shell: bash
         run: |
           set -euo pipefail
-          test "$GITHUB_SHA" = "${{ github.event.pull_request.head.sha }}"
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
           git diff --quiet
-          git status --porcelain=v1
+          test -z "$(git status --porcelain=v1)"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -37,7 +38,11 @@ jobs:
           env | cut -d= -f1 | grep -Eiq '(BINANCE|OKX).*(API|SECRET|TOKEN|KEY)' && exit 1 || true
           ! grep -RInE 'api[-_]?key|secret[-_]?key|place_order|create_order|submit_order|send_order' scripts/run_temporal_stochastic_dominance_trend.py
       - name: Execute frozen public-data experiment
-        run: python scripts/run_temporal_stochastic_dominance_trend.py
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA='${{ github.event.pull_request.head.sha }}'
+          python scripts/run_temporal_stochastic_dominance_trend.py
       - name: Validate machine-readable contract
         shell: bash
         run: |
@@ -49,6 +54,7 @@ jobs:
           p = root / 'evidence.json'
           d = json.loads(p.read_text())
           assert d['family_id'] == 'causal-temporal-stochastic-dominance-trend-1h-v1'
+          assert d['exact_head'] == '${{ github.event.pull_request.head.sha }}'
           assert d['canonical_fee_bps_one_way'] == 5.0
           assert d['bar_interval'] == '1H'
           assert d['public_data_only'] is True
