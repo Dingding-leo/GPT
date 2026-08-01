@@ -1,0 +1,180 @@
+    index = candles.index
+    closes = candles["close"].to_numpy(dtype=float)
+    log_dvol = np.log(dvol_close.reindex(index[:-1]).to_numpy(dtype=float))
+    decisions = pd.date_range(TRAIN_START, SAMPLE_END, freq="24h", inclusive="left")
+    rows: list[dict[str, Any]] = []
+    previous_candidate = 0
+    previous_base = 0
+    previous_risk_off = False
+    for timestamp in decisions:
+        location = index.get_loc(timestamp)
+        if not isinstance(location, int):
+            raise ValueError("decision timestamp is not unique")
+        if location < 2_161 or location < 888:
+            raise ValueError("insufficient decision warm-up")
+        spot_margin = math.log(closes[location - 1] / closes[location - 2_161])
+        recent = log_dvol[location - 168 : location]
+        prior = log_dvol[location - 888 : location - 168]
+        if len(recent) != 168 or len(prior) != 720:
+            raise ValueError("DVOL windows do not match frozen lengths")
+        if not np.isfinite(recent).all() or not np.isfinite(prior).all():
+            raise ValueError("DVOL windows contain non-finite values")
+        recent_level = float(np.median(recent))
+        prior_level = float(np.median(prior))
+        dvol_margin = recent_level - prior_level
+        base = int(spot_margin > 0.0)
+        risk_off = bool(dvol_margin > 0.0)
+        candidate = int(base == 1 and not risk_off)
+        veto = bool(base == 1 and candidate == 0)
+        reauthorization = bool(
+            candidate == 1
+            and previous_candidate == 0
+            and previous_base == 1
+            and previous_risk_off
+        )
+        rows.append(
+            {
+                "timestamp": timestamp,
+                "spot_margin": spot_margin,
+                "recent_dvol_level": recent_level,
+                "prior_dvol_level": prior_level,
+                "dvol_margin": dvol_margin,
+                "risk_off": risk_off,
+                "base": base,
+                "candidate": candidate,
+                "veto": veto,
+                "reauthorization": reauthorization,
+                "quarter": quarter_label(timestamp),
+                "year": timestamp.year,
+            }
+        )
+        previous_candidate = candidate
+        previous_base = base
+        previous_risk_off = risk_off
+    result = pd.DataFrame(rows).set_index("timestamp")
+    return result
+
+
+def position_path(
+    candles: pd.DataFrame,
+    decisions: pd.DataFrame,
+    *,
+    start: pd.Timestamp,
+    end: pd.Timestamp,
+    state_column: str,
+) -> dict[str, Any]:
+    hours = candles.index[(candles.index >= start) & (candles.index < end)]
+    if len(hours) == 0 or hours[-1] + pd.Timedelta(hours=1) > candles.index[-1]:
+        raise ValueError("segment lacks a complete next-open payoff boundary")
+    state_map = decisions[state_column].astype(int).to_dict()
+    positions = np.asarray([state_map[timestamp.floor("D")] for timestamp in hours], dtype=float)
+    return evaluate_positions(candles, hours, positions)
+
+
+def evaluate_positions(
+    candles: pd.DataFrame,
+    hours: pd.DatetimeIndex,
+    positions: np.ndarray,
+) -> dict[str, Any]:
+    if len(hours) != len(positions):
+        raise ValueError("position path length mismatch")
+    opens = candles["open"].reindex(hours).to_numpy(dtype=float)
+    next_opens = candles["open"].reindex(hours + pd.Timedelta(hours=1)).to_numpy(dtype=float)
+    if not np.isfinite(opens).all() or not np.isfinite(next_opens).all():
+        raise ValueError("position path contains unavailable execution opens")
+    asset_returns = next_opens / opens - 1.0
+    gross_returns = positions * asset_returns
+    previous = np.concatenate(([0.0], positions[:-1]))
+    changes = np.abs(positions - previous)
+    net_returns = (1.0 + gross_returns) * (1.0 - FEE * changes) - 1.0
+    terminal_change = float(positions[-1])
+    if terminal_change:
+        net_returns[-1] = (1.0 + net_returns[-1]) * (1.0 - FEE * terminal_change) - 1.0
+    turnover = float(changes.sum() + terminal_change)
+    return {
+        "hours": hours,
+        "positions": positions,
+        "gross_returns": gross_returns,
+        "net_returns": net_returns,
+        "turnover": turnover,
+        "modeled_fee_units": turnover,
+        "modeled_fee_fraction": turnover * FEE,
+        "metrics": metrics(gross_returns, net_returns, positions, turnover),
+    }
+
+
+def metrics(
+    gross_returns: np.ndarray,
+    net_returns: np.ndarray,
+    positions: np.ndarray,
+    turnover: float,
+) -> dict[str, Any]:
+    gross_wealth = np.cumprod(1.0 + gross_returns)
+    net_wealth = np.cumprod(1.0 + net_returns)
+    net_return = float(net_wealth[-1] - 1.0)
+    gross_return = float(gross_wealth[-1] - 1.0)
+    mean = float(np.mean(net_returns))
+    standard_deviation = float(np.std(net_returns, ddof=1)) if len(net_returns) > 1 else 0.0
+    sharpe = mean / standard_deviation * math.sqrt(ANNUAL_HOURS) if standard_deviation > 0 else None
+    path = np.concatenate(([1.0], net_wealth))
+    peaks = np.maximum.accumulate(path)
+    maximum_drawdown = float(np.min(path / peaks - 1.0))
+    edge_per_turnover = net_return / turnover * 10_000.0 if turnover > 0 else None
+    return {
+        "gross_compounded_return": gross_return,
+        "net_compounded_return": net_return,
+        "annualized_arithmetic_mean": mean * ANNUAL_HOURS,
+        "annualized_sharpe": sharpe,
+        "maximum_drawdown": maximum_drawdown,
+        "exposure_fraction": float(np.mean(positions)),
+        "one_way_turnover": turnover,
+        "transition_count": int(turnover),
+        "modeled_fee_fraction": turnover * FEE,
+        "edge_per_turnover_bps": edge_per_turnover,
+        "hour_count": int(len(net_returns)),
+    }
+
+
+def concentration(labels: pd.Series) -> float | None:
+    if labels.empty:
+        return None
+    counts = labels.value_counts()
+    return float(counts.max() / counts.sum())
+
+
+def training_support(decisions: pd.DataFrame) -> dict[str, Any]:
+    base_positive = decisions[decisions["base"] == 1]
+    vetoes = decisions[decisions["veto"]]
+    reauthorizations = decisions[decisions["reauthorization"]]
+    veto_quarters = sorted(vetoes["quarter"].unique().tolist())
+    reauthorization_quarters = sorted(reauthorizations["quarter"].unique().tolist())
+    return {
+        "daily_decisions": int(len(decisions)),
+        "base_positive_decisions": int(len(base_positive)),
+        "veto_decisions": int(len(vetoes)),
+        "veto_quarter_count": len(veto_quarters),
+        "veto_quarters": veto_quarters,
+        "reauthorization_decisions": int(len(reauthorizations)),
+        "reauthorization_quarter_count": len(reauthorization_quarters),
+        "reauthorization_quarters": reauthorization_quarters,
+        "difference_fraction_of_base_positive": (
+            float(len(vetoes) / len(base_positive)) if len(base_positive) else 0.0
+        ),
+        "largest_veto_quarter_share": concentration(vetoes["quarter"]),
+        "largest_reauthorization_quarter_share": concentration(
+            reauthorizations["quarter"]
+        ),
+        "dvol_margin_quantiles": {
+            str(key): float(value)
+            for key, value in decisions["dvol_margin"].quantile(
+                [0.0, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0]
+            ).items()
+        },
+        "risk_off_rate": float(decisions["risk_off"].mean()),
+        "veto_rate_within_base_positive": (
+            float(vetoes.shape[0] / base_positive.shape[0]) if len(base_positive) else 0.0
+        ),
+    }
+
+
+def training_gate(
