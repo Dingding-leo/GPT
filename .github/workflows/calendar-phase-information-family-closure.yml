@@ -1,0 +1,36 @@
+name: Calendar Phase Information Family Closure
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/calendar-phase-information-family-closure.yml"
+      - "scripts/verify_calendar_phase_information_family_closure.py"
+      - "reports/research/causal-calendar-phase-timing-information-family-closure-1h-v1/**"
+
+permissions:
+  contents: read
+
+jobs:
+  close-family:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Replay architecture-level closure gates
+        run: python scripts/verify_calendar_phase_information_family_closure.py
+      - name: Record exact identities
+        run: |
+          sha256sum \
+            reports/research/causal-calendar-phase-timing-information-family-closure-1h-v1/source_group_a.json \
+            reports/research/causal-calendar-phase-timing-information-family-closure-1h-v1/source_group_b.json \
+            reports/research/causal-calendar-phase-timing-information-family-closure-1h-v1/evidence.json \
+            reports/research/causal-calendar-phase-timing-information-family-closure-1h-v1/report.md \
+            > reports/research/causal-calendar-phase-timing-information-family-closure-1h-v1/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: calendar-phase-information-family-closure
+          path: reports/research/causal-calendar-phase-timing-information-family-closure-1h-v1/
+          if-no-files-found: error
