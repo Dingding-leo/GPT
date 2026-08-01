@@ -21,12 +21,18 @@ def main() -> None:
     root = Path(__file__).parent
     parts = sorted(root.glob("payload.part.*"))
     if len(parts) != EXPECTED_PARTS:
-        raise RuntimeError(f"expected {EXPECTED_PARTS} payload parts, found {len(parts)}")
-    encoded = "".join(part.read_text(encoding="ascii").strip() for part in parts)
+        raise RuntimeError(
+            f"expected {EXPECTED_PARTS} payload parts, found {len(parts)}"
+        )
+    encoded = "".join(
+        part.read_text(encoding="ascii").strip() for part in parts
+    )
     source = gzip.decompress(base64.b64decode(encoded, validate=True))
     digest = hashlib.sha256(source).hexdigest()
     if digest != EXPECTED_SOURCE_SHA256:
-        raise RuntimeError(f"materialized source SHA-256 mismatch: {digest}")
+        raise RuntimeError(
+            f"materialized source SHA-256 mismatch: {digest}"
+        )
     source.decode("utf-8")
     args.materialize.parent.mkdir(parents=True, exist_ok=True)
     args.materialize.write_bytes(source)
