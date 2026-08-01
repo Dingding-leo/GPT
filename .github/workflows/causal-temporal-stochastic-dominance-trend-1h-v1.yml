@@ -1,0 +1,158 @@
+name: Temporal Stochastic Dominance 1H Research
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/causal-temporal-stochastic-dominance-trend-1h-v1.yml"
+      - "reports/research/causal-temporal-stochastic-dominance-trend-1h-v1/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  REPORT_DIR: reports/research/causal-temporal-stochastic-dominance-trend-1h-v1
+  SOURCE_PATH: reports/research/causal-temporal-stochastic-dominance-trend-1h-v1/run_temporal_stochastic_dominance.py
+  PYTHONHASHSEED: "0"
+  OPENBLAS_NUM_THREADS: "1"
+  OMP_NUM_THREADS: "1"
+  MKL_NUM_THREADS: "1"
+  NUMEXPR_NUM_THREADS: "1"
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out exact evidence head without credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact checked-out revision
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+
+      - name: Set up fixed Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Install fixed research dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            "numpy==2.2.6" "ruff==0.16.1"
+
+      - name: Verify committed deterministic reproducer
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/tsd-output /tmp/tsd-cache
+          test -f "$SOURCE_PATH"
+          cp "$SOURCE_PATH" /tmp/tsd-output/materialized_source.py
+          ruff check /tmp/tsd-output/materialized_source.py
+          ruff format --check /tmp/tsd-output/materialized_source.py
+          python -m py_compile /tmp/tsd-output/materialized_source.py
+          sha256sum /tmp/tsd-output/materialized_source.py
+
+      - name: Run immutable public-data strategy experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python /tmp/tsd-output/materialized_source.py \
+            --output-dir /tmp/tsd-output \
+            --cache-dir /tmp/tsd-cache \
+            | tee /tmp/tsd-output/stdout.json
+          (cd /tmp/tsd-output && sha256sum -c evidence.sha256)
+          if test -f /tmp/tsd-output/source-manifest.sha256; then
+            (cd /tmp/tsd-output && sha256sum -c source-manifest.sha256)
+            (cd /tmp/tsd-output && sha256sum -c training-freeze.sha256)
+            (cd /tmp/tsd-output && sha256sum -c report.sha256)
+          fi
+
+      - name: Reproduce exact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/tsd-replay
+          python /tmp/tsd-output/materialized_source.py \
+            --output-dir /tmp/tsd-replay \
+            --cache-dir /tmp/tsd-cache
+          for file in evidence.json evidence.sha256 report.md; do
+            cmp "/tmp/tsd-output/$file" "/tmp/tsd-replay/$file"
+          done
+          for file in source-manifest.json source-manifest.sha256 training-freeze.json training-freeze.sha256 report.sha256; do
+            if test -f "/tmp/tsd-output/$file"; then
+              cmp "/tmp/tsd-output/$file" "/tmp/tsd-replay/$file"
+            fi
+          done
+          if test -f "$REPORT_DIR/evidence.json"; then
+            for file in evidence.json evidence.sha256 report.md; do
+              cmp "/tmp/tsd-output/$file" "$REPORT_DIR/$file"
+            done
+            for file in source-manifest.json source-manifest.sha256 training-freeze.json training-freeze.sha256 report.sha256; do
+              if test -f "/tmp/tsd-output/$file"; then
+                cmp "/tmp/tsd-output/$file" "$REPORT_DIR/$file"
+              fi
+            done
+          fi
+
+      - name: Verify frozen protocol and evidence identity
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence = json.loads(Path("/tmp/tsd-output/evidence.json").read_text())
+          assert evidence["family_id"] == "causal-temporal-stochastic-dominance-trend-1h-v1"
+          assert evidence["candidate_count"] == 2
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["bar"] == "1H"
+          assert evidence["fee_one_way"] == 0.0005
+          assert evidence["research_parent"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["verdict"] in {
+              "accept_causal_temporal_stochastic_dominance_trend_1h_v1",
+              "reject_causal_temporal_stochastic_dominance_trend_1h_v1",
+          }
+          if evidence["source_contract_pass"]:
+              assert evidence["sample"]["rows_per_market"] == 24144
+              assert evidence["sample"]["training_daily_decisions"] == 360
+              assert evidence["sample"]["oos_daily_decisions"] == 540
+              assert evidence["sample"]["full_daily_decisions"] == 900
+              assert set(evidence["markets"]) == {"ICXUSDT", "ONTUSDT"}
+              for market in evidence["markets"].values():
+                  assert market["source"]["objects"] == 33
+                  assert market["source"]["rows"] == 24144
+                  assert market["correctness"]["rank_sum_pair_count_parity_pass"] is True
+                  assert market["correctness"]["future_suffix_invariance_pass"] is True
+                  assert market["correctness"]["fee_identity_pass"] is True
+          else:
+              assert evidence["performance_accessed"] is False
+          PY
+
+      - name: Build immutable artifact manifest
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          find /tmp/tsd-output -maxdepth 1 -type f \
+            ! -name artifact-files.sha256 -print0 \
+            | sort -z | xargs -0 sha256sum \
+            > /tmp/tsd-output/artifact-files.sha256
+
+      - name: Upload immutable strategy evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: causal-temporal-stochastic-dominance-trend-1h-v1
+          path: /tmp/tsd-output
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 90
