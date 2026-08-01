@@ -8,10 +8,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  RESEARCH_BRANCH: ${{ github.event.pull_request.head.ref || github.ref_name }}
+  SOURCE_PATH: reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py
+  REPORT_DIR: reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1
 
 jobs:
   research:
@@ -38,12 +41,16 @@ jobs:
             "numpy==2.2.6" "ruff==0.16.1"
 
       - name: Materialize corrected deterministic reproducer
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p /tmp/local-linear-output
-          {
+          if head -n 1 "$SOURCE_PATH" | grep -Fxq '# ruff: noqa: E501'; then
+            cat "$SOURCE_PATH"
+          else
             printf '%s\n' '# ruff: noqa: E501'
-            cat reports/research/multi-horizon-local-linear-trend-ensemble-1h-v1/run_local_linear_ensemble.py
-          } | sed 's/1_767_225_200_000/1_767_222_000_000/' \
+            cat "$SOURCE_PATH"
+          fi | sed 's/1_767_225_200_000/1_767_222_000_000/' \
             > /tmp/local-linear-output/materialized_source.py
           ruff check --fix /tmp/local-linear-output/materialized_source.py
           ruff format /tmp/local-linear-output/materialized_source.py
@@ -61,10 +68,31 @@ jobs:
             --output-dir /tmp/local-linear-output \
             --cache-dir /tmp/local-linear-cache \
             | tee /tmp/local-linear-output/stdout.json
-          find /tmp/local-linear-output -maxdepth 1 -type f -print0 \
+          find /tmp/local-linear-output -maxdepth 1 -type f \
+            ! -name artifact-files.sha256 -print0 \
             | sort -z \
             | xargs -0 sha256sum \
             > /tmp/local-linear-output/artifact-files.sha256
+
+      - name: Persist exact reproducer and terminal evidence
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp /tmp/local-linear-output/materialized_source.py "$SOURCE_PATH"
+          cp /tmp/local-linear-output/evidence.json "$REPORT_DIR/evidence.json"
+          cp /tmp/local-linear-output/evidence.sha256 "$REPORT_DIR/evidence.sha256"
+          cp /tmp/local-linear-output/report.md "$REPORT_DIR/report.md"
+          git add "$SOURCE_PATH" "$REPORT_DIR/evidence.json" \
+            "$REPORT_DIR/evidence.sha256" "$REPORT_DIR/report.md"
+          if git diff --cached --quiet; then
+            echo 'Terminal evidence already persisted.'
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'research: persist rejected local-linear ensemble evidence'
+          git push origin "HEAD:$RESEARCH_BRANCH"
 
       - name: Upload immutable evidence
         if: always()
