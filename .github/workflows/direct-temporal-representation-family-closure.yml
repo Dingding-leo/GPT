@@ -1,0 +1,150 @@
+name: Direct Temporal Representation Family Closure
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/direct-temporal-representation-family-closure.yml"
+      - "reports/research/direct-temporal-representation-family-closure-1h-v1/**"
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full 40-character commit SHA to verify
+        required: false
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: direct-representation-closure-${{ github.event_name }}-${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      EXPECTED_TESTED_SHA: ${{ inputs.target_sha || github.event.pull_request.head.sha || github.sha }}
+      SOURCE_B64: reports/research/direct-temporal-representation-family-closure-1h-v1/run_closure.py.gz.b64
+      SCRIPT: /tmp/run_closure.py
+
+    steps:
+      - name: Check out exact evidence head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact revision and parent
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          git cat-file -e "5a0fcc97d1a882f8223656c51f5bb8055f534e38^{commit}"
+
+      - name: Set up fixed Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Materialize and verify frozen source
+        run: |
+          set -euo pipefail
+          base64 --decode "$SOURCE_B64" | gzip --decompress > "$SCRIPT"
+          python -m pip install --disable-pip-version-check "ruff==0.16.1"
+          ruff check "$SCRIPT"
+          ruff format --check "$SCRIPT"
+          python -m py_compile "$SCRIPT"
+          git diff --exit-code
+
+      - name: Download immutable source artifacts
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/source-zips artifacts/direct-representation-closure
+          download_artifact() {
+            local artifact_id="$1"
+            local filename="$2"
+            local headers signed_url
+            headers="$(mktemp)"
+            curl --silent --show-error --dump-header "$headers" --output /dev/null \
+              --header "Accept: application/vnd.github+json" \
+              --header "Authorization: Bearer $GITHUB_TOKEN" \
+              --header "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/Dingding-leo/GPT/actions/artifacts/${artifact_id}/zip"
+            signed_url="$(awk 'BEGIN { IGNORECASE = 1 } /^location:/ {
+              sub(/\r$/, ""); sub(/^[^:]*:[[:space:]]*/, ""); print
+            }' "$headers" | tail -n 1)"
+            rm -f "$headers"
+            test -n "$signed_url"
+            curl --fail --silent --show-error --location --retry 3 --retry-all-errors \
+              "$signed_url" --output "artifacts/source-zips/$filename"
+          }
+          download_artifact 8812982656 haar.zip
+          download_artifact 8813522789 analog.zip
+
+      - name: Reproduce closure twice
+        run: |
+          set -euo pipefail
+          python "$SCRIPT" \
+            --artifact-dir artifacts/source-zips \
+            --output-dir artifacts/direct-representation-closure
+          python "$SCRIPT" \
+            --artifact-dir artifacts/source-zips \
+            --output-dir /tmp/direct-representation-closure-replay
+          cmp artifacts/direct-representation-closure/evidence.json \
+            /tmp/direct-representation-closure-replay/evidence.json
+          cmp artifacts/direct-representation-closure/evidence.sha256 \
+            /tmp/direct-representation-closure-replay/evidence.sha256
+          cmp artifacts/direct-representation-closure/report.md \
+            /tmp/direct-representation-closure-replay/report.md
+          cp "$SCRIPT" artifacts/direct-representation-closure/run_closure.py
+          find artifacts/direct-representation-closure -maxdepth 1 -type f \
+            ! -name artifact-files.sha256 -print0 | sort -z | xargs -0 sha256sum \
+            > artifacts/direct-representation-closure/artifact-files.sha256
+          git diff --exit-code
+
+      - name: Verify frozen terminal verdict
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence = json.loads(
+              Path("artifacts/direct-representation-closure/evidence.json").read_text()
+          )
+          assert evidence["research_parent"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["candidate_count"] == 0
+          assert evidence["source_architecture_count"] == 2
+          assert evidence["source_market_candidate_count"] == 4
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["new_market_data"] is False
+          assert evidence["new_oos_consumption"] is False
+          assert evidence["fee_one_way"] == 0.0005
+          assert evidence["family_uncertainty"]["identifiable"] is False
+          assert evidence["breadth_counts"]["positive_primary_lower_bounds"] == 0
+          assert evidence["breadth_counts"]["delay_survival"] == 0
+          assert evidence["breadth_counts"]["no_joint_sign_reversal"] == 0
+          assert evidence["mechanism_audit"]["negative_gross_timing_markets"] == 3
+          assert evidence["gates_passed"] == 1
+          assert evidence["gates_total"] == 13
+          assert evidence["verdict"] == (
+              "reject_direct_temporal_representation_architecture_family"
+          )
+          PY
+
+      - name: Publish terminal report
+        run: cat artifacts/direct-representation-closure/report.md
+
+      - name: Upload immutable closure artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: direct-temporal-representation-family-closure-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+          path: artifacts/direct-representation-closure
+          if-no-files-found: error
+          compression-level: 9
+          retention-days: 30
