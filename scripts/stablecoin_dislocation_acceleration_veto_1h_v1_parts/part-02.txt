@@ -1,0 +1,360 @@
+        vetoes += int(event["entry_veto"])
+    worsening_mean = float(np.mean(worsening_returns)) if worsening_returns else None
+    stable_mean = float(np.mean(stable_returns)) if stable_returns else None
+    effect = (
+        stable_mean - worsening_mean
+        if stable_mean is not None and worsening_mean is not None
+        else None
+    )
+    return {
+        "base_positive_worsening_count": len(worsening_returns),
+        "base_positive_not_worsening_count": len(stable_returns),
+        "base_positive_worsening_mean_24h_gross_return": worsening_mean,
+        "base_positive_not_worsening_mean_24h_gross_return": stable_mean,
+        "not_worsening_minus_worsening_mean_24h_effect": effect,
+        "entry_vetoes": vetoes,
+    }
+
+
+def segment_result(
+    spot: Series,
+    exogenous: Series,
+    start: int,
+    end: int,
+) -> tuple[dict[str, Any], dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    candidate, events = simulate_kind(spot, exogenous, start, end, "candidate")
+    benchmark, _ = simulate_kind(spot, exogenous, start, end, "e2160")
+    always_long, _ = simulate_kind(spot, exogenous, start, end, "always_long")
+    compact = {
+        "candidate": candidate["metrics"],
+        "e2160": benchmark["metrics"],
+        "always_long": always_long["metrics"],
+    }
+    raw = {
+        "candidate": candidate,
+        "e2160": benchmark,
+        "always_long": always_long,
+    }
+    return compact, raw, events
+
+
+def positive_concentration(values: list[float]) -> float | None:
+    positive = [value for value in values if value > 0]
+    if not positive:
+        return None
+    return float(max(positive) / sum(positive))
+
+
+def fold_and_year_audit(
+    spot: Series,
+    exogenous: Series,
+) -> dict[str, Any]:
+    folds: list[dict[str, Any]] = []
+    for fold in range(6):
+        start = TRAIN_END + fold * 2_160
+        end = start + 2_160
+        compact, _, events = segment_result(spot, exogenous, start, end)
+        relative = (
+            compact["candidate"]["net_compound_return"]
+            - compact["e2160"]["net_compound_return"]
+        )
+        folds.append(
+            {
+                "fold": fold + 1,
+                "start": utc_iso(int(spot.open_ms[start])),
+                "end": utc_iso(int(spot.open_ms[end])),
+                "candidate": compact["candidate"],
+                "e2160": compact["e2160"],
+                "relative_net_return": relative,
+                "entry_vetoes": sum(event["entry_veto"] for event in events),
+            }
+        )
+    year_boundaries = (
+        (2024, TRAIN_END, int((datetime(2025, 1, 1, tzinfo=UTC).timestamp() * 1000 - START_MS) // HOUR_MS)),
+        (2025, int((datetime(2025, 1, 1, tzinfo=UTC).timestamp() * 1000 - START_MS) // HOUR_MS), FULL_END),
+    )
+    years: list[dict[str, Any]] = []
+    for year, start, end in year_boundaries:
+        compact, _, events = segment_result(spot, exogenous, start, end)
+        years.append(
+            {
+                "year": year,
+                "start": utc_iso(int(spot.open_ms[start])),
+                "end": utc_iso(int(spot.open_ms[end])),
+                "candidate": compact["candidate"],
+                "e2160": compact["e2160"],
+                "relative_net_return": (
+                    compact["candidate"]["net_compound_return"]
+                    - compact["e2160"]["net_compound_return"]
+                ),
+                "entry_vetoes": sum(event["entry_veto"] for event in events),
+            }
+        )
+    relative_fold_values = [float(record["relative_net_return"]) for record in folds]
+    return {
+        "folds": folds,
+        "years": years,
+        "positive_candidate_folds": sum(
+            record["candidate"]["net_compound_return"] > 0 for record in folds
+        ),
+        "positive_relative_folds": sum(
+            record["relative_net_return"] > 0 for record in folds
+        ),
+        "largest_positive_fold_effect_share": positive_concentration(relative_fold_values),
+        "both_calendar_partitions_candidate_positive": all(
+            record["candidate"]["net_compound_return"] > 0 for record in years
+        ),
+        "both_calendar_partitions_relative_positive": all(
+            record["relative_net_return"] > 0 for record in years
+        ),
+    }
+
+
+def full_economics(spot: Series, exogenous: Series) -> dict[str, Any]:
+    segments: dict[str, dict[str, Any]] = {}
+    raw_segments: dict[str, dict[str, dict[str, Any]]] = {}
+    event_sets: dict[str, list[dict[str, Any]]] = {}
+    for name, start, end in (
+        ("training", WARMUP_END, TRAIN_END),
+        ("oos", TRAIN_END, OOS_END),
+        ("full", WARMUP_END, FULL_END),
+    ):
+        compact, raw, events = segment_result(spot, exogenous, start, end)
+        segments[name] = compact
+        raw_segments[name] = raw
+        event_sets[name] = events
+    candidate_oos = raw_segments["oos"]["candidate"]
+    benchmark_oos = raw_segments["oos"]["e2160"]
+    bootstrap = paired_bootstrap(
+        candidate_oos["net_returns"], benchmark_oos["net_returns"]
+    )
+    delayed_candidate = evaluate_positions(
+        spot,
+        shifted_positions(candidate_oos["positions"]),
+        TRAIN_END,
+        OOS_END,
+    )
+    delayed_benchmark = evaluate_positions(
+        spot,
+        shifted_positions(benchmark_oos["positions"]),
+        TRAIN_END,
+        OOS_END,
+    )
+    fold_year = fold_and_year_audit(spot, exogenous)
+    training_effect = conditional_daily_effect(
+        spot, event_sets["training"], end=TRAIN_END
+    )
+    oos_effect = conditional_daily_effect(spot, event_sets["oos"], end=OOS_END)
+    training_worsening_rate = float(
+        np.mean([event["worsening"] for event in event_sets["training"]])
+    )
+    oos_worsening_rate = float(
+        np.mean([event["worsening"] for event in event_sets["oos"]])
+    )
+    return {
+        "segments": segments,
+        "bootstrap": bootstrap,
+        "fold_and_year": fold_year,
+        "one_hour_delay": {
+            "candidate": delayed_candidate["metrics"],
+            "e2160": delayed_benchmark["metrics"],
+        },
+        "training_to_oos_transport": {
+            "training_worsening_rate": training_worsening_rate,
+            "oos_worsening_rate": oos_worsening_rate,
+            "training_conditional_effect": training_effect,
+            "oos_conditional_effect": oos_effect,
+        },
+        "oos_path_identities": {
+            "candidate_position_sha256": sha256_bytes(
+                canonical_bytes(candidate_oos["positions"].tolist())
+            ),
+            "e2160_position_sha256": sha256_bytes(
+                canonical_bytes(benchmark_oos["positions"].tolist())
+            ),
+            "candidate_net_return_sha256": sha256_bytes(
+                canonical_bytes(candidate_oos["net_returns"].tolist())
+            ),
+            "e2160_net_return_sha256": sha256_bytes(
+                canonical_bytes(benchmark_oos["net_returns"].tolist())
+            ),
+        },
+        "gross_vs_fee_decomposition": {
+            "candidate_minus_e2160_gross_arithmetic": float(
+                np.sum(candidate_oos["gross_returns"])
+                - np.sum(benchmark_oos["gross_returns"])
+            ),
+            "candidate_minus_e2160_net_arithmetic": float(
+                np.sum(candidate_oos["net_returns"])
+                - np.sum(benchmark_oos["net_returns"])
+            ),
+            "candidate_minus_e2160_turnover": float(
+                candidate_oos["metrics"]["one_way_turnover"]
+                - benchmark_oos["metrics"]["one_way_turnover"]
+            ),
+        },
+    }
+
+
+def oos_gate(economics: dict[str, Any]) -> dict[str, bool]:
+    oos = economics["segments"]["oos"]
+    candidate = oos["candidate"]
+    benchmark = oos["e2160"]
+    candidate_sharpe = candidate["annualised_hourly_sharpe"]
+    benchmark_sharpe = benchmark["annualised_hourly_sharpe"]
+    candidate_edge = candidate["edge_per_turnover_bps"]
+    benchmark_edge = benchmark["edge_per_turnover_bps"]
+    breadth = economics["fold_and_year"]
+    delayed = economics["one_hour_delay"]
+    delayed_candidate = delayed["candidate"]
+    delayed_benchmark = delayed["e2160"]
+    transport = economics["training_to_oos_transport"]
+    training_effect = transport["training_conditional_effect"][
+        "not_worsening_minus_worsening_mean_24h_effect"
+    ]
+    oos_effect = transport["oos_conditional_effect"][
+        "not_worsening_minus_worsening_mean_24h_effect"
+    ]
+    concentration = breadth["largest_positive_fold_effect_share"]
+    return {
+        "candidate_oos_net_return_positive": candidate["net_compound_return"] > 0,
+        "candidate_oos_sharpe_positive": bool(
+            candidate_sharpe is not None and candidate_sharpe > 0
+        ),
+        "candidate_oos_return_exceeds_e2160": (
+            candidate["net_compound_return"] > benchmark["net_compound_return"]
+        ),
+        "candidate_oos_sharpe_exceeds_e2160": bool(
+            candidate_sharpe is not None
+            and benchmark_sharpe is not None
+            and candidate_sharpe > benchmark_sharpe
+        ),
+        "candidate_oos_drawdown_no_worse_than_e2160": (
+            candidate["maximum_drawdown"] >= benchmark["maximum_drawdown"]
+        ),
+        "candidate_oos_edge_per_turnover_exceeds_e2160": bool(
+            candidate_edge is not None
+            and benchmark_edge is not None
+            and candidate_edge > benchmark_edge
+        ),
+        "candidate_oos_turnover_not_greater_than_e2160": (
+            candidate["one_way_turnover"] <= benchmark["one_way_turnover"]
+        ),
+        "at_least_4_of_6_positive_candidate_folds": (
+            breadth["positive_candidate_folds"] >= 4
+        ),
+        "at_least_4_of_6_positive_relative_folds": (
+            breadth["positive_relative_folds"] >= 4
+        ),
+        "both_calendar_partitions_candidate_and_relative_positive": bool(
+            breadth["both_calendar_partitions_candidate_positive"]
+            and breadth["both_calendar_partitions_relative_positive"]
+        ),
+        "largest_positive_fold_effect_at_most_50_percent": bool(
+            concentration is not None and concentration <= 0.50
+        ),
+        "mean_return_difference_lower_95_strictly_positive": (
+            economics["bootstrap"]["annualised_mean_return_difference"]["lower_95"]
+            > 0
+        ),
+        "sharpe_difference_lower_95_strictly_positive": (
+            economics["bootstrap"]["annualised_sharpe_difference"]["lower_95"]
+            > 0
+        ),
+        "one_hour_delay_candidate_positive": bool(
+            delayed_candidate["net_compound_return"] > 0
+            and delayed_candidate["annualised_hourly_sharpe"] is not None
+            and delayed_candidate["annualised_hourly_sharpe"] > 0
+        ),
+        "one_hour_delay_candidate_exceeds_e2160_return_and_sharpe": bool(
+            delayed_candidate["net_compound_return"]
+            > delayed_benchmark["net_compound_return"]
+            and delayed_candidate["annualised_hourly_sharpe"] is not None
+            and delayed_benchmark["annualised_hourly_sharpe"] is not None
+            and delayed_candidate["annualised_hourly_sharpe"]
+            > delayed_benchmark["annualised_hourly_sharpe"]
+        ),
+        "activation_direction_stable_training_to_oos": bool(
+            0.20 <= transport["training_worsening_rate"] <= 0.80
+            and 0.20 <= transport["oos_worsening_rate"] <= 0.80
+            and transport["training_conditional_effect"]["entry_vetoes"] > 0
+            and transport["oos_conditional_effect"]["entry_vetoes"] > 0
+        ),
+        "conditional_effect_sign_positive_training_and_oos": bool(
+            training_effect is not None
+            and oos_effect is not None
+            and training_effect > 0
+            and oos_effect > 0
+        ),
+        "fixed_all_fold_year_target_cohort_preserved": True,
+    }
+
+
+def source_and_feature_invariance(
+    spot: Series, exogenous: Series
+) -> dict[str, Any]:
+    full_positions, full_events = build_path(
+        spot, exogenous, WARMUP_END, FULL_END, kind="candidate"
+    )
+    truncated_spot = Series(
+        inst_id=spot.inst_id,
+        open_ms=spot.open_ms[:FULL_END],
+        opens=spot.opens[:FULL_END],
+        highs=spot.highs[:FULL_END],
+        lows=spot.lows[:FULL_END],
+        closes=spot.closes[:FULL_END],
+        normalized_sha256="prefix-only-not-a-source-claim",
+        manifest=(),
+        instrument_evidence={},
+    )
+    truncated_exogenous = Series(
+        inst_id=exogenous.inst_id,
+        open_ms=exogenous.open_ms[:FULL_END],
+        opens=exogenous.opens[:FULL_END],
+        highs=exogenous.highs[:FULL_END],
+        lows=exogenous.lows[:FULL_END],
+        closes=exogenous.closes[:FULL_END],
+        normalized_sha256="prefix-only-not-a-source-claim",
+        manifest=(),
+        instrument_evidence={},
+    )
+    prefix_positions, prefix_events = build_path(
+        truncated_spot,
+        truncated_exogenous,
+        WARMUP_END,
+        FULL_END,
+        kind="candidate",
+    )
+    full_event_hash = sha256_bytes(canonical_bytes(full_events))
+    prefix_event_hash = sha256_bytes(canonical_bytes(prefix_events))
+    return {
+        "unscored_suffix_start_index": FULL_END,
+        "unscored_suffix_rows": EXPECTED_ROWS - FULL_END,
+        "full_event_sha256": full_event_hash,
+        "prefix_event_sha256": prefix_event_hash,
+        "event_prefix_identical": full_event_hash == prefix_event_hash,
+        "position_prefix_identical": bool(np.array_equal(full_positions, prefix_positions)),
+    }
+
+
+def null_market_record(market: str, support: dict[str, Any] | None) -> dict[str, Any]:
+    return {
+        "market": market,
+        "training_support": support,
+        "performance_accessed": False,
+        "strategies": None,
+        "oos_folds": None,
+        "oos_years": None,
+        "paired_uncertainty": None,
+        "one_hour_delay": None,
+        "training_to_oos_transport": None,
+        "gates": None,
+        "passes_all_gates": False,
+    }
+
+
+def make_report(evidence: dict[str, Any]) -> str:
+    lines = [
+        "# Stablecoin-dislocation acceleration confirmed E2160 entry",
+        "",
+        f"- Family: `{FAMILY_ID}`",
