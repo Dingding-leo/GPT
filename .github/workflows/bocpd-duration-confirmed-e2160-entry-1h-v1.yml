@@ -56,7 +56,7 @@ jobs:
         run: |
           python reports/research/bocpd-duration-confirmed-e2160-entry-1h-v1/run_research.py \
             --materialize artifacts/work/run_research_impl.py
-          ruff check --fix --ignore E501 artifacts/work/run_research_impl.py
+          ruff check --fix --unsafe-fixes --ignore E501 artifacts/work/run_research_impl.py
           ruff format artifacts/work/run_research_impl.py
           ruff check --ignore E501 artifacts/work/run_research_impl.py
           python -m compileall -q artifacts/work/run_research_impl.py
