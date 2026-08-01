@@ -1,0 +1,1 @@
+Exact-head strategy evidence verification trigger.
