@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from datetime import UTC, datetime
@@ -55,6 +56,14 @@ def patch_report(output_dir: Path) -> None:
     for old, new in replacements.items():
         report = report.replace(old, new)
     path.write_text(report)
+
+
+def write_result(output_dir: Path, result: dict[str, Any]) -> None:
+    payload = json.dumps(result, sort_keys=True, indent=2, allow_nan=False) + "\n"
+    (output_dir / "result.json").write_text(payload)
+    (output_dir / "result.sha256").write_text(
+        hashlib.sha256(payload.encode()).hexdigest() + "\n"
+    )
 
 
 def run(output_dir: Path, base_url: str) -> dict[str, Any]:
@@ -126,7 +135,7 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     result["machine_readable_verdict"]["active_family_status"] = result[
         "active_alpha_context"
     ]["status"]
-    prior.write_outputs(output_dir, result)
+    write_result(output_dir, result)
     patch_report(output_dir)
     return result
 
