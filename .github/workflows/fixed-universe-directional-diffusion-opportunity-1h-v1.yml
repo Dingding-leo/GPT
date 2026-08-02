@@ -93,6 +93,7 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf evidence/fixed-universe-directional-diffusion-opportunity-1h-v1
+          mkdir -p evidence/fixed-universe-directional-diffusion-opportunity-1h-v1
           python /tmp/run_directional_diffusion.py \
             --base-script /tmp/frozen_okx_base.py \
             --tested-head "$(git rev-parse HEAD)" \
