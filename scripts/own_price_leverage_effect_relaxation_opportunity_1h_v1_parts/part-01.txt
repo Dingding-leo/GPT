@@ -1,0 +1,140 @@
+def source_grid_audit(series: Any, end: int) -> dict[str, Any]:
+    open_ms = np.asarray(series.open_ms[:end], dtype=np.int64)
+    if len(open_ms) != end:
+        raise ValueError(f"source length {len(open_ms)} does not equal {end}")
+    if open_ms[0] != EXPECTED_START_MS:
+        raise ValueError(f"unexpected first hour: {open_ms[0]}")
+    if end == FULL_END and open_ms[-1] != EXPECTED_END_MS:
+        raise ValueError(f"unexpected last hour: {open_ms[-1]}")
+    if np.any(open_ms % HOUR_MS != 0):
+        raise ValueError("source contains a non-UTC-hour opening")
+    gaps = np.flatnonzero(np.diff(open_ms) != HOUR_MS)
+    if len(gaps):
+        raise ValueError(f"non-contiguous 1H source at index {int(gaps[0])}")
+    return {
+        "rows_checked": int(end),
+        "first_open_ms": int(open_ms[0]),
+        "last_open_ms": int(open_ms[-1]),
+        "non_hour_openings": 0,
+        "one_hour_gaps": 0,
+    }
+
+
+def completed_log_returns(series: Any, end: int) -> np.ndarray:
+    closes = np.asarray(series.closes[:end], dtype=float)
+    if len(closes) != end:
+        raise ValueError("close vector has incorrect length")
+    if not np.isfinite(closes).all() or np.any(closes <= 0):
+        raise ValueError("closes must be finite and positive")
+    returns = np.full(end, np.nan, dtype=float)
+    returns[1:] = np.log(closes[1:] / closes[:-1])
+    return returns
+
+
+def leverage_statistic(returns: np.ndarray, response_indices: np.ndarray) -> float:
+    antecedent = returns[response_indices - 1]
+    subsequent_variance = returns[response_indices] ** 2
+    if not np.isfinite(antecedent).all() or not np.isfinite(subsequent_variance).all():
+        return float("nan")
+    value = -corr(antecedent, subsequent_variance)
+    return value if math.isfinite(value) else float("nan")
+
+
+def leverage_feature(returns: np.ndarray, t: int) -> dict[str, Any]:
+    baseline_indices = np.arange(t - 912, t - 192, dtype=int)
+    recent_indices = np.arange(t - 192, t - 24, dtype=int)
+    if len(baseline_indices) != BASELINE_PAIRS:
+        raise ValueError("baseline does not contain exactly 720 response pairs")
+    if len(recent_indices) != RECENT_PAIRS:
+        raise ValueError("recent window does not contain exactly 168 response pairs")
+    baseline = leverage_statistic(returns, baseline_indices)
+    recent = leverage_statistic(returns, recent_indices)
+    feature = baseline - recent
+    if not all(math.isfinite(value) for value in (baseline, recent, feature)):
+        return {"valid": False, "reason": "zero variance or non-finite leverage correlation"}
+    return {
+        "valid": True,
+        "baseline_leverage": baseline,
+        "recent_leverage": recent,
+        "leverage_relaxation": feature,
+        "baseline_first_response_index": int(baseline_indices[0]),
+        "baseline_last_response_index": int(baseline_indices[-1]),
+        "recent_first_response_index": int(recent_indices[0]),
+        "recent_last_response_index": int(recent_indices[-1]),
+        "baseline_first_antecedent_index": int(baseline_indices[0] - 1),
+        "recent_first_antecedent_index": int(recent_indices[0] - 1),
+    }
+
+
+def first_daily_anchor() -> int:
+    minimum = 2185
+    return ((minimum + 23) // 24) * 24
+
+
+def opportunities(series: Any, end: int) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if end < TRAIN_END:
+        raise ValueError("analysis prefix must include the full frozen training region")
+    grid_audit = source_grid_audit(series, end)
+    returns = completed_log_returns(series, TRAIN_END)
+    records: list[dict[str, Any]] = []
+    invalid_feature_anchors = 0
+    ineligible_e2160 = 0
+    evaluated_daily_anchors = 0
+    for t in range(first_daily_anchor(), TRAIN_END - 25, 24):
+        evaluated_daily_anchors += 1
+        if not (series.closes[t - 25] > series.closes[t - 2185]):
+            ineligible_e2160 += 1
+            continue
+        feature = leverage_feature(returns, t)
+        if not feature["valid"]:
+            invalid_feature_anchors += 1
+            continue
+        entry = float(series.opens[t])
+        exit_price = float(series.opens[t + 24])
+        delayed_entry = float(series.opens[t + 1])
+        delayed_exit = float(series.opens[t + 25])
+        path = np.asarray(series.opens[t : t + 25], dtype=float) / entry - 1.0
+        delayed_path = np.asarray(series.opens[t + 1 : t + 26], dtype=float) / delayed_entry - 1.0
+        records.append(
+            {
+                "decision_index": t,
+                "execution_open_ms": int(series.open_ms[t]),
+                "e2160_margin": float(math.log(series.closes[t - 25] / series.closes[t - 2185])),
+                **feature,
+                "net_24h": float(exit_price / entry - 1.0 - ROUND_TRIP_FEE),
+                "adverse_24h": float(np.min(path)),
+                "delayed_net_24h": float(delayed_exit / delayed_entry - 1.0 - ROUND_TRIP_FEE),
+                "delayed_adverse_24h": float(np.min(delayed_path)),
+            }
+        )
+    audit = {
+        **grid_audit,
+        "evaluated_daily_anchors": evaluated_daily_anchors,
+        "invalid_feature_anchors": invalid_feature_anchors,
+        "ineligible_e2160_anchors": ineligible_e2160,
+        "latest_feature_response_index": max((record["recent_last_response_index"] for record in records), default=None),
+        "latest_delayed_label_endpoint_index": max((record["decision_index"] + 25 for record in records), default=None),
+    }
+    return records, audit
+
+
+def fold_audit(records: list[dict[str, Any]]) -> dict[str, Any]:
+    folds: list[dict[str, Any]] = []
+    for number in range(4):
+        start = WARMUP + number * 2160
+        end = start + 2160
+        subset = [record for record in records if start <= record["decision_index"] < end]
+        if len(subset) >= 3:
+            x = np.array([record["leverage_relaxation"] for record in subset])
+            net = np.array([record["net_24h"] for record in subset])
+            adverse = np.array([record["adverse_24h"] for record in subset])
+            net_slope = standardized_slope(x, net)
+            adverse_slope = standardized_slope(x, adverse)
+        else:
+            net_slope = None
+            adverse_slope = None
+        folds.append(
+            {
+                "fold": number + 1,
+                "start_index": start,
+                "end_index": end,
