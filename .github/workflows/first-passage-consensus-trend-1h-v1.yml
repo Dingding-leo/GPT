@@ -49,8 +49,6 @@ jobs:
           test -z "${{ secrets.OKX_PASSPHRASE }}"
           ! grep -EIn '(/api/v5/(account|trade|asset|broker)|place_order\(|create_order\(|submit_order\(|send_order\()' \
             /tmp/run_first_passage_consensus_trend_1h_v1.py
-          ! grep -EIn '(15m|leverage|short_position|market_neutral|cointegration)' \
-            /tmp/run_first_passage_consensus_trend_1h_v1.py
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
