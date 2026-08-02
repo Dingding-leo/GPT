@@ -1,0 +1,223 @@
+            f"{associations['net_spearman']:+.6f} | "
+            f"{associations['adverse_spearman']:+.6f} | "
+            f"{associations['net_standardized_slope']:+.6f} | "
+            f"{associations['adverse_standardized_slope']:+.6f} | "
+            f"{effects['net_upper_minus_lower'] * 10000:+.2f} | "
+            f"{effects['adverse_upper_minus_lower'] * 10000:+.2f} | "
+            f"{folds['positive_net_slope_folds']}/4 | "
+            f"{folds['positive_adverse_slope_folds']}/4 | "
+            f"{sum(target['gates'].values())}/{len(target['gates'])} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Highest-value failure",
+            "",
+            evidence["highest_value_failure"],
+            "",
+            "All strategy train/OOS/full, benchmark, turnover, drawdown, "
+            "edge-per-turnover and calendar-year fields remain null because "
+            "this zero-candidate diagnostic did not open sealed OOS.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base-script", required=True)
+    parser.add_argument("--tested-head", required=True)
+    parser.add_argument("--output-dir", required=True)
+    args = parser.parse_args()
+    base = load_base(args.base_script)
+    output = Path(args.output_dir)
+    source_root = output / "source"
+    output.mkdir(parents=True, exist_ok=True)
+    series: dict[str, Any] = {}
+    failures: dict[str, str] = {}
+    for inst_id in TARGETS:
+        try:
+            acquired = base.acquire_series(inst_id, source_root)
+            if acquired.normalized_sha256 != EXPECTED_SOURCE_HASHES[inst_id]:
+                raise ValueError(
+                    "normalized source hash mismatch: "
+                    f"{acquired.normalized_sha256} != "
+                    f"{EXPECTED_SOURCE_HASHES[inst_id]}"
+                )
+            series[inst_id] = acquired
+        except Exception as exc:
+            failures[inst_id] = f"{type(exc).__name__}: {exc}"
+    common_grid = len(series) == len(TARGETS) and np.array_equal(
+        series[TARGETS[0]].open_ms,
+        series[TARGETS[1]].open_ms,
+    )
+    if len(series) == len(TARGETS) and not common_grid:
+        failures["common_grid"] = "BTC and ETH do not share one exact UTC grid"
+    source_passed = len(series) == len(TARGETS) and not failures and common_grid
+    source_manifest = {
+        "family_id": FAMILY,
+        "acquisition_base_sha256": base.sha256_bytes(Path(args.base_script).read_bytes()),
+        "provider": "OKX public market data",
+        "bar": "1H",
+        "targets": list(TARGETS),
+        "expected_rows_per_series": base.EXPECTED_ROWS,
+        "expected_source_sha256": EXPECTED_SOURCE_HASHES,
+        "series": {
+            key: {
+                "rows": len(value.open_ms),
+                "normalized_sha256": value.normalized_sha256,
+                "instrument_evidence": value.instrument_evidence,
+                "pages": list(value.manifest),
+            }
+            for key, value in series.items()
+        },
+        "failures": failures,
+        "common_grid": common_grid,
+        "source_contract_passed": source_passed,
+    }
+    source_manifest_hash = base.persist_json(output / "source_manifest.json", source_manifest)
+    targets: list[dict[str, Any]] = []
+    if source_passed:
+        for target in TARGETS:
+            try:
+                targets.append(analyse(base, series[target], target))
+            except Exception as exc:
+                failures[f"{target}_analysis"] = f"{type(exc).__name__}: {exc}"
+                source_passed = False
+                targets = []
+                break
+    bilateral = bool(targets) and all(target["passes"] for target in targets)
+    if source_passed and not bilateral:
+        failed_gates = []
+        for target in targets:
+            names = [name for name, passed in target["gates"].items() if not passed]
+            failed_gates.append(f"{target['target']}: {', '.join(names)}")
+        highest_value_failure = (
+            "Bilateral hour-of-week seasonal-projection support failed: "
+            + "; ".join(failed_gates)
+        )
+    elif source_passed:
+        highest_value_failure = (
+            "No information gate failed; only a separately preregistered "
+            "candidate architecture may proceed."
+        )
+    else:
+        highest_value_failure = "Source or UTC-bin contract failed: " + "; ".join(
+            f"{name}: {message}" for name, message in failures.items()
+        )
+    evidence = {
+        "family_id": FAMILY,
+        "exact_head": args.tested_head,
+        "repository_main": MAIN,
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "canonical_fee_bps_one_way": 5.0,
+        "round_trip_opportunity_fee": ROUND_TRIP_FEE,
+        "bar_interval": "1H",
+        "candidate_count": 0,
+        "parameter_grid_count": 0,
+        "source_contract_passed": source_passed,
+        "source_failures": failures,
+        "source_manifest_sha256": source_manifest_hash,
+        "source_series_sha256": {
+            key: value.normalized_sha256 for key, value in series.items()
+        },
+        "targets": targets,
+        "sample": {
+            "rows_per_series": base.EXPECTED_ROWS,
+            "warmup": [0, WARMUP],
+            "training_information": [WARMUP, TRAIN_END],
+            "sealed_oos": [TRAIN_END, OOS_END],
+            "unread_suffix": [OOS_END, FULL_END],
+            "folds": 4,
+            "fold_hours": 2160,
+        },
+        "training_information_labels_accessed": source_passed,
+        "strategy_performance_accessed": False,
+        "oos_accessed": False,
+        "full_sample_accessed": False,
+        "bilateral_training_support_passed": bilateral,
+        "targets_passing": sum(target["passes"] for target in targets),
+        "highest_value_failure": highest_value_failure,
+        "canonical_strategy_changed": False,
+        "canonical_mutation_authorized": False,
+        "executable_candidate_authorized": False,
+        "separate_candidate_predeclaration_authorized": bilateral,
+        "prospective_shadow_authorized": False,
+        "paper_trading_authorized": False,
+        "live_trading_authorized": False,
+        "public_data_only": True,
+        "synthetic_market_data_used": False,
+        "interpolation_or_row_repair_used": False,
+        "cross_sectional_ranking_or_selection": False,
+        "pairs_or_spreads": False,
+        "cointegration_or_statistical_arbitrage": False,
+        "market_neutral_or_long_short": False,
+        "credentials_used": False,
+        "private_endpoints_used": False,
+        "accounts_or_orders": False,
+        "enabled_adapters": False,
+        "leverage_used": False,
+        "non_1h_or_15m_input_used": False,
+        "verdict": ACCEPT if bilateral else REJECT,
+    }
+    evidence["machine_readable_verdict"] = {
+        key: evidence[key]
+        for key in (
+            "family_id",
+            "candidate_count",
+            "parameter_grid_count",
+            "source_contract_passed",
+            "bilateral_training_support_passed",
+            "strategy_performance_accessed",
+            "oos_accessed",
+            "canonical_strategy_changed",
+            "canonical_mutation_authorized",
+            "executable_candidate_authorized",
+            "separate_candidate_predeclaration_authorized",
+            "paper_trading_authorized",
+            "live_trading_authorized",
+            "verdict",
+        )
+    }
+    evidence_hash = base.persist_json(output / "evidence.json", evidence)
+    protocol = {
+        "family_id": FAMILY,
+        "targets": list(TARGETS),
+        "return": "log(close[h]/close[h-1])",
+        "hour_of_week": "UTC weekday(open_time[h])*24+UTC hour(open_time[h])",
+        "baseline_return_endpoints": "[t-1536,t-193], exactly 8 per UTC bin",
+        "recent_return_endpoints": "[t-192,t-25], exactly 1 per UTC bin",
+        "template": "binwise baseline mean centred across 168 bins",
+        "recent_vector": "one return per bin centred across 168 bins",
+        "phase_beta": "dot(recent,template)/dot(template,template)",
+        "next24_projection": "phase_beta*sum(template[next 24 known UTC bins])",
+        "own_e2160": "close[t-25] > close[t-2185]",
+        "label": "open[t+24]/open[t]-1-0.0010",
+        "adverse": "min(open[t:t+25]/open[t]-1), including zero",
+        "delay": "same feature; open[t+1] to open[t+25]",
+        "candidate_count": 0,
+        "parameter_grid_count": 0,
+        "bootstrap": {
+            "draws": DRAWS,
+            "block_opportunities": BLOCK,
+            "seed": SEED,
+        },
+        "oos_access": "prohibited",
+    }
+    protocol_hash = base.persist_json(output / "protocol.json", protocol)
+    report_text = report(evidence)
+    (output / "report.md").write_text(report_text, encoding="utf-8")
+    hashes = {
+        "evidence_sha256": evidence_hash,
+        "source_manifest_sha256": source_manifest_hash,
+        "protocol_sha256": protocol_hash,
+        "report_sha256": base.sha256_bytes(report_text.encode()),
+    }
+    (output / "hashes.json").write_text(
+        json.dumps(hashes, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        json.dumps(
+            {
