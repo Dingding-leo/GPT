@@ -1,0 +1,192 @@
+name: Prospective Simple Trend Shadow 20260802 1900 Exact
+
+on:
+  pull_request:
+    branches:
+      - auto/research/20260803-0344-prospective-simple-trend-shadow-20260802-1800
+    paths:
+      - "scripts/run_prospective_simple_trend_shadow_20260802_1900.py"
+      - "scripts/run_prospective_simple_trend_shadow_20260802_1900_exact.py"
+      - ".github/workflows/prospective-simple-trend-shadow-20260802-1900-exact.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prospective-simple-trend-20260802-1900-exact-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  prospective-shadow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OKX_BASE_URL: https://www.okx.com
+      OUTPUT_DIR: reports/prospective/simple-trend-20260802T1900Z
+      ARTIFACT_NAME: prospective-simple-trend-20260802-1900-exact-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify public-only exact revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+          ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
+            scripts/run_prospective_simple_trend_shadow_20260802_1900.py \
+            scripts/run_prospective_simple_trend_shadow_20260802_1900_exact.py
+          ! grep -EIn '(15m|quarter-hour|resample\()' \
+            scripts/run_prospective_simple_trend_shadow_20260802_1900.py \
+            scripts/run_prospective_simple_trend_shadow_20260802_1900_exact.py
+
+      - name: Execute frozen prospective checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            scripts/run_prospective_simple_trend_shadow_20260802_1900.py \
+            scripts/run_prospective_simple_trend_shadow_20260802_1900_exact.py
+          python scripts/run_prospective_simple_trend_shadow_20260802_1900_exact.py \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify machine-readable strategy evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/result.json"
+          test -s "$OUTPUT_DIR/result.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          test "$(sha256sum "$OUTPUT_DIR/result.json" | awk '{print $1}')" = \
+            "$(cat "$OUTPUT_DIR/result.sha256")"
+          grep -Fq '# Prospective simple-trend checkpoint through 19:00 UTC on 2 August 2026' \
+            "$OUTPUT_DIR/report.md"
+          grep -Fq 'The 18:00 signal bar was provider-confirmed' "$OUTPUT_DIR/report.md"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          output_dir = Path(os.environ["OUTPUT_DIR"])
+          result = json.loads((output_dir / "result.json").read_text())
+          assert result["policy_name"] == "simple_trend_long_cash_2160h_next_open"
+          assert result["policy_sha256"] == (
+              "9dc8ab03368b61546a6ae7674f1f4127953404900ff1e09e066ecf9adf741131"
+          )
+          assert result["bar"] == "1H"
+          assert result["canonical_fee_bps_one_way"] == 5.0
+          assert result["cross_sectional_selection"] is False
+          assert result["actual_orders"] is False
+          assert result["credentials_used"] is False
+          assert result["private_endpoints_used"] is False
+          assert result["enabled_adapters"] is False
+          assert result["paper_trading_authorized"] is False
+          assert result["live_trading_authorized"] is False
+          assert result["performance_accessed"] is False
+          assert result["oos_accessed"] is False
+
+          window = result["window"]
+          assert window["prior_last_signal_bar_start"] == "2026-08-02T17:00:00Z"
+          assert window["latest_complete_signal_bar_start"] == "2026-08-02T18:00:00Z"
+          assert window["realized_payoff_interval_start"] == "2026-08-02T18:00:00Z"
+          assert window["realized_payoff_interval_end"] == "2026-08-02T19:00:00Z"
+          assert window["new_signal_bar_count"] == 1
+          assert window["new_realized_payoff_intervals"] == 1
+          assert window["prior_cumulative_realized_hours"] == 617
+          assert window["updated_cumulative_realized_hours"] == 618
+
+          active = result["active_alpha_context"]
+          assert active["issue"] == 993
+          assert active["candidate_count"] == 0
+          assert active["performance_accessed"] is False
+          assert active["sealed_oos_accessed"] is False
+          assert active["correction_authority"] is False
+
+          assert len(result["markets"]) == 2
+          assert all(len(market["new_decisions"]) == 1 for market in result["markets"])
+          assert all(
+              market["new_decisions"][0]["signal_hour_start"]
+              == "2026-08-02T18:00:00Z"
+              for market in result["markets"]
+          )
+          assert all(
+              source["grid"]["contiguous_confirmed_grid_passed"] is True
+              for source in result["sources"]
+          )
+
+          correction = result["training_authorized_correction"]
+          assert correction["permitted"] is False
+          assert correction["applied"] is False
+          assert correction["policy_changed"] is False
+          assert correction["observation_epoch_restarted"] is False
+          assert result["abort_conditions"]["triggered"] is False
+
+          machine = result["machine_readable_verdict"]
+          assert machine["payoff_end_open_only"] is True
+          assert machine["payoff_end_open_timestamp"] == "2026-08-02T19:00:00Z"
+          assert machine["future_signal_accessed"] is False
+          assert machine["strategy_value_changed"] is False
+          assert machine["updated_cumulative_realized_hours"] == 618
+          assert machine["correction_permitted"] is False
+          assert machine["policy_changed"] is False
+          assert machine["live_trading_authorized"] is False
+
+          compact = {
+              "verdict": result["verdict"],
+              "generated_at": result["generated_at"],
+              "acquisition": result["acquisition"],
+              "window": window,
+              "aggregate": result["aggregate_forward_scorecard"],
+              "markets": [
+                  {
+                      "instrument": market["instrument"],
+                      "new_margin": market["new_decisions"][0]["margin"],
+                      "new_target": market["new_decisions"][0]["target"],
+                      "margin_drift": market["signal_drift"]["margin_change"],
+                      "position": market["realized_interval"]["position"],
+                      "expected_net": market["realized_interval"][
+                          "expected_net_return_under_frozen_decision"
+                      ],
+                      "realized_net": market["realized_interval"][
+                          "net_strategy_return"
+                      ],
+                      "benchmark": market["realized_interval"]["asset_return"],
+                      "residual": market["realized_interval"][
+                          "strategy_residual_vs_buy_and_hold"
+                      ],
+                      "turnover": market["realized_interval"]["turnover"],
+                      "fee": market["realized_interval"]["modeled_fee"],
+                      "drift_attribution": market["drift_attribution"],
+                      "five_interval": market["recent_forward_window"],
+                  }
+                  for market in result["markets"]
+              ],
+              "discrepancy": result["strategy_facing_discrepancy"],
+              "correction": correction,
+              "active_architecture": active,
+              "abort": result["abort_conditions"],
+              "next_action": result["next_strategy_action"],
+          }
+          print("STRATEGY_COMPACT_JSON=" + json.dumps(compact, sort_keys=True))
+          PY
+          echo "RESULT_SHA256=$(cat "$OUTPUT_DIR/result.sha256")"
+          echo "REPORT_SHA256=$(sha256sum "$OUTPUT_DIR/report.md" | awk '{print $1}')"
+
+      - name: Upload immutable prospective evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
