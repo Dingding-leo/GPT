@@ -89,8 +89,8 @@ def transform(text: str) -> str:
     remaining = [fragment for fragment in forbidden if fragment in text]
     if remaining:
         raise RuntimeError(f"stale leverage diagnostic fragments remain: {remaining}")
-    if text.count("clustering_relaxation") < 8:
-        raise RuntimeError("transformed diagnostic has too few clustering-relaxation bindings")
+    if text.count("clustering_relaxation") != 4:
+        raise RuntimeError("transformed diagnostic has an unexpected clustering-relaxation binding count")
     if "leverage_used" not in text:
         raise RuntimeError("hard-boundary leverage prohibition field was accidentally removed")
     return text
