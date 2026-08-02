@@ -1,0 +1,104 @@
+name: Directed Temporal Asymmetry Programme Closure 1H V1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/directed-temporal-asymmetry-programme-closure-1h-v1.yml"
+      - "scripts/directed_temporal_asymmetry_programme_closure_1h_v1_records.json"
+      - "scripts/run_directed_temporal_asymmetry_programme_closure_1h_v1.py"
+
+permissions:
+  contents: read
+
+jobs:
+  close-programme:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact head
+        uses: actions/checkout@3d3c42e3f8f5d581d4c9b2c8b4b5c8f2e6f86a3a
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
+        with:
+          python-version: "3.12"
+
+      - name: Verify immutable closure boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          script=scripts/run_directed_temporal_asymmetry_programme_closure_1h_v1.py
+          ! grep -E 'urllib|requests|httpx|socket|subprocess|aiohttp' "$script"
+          python -m py_compile "$script"
+
+      - name: Materialize exact closure evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=evidence/directed-temporal-asymmetry-programme-closure-1h-v1
+          rm -rf "$root"
+          python scripts/run_directed_temporal_asymmetry_programme_closure_1h_v1.py \
+            --tested-head "$(git rev-parse HEAD)" \
+            --output-dir "$root" \
+            | tee "$root/stdout.json"
+
+      - name: Verify closure gates and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import subprocess
+          from pathlib import Path
+
+          root = Path("evidence/directed-temporal-asymmetry-programme-closure-1h-v1")
+          evidence = json.loads((root / "evidence.json").read_text())
+          expected_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"], text=True
+          ).strip()
+          assert evidence["tested_head"] == expected_head
+          assert evidence["canonical_main_head"] == (
+              "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          )
+          assert evidence["bar"] == "1H"
+          assert evidence["one_way_fee_bps"] == 5.0
+          summary = evidence["summary"]
+          assert summary["bound_groups"] == 5
+          assert summary["bound_historical_candidates"] == 2
+          assert summary["executable_groups"] == 2
+          assert summary["diagnostic_groups"] == 3
+          assert summary["supportive_individual_groups"] == 0
+          assert summary["supportive_leave_one_out_subsets"] == 0
+          assert summary["closure_candidate_count"] == 0
+          assert summary["parameter_grid_count"] == 0
+          assert summary["new_market_data"] == 0
+          assert summary["new_target_labels"] == 0
+          assert summary["new_oos_consumed"] == 0
+          assert summary["performance_accessed_in_closure"] is False
+          assert evidence["canonical_mutation"] is False
+          assert evidence["paper_trading_authority"] is False
+          assert evidence["live_trading_authority"] is False
+          assert evidence["verdict"] == (
+              "reject_reopening_completed_directed_temporal_asymmetry_mechanisms_1h_v1"
+          )
+          for name in ("source_records", "evidence", "report"):
+              payload = (root / f"{name}.json").read_bytes() if name != "report" else (
+                  root / "report.md"
+              ).read_bytes()
+              expected = (root / f"{name}.sha256").read_text().split()[0]
+              assert hashlib.sha256(payload).hexdigest() == expected
+          print(json.dumps(summary, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload immutable closure evidence
+        uses: actions/upload-artifact@043fb460b7c0f86c0bca3d3404a21ad4c9c0a3f3
+        with:
+          name: directed-temporal-asymmetry-programme-closure-1h-v1
+          path: evidence/directed-temporal-asymmetry-programme-closure-1h-v1
+          if-no-files-found: error
+          retention-days: 90
