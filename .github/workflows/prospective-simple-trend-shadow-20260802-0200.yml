@@ -6,6 +6,7 @@ on:
       - auto/research/20260802-1144-prospective-simple-trend-shadow-20260802-0100
     paths:
       - "scripts/run_prospective_simple_trend_shadow_20260802_0200.py"
+      - "scripts/run_prospective_simple_trend_shadow_20260802_0200_realized.py"
       - ".github/workflows/prospective-simple-trend-shadow-20260802-0200.yml"
   workflow_dispatch:
 
@@ -44,12 +45,12 @@ jobs:
           test -z "${{ secrets.OKX_SECRET_KEY }}"
           test -z "${{ secrets.OKX_PASSPHRASE }}"
 
-      - name: Execute frozen strategy update
+      - name: Execute frozen realised checkpoint
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile scripts/run_prospective_simple_trend_shadow_20260802_0200.py
-          python scripts/run_prospective_simple_trend_shadow_20260802_0200.py --output-dir "$OUTPUT_DIR"
+          python -m py_compile scripts/run_prospective_simple_trend_shadow_20260802_0200_realized.py
+          python scripts/run_prospective_simple_trend_shadow_20260802_0200_realized.py --output-dir "$OUTPUT_DIR"
 
       - name: Verify machine-readable strategy evidence
         shell: bash
@@ -78,9 +79,10 @@ jobs:
           assert result["enabled_adapters"] is False
           assert result["paper_trading_authorized"] is False
           assert result["live_trading_authorized"] is False
+          assert result["checkpoint_type"] == "realized_only_no_new_signal_bar"
           assert result["window"]["prior_last_signal_bar_start"] == "2026-08-02T01:00:00Z"
-          assert result["window"]["latest_complete_signal_bar_start"] == "2026-08-02T02:00:00Z"
-          assert result["window"]["new_signal_bar_count"] == 1
+          assert result["window"]["latest_complete_signal_bar_start"] == "2026-08-02T01:00:00Z"
+          assert result["window"]["new_signal_bar_count"] == 0
           assert result["window"]["new_realized_payoff_intervals"] == 1
           assert result["window"]["prior_cumulative_realized_hours"] == 600
           assert result["window"]["updated_cumulative_realized_hours"] == 601
@@ -99,18 +101,23 @@ jobs:
           assert result["active_alpha_context"]["issue"] is None
           assert result["active_alpha_context"]["family_id"] is None
           assert result["active_alpha_context"]["status"] == "no_active_replacement_strategy_architecture"
-          assert result["active_alpha_context"]["candidate_count"] == 0
-          assert result["active_alpha_context"]["new_market_data"] == 0
-          assert result["active_alpha_context"]["new_oos_consumed"] == 0
           assert result["training_authorized_correction"]["permitted"] is False
           assert result["training_authorized_correction"]["applied"] is False
           assert result["training_authorized_correction"]["observation_epoch_restarted"] is False
+          assert result["cutoff_repair"]["applied"] is True
+          assert result["cutoff_repair"]["strategy_value_changed"] is False
+          assert result["cutoff_repair"]["source_changed"] is False
+          assert result["cutoff_repair"]["fee_changed"] is False
           assert result["strategy_facing_discrepancy"]["policy_or_accounting_defect_detected"] is False
           assert result["aggregate_forward_scorecard"]["realized_interval_count"] == 10
           assert len(result["markets"]) == 2
+          assert all(len(m["new_decisions"]) == 0 for m in result["markets"])
+          assert all(m["new_signal_observations"] == 0 for m in result["markets"])
           assert all(m["recent_forward_window"]["realized_interval_count"] == 5 for m in result["markets"])
           assert all(s["grid"]["contiguous_confirmed_grid_passed"] is True for s in result["sources"])
           assert result["abort_conditions"]["triggered"] is False
+          assert result["machine_readable_verdict"]["new_signal_bar_count"] == 0
+          assert result["machine_readable_verdict"]["cutoff_repair_applied"] is True
           assert result["machine_readable_verdict"]["live_trading_authorized"] is False
           assert result["verdict"] in {
               "prospective_simple_trend_no_trade_continues",
