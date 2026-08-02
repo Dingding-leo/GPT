@@ -41,6 +41,7 @@ jobs:
           set -euo pipefail
           root=evidence/directed-temporal-asymmetry-programme-closure-1h-v1
           rm -rf "$root"
+          mkdir -p "$root"
           python scripts/run_directed_temporal_asymmetry_programme_closure_1h_v1.py \
             --tested-head "$(git rev-parse HEAD)" \
             --output-dir "$root" \
