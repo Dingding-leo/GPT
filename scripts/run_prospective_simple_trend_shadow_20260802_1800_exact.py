@@ -28,6 +28,9 @@ def main() -> None:
     original_write_result = getattr(checkpoint.prior, "write_result", None)
     original_write_report = getattr(checkpoint.prior, "write_report", None)
 
+    checkpoint.LATEST_AUDIT.setdefault(
+        "verdict", checkpoint.LATEST_AUDIT["strategy_disposition"]
+    )
     checkpoint.prior.validate = lambda result: None
     checkpoint.prior.patch_report = lambda output_dir: None
     checkpoint.prior.write_result = checkpoint.prior.prior.write_result
