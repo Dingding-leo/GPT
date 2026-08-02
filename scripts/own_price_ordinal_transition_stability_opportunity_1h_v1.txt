@@ -1,0 +1,800 @@
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import math
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+FAMILY = "causal-own-price-ordinal-transition-stability-opportunity-1h-v1"
+ACCEPT = "accept_causal_own_price_ordinal_transition_stability_information_premise_1h_v1"
+REJECT = "reject_causal_own_price_ordinal_transition_stability_information_premise_1h_v1"
+MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+TARGETS = ("BTC-USDT", "ETH-USDT")
+EXPECTED_SOURCE_HASHES = {
+    "BTC-USDT": "0891418c4ed57e424922fe9690f10a7b50c586ba2b37eb62761e88f51926550f",
+    "ETH-USDT": "a058b6f30524ee828ed277cfe41076722b169452c6147094300b39f11377c697",
+}
+WARMUP = 2160
+TRAIN_END = 10800
+OOS_END = 23760
+FULL_END = 24144
+BASELINE_HOURS = 720
+RECENT_HOURS = 168
+INFORMATION_LAG_HOURS = 24
+DRAWS = 5000
+BLOCK = 7
+SEED = 2026080220
+ROUND_TRIP_FEE = 0.0010
+MIN_VALID_FRACTION = 0.95
+MOTIFS = ("012", "021", "102", "120", "201", "210")
+MOTIF_INDEX = {motif: index for index, motif in enumerate(MOTIFS)}
+
+
+def load_base(path: str) -> Any:
+    spec = importlib.util.spec_from_file_location("frozen_okx_base", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load frozen acquisition base")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def corr(x: np.ndarray, y: np.ndarray) -> float:
+    xc = x - x.mean()
+    yc = y - y.mean()
+    den = math.sqrt(float(np.sum(xc * xc) * np.sum(yc * yc)))
+    return float(np.sum(xc * yc) / den) if den > 0 else float("nan")
+
+
+def ranks(x: np.ndarray) -> np.ndarray:
+    order = np.argsort(x, kind="mergesort")
+    result = np.empty(len(x), dtype=float)
+    start = 0
+    while start < len(x):
+        end = start + 1
+        while end < len(x) and x[order[end]] == x[order[start]]:
+            end += 1
+        result[order[start:end]] = 0.5 * (start + end - 1) + 1
+        start = end
+    return result
+
+
+def spearman(x: np.ndarray, y: np.ndarray) -> float:
+    return corr(ranks(x), ranks(y))
+
+
+def standardized_slope(x: np.ndarray, y: np.ndarray) -> float:
+    sx = float(np.std(x, ddof=1))
+    sy = float(np.std(y, ddof=1))
+    return corr(x, y) if sx > 0 and sy > 0 else float("nan")
+
+
+def summary_stats(
+    x: np.ndarray,
+    net: np.ndarray,
+    adverse: np.ndarray,
+) -> dict[str, float]:
+    return {
+        "net_spearman": spearman(x, net),
+        "adverse_spearman": spearman(x, adverse),
+        "net_standardized_slope": standardized_slope(x, net),
+        "adverse_standardized_slope": standardized_slope(x, adverse),
+    }
+
+
+def tercile_effects(
+    x: np.ndarray,
+    net: np.ndarray,
+    adverse: np.ndarray,
+) -> dict[str, float | int]:
+    lower_cut = float(np.quantile(x, 1 / 3))
+    upper_cut = float(np.quantile(x, 2 / 3))
+    lower = x <= lower_cut
+    upper = x >= upper_cut
+    return {
+        "lower_cut": lower_cut,
+        "upper_cut": upper_cut,
+        "lower_count": int(lower.sum()),
+        "upper_count": int(upper.sum()),
+        "net_upper_minus_lower": float(net[upper].mean() - net[lower].mean()),
+        "adverse_upper_minus_lower": float(
+            adverse[upper].mean() - adverse[lower].mean()
+        ),
+        "lower_net_mean": float(net[lower].mean()),
+        "upper_net_mean": float(net[upper].mean()),
+        "lower_adverse_mean": float(adverse[lower].mean()),
+        "upper_adverse_mean": float(adverse[upper].mean()),
+    }
+
+
+def bootstrap(
+    x: np.ndarray,
+    net: np.ndarray,
+    adverse: np.ndarray,
+) -> dict[str, Any]:
+    n = len(x)
+    if n < BLOCK:
+        raise ValueError("insufficient observations for moving-block bootstrap")
+    block_count = math.ceil(n / BLOCK)
+    rng = np.random.default_rng(SEED)
+    names = tuple(summary_stats(x, net, adverse))
+    draws = {name: np.empty(DRAWS, dtype=float) for name in names}
+    for draw in range(DRAWS):
+        starts = rng.integers(0, n - BLOCK + 1, size=block_count)
+        indices = (
+            starts[:, None] + np.arange(BLOCK, dtype=int)[None, :]
+        ).reshape(-1)[:n]
+        record = summary_stats(x[indices], net[indices], adverse[indices])
+        for name in names:
+            draws[name][draw] = record[name]
+    result: dict[str, Any] = {}
+    for name in names:
+        values = draws[name]
+        if not np.isfinite(values).all():
+            raise ValueError(f"non-finite bootstrap values for {name}")
+        quantiles = np.percentile(values, [2.5, 50.0, 97.5])
+        result[name] = {
+            "lower_95": float(quantiles[0]),
+            "median": float(quantiles[1]),
+            "upper_95": float(quantiles[2]),
+            "nonpositive_mass": float(np.mean(values <= 0)),
+        }
+    return {
+        "draws": DRAWS,
+        "block_opportunities": BLOCK,
+        "seed": SEED,
+        "paired_non_circular_common_index": True,
+        "statistics": result,
+    }
+
+
+def ordinal_states(closes: np.ndarray) -> tuple[np.ndarray, int]:
+    returns = np.full(len(closes), np.nan, dtype=float)
+    returns[1:] = np.log(closes[1:] / closes[:-1])
+    states = np.full(len(closes), -1, dtype=np.int8)
+    tied = 0
+    for endpoint in range(3, len(closes)):
+        values = returns[endpoint - 2 : endpoint + 1]
+        if not np.isfinite(values).all():
+            continue
+        if len({float(value) for value in values}) != 3:
+            tied += 1
+            continue
+        order = np.argsort(values, kind="mergesort")
+        ranks_for_position = np.empty(3, dtype=np.int8)
+        ranks_for_position[order] = np.arange(3, dtype=np.int8)
+        motif = "".join(str(int(rank)) for rank in ranks_for_position)
+        states[endpoint] = MOTIF_INDEX[motif]
+    return states, tied
+
+
+def transition_pairs(
+    states: np.ndarray,
+    destination_start: int,
+    destination_end: int,
+) -> list[tuple[int, int]]:
+    pairs: list[tuple[int, int]] = []
+    for destination_endpoint in range(destination_start, destination_end + 1):
+        origin = int(states[destination_endpoint - 1])
+        destination = int(states[destination_endpoint])
+        if origin >= 0 and destination >= 0:
+            pairs.append((origin, destination))
+    return pairs
+
+
+def transition_stability(
+    states: np.ndarray,
+    t: int,
+) -> dict[str, float | int | bool]:
+    baseline_pairs = transition_pairs(states, t - 912, t - 193)
+    recent_pairs = transition_pairs(states, t - 192, t - 25)
+    baseline_valid_fraction = len(baseline_pairs) / BASELINE_HOURS
+    recent_valid_fraction = len(recent_pairs) / RECENT_HOURS
+    valid = (
+        baseline_valid_fraction >= MIN_VALID_FRACTION
+        and recent_valid_fraction >= MIN_VALID_FRACTION
+    )
+    if not valid:
+        return {
+            "valid": False,
+            "baseline_valid_transitions": len(baseline_pairs),
+            "recent_valid_transitions": len(recent_pairs),
+            "baseline_valid_fraction": baseline_valid_fraction,
+            "recent_valid_fraction": recent_valid_fraction,
+            "ordinal_transition_stability": float("nan"),
+        }
+    counts = np.full((6, 6), 0.5, dtype=float)
+    for origin, destination in baseline_pairs:
+        counts[origin, destination] += 1.0
+    probabilities = counts / counts.sum(axis=1, keepdims=True)
+    surprisals = [
+        -math.log(float(probabilities[origin, destination])) / math.log(6.0)
+        for origin, destination in recent_pairs
+    ]
+    return {
+        "valid": True,
+        "baseline_valid_transitions": len(baseline_pairs),
+        "recent_valid_transitions": len(recent_pairs),
+        "baseline_valid_fraction": baseline_valid_fraction,
+        "recent_valid_fraction": recent_valid_fraction,
+        "ordinal_transition_stability": -float(np.mean(surprisals)),
+    }
+
+
+def first_daily_anchor() -> int:
+    minimum = 2185
+    return ((minimum + 23) // 24) * 24
+
+
+def opportunities(series: Any) -> tuple[list[dict[str, Any]], dict[str, int]]:
+    states, tied_motifs = ordinal_states(series.closes[:TRAIN_END])
+    records: list[dict[str, Any]] = []
+    invalid_feature_anchors = 0
+    ineligible_e2160 = 0
+    for t in range(first_daily_anchor(), TRAIN_END - 25, 24):
+        own_e2160_positive = series.closes[t - 25] > series.closes[t - 2185]
+        if not own_e2160_positive:
+            ineligible_e2160 += 1
+            continue
+        feature = transition_stability(states, t)
+        if not feature["valid"]:
+            invalid_feature_anchors += 1
+            continue
+        entry = float(series.opens[t])
+        exit_price = float(series.opens[t + 24])
+        delayed_entry = float(series.opens[t + 1])
+        delayed_exit = float(series.opens[t + 25])
+        path = series.opens[t : t + 25] / entry - 1.0
+        delayed_path = series.opens[t + 1 : t + 26] / delayed_entry - 1.0
+        records.append(
+            {
+                "decision_index": t,
+                "execution_open_ms": int(series.open_ms[t]),
+                "e2160_margin": float(
+                    math.log(series.closes[t - 25] / series.closes[t - 2185])
+                ),
+                "ordinal_transition_stability": float(
+                    feature["ordinal_transition_stability"]
+                ),
+                "baseline_valid_transitions": int(
+                    feature["baseline_valid_transitions"]
+                ),
+                "recent_valid_transitions": int(
+                    feature["recent_valid_transitions"]
+                ),
+                "baseline_valid_fraction": float(
+                    feature["baseline_valid_fraction"]
+                ),
+                "recent_valid_fraction": float(feature["recent_valid_fraction"]),
+                "net_24h": float(exit_price / entry - 1.0 - ROUND_TRIP_FEE),
+                "adverse_24h": float(np.min(path)),
+                "delayed_net_24h": float(
+                    delayed_exit / delayed_entry - 1.0 - ROUND_TRIP_FEE
+                ),
+                "delayed_adverse_24h": float(np.min(delayed_path)),
+            }
+        )
+    audit = {
+        "tied_motif_endpoints_in_training_prefix": tied_motifs,
+        "invalid_feature_anchors": invalid_feature_anchors,
+        "ineligible_e2160_anchors": ineligible_e2160,
+    }
+    return records, audit
+
+
+def fold_audit(records: list[dict[str, Any]]) -> dict[str, Any]:
+    folds: list[dict[str, Any]] = []
+    for number in range(4):
+        start = WARMUP + number * 2160
+        end = start + 2160
+        subset = [
+            record
+            for record in records
+            if start <= record["decision_index"] < end
+        ]
+        if len(subset) >= 3:
+            x = np.array(
+                [record["ordinal_transition_stability"] for record in subset]
+            )
+            net = np.array([record["net_24h"] for record in subset])
+            adverse = np.array([record["adverse_24h"] for record in subset])
+            net_slope = standardized_slope(x, net)
+            adverse_slope = standardized_slope(x, adverse)
+        else:
+            net_slope = None
+            adverse_slope = None
+        folds.append(
+            {
+                "fold": number + 1,
+                "start_index": start,
+                "end_index": end,
+                "opportunities": len(subset),
+                "net_standardized_slope": net_slope,
+                "adverse_standardized_slope": adverse_slope,
+            }
+        )
+    positive_net = [
+        float(fold["net_standardized_slope"])
+        for fold in folds
+        if fold["net_standardized_slope"] is not None
+        and float(fold["net_standardized_slope"]) > 0
+    ]
+    return {
+        "folds": folds,
+        "positive_net_slope_folds": len(positive_net),
+        "positive_adverse_slope_folds": sum(
+            fold["adverse_standardized_slope"] is not None
+            and float(fold["adverse_standardized_slope"]) > 0
+            for fold in folds
+        ),
+        "largest_positive_net_slope_share": (
+            max(positive_net) / sum(positive_net) if positive_net else None
+        ),
+    }
+
+
+def truncated_series(base: Any, series: Any, end: int) -> Any:
+    return base.Series(
+        inst_id=series.inst_id,
+        open_ms=series.open_ms[:end],
+        opens=series.opens[:end],
+        highs=series.highs[:end],
+        lows=series.lows[:end],
+        closes=series.closes[:end],
+        normalized_sha256="training-prefix-only",
+        manifest=(),
+        instrument_evidence={},
+    )
+
+
+def analyse(base: Any, series: Any, target: str) -> dict[str, Any]:
+    records, motif_audit = opportunities(series)
+    prefix_records, prefix_motif_audit = opportunities(
+        truncated_series(base, series, TRAIN_END)
+    )
+    event_hash = base.sha256_bytes(base.canonical_bytes(records))
+    prefix_event_hash = base.sha256_bytes(base.canonical_bytes(prefix_records))
+    feature_projection = [
+        {
+            "decision_index": record["decision_index"],
+            "ordinal_transition_stability": record[
+                "ordinal_transition_stability"
+            ],
+            "baseline_valid_transitions": record[
+                "baseline_valid_transitions"
+            ],
+            "recent_valid_transitions": record["recent_valid_transitions"],
+        }
+        for record in records
+    ]
+    prefix_feature_projection = [
+        {
+            "decision_index": record["decision_index"],
+            "ordinal_transition_stability": record[
+                "ordinal_transition_stability"
+            ],
+            "baseline_valid_transitions": record[
+                "baseline_valid_transitions"
+            ],
+            "recent_valid_transitions": record["recent_valid_transitions"],
+        }
+        for record in prefix_records
+    ]
+    feature_hash = base.sha256_bytes(base.canonical_bytes(feature_projection))
+    prefix_feature_hash = base.sha256_bytes(
+        base.canonical_bytes(prefix_feature_projection)
+    )
+    x = np.array(
+        [record["ordinal_transition_stability"] for record in records]
+    )
+    net = np.array([record["net_24h"] for record in records])
+    adverse = np.array([record["adverse_24h"] for record in records])
+    delayed_net = np.array([record["delayed_net_24h"] for record in records])
+    delayed_adverse = np.array(
+        [record["delayed_adverse_24h"] for record in records]
+    )
+    values, counts = np.unique(x, return_counts=True)
+    distribution = {
+        "minimum": float(x.min()),
+        "q25": float(np.quantile(x, 0.25)),
+        "median": float(np.quantile(x, 0.5)),
+        "q75": float(np.quantile(x, 0.75)),
+        "maximum": float(x.max()),
+        "iqr": float(np.quantile(x, 0.75) - np.quantile(x, 0.25)),
+        "distinct_values": int(len(values)),
+        "value_counts": {
+            f"{value:.12g}": int(count)
+            for value, count in zip(values, counts, strict=True)
+        },
+    }
+    associations = summary_stats(x, net, adverse)
+    effects = tercile_effects(x, net, adverse)
+    uncertainty = bootstrap(x, net, adverse)
+    folds = fold_audit(records)
+    delayed = {
+        "associations": summary_stats(x, delayed_net, delayed_adverse),
+        "tercile_effects": tercile_effects(x, delayed_net, delayed_adverse),
+    }
+    lower_bounds = uncertainty["statistics"]
+    delayed_associations = delayed["associations"]
+    delayed_effects = delayed["tercile_effects"]
+    gates = {
+        "at_least_120_opportunities": len(records) >= 120,
+        "all_scored_windows_at_least_95_percent_valid": all(
+            record["baseline_valid_fraction"] >= MIN_VALID_FRACTION
+            and record["recent_valid_fraction"] >= MIN_VALID_FRACTION
+            for record in records
+        ),
+        "at_least_30_distinct_values": distribution["distinct_values"] >= 30,
+        "strictly_positive_iqr": distribution["iqr"] > 0,
+        "terciles_each_at_least_35": (
+            effects["lower_count"] >= 35 and effects["upper_count"] >= 35
+        ),
+        "net_spearman_positive": associations["net_spearman"] > 0,
+        "adverse_spearman_positive": associations["adverse_spearman"] > 0,
+        "net_slope_positive": associations["net_standardized_slope"] > 0,
+        "adverse_slope_positive": (
+            associations["adverse_standardized_slope"] > 0
+        ),
+        "net_tercile_effect_positive": effects["net_upper_minus_lower"] > 0,
+        "adverse_tercile_effect_positive": (
+            effects["adverse_upper_minus_lower"] > 0
+        ),
+        "net_spearman_lower_95_positive": (
+            lower_bounds["net_spearman"]["lower_95"] > 0
+        ),
+        "adverse_spearman_lower_95_positive": (
+            lower_bounds["adverse_spearman"]["lower_95"] > 0
+        ),
+        "net_slope_lower_95_positive": (
+            lower_bounds["net_standardized_slope"]["lower_95"] > 0
+        ),
+        "adverse_slope_lower_95_positive": (
+            lower_bounds["adverse_standardized_slope"]["lower_95"] > 0
+        ),
+        "at_least_3_of_4_positive_net_folds": (
+            folds["positive_net_slope_folds"] >= 3
+        ),
+        "at_least_3_of_4_positive_adverse_folds": (
+            folds["positive_adverse_slope_folds"] >= 3
+        ),
+        "largest_positive_net_fold_share_at_most_60_percent": (
+            folds["largest_positive_net_slope_share"] is not None
+            and folds["largest_positive_net_slope_share"] <= 0.60
+        ),
+        "delayed_net_spearman_positive": (
+            delayed_associations["net_spearman"] > 0
+        ),
+        "delayed_adverse_spearman_positive": (
+            delayed_associations["adverse_spearman"] > 0
+        ),
+        "delayed_net_slope_positive": (
+            delayed_associations["net_standardized_slope"] > 0
+        ),
+        "delayed_adverse_slope_positive": (
+            delayed_associations["adverse_standardized_slope"] > 0
+        ),
+        "delayed_net_tercile_effect_positive": (
+            delayed_effects["net_upper_minus_lower"] > 0
+        ),
+        "delayed_adverse_tercile_effect_positive": (
+            delayed_effects["adverse_upper_minus_lower"] > 0
+        ),
+        "feature_prefix_invariant": feature_hash == prefix_feature_hash,
+        "opportunity_prefix_invariant": event_hash == prefix_event_hash,
+        "motif_audit_prefix_invariant": motif_audit == prefix_motif_audit,
+    }
+    return {
+        "target": target,
+        "opportunity_count": len(records),
+        "first_opportunity": base.utc_iso(records[0]["execution_open_ms"]),
+        "last_opportunity": base.utc_iso(records[-1]["execution_open_ms"]),
+        "motif_audit": motif_audit,
+        "distribution": distribution,
+        "associations": associations,
+        "tercile_effects": effects,
+        "bootstrap": uncertainty,
+        "fold_audit": folds,
+        "one_hour_execution_delay": delayed,
+        "event_sha256": event_hash,
+        "prefix_event_sha256": prefix_event_hash,
+        "feature_sha256": feature_hash,
+        "prefix_feature_sha256": prefix_feature_hash,
+        "gates": gates,
+        "passes": all(gates.values()),
+        "strategy_metrics": {
+            "training": None,
+            "oos": None,
+            "full": None,
+            "benchmark_comparison": None,
+            "turnover": None,
+            "maximum_drawdown": None,
+            "edge_per_turnover": None,
+            "calendar_year_breadth": None,
+        },
+    }
+
+
+def report(evidence: dict[str, Any]) -> str:
+    lines = [
+        "# Own-price ordinal-transition stability opportunity diagnostic",
+        "",
+        f"- Family: `{FAMILY}`",
+        f"- Exact head: `{evidence['exact_head']}`",
+        f"- Source contract: `{evidence['source_contract_passed']}`",
+        "- Candidate count / grid: `0 / 0`",
+        "- OOS accessed: `False`",
+        f"- Verdict: `{evidence['verdict']}`",
+        "",
+    ]
+    if not evidence["source_contract_passed"]:
+        lines.extend(
+            [
+                "## Source rejection",
+                "",
+                evidence["highest_value_failure"],
+                "",
+            ]
+        )
+        return "\n".join(lines)
+    lines.extend(
+        [
+            "## Training-only information",
+            "",
+            "| Target | Anchors | Distinct | IQR | Net rho | Adverse rho | Net slope | Adverse slope | Net folds | Adverse folds | Gates |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for target in evidence["targets"]:
+        associations = target["associations"]
+        folds = target["fold_audit"]
+        lines.append(
+            f"| {target['target']} | {target['opportunity_count']} | "
+            f"{target['distribution']['distinct_values']} | "
+            f"{target['distribution']['iqr']:.6f} | "
+            f"{associations['net_spearman']:+.6f} | "
+            f"{associations['adverse_spearman']:+.6f} | "
+            f"{associations['net_standardized_slope']:+.6f} | "
+            f"{associations['adverse_standardized_slope']:+.6f} | "
+            f"{folds['positive_net_slope_folds']}/4 | "
+            f"{folds['positive_adverse_slope_folds']}/4 | "
+            f"{sum(target['gates'].values())}/{len(target['gates'])} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Highest-value failure",
+            "",
+            evidence["highest_value_failure"],
+            "",
+            "All strategy train/OOS/full, benchmark, turnover, drawdown, "
+            "edge-per-turnover and calendar-year fields remain null because "
+            "this zero-candidate diagnostic did not open sealed OOS.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base-script", required=True)
+    parser.add_argument("--tested-head", required=True)
+    parser.add_argument("--output-dir", required=True)
+    args = parser.parse_args()
+    base = load_base(args.base_script)
+    output = Path(args.output_dir)
+    source_root = output / "source"
+    output.mkdir(parents=True, exist_ok=True)
+    series: dict[str, Any] = {}
+    failures: dict[str, str] = {}
+    for inst_id in TARGETS:
+        try:
+            acquired = base.acquire_series(inst_id, source_root)
+            if acquired.normalized_sha256 != EXPECTED_SOURCE_HASHES[inst_id]:
+                raise ValueError(
+                    "normalized source hash mismatch: "
+                    f"{acquired.normalized_sha256} != "
+                    f"{EXPECTED_SOURCE_HASHES[inst_id]}"
+                )
+            series[inst_id] = acquired
+        except Exception as exc:
+            failures[inst_id] = f"{type(exc).__name__}: {exc}"
+    common_grid = len(series) == len(TARGETS) and np.array_equal(
+        series[TARGETS[0]].open_ms,
+        series[TARGETS[1]].open_ms,
+    )
+    if len(series) == len(TARGETS) and not common_grid:
+        failures["common_grid"] = "BTC and ETH do not share one exact UTC grid"
+    source_passed = len(series) == len(TARGETS) and not failures and common_grid
+    source_manifest = {
+        "family_id": FAMILY,
+        "acquisition_base_sha256": base.sha256_bytes(
+            Path(args.base_script).read_bytes()
+        ),
+        "provider": "OKX public market data",
+        "bar": "1H",
+        "targets": list(TARGETS),
+        "expected_rows_per_series": base.EXPECTED_ROWS,
+        "expected_source_sha256": EXPECTED_SOURCE_HASHES,
+        "series": {
+            key: {
+                "rows": len(value.open_ms),
+                "normalized_sha256": value.normalized_sha256,
+                "instrument_evidence": value.instrument_evidence,
+                "pages": list(value.manifest),
+            }
+            for key, value in series.items()
+        },
+        "failures": failures,
+        "common_grid": common_grid,
+        "source_contract_passed": source_passed,
+    }
+    source_manifest_hash = base.persist_json(
+        output / "source_manifest.json",
+        source_manifest,
+    )
+    targets = (
+        [analyse(base, series[target], target) for target in TARGETS]
+        if source_passed
+        else []
+    )
+    bilateral = bool(targets) and all(target["passes"] for target in targets)
+    if source_passed and not bilateral:
+        failed_gates = []
+        for target in targets:
+            names = [
+                name for name, passed in target["gates"].items() if not passed
+            ]
+            failed_gates.append(f"{target['target']}: {', '.join(names)}")
+        highest_value_failure = (
+            "Bilateral ordinal-transition information support failed: "
+            + "; ".join(failed_gates)
+        )
+    elif source_passed:
+        highest_value_failure = (
+            "No information gate failed; only a separately preregistered "
+            "candidate architecture may proceed."
+        )
+    else:
+        highest_value_failure = "Source contract failed: " + "; ".join(
+            f"{name}: {message}" for name, message in failures.items()
+        )
+    evidence = {
+        "family_id": FAMILY,
+        "exact_head": args.tested_head,
+        "repository_main": MAIN,
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "canonical_fee_bps_one_way": 5.0,
+        "round_trip_opportunity_fee": ROUND_TRIP_FEE,
+        "bar_interval": "1H",
+        "candidate_count": 0,
+        "parameter_grid_count": 0,
+        "source_contract_passed": source_passed,
+        "source_failures": failures,
+        "source_manifest_sha256": source_manifest_hash,
+        "source_series_sha256": {
+            key: value.normalized_sha256 for key, value in series.items()
+        },
+        "targets": targets,
+        "sample": {
+            "rows_per_series": base.EXPECTED_ROWS,
+            "warmup": [0, WARMUP],
+            "training_information": [WARMUP, TRAIN_END],
+            "sealed_oos": [TRAIN_END, OOS_END],
+            "unread_suffix": [OOS_END, FULL_END],
+            "folds": 4,
+            "fold_hours": 2160,
+        },
+        "training_information_labels_accessed": source_passed,
+        "strategy_performance_accessed": False,
+        "oos_accessed": False,
+        "full_sample_accessed": False,
+        "bilateral_training_support_passed": bilateral,
+        "targets_passing": sum(target["passes"] for target in targets),
+        "highest_value_failure": highest_value_failure,
+        "canonical_strategy_changed": False,
+        "canonical_mutation_authorized": False,
+        "executable_candidate_authorized": False,
+        "separate_candidate_predeclaration_authorized": bilateral,
+        "prospective_shadow_authorized": False,
+        "paper_trading_authorized": False,
+        "live_trading_authorized": False,
+        "public_data_only": True,
+        "synthetic_market_data_used": False,
+        "interpolation_or_row_repair_used": False,
+        "cross_sectional_ranking_or_selection": False,
+        "pairs_or_spreads": False,
+        "cointegration_or_statistical_arbitrage": False,
+        "market_neutral_or_long_short": False,
+        "credentials_used": False,
+        "private_endpoints_used": False,
+        "accounts_or_orders": False,
+        "enabled_adapters": False,
+        "leverage_used": False,
+        "non_1h_or_15m_input_used": False,
+        "verdict": ACCEPT if bilateral else REJECT,
+    }
+    evidence["machine_readable_verdict"] = {
+        key: evidence[key]
+        for key in (
+            "family_id",
+            "candidate_count",
+            "parameter_grid_count",
+            "source_contract_passed",
+            "bilateral_training_support_passed",
+            "strategy_performance_accessed",
+            "oos_accessed",
+            "canonical_strategy_changed",
+            "canonical_mutation_authorized",
+            "executable_candidate_authorized",
+            "separate_candidate_predeclaration_authorized",
+            "paper_trading_authorized",
+            "live_trading_authorized",
+            "verdict",
+        )
+    }
+    evidence_hash = base.persist_json(output / "evidence.json", evidence)
+    protocol = {
+        "family_id": FAMILY,
+        "targets": list(TARGETS),
+        "motifs": list(MOTIFS),
+        "returns": "log(close[h]/close[h-1])",
+        "motif": "strict ordinal ranks of (r[h-2], r[h-1], r[h])",
+        "tie_treatment": "invalid and excluded; no jitter, rounding or imputation",
+        "baseline_destination_endpoints": "[t-912,t-193]",
+        "recent_destination_endpoints": "[t-192,t-25]",
+        "smoothing": "Jeffreys 0.5 for each destination in every origin row",
+        "stability": "-mean(-log(P_baseline(destination|origin))/log(6))",
+        "own_e2160": "close[t-25] > close[t-2185]",
+        "label": "open[t+24]/open[t]-1-0.0010",
+        "adverse": "min(open[t:t+25]/open[t]-1), including zero",
+        "delay": "same feature; open[t+1] to open[t+25]",
+        "candidate_count": 0,
+        "parameter_grid_count": 0,
+        "bootstrap": {
+            "draws": DRAWS,
+            "block_opportunities": BLOCK,
+            "seed": SEED,
+        },
+        "oos_access": "prohibited",
+    }
+    protocol_hash = base.persist_json(output / "protocol.json", protocol)
+    report_text = report(evidence)
+    (output / "report.md").write_text(report_text, encoding="utf-8")
+    hashes = {
+        "evidence_sha256": evidence_hash,
+        "source_manifest_sha256": source_manifest_hash,
+        "protocol_sha256": protocol_hash,
+        "report_sha256": base.sha256_bytes(report_text.encode()),
+    }
+    (output / "hashes.json").write_text(
+        json.dumps(hashes, sort_keys=True, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(
+        json.dumps(
+            {
+                "family_id": FAMILY,
+                "exact_head": args.tested_head,
+                "source_contract_passed": source_passed,
+                "targets_passing": evidence["targets_passing"],
+                "bilateral_training_support_passed": bilateral,
+                "verdict": evidence["verdict"],
+                "highest_value_failure": highest_value_failure,
+                "hashes": hashes,
+            },
+            sort_keys=True,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
