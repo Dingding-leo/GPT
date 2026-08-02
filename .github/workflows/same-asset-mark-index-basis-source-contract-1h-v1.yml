@@ -1,0 +1,158 @@
+name: Same-Asset Mark-Index Basis Source Contract 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_same_asset_mark_index_basis_source_contract_1h_v1.py"
+      - ".github/workflows/same-asset-mark-index-basis-source-contract-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mark-index-basis-source-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/research/same-asset-mark-index-basis-source-contract-1h-v1
+      ARTIFACT_NAME: mark-index-basis-source-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify source-only strategy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          env | cut -d= -f1 | grep -Eiq '(OKX|EXCHANGE).*(SECRET|TOKEN|KEY|PASSPHRASE)' && exit 1 || true
+          ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\(|send_order\()' \
+            scripts/run_same_asset_mark_index_basis_source_contract_1h_v1.py
+          ! grep -EIn '(15m|quarter-hour|histominute|resample\()' \
+            scripts/run_same_asset_mark_index_basis_source_contract_1h_v1.py
+
+      - name: Acquire and audit fixed public 1H mark-index panel
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/run_same_asset_mark_index_basis_source_contract_1h_v1.py
+          python scripts/run_same_asset_mark_index_basis_source_contract_1h_v1.py \
+            --tested-head "$EXPECTED_TESTED_SHA" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify machine-readable terminal source verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/source_manifest.json"
+          test -s "$OUTPUT_DIR/source_manifest.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
+          actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((root / "evidence.json").read_text())
+          assert evidence["family_id"] == (
+              "causal-same-asset-mark-index-basis-source-contract-1h-v1"
+          )
+          assert evidence["tested_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["repository_main"] == (
+              "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          )
+          assert evidence["issue"] == 941
+          assert evidence["bar"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["source_arm_count"] == 4
+          assert len(evidence["source_arms"]) == 4
+          assert {
+              (arm["asset"], arm["series_type"], arm["inst_id"])
+              for arm in evidence["source_arms"]
+          } == {
+              ("BTC", "mark", "BTC-USDT-SWAP"),
+              ("BTC", "index", "BTC-USDT"),
+              ("ETH", "mark", "ETH-USDT-SWAP"),
+              ("ETH", "index", "ETH-USDT"),
+          }
+          assert all(arm["expected_rows"] == 24144 for arm in evidence["source_arms"])
+          assert all(
+              all(value is None for value in arm["economics"].values())
+              for arm in evidence["source_arms"]
+          )
+          expected_pass = all(
+              arm["source_contract_passed"] for arm in evidence["source_arms"]
+          ) and evidence["common_grid_passed"]
+          assert evidence["source_contract_passed"] is expected_pass
+          assert evidence["source_arms_passing"] == sum(
+              arm["source_contract_passed"] for arm in evidence["source_arms"]
+          )
+          if expected_pass:
+              assert evidence["verdict"] == (
+                  "accept_same_asset_mark_index_basis_1h_source_for_separate_"
+                  "training_only_predeclaration"
+              )
+          else:
+              assert evidence["verdict"] == (
+                  "reject_causal_same_asset_mark_index_basis_source_contract_1h_v1"
+              )
+          for key in (
+              "target_price_data_downloaded",
+              "target_returns_downloaded",
+              "basis_calculated",
+              "feature_defined",
+              "candidate_created",
+              "performance_accessed",
+              "oos_accessed",
+              "synthetic_data_used",
+              "interpolation_or_fill_used",
+              "credentials_used",
+              "private_endpoints_used",
+              "accounts_balances_or_orders",
+              "enabled_adapters",
+              "leverage_or_funds_used",
+              "cross_sectional_asset_selection",
+              "current_relative_rank",
+              "top_n_rotation",
+              "pairs_spreads_cointegration_or_stat_arb",
+              "market_neutral_or_long_short",
+              "post_hoc_asset_filtering",
+              "canonical_strategy_changed",
+              "paper_trading_authorized",
+              "live_trading_authorized",
+          ):
+              assert evidence[key] is False, key
+          assert (
+              evidence["total_raw_response_and_metadata_bytes"]
+              <= evidence["evidence_ceiling_bytes"]
+          )
+          PY
+
+      - name: Upload immutable source-contract evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
