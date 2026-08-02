@@ -51,6 +51,16 @@ jobs:
             --tested-head "$EXPECTED_TESTED_SHA" \
             --output-dir "$OUTPUT_DIR"
 
+      - name: Emit canonical formatter repair artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'ruff==0.16.1'
+          cp scripts/run_options_term_structure_source_contract_1h_v1.py \
+            "$OUTPUT_DIR/formatted_script.py"
+          ruff format "$OUTPUT_DIR/formatted_script.py"
+          ruff check --fix "$OUTPUT_DIR/formatted_script.py"
+
       - name: Verify machine-readable source verdict
         shell: bash
         run: |
@@ -60,6 +70,7 @@ jobs:
           test -s "$OUTPUT_DIR/source_manifest.json"
           test -s "$OUTPUT_DIR/source_manifest.sha256"
           test -s "$OUTPUT_DIR/report.md"
+          test -s "$OUTPUT_DIR/formatted_script.py"
           expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
           actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
           test "$actual" = "$expected"
