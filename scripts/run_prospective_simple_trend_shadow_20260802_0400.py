@@ -132,6 +132,8 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     result["generated_at"] = datetime.now(tz=UTC).isoformat().replace("+00:00", "Z")
     result["window"]["prior_cumulative_realized_hours"] = 602
     result["window"]["updated_cumulative_realized_hours"] = 603
+    result["performance_accessed"] = False
+    result["oos_accessed"] = False
     result["machine_readable_verdict"]["updated_cumulative_realized_hours"] = 603
     result["machine_readable_verdict"]["payoff_end_open_timestamp"] = prior.engine.iso_utc(
         PAYOFF_END_OPEN_HOUR_MS
