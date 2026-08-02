@@ -79,9 +79,7 @@ def build_summary(records: dict[str, Any]) -> dict[str, Any]:
         "source_arms_expected": len(arms),
         "source_arms_passing": sum(bool(row["passed"]) for row in arms),
         "expected_rows_per_arm": records["frozen_sample"]["expected_rows_per_arm"],
-        "observed_qualifying_rows_total": sum(
-            int(row["observed_qualifying_rows"]) for row in arms
-        ),
+        "observed_qualifying_rows_total": sum(int(row["observed_qualifying_rows"]) for row in arms),
         "candidate_count": 0,
         "parameter_grid_count": 0,
         "performance_accessed": False,
@@ -107,9 +105,7 @@ def build_gates(records: dict[str, Any], summary: dict[str, Any]) -> dict[str, b
                 "etherscan-token-supply",
             ]
         ),
-        "direct_supply_semantics_audited": all(
-            bool(row["supply_semantics"]) for row in providers
-        ),
+        "direct_supply_semantics_audited": all(bool(row["supply_semantics"]) for row in providers),
         "exact_completed_utc_1h_history_proven": all(
             bool(row["documented_exact_utc_1h_contract"])
             and bool(row["complete_frozen_1h_history_proven"])
@@ -132,15 +128,11 @@ def build_gates(records: dict[str, Any], summary: dict[str, Any]) -> dict[str, b
         and bool(summary["qualifying_provider_interfaces"]),
         "identical_provider_semantics_for_usdt_and_usdc": (
             len(arms[0]["qualifying_provider_ids"]) > 0
-            and arms[0]["qualifying_provider_ids"]
-            == arms[1]["qualifying_provider_ids"]
+            and arms[0]["qualifying_provider_ids"] == arms[1]["qualifying_provider_ids"]
         ),
         "complete_bilateral_source_arms": (
             summary["source_arms_passing"] == summary["source_arms_expected"]
-            and all(
-                row["observed_qualifying_rows"] == row["expected_rows"]
-                for row in arms
-            )
+            and all(row["observed_qualifying_rows"] == row["expected_rows"] for row in arms)
         ),
         "performance_and_oos_remained_sealed": (
             not summary["performance_accessed"]
@@ -175,10 +167,7 @@ def build_report(evidence: dict[str, Any]) -> str:
             f"`{evidence['frozen_sample']['start_utc']}` through "
             f"`{evidence['frozen_sample']['end_utc']}`"
         ),
-        (
-            "- Expected rows per stablecoin arm: "
-            f"`{summary['expected_rows_per_arm']}`"
-        ),
+        (f"- Expected rows per stablecoin arm: `{summary['expected_rows_per_arm']}`"),
         "- Fixed stablecoin arms: `USDT`, `USDC`",
         "- Candidate count and parameter grid: `0`, `0`",
         "- Target prices, returns, performance and OOS: not accessed",
@@ -211,10 +200,7 @@ def build_report(evidence: dict[str, Any]) -> str:
                 "but no official exact completed-UTC-hour contract was found; "
                 "creating a full 1H calendar would require expansion or reconstruction."
             ),
-            (
-                "- Coin Metrics defines `SplyCur` at native `1d` frequency, "
-                "not direct 1H."
-            ),
+            ("- Coin Metrics defines `SplyCur` at native `1d` frequency, not direct 1H."),
             (
                 "- CoinGecko circulating-supply history requires an API key; "
                 "the range endpoint is Enterprise-only and the frozen multi-year "
