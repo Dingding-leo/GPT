@@ -17,12 +17,12 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out exact head
-        uses: actions/checkout@3d3c42e3f8f5d581d4c9b2c8b4b5c8f2e6f86a3a
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Python
-        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97
         with:
           python-version: "3.12"
 
@@ -96,7 +96,7 @@ jobs:
           PY
 
       - name: Upload immutable closure evidence
-        uses: actions/upload-artifact@043fb460b7c0f86c0bca3d3404a21ad4c9c0a3f3
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: directed-temporal-asymmetry-programme-closure-1h-v1
           path: evidence/directed-temporal-asymmetry-programme-closure-1h-v1
