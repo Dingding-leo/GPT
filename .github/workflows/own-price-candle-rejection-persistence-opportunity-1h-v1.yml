@@ -1,0 +1,216 @@
+name: Own Price Candle Rejection Persistence Opportunity 1H V1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/own-price-candle-rejection-persistence-opportunity-1h-v1.yml"
+      - "scripts/own_price_candle_rejection_persistence_opportunity_1h_v1.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact head and prohibited capabilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          ! grep -E '/api/v5/(trade|account|asset|broker)|apiKey|secretKey|passphrase' \
+            scripts/own_price_candle_rejection_persistence_opportunity_1h_v1.txt
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install research dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Materialize pinned acquisition base and diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+
+          commit = "7fd31e61ff48c6c187b0c3ad4ea37bc376127d09"
+          root = "https://raw.githubusercontent.com/Dingding-leo/GPT/" + commit
+          parts = []
+          for index in range(4):
+              url = (
+                  root
+                  + "/scripts/stablecoin_dislocation_acceleration_veto_1h_v1_parts/"
+                  + f"part-{index:02d}.txt"
+              )
+              request = Request(
+                  url,
+                  headers={"User-Agent": "Dingding-leo-GPT-research/1.0"},
+              )
+              with urlopen(request, timeout=60) as response:  # noqa: S310
+                  body = response.read()
+              if not body:
+                  raise RuntimeError(f"empty pinned acquisition part: {url}")
+              parts.append(body)
+          Path("/tmp/frozen_okx_base.py").write_bytes(b"".join(parts))
+          Path("/tmp/run_candle_rejection.py").write_text(
+              Path(
+                  "scripts/own_price_candle_rejection_persistence_opportunity_1h_v1.txt"
+              ).read_text(encoding="utf-8"),
+              encoding="utf-8",
+          )
+          PY
+          python -m ruff format \
+            /tmp/frozen_okx_base.py \
+            /tmp/run_candle_rejection.py
+          python -m ruff check --fix --ignore E501,B905 \
+            /tmp/frozen_okx_base.py \
+            /tmp/run_candle_rejection.py
+          python -m py_compile \
+            /tmp/frozen_okx_base.py \
+            /tmp/run_candle_rejection.py
+
+      - name: Execute real-data training-only diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf evidence/own-price-candle-rejection-persistence-opportunity-1h-v1
+          mkdir -p evidence/own-price-candle-rejection-persistence-opportunity-1h-v1
+          python /tmp/run_candle_rejection.py \
+            --base-script /tmp/frozen_okx_base.py \
+            --tested-head "$(git rev-parse HEAD)" \
+            --output-dir evidence/own-price-candle-rejection-persistence-opportunity-1h-v1 \
+            | tee evidence/own-price-candle-rejection-persistence-opportunity-1h-v1/stdout.json
+          cp /tmp/frozen_okx_base.py \
+            evidence/own-price-candle-rejection-persistence-opportunity-1h-v1/frozen_okx_base.py
+          cp /tmp/run_candle_rejection.py \
+            evidence/own-price-candle-rejection-persistence-opportunity-1h-v1/reproducer.py
+          sha256sum \
+            evidence/own-price-candle-rejection-persistence-opportunity-1h-v1/frozen_okx_base.py \
+            evidence/own-price-candle-rejection-persistence-opportunity-1h-v1/reproducer.py \
+            > evidence/own-price-candle-rejection-persistence-opportunity-1h-v1/reproducer.sha256
+
+      - name: Verify evidence contract and print exact metrics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          root = Path(
+              "evidence/own-price-candle-rejection-persistence-opportunity-1h-v1"
+          )
+          evidence = json.loads((root / "evidence.json").read_text())
+          expected_head = subprocess.check_output(
+              ["git", "rev-parse", "HEAD"],
+              text=True,
+          ).strip()
+          assert evidence["exact_head"] == expected_head
+          assert evidence["repository_main"] == (
+              "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          )
+          assert evidence["bar_interval"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["round_trip_opportunity_fee"] == 0.001
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["strategy_performance_accessed"] is False
+          assert evidence["oos_accessed"] is False
+          assert evidence["full_sample_accessed"] is False
+          assert evidence["canonical_strategy_changed"] is False
+          assert evidence["canonical_mutation_authorized"] is False
+          assert evidence["executable_candidate_authorized"] is False
+          assert evidence["separate_candidate_predeclaration_authorized"] is evidence[
+              "bilateral_training_support_passed"
+          ]
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert evidence["cross_sectional_ranking_or_selection"] is False
+          assert evidence["credentials_used"] is False
+          assert evidence["private_endpoints_used"] is False
+          assert evidence["accounts_or_orders"] is False
+          assert evidence["leverage_used"] is False
+          assert evidence["non_1h_or_15m_input_used"] is False
+          assert evidence["source_contract_passed"] is True
+          assert evidence["source_series_sha256"] == {
+              "BTC-USDT": "0891418c4ed57e424922fe9690f10a7b50c586ba2b37eb62761e88f51926550f",
+              "ETH-USDT": "a058b6f30524ee828ed277cfe41076722b169452c6147094300b39f11377c697",
+          }
+          print(
+              json.dumps(
+                  {
+                      "source_contract_passed": evidence[
+                          "source_contract_passed"
+                      ],
+                      "source_series_sha256": evidence[
+                          "source_series_sha256"
+                      ],
+                      "targets_passing": evidence["targets_passing"],
+                      "bilateral_training_support_passed": evidence[
+                          "bilateral_training_support_passed"
+                      ],
+                      "verdict": evidence["verdict"],
+                      "highest_value_failure": evidence[
+                          "highest_value_failure"
+                      ],
+                  },
+                  indent=2,
+                  sort_keys=True,
+              )
+          )
+          for target in evidence["targets"]:
+              assert target["strategy_metrics"] == {
+                  "training": None,
+                  "oos": None,
+                  "full": None,
+                  "benchmark_comparison": None,
+                  "turnover": None,
+                  "maximum_drawdown": None,
+                  "edge_per_turnover": None,
+                  "calendar_year_breadth": None,
+              }
+              print(
+                  json.dumps(
+                      {
+                          "target": target["target"],
+                          "opportunity_count": target[
+                              "opportunity_count"
+                          ],
+                          "candle_audit": target["candle_audit"],
+                          "distribution": target["distribution"],
+                          "associations": target["associations"],
+                          "tercile_effects": target["tercile_effects"],
+                          "bootstrap": target["bootstrap"],
+                          "fold_audit": target["fold_audit"],
+                          "one_hour_execution_delay": target[
+                              "one_hour_execution_delay"
+                          ],
+                          "gates": target["gates"],
+                          "passes": target["passes"],
+                      },
+                      indent=2,
+                      sort_keys=True,
+                  )
+              )
+          PY
+
+      - name: Upload immutable evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: own-price-candle-rejection-persistence-opportunity-1h-v1
+          path: evidence/own-price-candle-rejection-persistence-opportunity-1h-v1
+          if-no-files-found: error
+          retention-days: 90
