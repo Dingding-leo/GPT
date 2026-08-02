@@ -1,0 +1,223 @@
+        {
+            "decision_index": record["decision_index"],
+            "baseline_first_endpoint_index": record["baseline_first_endpoint_index"],
+            "baseline_last_endpoint_index": record["baseline_last_endpoint_index"],
+            "recent_first_endpoint_index": record["recent_first_endpoint_index"],
+            "recent_last_endpoint_index": record["recent_last_endpoint_index"],
+            "seasonal_projection": record["seasonal_projection"],
+            "phase_beta": record["phase_beta"],
+            "next24_template_sum": record["next24_template_sum"],
+            "template_norm": record["template_norm"],
+            "baseline_min_bin_count": record["baseline_min_bin_count"],
+            "baseline_max_bin_count": record["baseline_max_bin_count"],
+            "recent_min_bin_count": record["recent_min_bin_count"],
+            "recent_max_bin_count": record["recent_max_bin_count"],
+            "next24_bins": record["next24_bins"],
+        }
+        for record in records
+    ]
+
+
+def analyse(base: Any, series: Any, target: str) -> dict[str, Any]:
+    records, grid_audit = opportunities(series, FULL_END)
+    prefix_series = truncated_series(base, series, TRAIN_END)
+    prefix_records, prefix_grid_audit = opportunities(prefix_series, TRAIN_END)
+    event_hash = base.sha256_bytes(base.canonical_bytes(records))
+    prefix_event_hash = base.sha256_bytes(base.canonical_bytes(prefix_records))
+    feature_hash = base.sha256_bytes(base.canonical_bytes(feature_projection(records)))
+    prefix_feature_hash = base.sha256_bytes(
+        base.canonical_bytes(feature_projection(prefix_records))
+    )
+    source_prefix_hash = base.sha256_bytes(
+        base.canonical_bytes(source_prefix_projection(series, TRAIN_END))
+    )
+    truncated_source_prefix_hash = base.sha256_bytes(
+        base.canonical_bytes(source_prefix_projection(prefix_series, TRAIN_END))
+    )
+    x = np.array([record["seasonal_projection"] for record in records])
+    net = np.array([record["net_24h"] for record in records])
+    adverse = np.array([record["adverse_24h"] for record in records])
+    delayed_net = np.array([record["delayed_net_24h"] for record in records])
+    delayed_adverse = np.array(
+        [record["delayed_adverse_24h"] for record in records]
+    )
+    values, counts = np.unique(x, return_counts=True)
+    distribution = {
+        "minimum": float(x.min()),
+        "q25": float(np.quantile(x, 0.25)),
+        "median": float(np.quantile(x, 0.5)),
+        "q75": float(np.quantile(x, 0.75)),
+        "maximum": float(x.max()),
+        "iqr": float(np.quantile(x, 0.75) - np.quantile(x, 0.25)),
+        "distinct_values": int(len(values)),
+        "value_counts": {
+            f"{value:.12g}": int(count)
+            for value, count in zip(values, counts, strict=True)
+        },
+    }
+    associations = summary_stats(x, net, adverse)
+    effects = tercile_effects(x, net, adverse)
+    uncertainty = bootstrap(x, net, adverse)
+    folds = fold_audit(records)
+    delayed = {
+        "associations": summary_stats(x, delayed_net, delayed_adverse),
+        "tercile_effects": tercile_effects(x, delayed_net, delayed_adverse),
+    }
+    lower_bounds = uncertainty["statistics"]
+    delayed_associations = delayed["associations"]
+    delayed_effects = delayed["tercile_effects"]
+    gates = {
+        "at_least_120_opportunities": len(records) >= 120,
+        "all_scored_baselines_exactly_8_per_bin": all(
+            record["baseline_min_bin_count"] == 8
+            and record["baseline_max_bin_count"] == 8
+            for record in records
+        ),
+        "all_scored_recent_windows_exactly_1_per_bin": all(
+            record["recent_min_bin_count"] == 1
+            and record["recent_max_bin_count"] == 1
+            for record in records
+        ),
+        "no_invalid_feature_anchors": grid_audit["invalid_feature_anchors"] == 0,
+        "exact_frozen_feature_endpoint_ranges": all(
+            record["baseline_first_endpoint_index"] == record["decision_index"] - 1536
+            and record["baseline_last_endpoint_index"] == record["decision_index"] - 193
+            and record["recent_first_endpoint_index"] == record["decision_index"] - 192
+            and record["recent_last_endpoint_index"] == record["decision_index"] - 25
+            for record in records
+        ),
+        "latest_feature_endpoint_at_least_24h_before_execution": all(
+            record["recent_last_endpoint_index"] <= record["decision_index"] - 25
+            for record in records
+        ),
+        "all_delayed_labels_end_before_training_boundary": all(
+            record["decision_index"] + 25 < TRAIN_END for record in records
+        ),
+        "at_least_30_distinct_values": distribution["distinct_values"] >= 30,
+        "strictly_positive_iqr": distribution["iqr"] > 0,
+        "terciles_each_at_least_35": (
+            effects["lower_count"] >= 35 and effects["upper_count"] >= 35
+        ),
+        "net_spearman_positive": associations["net_spearman"] > 0,
+        "adverse_spearman_positive": associations["adverse_spearman"] > 0,
+        "net_slope_positive": associations["net_standardized_slope"] > 0,
+        "adverse_slope_positive": associations["adverse_standardized_slope"] > 0,
+        "net_tercile_effect_positive": effects["net_upper_minus_lower"] > 0,
+        "adverse_tercile_effect_positive": (
+            effects["adverse_upper_minus_lower"] > 0
+        ),
+        "net_spearman_lower_95_positive": (
+            lower_bounds["net_spearman"]["lower_95"] > 0
+        ),
+        "adverse_spearman_lower_95_positive": (
+            lower_bounds["adverse_spearman"]["lower_95"] > 0
+        ),
+        "net_slope_lower_95_positive": (
+            lower_bounds["net_standardized_slope"]["lower_95"] > 0
+        ),
+        "adverse_slope_lower_95_positive": (
+            lower_bounds["adverse_standardized_slope"]["lower_95"] > 0
+        ),
+        "at_least_3_of_4_positive_net_folds": (
+            folds["positive_net_slope_folds"] >= 3
+        ),
+        "at_least_3_of_4_positive_adverse_folds": (
+            folds["positive_adverse_slope_folds"] >= 3
+        ),
+        "largest_positive_net_fold_share_at_most_60_percent": (
+            folds["largest_positive_net_slope_share"] is not None
+            and folds["largest_positive_net_slope_share"] <= 0.60
+        ),
+        "delayed_net_spearman_positive": delayed_associations["net_spearman"] > 0,
+        "delayed_adverse_spearman_positive": (
+            delayed_associations["adverse_spearman"] > 0
+        ),
+        "delayed_net_slope_positive": (
+            delayed_associations["net_standardized_slope"] > 0
+        ),
+        "delayed_adverse_slope_positive": (
+            delayed_associations["adverse_standardized_slope"] > 0
+        ),
+        "delayed_net_tercile_effect_positive": (
+            delayed_effects["net_upper_minus_lower"] > 0
+        ),
+        "delayed_adverse_tercile_effect_positive": (
+            delayed_effects["adverse_upper_minus_lower"] > 0
+        ),
+        "source_prefix_invariant": source_prefix_hash == truncated_source_prefix_hash,
+        "feature_prefix_invariant": feature_hash == prefix_feature_hash,
+        "opportunity_prefix_invariant": event_hash == prefix_event_hash,
+        "utc_bin_audit_prefix_invariant": (
+            grid_audit["utc_bin_identity_passed"]
+            == prefix_grid_audit["utc_bin_identity_passed"]
+            and grid_audit["invalid_feature_anchors"]
+            == prefix_grid_audit["invalid_feature_anchors"]
+            and grid_audit["ineligible_e2160_anchors"]
+            == prefix_grid_audit["ineligible_e2160_anchors"]
+        ),
+    }
+    return {
+        "target": target,
+        "opportunity_count": len(records),
+        "first_opportunity": base.utc_iso(records[0]["execution_open_ms"]),
+        "last_opportunity": base.utc_iso(records[-1]["execution_open_ms"]),
+        "utc_grid_and_feature_audit": grid_audit,
+        "training_prefix_utc_grid_and_feature_audit": prefix_grid_audit,
+        "distribution": distribution,
+        "associations": associations,
+        "tercile_effects": effects,
+        "bootstrap": uncertainty,
+        "fold_audit": folds,
+        "one_hour_execution_delay": delayed,
+        "source_prefix_sha256": source_prefix_hash,
+        "truncated_source_prefix_sha256": truncated_source_prefix_hash,
+        "event_sha256": event_hash,
+        "prefix_event_sha256": prefix_event_hash,
+        "feature_sha256": feature_hash,
+        "prefix_feature_sha256": prefix_feature_hash,
+        "gates": gates,
+        "passes": all(gates.values()),
+        "strategy_metrics": {
+            "training": None,
+            "oos": None,
+            "full": None,
+            "benchmark_comparison": None,
+            "turnover": None,
+            "maximum_drawdown": None,
+            "edge_per_turnover": None,
+            "calendar_year_breadth": None,
+        },
+    }
+
+
+def report(evidence: dict[str, Any]) -> str:
+    lines = [
+        "# Own-price hour-of-week seasonal-projection opportunity diagnostic",
+        "",
+        f"- Family: `{FAMILY}`",
+        f"- Exact head: `{evidence['exact_head']}`",
+        f"- Source contract: `{evidence['source_contract_passed']}`",
+        "- Candidate count / grid: `0 / 0`",
+        "- OOS accessed: `False`",
+        f"- Verdict: `{evidence['verdict']}`",
+        "",
+    ]
+    if not evidence["source_contract_passed"]:
+        lines.extend(["## Source rejection", "", evidence["highest_value_failure"], ""])
+        return "\n".join(lines)
+    lines.extend(
+        [
+            "## Training-only information",
+            "",
+            "| Target | Anchors | Distinct | IQR | Net rho | Adverse rho | Net slope | Adverse slope | Net tercile bp | Adverse tercile bp | Net folds | Adverse folds | Gates |",
+            "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+        ]
+    )
+    for target in evidence["targets"]:
+        associations = target["associations"]
+        effects = target["tercile_effects"]
+        folds = target["fold_audit"]
+        lines.append(
+            f"| {target['target']} | {target['opportunity_count']} | "
+            f"{target['distribution']['distinct_values']} | "
+            f"{target['distribution']['iqr']:.8f} | "
