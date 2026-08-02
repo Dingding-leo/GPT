@@ -52,6 +52,29 @@ def patch_report(output_dir: Path) -> None:
         "The 09:00 signal bar was provider-confirmed": "The 10:00 signal bar was provider-confirmed",
         "The 10:00 candle supplied only its already-fixed open": "The 11:00 candle supplied only its already-fixed open",
         "end of the 09:00–10:00 open-to-open payoff": "end of the 10:00–11:00 open-to-open payoff",
+        "Cumulative realised hours: `608`": "Cumulative realised hours: `610`",
+        '"updated_cumulative_realized_hours": 608': '"updated_cumulative_realized_hours": 610',
+        (
+            "The completed public-exogenous information programme closure in issue #957 / "
+            "PR #958 found zero bilateral benchmark-relative, dependence-supported, "
+            "breadth-and-delay-supported architecture groups. No training-authorised "
+            "correction or replacement observation epoch exists."
+        ): (
+            "The terminal training-only directional-diffusion diagnostic in issue #963 / "
+            "PR #964 was rejected with candidate count zero. No active replacement strategy "
+            "architecture, training-authorised correction or replacement observation epoch exists."
+        ),
+        (
+            "Next strategy-facing action: advance the unchanged independent BTC-USDT and "
+            "ETH-USDT E2160 shadow at the next complete public 1H observation; open no "
+            "replacement strategy until a materially orthogonal causal source contract and "
+            "falsifiable temporal rule are frozen before feature or target-return access."
+        ): (
+            "Next strategy-facing action: advance the unchanged independent BTC-USDT and "
+            "ETH-USDT E2160 shadow at the next complete public 1H observation; do not reopen "
+            "the rejected directional-diffusion premise, and freeze any materially orthogonal "
+            "causal source contract and falsifiable temporal rule before feature or target-return access."
+        ),
     }
     for old, new in replacements.items():
         report = report.replace(old, new)
