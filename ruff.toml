@@ -1,2 +1,5 @@
 extend = "pyproject.toml"
-extend-exclude = ["scripts/run_public_spot_borrow_demand_source_contract_1h_v1.py"]
+extend-exclude = [
+    "scripts/run_public_spot_borrow_demand_source_contract_1h_v1.py",
+    "scripts/run_public_spot_borrow_rate_source_contract_1h_v1.py",
+]
