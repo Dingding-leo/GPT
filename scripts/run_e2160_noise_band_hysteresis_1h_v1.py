@@ -61,16 +61,20 @@ def exact_index() -> pd.DatetimeIndex:
 
 
 def source_arm(output: Path, inst_id: str) -> tuple[pd.DataFrame, dict[str, Any]]:
+    acquisition_end = pd.Timestamp.now(tz="UTC").floor("h") - pd.Timedelta(hours=2)
+    if acquisition_end < END:
+        raise ValueError("current completed-hour boundary predates the frozen sample")
     snapshot = fetch_okx_one_hour_candles(
         inst_id=inst_id,
         start=START,
-        end=END,
+        end=acquisition_end,
         pause_seconds=0.12,
         timeout=30.0,
     )
     source_dir = output / "source" / inst_id / "snapshot"
     paths = write_okx_snapshot(snapshot, source_dir)
-    frame = snapshot.candles.copy()
+    full_frame = snapshot.candles.copy()
+    frame = full_frame.loc[START:END].copy()
     expected = exact_index()
     if len(frame) != EXPECTED_ROWS or not frame.index.equals(expected):
         raise ValueError(f"{inst_id} source does not match frozen 1H grid")
@@ -86,7 +90,9 @@ def source_arm(output: Path, inst_id: str) -> tuple[pd.DataFrame, dict[str, Any]
         "rows": len(frame),
         "first_timestamp": frame.index[0].isoformat(),
         "last_timestamp": frame.index[-1].isoformat(),
-        "normalized_csv_sha256": snapshot.metadata["normalized_csv_sha256"],
+        "acquisition_end": acquisition_end.isoformat(),
+        "acquisition_rows": len(full_frame),
+        "full_normalized_csv_sha256": snapshot.metadata["normalized_csv_sha256"],
         "raw_pages_sha256": snapshot.metadata["raw_pages_sha256"],
         "metadata_sha256": sha256(paths["metadata"].read_bytes()),
         "slice_sha256": sha256(_canonical_csv_bytes(frame)),
