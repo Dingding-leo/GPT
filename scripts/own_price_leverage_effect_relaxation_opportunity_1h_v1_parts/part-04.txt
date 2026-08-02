@@ -1,0 +1,138 @@
+            try:
+                targets.append(analyse(base, series[target], target))
+            except Exception as exc:
+                failures[f"{target}_analysis"] = f"{type(exc).__name__}: {exc}"
+                source_passed = False
+                targets = []
+                break
+    bilateral = bool(targets) and all(target["passes"] for target in targets)
+    if source_passed and not bilateral:
+        failed_gates = []
+        for target in targets:
+            names = [name for name, passed in target["gates"].items() if not passed]
+            failed_gates.append(f"{target['target']}: {', '.join(names)}")
+        highest_value_failure = "Bilateral leverage-effect relaxation support failed: " + "; ".join(failed_gates)
+    elif source_passed:
+        highest_value_failure = "No information gate failed; only a separately preregistered candidate architecture may proceed."
+    else:
+        highest_value_failure = "Source contract or diagnostic failed: " + "; ".join(f"{name}: {message}" for name, message in failures.items())
+    evidence = {
+        "family_id": FAMILY,
+        "exact_head": args.tested_head,
+        "repository_main": MAIN,
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "canonical_fee_bps_one_way": 5.0,
+        "round_trip_opportunity_fee": ROUND_TRIP_FEE,
+        "bar_interval": "1H",
+        "candidate_count": 0,
+        "parameter_grid_count": 0,
+        "source_contract_passed": source_passed,
+        "source_failures": failures,
+        "source_manifest_sha256": source_manifest_hash,
+        "source_series_sha256": {key: value.normalized_sha256 for key, value in series.items()},
+        "targets": targets,
+        "sample": {
+            "rows_per_series": base.EXPECTED_ROWS,
+            "warmup": [0, WARMUP],
+            "training_information": [WARMUP, TRAIN_END],
+            "sealed_oos": [TRAIN_END, OOS_END],
+            "unread_suffix": [OOS_END, FULL_END],
+            "folds": 4,
+            "fold_hours": 2160,
+        },
+        "training_information_labels_accessed": source_passed,
+        "strategy_performance_accessed": False,
+        "oos_accessed": False,
+        "full_sample_accessed": False,
+        "bilateral_training_support_passed": bilateral,
+        "targets_passing": sum(target["passes"] for target in targets),
+        "highest_value_failure": highest_value_failure,
+        "canonical_strategy_changed": False,
+        "canonical_mutation_authorized": False,
+        "executable_candidate_authorized": False,
+        "separate_candidate_predeclaration_authorized": bilateral,
+        "prospective_shadow_authorized": False,
+        "paper_trading_authorized": False,
+        "live_trading_authorized": False,
+        "public_data_only": True,
+        "synthetic_market_data_used": False,
+        "interpolation_or_row_repair_used": False,
+        "cross_sectional_ranking_or_selection": False,
+        "pairs_or_spreads": False,
+        "cointegration_or_statistical_arbitrage": False,
+        "market_neutral_or_long_short": False,
+        "credentials_used": False,
+        "private_endpoints_used": False,
+        "accounts_or_orders": False,
+        "enabled_adapters": False,
+        "leverage_used": False,
+        "non_1h_or_15m_input_used": False,
+        "verdict": ACCEPT if bilateral else REJECT,
+    }
+    evidence["machine_readable_verdict"] = {
+        key: evidence[key]
+        for key in (
+            "family_id",
+            "candidate_count",
+            "parameter_grid_count",
+            "source_contract_passed",
+            "bilateral_training_support_passed",
+            "strategy_performance_accessed",
+            "oos_accessed",
+            "canonical_strategy_changed",
+            "canonical_mutation_authorized",
+            "executable_candidate_authorized",
+            "separate_candidate_predeclaration_authorized",
+            "paper_trading_authorized",
+            "live_trading_authorized",
+            "verdict",
+        )
+    }
+    evidence_hash = base.persist_json(output / "evidence.json", evidence)
+    protocol = {
+        "family_id": FAMILY,
+        "targets": list(TARGETS),
+        "return": "r[i]=log(close[i]/close[i-1])",
+        "pair": "(r[i-1], r[i]^2)",
+        "baseline_response_indices": "[t-912,t-193], 720 pairs",
+        "recent_response_indices": "[t-192,t-25], 168 pairs",
+        "leverage_statistic": "-corr(r[i-1],r[i]^2)",
+        "feature": "baseline_leverage-recent_leverage",
+        "own_e2160": "close[t-25] > close[t-2185]",
+        "label": "open[t+24]/open[t]-1-0.0010",
+        "adverse": "min(open[t:t+25]/open[t]-1), including zero",
+        "delay": "same feature; open[t+1] to open[t+25]",
+        "candidate_count": 0,
+        "parameter_grid_count": 0,
+        "bootstrap": {"draws": DRAWS, "block_opportunities": BLOCK, "seed": SEED},
+        "oos_access": "prohibited",
+    }
+    protocol_hash = base.persist_json(output / "protocol.json", protocol)
+    report_text = report(evidence)
+    (output / "report.md").write_text(report_text, encoding="utf-8")
+    hashes = {
+        "evidence_sha256": evidence_hash,
+        "source_manifest_sha256": source_manifest_hash,
+        "protocol_sha256": protocol_hash,
+        "report_sha256": base.sha256_bytes(report_text.encode()),
+    }
+    (output / "hashes.json").write_text(json.dumps(hashes, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    print(
+        json.dumps(
+            {
+                "family_id": FAMILY,
+                "exact_head": args.tested_head,
+                "source_contract_passed": source_passed,
+                "targets_passing": evidence["targets_passing"],
+                "bilateral_training_support_passed": bilateral,
+                "verdict": evidence["verdict"],
+                "highest_value_failure": highest_value_failure,
+                "hashes": hashes,
+            },
+            sort_keys=True,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
