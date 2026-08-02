@@ -12,22 +12,25 @@ def replace_once(text: str, old: str, new: str) -> str:
 
 
 def transform(text: str) -> str:
-    critical_old = '''def leverage_statistic(returns: np.ndarray, response_indices: np.ndarray) -> float:
-    antecedent = returns[response_indices - 1]
-    subsequent_variance = returns[response_indices] ** 2
-    if not np.isfinite(antecedent).all() or not np.isfinite(subsequent_variance).all():
-        return float("nan")
-    value = -corr(antecedent, subsequent_variance)
-    return value if math.isfinite(value) else float("nan")
-'''
-    critical_new = '''def clustering_statistic(returns: np.ndarray, response_indices: np.ndarray) -> float:
-    antecedent_variance = returns[response_indices - 1] ** 2
-    subsequent_variance = returns[response_indices] ** 2
-    if not np.isfinite(antecedent_variance).all() or not np.isfinite(subsequent_variance).all():
-        return float("nan")
-    value = corr(antecedent_variance, subsequent_variance)
-    return value if math.isfinite(value) else float("nan")
-'''
+    critical_old = (
+        "def leverage_statistic(returns: np.ndarray, response_indices: np.ndarray) -> float:\n"
+        "    antecedent = returns[response_indices - 1]\n"
+        "    subsequent_variance = returns[response_indices] ** 2\n"
+        "    if not np.isfinite(antecedent).all() or not np.isfinite(subsequent_variance).all():\n"
+        '        return float("nan")\n'
+        "    value = -corr(antecedent, subsequent_variance)\n"
+        '    return value if math.isfinite(value) else float("nan")\n'
+    )
+    critical_new = (
+        "def clustering_statistic(returns: np.ndarray, response_indices: np.ndarray) -> float:\n"
+        "    antecedent_variance = returns[response_indices - 1] ** 2\n"
+        "    subsequent_variance = returns[response_indices] ** 2\n"
+        "    if not np.isfinite(antecedent_variance).all() "
+        "or not np.isfinite(subsequent_variance).all():\n"
+        '        return float("nan")\n'
+        "    value = corr(antecedent_variance, subsequent_variance)\n"
+        '    return value if math.isfinite(value) else float("nan")\n'
+    )
     text = replace_once(text, critical_old, critical_new)
     replacements = (
         (
@@ -89,8 +92,23 @@ def transform(text: str) -> str:
     remaining = [fragment for fragment in forbidden if fragment in text]
     if remaining:
         raise RuntimeError(f"stale leverage diagnostic fragments remain: {remaining}")
-    if text.count("clustering_relaxation") != 4:
-        raise RuntimeError("transformed diagnostic has an unexpected clustering-relaxation binding count")
+
+    required_bindings = (
+        "def clustering_statistic(",
+        "def clustering_feature(",
+        '"baseline_clustering": baseline',
+        '"recent_clustering": recent',
+        '"clustering_relaxation": feature',
+        'record["clustering_relaxation"]',
+        '"clustering_statistic": "corr(r[i-1]^2,r[i]^2)"',
+        '"feature": "baseline_clustering-recent_clustering"',
+    )
+    missing = [fragment for fragment in required_bindings if fragment not in text]
+    if missing:
+        raise RuntimeError(
+            "transformed diagnostic is missing required clustering bindings: "
+            f"{missing}"
+        )
     if "leverage_used" not in text:
         raise RuntimeError("hard-boundary leverage prohibition field was accidentally removed")
     return text
