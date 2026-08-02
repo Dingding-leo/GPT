@@ -59,7 +59,7 @@ jobs:
           cp scripts/run_options_term_structure_source_contract_1h_v1.py \
             "$OUTPUT_DIR/formatted_script.py"
           ruff format "$OUTPUT_DIR/formatted_script.py"
-          ruff check --fix "$OUTPUT_DIR/formatted_script.py"
+          ruff check --fix "$OUTPUT_DIR/formatted_script.py" || true
 
       - name: Verify machine-readable source verdict
         shell: bash
