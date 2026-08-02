@@ -78,6 +78,28 @@ jobs:
               "    spec.loader.exec_module(module)\n",
               1,
           )
+
+          old_anchor_range = (
+              "    for t in range(WARMUP + 24, TRAIN_END - 24 + 1, 24):\n"
+          )
+          new_anchor_range = (
+              "    for t in range(WARMUP + 24, TRAIN_END - 25, 24):\n"
+          )
+          if source.count(old_anchor_range) != 1:
+              raise RuntimeError("training-anchor boundary patch target mismatch")
+          source = source.replace(old_anchor_range, new_anchor_range, 1)
+
+          old_authority = (
+              '        "executable_candidate_authorized": bilateral,\n'
+          )
+          new_authority = (
+              '        "executable_candidate_authorized": False,\n'
+              '        "separate_candidate_predeclaration_authorized": bilateral,\n'
+          )
+          if source.count(old_authority) != 1:
+              raise RuntimeError("candidate-authority patch target mismatch")
+          source = source.replace(old_authority, new_authority, 1)
+
           Path("/tmp/run_directional_diffusion.py").write_text(
               source,
               encoding="utf-8",
@@ -129,6 +151,10 @@ jobs:
           assert evidence["strategy_performance_accessed"] is False
           assert evidence["oos_accessed"] is False
           assert evidence["full_sample_accessed"] is False
+          assert evidence["executable_candidate_authorized"] is False
+          assert evidence["separate_candidate_predeclaration_authorized"] is evidence[
+              "bilateral_training_support_passed"
+          ]
           assert evidence["cross_sectional_ranking_or_selection"] is False
           assert evidence["fixed_equal_panel_aggregation_only"] is True
           assert evidence["credentials_used"] is False
