@@ -1,0 +1,127 @@
+name: Public Spot Margin Balance Sheet Programme Closure 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/close_public_spot_margin_balance_sheet_crowding_programme_1h_v1.py"
+      - ".github/workflows/public-spot-margin-balance-sheet-programme-closure-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: spot-margin-balance-sheet-closure-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      PRIOR_DIR: prior-artifacts
+      OUTPUT_DIR: reports/research/public-spot-margin-balance-sheet-programme-closure-1h-v1
+      ARTIFACT_NAME: public-spot-margin-balance-sheet-closure-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact research revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          python -m py_compile \
+            scripts/close_public_spot_margin_balance_sheet_crowding_programme_1h_v1.py
+
+      - name: Download exact prior immutable artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$PRIOR_DIR"
+          download() {
+            local artifact_id="$1"
+            local output_name="$2"
+            curl --fail --location --silent --show-error \
+              --retry 3 --retry-all-errors \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+              --output "$PRIOR_DIR/$output_name"
+          }
+          download 8836300632 borrow-demand.zip
+          download 8837015113 borrow-rate.zip
+          download 8837581839 borrowing-closure.zip
+          download 8838313894 margin-ratio.zip
+
+      - name: Build deterministic strategy-family closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/close_public_spot_margin_balance_sheet_crowding_programme_1h_v1.py \
+            --tested-head "$EXPECTED_TESTED_SHA" \
+            --prior-dir "$PRIOR_DIR" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify terminal closure evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            evidence.json evidence.json.sha256 \
+            source_records.json source_records.json.sha256 \
+            report.md report.md.sha256 \
+            artifact_summary.json artifact_summary.json.sha256; do
+            test -s "$OUTPUT_DIR/$file"
+          done
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((root / "evidence.json").read_text())
+          assert evidence["family_id"] == (
+              "causal-public-spot-margin-balance-sheet-crowding-programme-closure-1h-v1"
+          )
+          assert evidence["tested_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["repository_main"] == (
+              "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          )
+          assert evidence["issue"] == 996
+          assert evidence["bar"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["new_market_data_rows"] == 0
+          assert evidence["new_target_return_rows"] == 0
+          assert evidence["new_oos_observations"] == 0
+          assert evidence["completed_group_count"] == 3
+          assert evidence["admissible_group_count"] == 0
+          assert all(value is None for value in evidence["economics"].values())
+          assert all(not row["programme_admissible"] for row in evidence["leave_one_group_out"])
+          assert evidence["verdict"] == (
+              "reject_reopening_completed_public_spot_margin_balance_sheet_crowding_mechanisms_1h_v1"
+          )
+          PY
+
+      - name: Upload immutable closure evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 90
