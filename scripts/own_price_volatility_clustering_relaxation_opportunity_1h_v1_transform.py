@@ -43,23 +43,6 @@ def transform(text: str) -> str:
             "reject_causal_own_price_volatility_clustering_relaxation_information_premise_1h_v1",
         ),
         ("SEED = 2026080223", "SEED = 2026080300"),
-        ("leverage_feature", "clustering_feature"),
-        ("leverage_statistic", "clustering_statistic"),
-        ("baseline_leverage", "baseline_clustering"),
-        ("recent_leverage", "recent_clustering"),
-        ("leverage_relaxation", "clustering_relaxation"),
-        (
-            "zero variance or non-finite leverage correlation",
-            "zero variance or non-finite variance-clustering correlation",
-        ),
-        (
-            "# Own-price leverage-effect relaxation opportunity diagnostic",
-            "# Own-price volatility-clustering relaxation opportunity diagnostic",
-        ),
-        (
-            "Bilateral leverage-effect relaxation support failed: ",
-            "Bilateral volatility-clustering relaxation support failed: ",
-        ),
         ('"pair": "(r[i-1], r[i]^2)"', '"pair": "(r[i-1]^2, r[i]^2)"'),
         (
             '"leverage_statistic": "-corr(r[i-1],r[i]^2)"',
@@ -69,6 +52,23 @@ def transform(text: str) -> str:
             '"feature": "baseline_leverage-recent_leverage"',
             '"feature": "baseline_clustering-recent_clustering"',
         ),
+        (
+            "# Own-price leverage-effect relaxation opportunity diagnostic",
+            "# Own-price volatility-clustering relaxation opportunity diagnostic",
+        ),
+        (
+            "Bilateral leverage-effect relaxation support failed: ",
+            "Bilateral volatility-clustering relaxation support failed: ",
+        ),
+        (
+            "zero variance or non-finite leverage correlation",
+            "zero variance or non-finite variance-clustering correlation",
+        ),
+        ("leverage_feature", "clustering_feature"),
+        ("leverage_statistic", "clustering_statistic"),
+        ("baseline_leverage", "baseline_clustering"),
+        ("recent_leverage", "recent_clustering"),
+        ("leverage_relaxation", "clustering_relaxation"),
     )
     for old, new in replacements:
         if old not in text:
