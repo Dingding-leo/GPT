@@ -1,0 +1,74 @@
+name: Public insurance-fund source contract 1H v1 exact
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  source-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+
+      - name: Verify exact checkout
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+
+      - name: Execute frozen anonymous source audit
+        env:
+          TESTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python scripts/audit_public_insurance_fund_balance_source_contract_1h_v1.py \
+            --tested-head "$TESTED_HEAD" \
+            --output-dir evidence/public-insurance-fund-source-contract-1h-v1
+
+      - name: Verify terminal zero-candidate evidence
+        env:
+          TESTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("evidence/public-insurance-fund-source-contract-1h-v1")
+          evidence = json.loads((root / "evidence.json").read_text())
+          assert evidence["tested_head"] == os.environ["TESTED_HEAD"]
+          assert evidence["family_id"] == "causal-public-insurance-fund-balance-source-contract-1h-v1"
+          assert evidence["verdict"] == "reject_causal_public_insurance_fund_balance_source_contract_1h_v1"
+          assert evidence["source_arms_passing"] == 0
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["controls"]["target_returns_accessed"] is False
+          assert evidence["controls"]["sealed_oos_accessed"] is False
+          assert evidence["correction_authority"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          for path in root.rglob("*.sha256"):
+              source = path.with_name(path.name[:-7])
+              assert hashlib.sha256(source.read_bytes()).hexdigest() == path.read_text().strip()
+          PY
+
+      - name: Upload immutable source-audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-insurance-fund-source-contract-1h-v1-${{ github.event.pull_request.head.sha }}
+          path: evidence/public-insurance-fund-source-contract-1h-v1
+          if-no-files-found: error
+          retention-days: 90
