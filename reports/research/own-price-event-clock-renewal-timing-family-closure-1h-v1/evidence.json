@@ -1,0 +1,393 @@
+{
+  "architecture_group_count": 4,
+  "bilateral_positive_dependence_lower_bound_groups": [],
+  "bilateral_promoted_groups": [],
+  "candidate_count": 0,
+  "canonical_fee_bps_one_way": 5.0,
+  "canonical_policy_changed": false,
+  "classification": "completed-evidence strategy-family closure",
+  "closed_rescue_surface": [
+    "alternate renewal horizons",
+    "time-since-renewal thresholds/transforms",
+    "trend-age checkpoints",
+    "first-passage barrier/volatility windows",
+    "event-count/quorum thresholds",
+    "pivot/tie/intrabar crossing conventions",
+    "renewal-conditioned veto/downgrade/pause/bridge",
+    "E2160 blending, market-specific settings, single-market promotion, favourable-period filtering"
+  ],
+  "closure_gate_count": 9,
+  "closure_gate_pass_count": 9,
+  "closure_gates": {
+    "all_four_terminal_exact_head_and_closed": true,
+    "at_least_three_distinct_temporal_representations": true,
+    "at_least_two_executable_groups_failed_bilateral_promotion": true,
+    "at_least_two_information_breadth_or_transport_failures": true,
+    "closure_scope_is_limited_to_direct_renewal_event_clock_timing": true,
+    "leave_one_group_out_preserves_information_and_economic_failure": true,
+    "no_bilateral_promotion_or_positive_dependence_lower_bounds": true,
+    "no_success_depends_on_posthoc_single_market_or_period_selection": true,
+    "same_instrument_causal_1h_and_5bps_standard": true
+  },
+  "correction_applied": false,
+  "correction_permitted": false,
+  "economically_executable_groups": [
+    "A",
+    "B"
+  ],
+  "family_id": "causal-own-price-event-clock-renewal-timing-family-closure-1h-v1",
+  "groups": [
+    {
+      "candidate_count": 1,
+      "economics_authorized": true,
+      "exact_head": "af4b28a61490c16119f8221223689bf5d84fd411",
+      "failure": "irreversible half-risk state outlived the warning and removed profitable continuation after renewed highs",
+      "family_id": "trend-renewal-drought-downgrade-1h-v1",
+      "fee_bps_one_way": 5.0,
+      "group": "A",
+      "issue": 710,
+      "markets": [
+        "BTC-USDT",
+        "ETH-USDT"
+      ],
+      "merged": false,
+      "metrics": {
+        "BTC-USDT": {
+          "benchmark_oos_edge_per_turnover_bps": 212.7512805,
+          "benchmark_oos_max_drawdown": -0.2654678574,
+          "benchmark_oos_net": 1.1968197962,
+          "benchmark_oos_sharpe": 0.9537651194,
+          "benchmark_oos_turnover": 45.0,
+          "candidate_oos_edge_per_turnover_bps": 114.9682868,
+          "candidate_oos_fees": 0.0225,
+          "candidate_oos_max_drawdown": -0.1773601602,
+          "candidate_oos_net": 0.5716019425,
+          "candidate_oos_sharpe": 0.8324121554,
+          "candidate_oos_turnover": 45.0,
+          "fold_count": 12,
+          "mean_delta_ci95": [
+            -0.3317869425,
+            0.0193834603
+          ],
+          "profitable_folds": 5,
+          "profitable_years": 3,
+          "residual_sharpe": -0.9668852839,
+          "sharpe_delta_ci95": [
+            -0.4236858393,
+            0.2090820998
+          ],
+          "year_count": 4
+        },
+        "ETH-USDT": {
+          "benchmark_oos_edge_per_turnover_bps": 283.58,
+          "benchmark_oos_max_drawdown": -0.4777,
+          "benchmark_oos_net": 0.7452,
+          "benchmark_oos_sharpe": 0.646,
+          "benchmark_oos_turnover": 30.0,
+          "candidate_oos_edge_per_turnover_bps": 127.39,
+          "candidate_oos_fees": 0.015,
+          "candidate_oos_max_drawdown": -0.2988,
+          "candidate_oos_net": 0.3252,
+          "candidate_oos_sharpe": 0.495,
+          "candidate_oos_turnover": 30.0,
+          "fold_count": 12,
+          "mean_delta_ci95": [
+            -0.4056075951,
+            0.0723985791
+          ],
+          "profitable_folds": 6,
+          "profitable_years": 3,
+          "residual_sharpe": -0.7596553362,
+          "sharpe_delta_ci95": [
+            -0.4919330104,
+            0.2432526534
+          ],
+          "year_count": 4
+        }
+      },
+      "oos_accessed": true,
+      "parameter_grid_count": 0,
+      "policy_authority": "one irreversible 1.0-to-0.5 downgrade; E2160 retains exit authority",
+      "pr_state": "closed",
+      "pull_request": 711,
+      "representation": "time since strict causal trailing-720H closing-high renewal plus latest-168H return inside positive E2160",
+      "result_sha256": "6644badc67c3208cea73c7b31dd12008bd4e53c867b358d2120c480a18a7593d",
+      "source": "public confirmed OKX SPOT 1H",
+      "source_and_chronology_valid": true,
+      "terminal_verdict": "reject_exact_trend_renewal_drought_downgrade_family"
+    },
+    {
+      "candidate_count": 1,
+      "economics_authorized": true,
+      "exact_head": "4498ce75028dea6d435fab0f45f6e1c10f1b463c",
+      "failure": "BTC underperformed; ETH benefit was concentrated in two events and strict uncertainty lower bounds were zero",
+      "family_id": "renewal-supported-base-exit-bridge-1h-v1",
+      "fee_bps_one_way": 5.0,
+      "group": "B",
+      "issue": 712,
+      "markets": [
+        "BTC-USDT",
+        "ETH-USDT"
+      ],
+      "merged": false,
+      "metrics": {
+        "BTC-USDT": {
+          "benchmark_oos_edge_per_turnover_bps": 212.75,
+          "benchmark_oos_max_drawdown": -0.2655,
+          "benchmark_oos_net": 1.1968,
+          "benchmark_oos_sharpe": 0.954,
+          "benchmark_oos_turnover": 45.0,
+          "bridge_starts": 4,
+          "candidate_oos_edge_per_turnover_bps": 219.97,
+          "candidate_oos_fees": 0.021,
+          "candidate_oos_max_drawdown": -0.2837,
+          "candidate_oos_net": 1.1175,
+          "candidate_oos_sharpe": 0.912,
+          "candidate_oos_turnover": 42.0,
+          "fold_count": 12,
+          "mean_delta_ci95": [
+            -0.0532,
+            0.0292
+          ],
+          "profitable_folds": 5,
+          "profitable_years": 3,
+          "residual_sharpe": -0.239,
+          "sharpe_delta_ci95": [
+            -0.168,
+            0.076
+          ],
+          "year_count": 4
+        },
+        "ETH-USDT": {
+          "benchmark_oos_edge_per_turnover_bps": 283.58,
+          "benchmark_oos_max_drawdown": -0.4777,
+          "benchmark_oos_net": 0.7452,
+          "benchmark_oos_sharpe": 0.646,
+          "benchmark_oos_turnover": 30.0,
+          "bridge_starts": 2,
+          "candidate_oos_edge_per_turnover_bps": 312.75,
+          "candidate_oos_fees": 0.014,
+          "candidate_oos_max_drawdown": -0.4777,
+          "candidate_oos_net": 0.7891,
+          "candidate_oos_sharpe": 0.664,
+          "candidate_oos_turnover": 28.0,
+          "fold_count": 12,
+          "mean_delta_ci95": [
+            0.0,
+            0.0233
+          ],
+          "profitable_folds": 6,
+          "profitable_years": 3,
+          "residual_sharpe": 1.194,
+          "sharpe_delta_ci95": [
+            0.0,
+            0.053
+          ],
+          "year_count": 4
+        }
+      },
+      "oos_accessed": true,
+      "parameter_grid_count": 0,
+      "policy_authority": "bounded 168H half bridge after base exit; restore on E2160 recross",
+      "pr_state": "closed",
+      "pull_request": 713,
+      "representation": "recent strict high renewal before first E2160 exit",
+      "result_sha256": "c157ef52c141d418da2ef41fefe2d7ade28586e77c58d9457e78fb9032ea63bf",
+      "source": "public confirmed OKX SPOT 1H",
+      "source_and_chronology_valid": true,
+      "terminal_verdict": "reject_exact_renewal_supported_base_exit_bridge_family"
+    },
+    {
+      "candidate_count": 0,
+      "diagnostic_count": 1,
+      "economics": null,
+      "economics_authorized": false,
+      "evidence_sha256": "d19e435a11d77e0de92502467c2c31de2b325fa82de8ce002c7144d79255f990",
+      "exact_head": "1e2cded75fe42e34af7cf4270752bc08da6ecb40",
+      "failure": "adequate support and dispersion but weak non-transportable rank information; lower bounds crossed zero",
+      "family_id": "daily-positive-trend-age-opportunity-diagnostic-1h-v1",
+      "fee_bps_one_way": 5.0,
+      "group": "C",
+      "issue": 806,
+      "markets": [
+        "BTC-USDT",
+        "ETH-USDT"
+      ],
+      "merged": false,
+      "oos_accessed": false,
+      "parameter_grid_count": 0,
+      "policy_authority": "none; training-only next-24H opportunity diagnostic",
+      "pr_state": "closed",
+      "pull_request": 807,
+      "representation": "log1p age of current uninterrupted positive daily E2160 state",
+      "source": "immutable public confirmed OKX SPOT 1H",
+      "source_and_chronology_valid": true,
+      "support": {
+        "BTC-USDT": {
+          "active_anchors": 246,
+          "adverse_ci95": [
+            -0.049,
+            0.1873
+          ],
+          "adverse_rho": 0.0649,
+          "fold_count": 6,
+          "gross_ci95": [
+            -0.0488,
+            0.1683
+          ],
+          "gross_rho": 0.0589,
+          "positive_adverse_folds": 2,
+          "positive_gross_folds": 1,
+          "regimes": 14,
+          "state_iqr": 2.421
+        },
+        "ETH-USDT": {
+          "active_anchors": 272,
+          "adverse_ci95": [
+            -0.0668,
+            0.1718
+          ],
+          "adverse_rho": 0.0516,
+          "fold_count": 6,
+          "gross_ci95": [
+            -0.0847,
+            0.1189
+          ],
+          "gross_rho": 0.0247,
+          "positive_adverse_folds": 2,
+          "positive_gross_folds": 2,
+          "regimes": 11,
+          "state_iqr": 1.7177
+        },
+        "common_adverse_ci95": [
+          -0.043,
+          0.1645
+        ],
+        "common_gross_ci95": [
+          -0.0498,
+          0.1292
+        ],
+        "valid_draws": 5000
+      },
+      "terminal_verdict": "reject_daily_positive_trend_age_opportunity_premise"
+    },
+    {
+      "artifact_id": 8825942016,
+      "artifact_sha256": "efea813e5d5ac64f0d142f0b24bc774629ca4fe050d7f954349f1aeacfac0ef1",
+      "candidate_count": 2,
+      "economics": null,
+      "economics_authorized": false,
+      "evidence_sha256": "ca85ad5e2ff677c787d8ba53489f3dcde3ed7f2b9d1d44643edfd4df4dc45432",
+      "exact_head": "88e244d0f9d276c9d5b42ecc9ecd930ae1bb3632",
+      "failure": "incremental disagreements were concentrated by quarter and direction; bilateral training support failed before economics",
+      "family_id": "causal-volatility-normalized-first-passage-consensus-trend-1h-v1",
+      "fee_bps_one_way": 5.0,
+      "focused_workflow_run": 30724659548,
+      "group": "D",
+      "issue": 931,
+      "markets": [
+        "ADA-USDT",
+        "DOT-USDT"
+      ],
+      "merged": false,
+      "oos_accessed": false,
+      "parameter_grid_count": 0,
+      "policy_authority": "independent own-market long/cash state",
+      "pr_state": "closed",
+      "pull_request": 932,
+      "representation": "close-only volatility-normalized first-passage signs with two-thirds consensus over latest 12 events",
+      "source": "anonymous public OKX SPOT 1H",
+      "source_and_chronology_valid": true,
+      "support": {
+        "ADA-USDT": {
+          "candidate_long_rate": 0.5153,
+          "disagreements": 71,
+          "events": 152,
+          "largest_quarter_share": 0.4789,
+          "quarter_counts": [
+            34,
+            9,
+            22,
+            6
+          ],
+          "transitions": 6
+        },
+        "DOT-USDT": {
+          "candidate_long_rate": 0.61,
+          "disagreements": 78,
+          "events": 155,
+          "largest_direction_share": 0.8077,
+          "largest_quarter_share": 0.6026,
+          "quarter_counts": [
+            47,
+            16,
+            0,
+            15
+          ],
+          "transitions": 4
+        }
+      },
+      "terminal_verdict": "reject_causal_volatility_normalized_first_passage_consensus_trend_1h_v1"
+    }
+  ],
+  "highest_value_family_failure": "Direct renewal/event-clock timing was economically harmful, episode- or quarter-concentrated, or statistically non-transportable; further thresholds/windows would be post-result search rather than new information.",
+  "information_support_failures": [
+    "C",
+    "D"
+  ],
+  "issue": 933,
+  "leave_one_group_out": {
+    "without_A": {
+      "economic_or_transport_failure": [
+        "B"
+      ],
+      "information_failure": [
+        "C",
+        "D"
+      ],
+      "passes": true
+    },
+    "without_B": {
+      "economic_or_transport_failure": [
+        "A"
+      ],
+      "information_failure": [
+        "C",
+        "D"
+      ],
+      "passes": true
+    },
+    "without_C": {
+      "economic_or_transport_failure": [
+        "A",
+        "B"
+      ],
+      "information_failure": [
+        "D"
+      ],
+      "passes": true
+    },
+    "without_D": {
+      "economic_or_transport_failure": [
+        "A",
+        "B"
+      ],
+      "information_failure": [
+        "C"
+      ],
+      "passes": true
+    }
+  },
+  "live_trading_authorized": false,
+  "new_market_data": 0,
+  "new_oos_consumed": 0,
+  "new_target_returns": 0,
+  "next_strategy_facing_action": "Continue immutable BTC-USDT and ETH-USDT E2160 shadow. Any candidate must add materially orthogonal causal information and be preregistered before target-return access.",
+  "observation_epoch_restarted": false,
+  "paper_trading_authorized": false,
+  "parameter_grid_count": 0,
+  "research_parent": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "schema_version": "strategy-family-closure-evidence-v1",
+  "scope_limit": "Closes direct own-price renewal/event-clock timing and its threshold, window, age and bridge variants under this evidence programme; it does not claim every path-dependent signal is impossible.",
+  "verdict": "close_causal_own_price_event_clock_renewal_timing_family_1h_v1"
+}
