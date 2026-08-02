@@ -74,9 +74,7 @@ def build_leave_one_out(
     rows: list[dict[str, Any]] = []
     for omitted in [group["group_id"] for group in groups]:
         retained = [group for group in groups if group["group_id"] != omitted]
-        supportive_groups = [
-            group["group_id"] for group in retained if group_supportive(group)
-        ]
+        supportive_groups = [group["group_id"] for group in retained if group_supportive(group)]
         rows.append(
             {
                 "omitted_group": omitted,
@@ -95,34 +93,25 @@ def build_summary(
     return {
         "bound_groups": len(groups),
         "source_feasible_groups": sum(
-            bool(group["source_contract"]["direct_public_1h_feasible"])
-            for group in groups
+            bool(group["source_contract"]["direct_public_1h_feasible"]) for group in groups
         ),
-        "executable_economics_groups": sum(
-            bool(group["executable_economics"]) for group in groups
-        ),
+        "executable_economics_groups": sum(bool(group["executable_economics"]) for group in groups),
         "bilateral_benchmark_supported_groups": sum(
             bool(group["bilateral_benchmark_support"]) for group in groups
         ),
         "bilateral_adverse_or_drawdown_supported_groups": sum(
-            bool(group["bilateral_adverse_or_drawdown_support"])
-            for group in groups
+            bool(group["bilateral_adverse_or_drawdown_support"]) for group in groups
         ),
         "bilateral_dependence_supported_groups": sum(
             bool(group["bilateral_dependence_support"]) for group in groups
         ),
         "bilateral_breadth_and_delay_supported_groups": sum(
-            bool(group["bilateral_breadth_and_delay_support"])
-            for group in groups
+            bool(group["bilateral_breadth_and_delay_support"]) for group in groups
         ),
         "supportive_groups": sum(group_supportive(group) for group in groups),
-        "supportive_leave_one_out_subsets": sum(
-            bool(row["supportive"]) for row in leave_one_out
-        ),
+        "supportive_leave_one_out_subsets": sum(bool(row["supportive"]) for row in leave_one_out),
         "closure_candidate_count": 0,
-        "bound_historical_candidate_paths": sum(
-            int(group["candidate_count"]) for group in groups
-        ),
+        "bound_historical_candidate_paths": sum(int(group["candidate_count"]) for group in groups),
         "parameter_grid_count": 0,
         "new_market_data": 0,
         "new_target_returns": 0,
@@ -137,9 +126,7 @@ def build_gates(
     summary: dict[str, Any],
 ) -> dict[str, bool]:
     terminal_identities_bound = all(
-        family["terminal_verdict"]
-        and family["issues"]
-        and family["target_arms"]
+        family["terminal_verdict"] and family["issues"] and family["target_arms"]
         for group in groups
         for family in group["families"]
     )
@@ -153,8 +140,7 @@ def build_gates(
     )
     return {
         "all_eight_group_identities_bound": (
-            len(groups) == 8
-            and [group["group_id"] for group in groups] == list("ABCDEFGH")
+            len(groups) == 8 and [group["group_id"] for group in groups] == list("ABCDEFGH")
         ),
         "all_terminal_family_records_bound": terminal_identities_bound,
         "causal_1h_and_exact_5bps_boundary_preserved": (
@@ -176,9 +162,7 @@ def build_gates(
             summary["bilateral_breadth_and_delay_supported_groups"] == 0
         ),
         "zero_supportive_groups": summary["supportive_groups"] == 0,
-        "leave_one_group_out_zero_support": (
-            summary["supportive_leave_one_out_subsets"] == 0
-        ),
+        "leave_one_group_out_zero_support": (summary["supportive_leave_one_out_subsets"] == 0),
         "closure_scope_limited_to_consumed_mechanisms": True,
     }
 
@@ -268,26 +252,12 @@ def build_report(evidence: dict[str, Any]) -> str:
         "|---|---|---:|---:|---:|---:|---:|---:|",
     ]
     for group in evidence["groups"]:
-        source = (
-            "pass"
-            if group["source_contract"]["direct_public_1h_feasible"]
-            else "fail"
-        )
+        source = "pass" if group["source_contract"]["direct_public_1h_feasible"] else "fail"
         economics = "yes" if group["executable_economics"] else "diagnostic"
         benchmark = "pass" if group["bilateral_benchmark_support"] else "fail"
-        risk = (
-            "pass"
-            if group["bilateral_adverse_or_drawdown_support"]
-            else "fail"
-        )
-        dependence = (
-            "pass" if group["bilateral_dependence_support"] else "fail"
-        )
-        breadth = (
-            "pass"
-            if group["bilateral_breadth_and_delay_support"]
-            else "fail"
-        )
+        risk = "pass" if group["bilateral_adverse_or_drawdown_support"] else "fail"
+        dependence = "pass" if group["bilateral_dependence_support"] else "fail"
+        breadth = "pass" if group["bilateral_breadth_and_delay_support"] else "fail"
         lines.append(
             f"| {group['group_id']} | {group['mechanism']} | {source} | "
             f"{economics} | {benchmark} | {risk} | {dependence} | "
@@ -375,12 +345,9 @@ def main() -> None:
     args = parser.parse_args()
 
     if len(args.tested_head) != 40 or any(
-        character not in "0123456789abcdef"
-        for character in args.tested_head
+        character not in "0123456789abcdef" for character in args.tested_head
     ):
-        raise SystemExit(
-            "tested head must be a lowercase 40-character git SHA"
-        )
+        raise SystemExit("tested head must be a lowercase 40-character git SHA")
 
     groups = load_groups()
     leave_one_out = build_leave_one_out(groups)
@@ -430,9 +397,7 @@ def main() -> None:
         "groups": groups,
         "leave_one_group_out": leave_one_out,
         "gates": gates,
-        "strongest_single_market_result": strongest_single_market_result(
-            groups
-        ),
+        "strongest_single_market_result": strongest_single_market_result(groups),
         "closed_rescue_surface": [
             "alternative rolling windows lags smoothing scaling or clipping",
             "squared versus absolute returns or rank versus Pearson correlation",
