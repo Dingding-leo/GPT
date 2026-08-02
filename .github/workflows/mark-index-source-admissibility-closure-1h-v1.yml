@@ -1,0 +1,115 @@
+name: Mark Index Source Admissibility Closure 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_mark_index_source_admissibility_closure_1h_v1.py"
+      - ".github/workflows/mark-index-source-admissibility-closure-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mark-index-source-admissibility-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  admissibility-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/research/mark-index-source-admissibility-closure-1h-v1
+      ARTIFACT_NAME: mark-index-source-admissibility-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify completed-evidence-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          ! grep -EIn '(urllib|requests\.|httpx|aiohttp|/private/|place_order\(|create_order\()' \
+            scripts/run_mark_index_source_admissibility_closure_1h_v1.py
+
+      - name: Build deterministic admissibility closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/run_mark_index_source_admissibility_closure_1h_v1.py
+          python scripts/run_mark_index_source_admissibility_closure_1h_v1.py \
+            --tested-head "$EXPECTED_TESTED_SHA" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify machine-readable terminal verdict
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          test -s "$OUTPUT_DIR/report.sha256"
+          expected="$(cat "$OUTPUT_DIR/evidence.sha256")"
+          actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = json.loads((Path(os.environ["OUTPUT_DIR"]) / "evidence.json").read_text())
+          assert evidence["family_id"] == "causal-mark-index-source-admissibility-closure-1h-v1"
+          assert evidence["tested_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["repository_main"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["bar"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["architecture_group_count"] == 3
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["new_market_data"] == 0
+          assert evidence["new_target_returns"] == 0
+          assert evidence["new_oos_consumed"] == 0
+          assert evidence["economically_supportive_group_count"] == 0
+          assert evidence["dependence_supported_group_count"] == 0
+          assert evidence["bilaterally_promoted_group_count"] == 0
+          assert evidence["admissibility_gate_pass_count"] == 2
+          assert evidence["admissibility_gate_count"] == 8
+          assert evidence["leave_one_group_out_admissible_count"] == 0
+          assert evidence["protocol_conflict"]["issue"] == 944
+          assert evidence["protocol_conflict"]["admissible"] is False
+          source_group = evidence["evidence_groups"][2]
+          assert source_group["source_contract_passed"] is True
+          assert source_group["source_arms_passing"] == 4
+          assert source_group["source_arm_count"] == 4
+          assert source_group["candidate_count"] == 0
+          assert source_group["performance_accessed"] is False
+          assert source_group["oos_accessed"] is False
+          assert all(
+              all(value is None for value in group["economics"].values())
+              for group in evidence["evidence_groups"]
+          )
+          assert evidence["training_authorized_correction"]["permitted"] is False
+          assert evidence["training_authorized_correction"]["applied"] is False
+          assert evidence["training_authorized_correction"]["observation_epoch_restarted"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert evidence["verdict"] == "reject_reopening_causal_mark_index_basis_strategy_family_1h_v1"
+          PY
+
+      - name: Upload immutable closure evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
