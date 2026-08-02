@@ -1,0 +1,223 @@
+        [hour_of_week(int(open_ms[index])) for index in baseline_indices],
+        dtype=int,
+    )
+    recent_bins = np.array(
+        [hour_of_week(int(open_ms[index])) for index in recent_indices],
+        dtype=int,
+    )
+    baseline_counts = np.bincount(baseline_bins, minlength=168)
+    recent_counts = np.bincount(recent_bins, minlength=168)
+    if not np.all(baseline_counts == 8):
+        return {
+            "valid": False,
+            "reason": "baseline UTC-bin coverage is not exactly eight per bin",
+            "baseline_min_count": int(baseline_counts.min()),
+            "baseline_max_count": int(baseline_counts.max()),
+        }
+    if not np.all(recent_counts == 1):
+        return {
+            "valid": False,
+            "reason": "recent UTC-bin coverage is not exactly one per bin",
+            "recent_min_count": int(recent_counts.min()),
+            "recent_max_count": int(recent_counts.max()),
+        }
+    mu = np.empty(168, dtype=float)
+    recent_by_bin = np.empty(168, dtype=float)
+    for bin_id in range(168):
+        mu[bin_id] = float(baseline_returns[baseline_bins == bin_id].mean())
+        recent_by_bin[bin_id] = float(recent_returns[recent_bins == bin_id][0])
+    template = mu - mu.mean()
+    recent_centered = recent_by_bin - recent_by_bin.mean()
+    template_norm = float(np.dot(template, template))
+    if not math.isfinite(template_norm) or template_norm <= 0:
+        return {
+            "valid": False,
+            "reason": "zero or non-finite centred template norm",
+        }
+    phase_beta = float(np.dot(recent_centered, template) / template_norm)
+    next_bins = np.array(
+        [hour_of_week(int(open_ms[t] + offset * HOUR_MS)) for offset in range(24)],
+        dtype=int,
+    )
+    next24_template_sum = float(template[next_bins].sum())
+    projection = float(phase_beta * next24_template_sum)
+    if not all(math.isfinite(value) for value in (phase_beta, next24_template_sum, projection)):
+        return {
+            "valid": False,
+            "reason": "non-finite seasonal projection",
+        }
+    return {
+        "valid": True,
+        "baseline_min_bin_count": int(baseline_counts.min()),
+        "baseline_max_bin_count": int(baseline_counts.max()),
+        "recent_min_bin_count": int(recent_counts.min()),
+        "recent_max_bin_count": int(recent_counts.max()),
+        "template_norm": template_norm,
+        "phase_beta": phase_beta,
+        "next24_template_sum": next24_template_sum,
+        "seasonal_projection": projection,
+        "next24_bins": next_bins.tolist(),
+    }
+
+
+def first_daily_anchor() -> int:
+    minimum = 2185
+    return ((minimum + 23) // 24) * 24
+
+
+def opportunities(series: Any, end: int) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if end < TRAIN_END:
+        raise ValueError("analysis prefix must include the full frozen training region")
+    grid_audit = source_grid_audit(series, end)
+    open_ms = np.asarray(series.open_ms[:TRAIN_END], dtype=np.int64)
+    returns = completed_log_returns(series, TRAIN_END)
+    records: list[dict[str, Any]] = []
+    invalid_feature_anchors = 0
+    ineligible_e2160 = 0
+    evaluated_daily_anchors = 0
+    exact_bin_coverage_anchors = 0
+    for t in range(first_daily_anchor(), TRAIN_END - 25, 24):
+        evaluated_daily_anchors += 1
+        own_e2160_positive = series.closes[t - 25] > series.closes[t - 2185]
+        if not own_e2160_positive:
+            ineligible_e2160 += 1
+            continue
+        feature = seasonal_feature(returns, open_ms, t)
+        if not feature["valid"]:
+            invalid_feature_anchors += 1
+            continue
+        exact_bin_coverage_anchors += 1
+        entry = float(series.opens[t])
+        exit_price = float(series.opens[t + 24])
+        delayed_entry = float(series.opens[t + 1])
+        delayed_exit = float(series.opens[t + 25])
+        path = np.asarray(series.opens[t : t + 25], dtype=float) / entry - 1.0
+        delayed_path = (
+            np.asarray(series.opens[t + 1 : t + 26], dtype=float)
+            / delayed_entry
+            - 1.0
+        )
+        records.append(
+            {
+                "decision_index": t,
+                "execution_open_ms": int(series.open_ms[t]),
+                "e2160_margin": float(
+                    math.log(series.closes[t - 25] / series.closes[t - 2185])
+                ),
+                "baseline_first_endpoint_index": t - 1536,
+                "baseline_last_endpoint_index": t - 193,
+                "recent_first_endpoint_index": t - 192,
+                "recent_last_endpoint_index": t - 25,
+                "seasonal_projection": float(feature["seasonal_projection"]),
+                "phase_beta": float(feature["phase_beta"]),
+                "next24_template_sum": float(feature["next24_template_sum"]),
+                "template_norm": float(feature["template_norm"]),
+                "baseline_min_bin_count": int(feature["baseline_min_bin_count"]),
+                "baseline_max_bin_count": int(feature["baseline_max_bin_count"]),
+                "recent_min_bin_count": int(feature["recent_min_bin_count"]),
+                "recent_max_bin_count": int(feature["recent_max_bin_count"]),
+                "next24_bins": feature["next24_bins"],
+                "net_24h": float(exit_price / entry - 1.0 - ROUND_TRIP_FEE),
+                "adverse_24h": float(np.min(path)),
+                "delayed_net_24h": float(
+                    delayed_exit / delayed_entry - 1.0 - ROUND_TRIP_FEE
+                ),
+                "delayed_adverse_24h": float(np.min(delayed_path)),
+            }
+        )
+    audit = {
+        **grid_audit,
+        "evaluated_daily_anchors": evaluated_daily_anchors,
+        "invalid_feature_anchors": invalid_feature_anchors,
+        "ineligible_e2160_anchors": ineligible_e2160,
+        "exact_bin_coverage_anchors": exact_bin_coverage_anchors,
+        "latest_feature_endpoint_index": max(
+            (record["decision_index"] - 25 for record in records),
+            default=None,
+        ),
+        "latest_delayed_label_endpoint_index": max(
+            (record["decision_index"] + 25 for record in records),
+            default=None,
+        ),
+    }
+    return records, audit
+
+
+def fold_audit(records: list[dict[str, Any]]) -> dict[str, Any]:
+    folds: list[dict[str, Any]] = []
+    for number in range(4):
+        start = WARMUP + number * 2160
+        end = start + 2160
+        subset = [
+            record
+            for record in records
+            if start <= record["decision_index"] < end
+        ]
+        if len(subset) >= 3:
+            x = np.array([record["seasonal_projection"] for record in subset])
+            net = np.array([record["net_24h"] for record in subset])
+            adverse = np.array([record["adverse_24h"] for record in subset])
+            net_slope = standardized_slope(x, net)
+            adverse_slope = standardized_slope(x, adverse)
+        else:
+            net_slope = None
+            adverse_slope = None
+        folds.append(
+            {
+                "fold": number + 1,
+                "start_index": start,
+                "end_index": end,
+                "opportunities": len(subset),
+                "net_standardized_slope": net_slope,
+                "adverse_standardized_slope": adverse_slope,
+            }
+        )
+    positive_net = [
+        float(fold["net_standardized_slope"])
+        for fold in folds
+        if fold["net_standardized_slope"] is not None
+        and float(fold["net_standardized_slope"]) > 0
+    ]
+    return {
+        "folds": folds,
+        "positive_net_slope_folds": len(positive_net),
+        "positive_adverse_slope_folds": sum(
+            fold["adverse_standardized_slope"] is not None
+            and float(fold["adverse_standardized_slope"]) > 0
+            for fold in folds
+        ),
+        "largest_positive_net_slope_share": (
+            max(positive_net) / sum(positive_net) if positive_net else None
+        ),
+    }
+
+
+def truncated_series(base: Any, series: Any, end: int) -> Any:
+    return base.Series(
+        inst_id=series.inst_id,
+        open_ms=series.open_ms[:end],
+        opens=series.opens[:end],
+        highs=series.highs[:end],
+        lows=series.lows[:end],
+        closes=series.closes[:end],
+        normalized_sha256="training-prefix-only",
+        manifest=(),
+        instrument_evidence={},
+    )
+
+
+def source_prefix_projection(series: Any, end: int) -> list[dict[str, float | int]]:
+    return [
+        {
+            "open_ms": int(series.open_ms[index]),
+            "open": float(series.opens[index]),
+            "high": float(series.highs[index]),
+            "low": float(series.lows[index]),
+            "close": float(series.closes[index]),
+        }
+        for index in range(end)
+    ]
+
+
+def feature_projection(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
