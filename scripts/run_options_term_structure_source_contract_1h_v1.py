@@ -11,7 +11,9 @@ from pathlib import Path
 from typing import Any
 
 FAMILY_ID = "causal-options-term-structure-shape-source-contract-1h-v1"
-PASS_VERDICT = "accept_options_term_structure_shape_1h_source_for_separate_training_only_predeclaration"
+PASS_VERDICT = (
+    "accept_options_term_structure_shape_1h_source_for_separate_training_only_predeclaration"
+)
 FAIL_VERDICT = "reject_causal_options_term_structure_shape_source_contract_1h_v1"
 REPOSITORY_MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
 START = "2023-04-01T00:00:00Z"
@@ -51,7 +53,10 @@ INTERFACES: tuple[dict[str, Any], ...] = (
     {
         "interface_id": "deribit_volatility_index_data",
         "provider": "Deribit",
-        "url": "https://docs.deribit.com/api-reference/market-data/public-get_volatility_index_data.md",
+        "url": (
+            "https://docs.deribit.com/api-reference/market-data/"
+            "public-get_volatility_index_data.md"
+        ),
         "documented_object": "aggregate provider volatility-index OHLC history",
         "historical": True,
         "direct_1h": True,
@@ -61,13 +66,19 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "direct_term_structure_shape": False,
         "reconstruction_required": False,
         "bilateral_btc_eth": True,
-        "failure_reason": "one aggregate forward-IV index per currency; no near/far maturity dimension",
+        "failure_reason": (
+            "one aggregate forward-IV index per currency; "
+            "no near/far maturity dimension"
+        ),
         "markers": ("volatility index", "3600", "open", "high", "low", "close"),
     },
     {
         "interface_id": "deribit_mark_price_history",
         "provider": "Deribit",
-        "url": "https://docs.deribit.com/api-reference/market-data/public-get_mark_price_history.md",
+        "url": (
+            "https://docs.deribit.com/api-reference/market-data/"
+            "public-get_mark_price_history.md"
+        ),
         "documented_object": "per-instrument historical mark prices",
         "historical": True,
         "direct_1h": False,
@@ -77,7 +88,10 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "direct_term_structure_shape": False,
         "reconstruction_required": True,
         "bilateral_btc_eth": True,
-        "failure_reason": "5-minute per-contract mark history requires dynamic option/expiry/strike reconstruction",
+        "failure_reason": (
+            "5-minute per-contract mark history requires dynamic "
+            "option/expiry/strike reconstruction"
+        ),
         "markers": ("instrument_name", "start_timestamp", "end_timestamp"),
     },
     {
@@ -93,13 +107,19 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "direct_term_structure_shape": False,
         "reconstruction_required": True,
         "bilateral_btc_eth": True,
-        "failure_reason": "current per-option snapshot; no direct historical hourly maturity-shape series",
+        "failure_reason": (
+            "current per-option snapshot; no direct historical hourly "
+            "maturity-shape series"
+        ),
         "markers": ("mark_iv", "bid_iv", "ask_iv", "instrument_name"),
     },
     {
         "interface_id": "deribit_historical_volatility",
         "provider": "Deribit",
-        "url": "https://docs.deribit.com/api-reference/market-data/public-get_historical_volatility",
+        "url": (
+            "https://docs.deribit.com/api-reference/market-data/"
+            "public-get_historical_volatility"
+        ),
         "documented_object": "historical realised-volatility observations",
         "historical": True,
         "direct_1h": True,
@@ -109,7 +129,10 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "direct_term_structure_shape": False,
         "reconstruction_required": False,
         "bilateral_btc_eth": True,
-        "failure_reason": "backward-looking realised volatility, not option-implied maturity term structure",
+        "failure_reason": (
+            "backward-looking realised volatility, not option-implied "
+            "maturity term structure"
+        ),
         "markers": ("historical volatility", "currency"),
     },
     {
@@ -125,7 +148,10 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "direct_term_structure_shape": False,
         "reconstruction_required": False,
         "bilateral_btc_eth": True,
-        "failure_reason": "periods are historical-volatility lookbacks, not option expiry tenors or forward IV",
+        "failure_reason": (
+            "periods are historical-volatility lookbacks, not option "
+            "expiry tenors or forward IV"
+        ),
         "markers": ("historical volatility", "period", "7", "14", "30", "180"),
     },
     {
@@ -141,14 +167,19 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "direct_term_structure_shape": False,
         "reconstruction_required": True,
         "bilateral_btc_eth": True,
-        "failure_reason": "recent per-contract trades require chain, expiry and moneyness reconstruction",
+        "failure_reason": (
+            "recent per-contract trades require chain, expiry and "
+            "moneyness reconstruction"
+        ),
         "markers": ("option trades", "instId", "tradeId"),
     },
 )
 
 
 def canonical(value: Any) -> bytes:
-    return (json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n").encode()
+    return (
+        json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False) + "\n"
+    ).encode()
 
 
 def digest(value: bytes) -> str:
@@ -234,11 +265,17 @@ def render_report(evidence: dict[str, Any]) -> str:
     for interface in evidence["interfaces"]:
         rows.append(
             "| {provider} | {interface_id} | {historical} | {direct_1h} | {implied_volatility} | "
-            "{fixed_maturity_dimension} | {reconstruction_required} | {qualifies_direct_source_contract} | {failure_reason} |".format(
+            "{fixed_maturity_dimension} | {reconstruction_required} | "
+            "{qualifies_direct_source_contract} | {failure_reason} |".format(
                 **interface
             )
         )
     table = "\n".join(rows)
+    table_header = (
+        "| Provider | Interface | Historical | Direct 1H | Implied vol | "
+        "Fixed maturity | Reconstruction | Qualifies | Terminal reason |"
+    )
+    table_separator = "|---|---|---:|---:|---:|---:|---:|---:|---|"
     gates = "\n".join(
         f"- Gate {index}: {'PASS' if gate['passed'] else 'FAIL'} — {gate['name']}"
         for index, gate in enumerate(evidence["source_gates"], start=1)
@@ -246,33 +283,41 @@ def render_report(evidence: dict[str, Any]) -> str:
     return f"""# Direct public 1H options term-structure source contract
 
 ```text
-family                 {evidence['family_id']}
-tested head            {evidence['tested_head']}
+family                 {evidence["family_id"]}
+tested head            {evidence["tested_head"]}
 fixed arms             BTC options -> BTC-USDT; ETH options -> ETH-USDT
-source interval        {evidence['source_interval']['start']} through {evidence['source_interval']['end']}
-expected rows          {evidence['source_interval']['expected_rows']} per arm
-interfaces audited     {len(evidence['interfaces'])}
-qualifying interfaces  {evidence['qualifying_interface_count']}
-source arms passing    {evidence['markets_passing_source_contract']}/2
+source interval        {evidence["source_interval"]["start"]}
+                       through {evidence["source_interval"]["end"]}
+expected rows          {evidence["source_interval"]["expected_rows"]} per arm
+interfaces audited     {len(evidence["interfaces"])}
+qualifying interfaces  {evidence["qualifying_interface_count"]}
+source arms passing    {evidence["markets_passing_source_contract"]}/2
 candidate count        0
 performance accessed   no
 OOS accessed           no
-verdict                {evidence['verdict']}
+verdict                {evidence["verdict"]}
 ```
 
 ## Interface audit
 
-| Provider | Interface | Historical | Direct 1H | Implied vol | Fixed maturity | Reconstruction | Qualifies | Terminal reason |
-|---|---|---:|---:|---:|---:|---:|---:|---|
+{table_header}
+{table_separator}
 {table}
 
 ## Frozen source gates
 
 {gates}
 
-No reviewed official interface supplies a provider-defined historical BTC and ETH near-versus-far implied-volatility shape at direct UTC 1H resolution. Aggregate DVOL lacks a maturity axis; historical-volatility endpoints are realised-volatility series; option ticker, trade and mark-price interfaces are current, recent, per-contract or sub-hourly and require prohibited chain/expiry/strike reconstruction.
+No reviewed official interface supplies a provider-defined historical BTC and ETH
+near-versus-far implied-volatility shape at direct UTC 1H resolution. Aggregate
+DVOL lacks a maturity axis; historical-volatility endpoints are realised-volatility
+series; option ticker, trade and mark-price interfaces are current, recent,
+per-contract or sub-hourly and require prohibited chain/expiry/strike reconstruction.
 
-No target prices, returns, feature states, candidate economics or sealed OOS values were accessed. All economic fields are null rather than zero. The result rejects this exact direct-public source architecture, not the economic possibility that options term structure contains information.
+No target prices, returns, feature states, candidate economics or sealed OOS values
+were accessed. All economic fields are null rather than zero. The result rejects
+this exact direct-public source architecture, not the economic possibility that
+options term structure contains information.
 """
 
 
@@ -283,16 +328,43 @@ def run(tested_head: str, output_dir: Path) -> dict[str, Any]:
     source_passed = bool(qualifying)
 
     source_gates = [
-        {"name": "official interface catalog retrieved and hash-bound", "passed": all(item["retrieval_succeeded"] for item in interfaces)},
-        {"name": "provider-defined implied volatility rather than realised volatility", "passed": any(item["implied_volatility"] for item in qualifying)},
-        {"name": "fixed provider-defined near/far maturity dimension", "passed": any(item["fixed_maturity_dimension"] for item in qualifying)},
-        {"name": "direct provider 1H historical observations", "passed": any(item["historical"] and item["direct_1h"] for item in qualifying)},
-        {"name": "no option-chain, strike, expiry or moneyness reconstruction", "passed": any(not item["reconstruction_required"] for item in qualifying)},
-        {"name": "complete frozen bilateral BTC and ETH coverage possible", "passed": source_passed},
-        {"name": "causal availability and replayable pagination can be established", "passed": source_passed},
-        {"name": "repeat acquisition and future-prefix invariance can be established", "passed": source_passed},
+        {
+            "name": "official interface catalog retrieved and hash-bound",
+            "passed": all(item["retrieval_succeeded"] for item in interfaces),
+        },
+        {
+            "name": "provider-defined implied volatility rather than realised volatility",
+            "passed": any(item["implied_volatility"] for item in qualifying),
+        },
+        {
+            "name": "fixed provider-defined near/far maturity dimension",
+            "passed": any(item["fixed_maturity_dimension"] for item in qualifying),
+        },
+        {
+            "name": "direct provider 1H historical observations",
+            "passed": any(item["historical"] and item["direct_1h"] for item in qualifying),
+        },
+        {
+            "name": "no option-chain, strike, expiry or moneyness reconstruction",
+            "passed": any(not item["reconstruction_required"] for item in qualifying),
+        },
+        {
+            "name": "complete frozen bilateral BTC and ETH coverage possible",
+            "passed": source_passed,
+        },
+        {
+            "name": "causal availability and replayable pagination can be established",
+            "passed": source_passed,
+        },
+        {
+            "name": "repeat acquisition and future-prefix invariance can be established",
+            "passed": source_passed,
+        },
         {"name": "prohibited trading and private capabilities absent", "passed": True},
-        {"name": "missing or ambiguous source fails closed before performance", "passed": not source_passed},
+        {
+            "name": "missing or ambiguous source fails closed before performance",
+            "passed": not source_passed,
+        },
     ]
 
     evidence = {
@@ -343,7 +415,10 @@ def run(tested_head: str, output_dir: Path) -> dict[str, Any]:
         "paper_trading_authorized": False,
         "live_trading_authorized": False,
         "verdict": PASS_VERDICT if source_passed else FAIL_VERDICT,
-        "remaining_blocker": "no direct provider-defined credential-free historical BTC/ETH 1H implied-volatility maturity-shape series",
+        "remaining_blocker": (
+            "no direct provider-defined credential-free historical BTC/ETH "
+            "1H implied-volatility maturity-shape series"
+        ),
     }
 
     manifest = {
@@ -381,7 +456,15 @@ def main() -> None:
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
     evidence = run(args.tested_head, args.output_dir)
-    print(json.dumps({"verdict": evidence["verdict"], "qualifying_interfaces": evidence["qualifying_interface_count"]}, sort_keys=True))
+    print(
+        json.dumps(
+            {
+                "verdict": evidence["verdict"],
+                "qualifying_interfaces": evidence["qualifying_interface_count"],
+            },
+            sort_keys=True,
+        )
+    )
 
 
 if __name__ == "__main__":
