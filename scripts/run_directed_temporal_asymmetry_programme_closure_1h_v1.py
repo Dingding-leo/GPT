@@ -74,9 +74,7 @@ def build_leave_one_out(groups: list[dict[str, Any]]) -> list[dict[str, Any]]:
     rows = []
     for omitted in [group["group_id"] for group in groups]:
         retained = [group for group in groups if group["group_id"] != omitted]
-        supportive = [
-            group["group_id"] for group in retained if group_supportive(group)
-        ]
+        supportive = [group["group_id"] for group in retained if group_supportive(group)]
         rows.append(
             {
                 "omitted_group": omitted,
@@ -95,29 +93,17 @@ def build_summary(
     groups = records["groups"]
     return {
         "bound_groups": len(groups),
-        "bound_historical_candidates": sum(
-            int(group["candidate_count"]) for group in groups
-        ),
-        "executable_groups": sum(
-            group["classification"] == "executable" for group in groups
-        ),
-        "diagnostic_groups": sum(
-            group["classification"] != "executable" for group in groups
-        ),
-        "supportive_individual_groups": sum(
-            group_supportive(group) for group in groups
-        ),
-        "supportive_leave_one_out_subsets": sum(
-            row["supportive"] for row in leave_one_out
-        ),
+        "bound_historical_candidates": sum(int(group["candidate_count"]) for group in groups),
+        "executable_groups": sum(group["classification"] == "executable" for group in groups),
+        "diagnostic_groups": sum(group["classification"] != "executable" for group in groups),
+        "supportive_individual_groups": sum(group_supportive(group) for group in groups),
+        "supportive_leave_one_out_subsets": sum(row["supportive"] for row in leave_one_out),
         "closure_candidate_count": records["candidate_count"],
         "parameter_grid_count": records["parameter_grid_count"],
         "new_market_data": records["new_market_data"],
         "new_target_labels": records["new_target_labels"],
         "new_oos_consumed": records["new_oos_consumed"],
-        "performance_accessed_in_closure": records[
-            "performance_accessed_in_closure"
-        ],
+        "performance_accessed_in_closure": records["performance_accessed_in_closure"],
     }
 
 
@@ -344,9 +330,7 @@ def main() -> None:
 
 
 def re_full_sha(value: str) -> bool:
-    return len(value) == 40 and all(
-        character in "0123456789abcdef" for character in value
-    )
+    return len(value) == 40 and all(character in "0123456789abcdef" for character in value)
 
 
 if __name__ == "__main__":
