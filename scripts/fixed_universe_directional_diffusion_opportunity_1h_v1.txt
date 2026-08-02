@@ -1,0 +1,534 @@
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import math
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+FAMILY = "causal-fixed-universe-directional-diffusion-opportunity-1h-v1"
+ACCEPT = "accept_causal_fixed_universe_directional_diffusion_information_premise_1h_v1"
+REJECT = "reject_causal_fixed_universe_directional_diffusion_information_premise_1h_v1"
+MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+UNIVERSE = (
+    "BTC-USDT", "ETH-USDT", "SOL-USDT", "XRP-USDT",
+    "ADA-USDT", "DOGE-USDT", "LTC-USDT", "BCH-USDT",
+)
+TARGETS = ("BTC-USDT", "ETH-USDT")
+WARMUP, TRAIN_END, OOS_END, FULL_END = 2160, 10800, 23760, 23760
+DRAWS, BLOCK, SEED = 5000, 7, 2026080219
+FEE = 0.0005
+
+
+def load_base(path: str) -> Any:
+    spec = importlib.util.spec_from_file_location("frozen_okx_base", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load frozen acquisition base")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def corr(x: np.ndarray, y: np.ndarray) -> float:
+    xc, yc = x - x.mean(), y - y.mean()
+    den = math.sqrt(float(np.sum(xc * xc) * np.sum(yc * yc)))
+    return float(np.sum(xc * yc) / den) if den > 0 else float("nan")
+
+
+def ranks(x: np.ndarray) -> np.ndarray:
+    order = np.argsort(x, kind="mergesort")
+    out = np.empty(len(x), dtype=float)
+    i = 0
+    while i < len(x):
+        j = i + 1
+        while j < len(x) and x[order[j]] == x[order[i]]:
+            j += 1
+        out[order[i:j]] = 0.5 * (i + j - 1) + 1
+        i = j
+    return out
+
+
+def rho(x: np.ndarray, y: np.ndarray) -> float:
+    return corr(ranks(x), ranks(y))
+
+
+def slope(x: np.ndarray, y: np.ndarray) -> float:
+    sx, sy = float(np.std(x, ddof=1)), float(np.std(y, ddof=1))
+    return corr(x, y) if sx > 0 and sy > 0 else float("nan")
+
+
+def effect(x: np.ndarray, net: np.ndarray, adverse: np.ndarray) -> dict[str, Any]:
+    lo, hi = float(np.quantile(x, 1 / 3)), float(np.quantile(x, 2 / 3))
+    low, high = x <= lo, x >= hi
+    return {
+        "lower_cut": lo,
+        "upper_cut": hi,
+        "lower_count": int(low.sum()),
+        "upper_count": int(high.sum()),
+        "net_upper_minus_lower": float(net[high].mean() - net[low].mean()),
+        "adverse_upper_minus_lower": float(
+            adverse[high].mean() - adverse[low].mean()
+        ),
+        "lower_net_mean": float(net[low].mean()),
+        "upper_net_mean": float(net[high].mean()),
+        "lower_adverse_mean": float(adverse[low].mean()),
+        "upper_adverse_mean": float(adverse[high].mean()),
+    }
+
+
+def stats(x: np.ndarray, net: np.ndarray, adverse: np.ndarray) -> dict[str, float]:
+    return {
+        "net_spearman": rho(x, net),
+        "adverse_spearman": rho(x, adverse),
+        "net_standardized_slope": slope(x, net),
+        "adverse_standardized_slope": slope(x, adverse),
+    }
+
+
+def bootstrap(x: np.ndarray, net: np.ndarray, adverse: np.ndarray) -> dict[str, Any]:
+    n = len(x)
+    blocks = math.ceil(n / BLOCK)
+    rng = np.random.default_rng(SEED)
+    names = tuple(stats(x, net, adverse))
+    values = {name: np.empty(DRAWS) for name in names}
+    for draw in range(DRAWS):
+        starts = rng.integers(0, n - BLOCK + 1, size=blocks)
+        idx = (
+            starts[:, None] + np.arange(BLOCK)[None, :]
+        ).reshape(-1)[:n]
+        record = stats(x[idx], net[idx], adverse[idx])
+        for name in names:
+            values[name][draw] = record[name]
+    result = {}
+    for name in names:
+        if not np.isfinite(values[name]).all():
+            raise ValueError(f"non-finite bootstrap values for {name}")
+        q = np.percentile(values[name], [2.5, 50, 97.5])
+        result[name] = {
+            "lower_95": float(q[0]),
+            "median": float(q[1]),
+            "upper_95": float(q[2]),
+            "nonpositive_mass": float(np.mean(values[name] <= 0)),
+        }
+    return {
+        "draws": DRAWS,
+        "block_opportunities": BLOCK,
+        "seed": SEED,
+        "non_circular_common_index": True,
+        "statistics": result,
+    }
+
+
+def diffusion(series: dict[str, Any], target: str, t: int) -> tuple[float, float, float]:
+    panel = [item for item in UNIVERSE if item != target]
+    s168 = [float(series[item].closes[t - 25] > series[item].closes[t - 193])
+            for item in panel]
+    s720 = [float(series[item].closes[t - 25] > series[item].closes[t - 745])
+            for item in panel]
+    b168, b720 = float(np.mean(s168)), float(np.mean(s720))
+    return b168, b720, 0.5 * (b168 + b720)
+
+
+def opportunities(series: dict[str, Any], target: str) -> list[dict[str, Any]]:
+    spot = series[target]
+    records = []
+    for t in range(WARMUP + 24, TRAIN_END - 24 + 1, 24):
+        margin = math.log(spot.closes[t - 1] / spot.closes[t - 2161])
+        if margin <= 0:
+            continue
+        b168, b720, value = diffusion(series, target, t)
+        records.append({
+            "decision_index": t,
+            "execution_open": int(spot.open_ms[t]),
+            "e2160_margin": margin,
+            "breadth168": b168,
+            "breadth720": b720,
+            "directional_diffusion": value,
+            "net_24h": float(
+                spot.opens[t + 24] / spot.opens[t] * (1 - FEE) ** 2 - 1
+            ),
+            "adverse_24h": float(
+                np.min(spot.lows[t:t + 24]) / spot.opens[t] - 1
+            ),
+            "delayed_net_24h": float(
+                spot.opens[t + 25] / spot.opens[t + 1] * (1 - FEE) ** 2 - 1
+            ),
+            "delayed_adverse_24h": float(
+                np.min(spot.lows[t + 1:t + 25]) / spot.opens[t + 1] - 1
+            ),
+        })
+    return records
+
+
+def fold_audit(records: list[dict[str, Any]]) -> dict[str, Any]:
+    folds = []
+    for number in range(4):
+        start, end = WARMUP + number * 2160, WARMUP + (number + 1) * 2160
+        subset = [r for r in records if start <= r["decision_index"] < end]
+        x = np.array([r["directional_diffusion"] for r in subset])
+        net = np.array([r["net_24h"] for r in subset])
+        adverse = np.array([r["adverse_24h"] for r in subset])
+        folds.append({
+            "fold": number + 1,
+            "start_index": start,
+            "end_index": end,
+            "opportunities": len(subset),
+            "net_standardized_slope": slope(x, net) if len(subset) >= 3 else None,
+            "adverse_standardized_slope": (
+                slope(x, adverse) if len(subset) >= 3 else None
+            ),
+        })
+    pos_net = [r["net_standardized_slope"] for r in folds
+               if r["net_standardized_slope"] is not None
+               and r["net_standardized_slope"] > 0]
+    return {
+        "folds": folds,
+        "positive_net_slope_folds": len(pos_net),
+        "positive_adverse_slope_folds": sum(
+            r["adverse_standardized_slope"] is not None
+            and r["adverse_standardized_slope"] > 0
+            for r in folds
+        ),
+        "largest_positive_net_slope_share": (
+            max(pos_net) / sum(pos_net) if pos_net else None
+        ),
+    }
+
+
+def analyse(base: Any, series: dict[str, Any], target: str) -> dict[str, Any]:
+    records = opportunities(series, target)
+    event_hash = base.sha256_bytes(base.canonical_bytes(records))
+    truncated = {
+        key: base.Series(
+            inst_id=value.inst_id,
+            open_ms=value.open_ms[:FULL_END],
+            opens=value.opens[:FULL_END],
+            highs=value.highs[:FULL_END],
+            lows=value.lows[:FULL_END],
+            closes=value.closes[:FULL_END],
+            normalized_sha256="prefix-only",
+            manifest=(),
+            instrument_evidence={},
+        )
+        for key, value in series.items()
+    }
+    prefix_hash = base.sha256_bytes(
+        base.canonical_bytes(opportunities(truncated, target))
+    )
+    x = np.array([r["directional_diffusion"] for r in records])
+    net = np.array([r["net_24h"] for r in records])
+    adverse = np.array([r["adverse_24h"] for r in records])
+    dnet = np.array([r["delayed_net_24h"] for r in records])
+    dadverse = np.array([r["delayed_adverse_24h"] for r in records])
+    values, counts = np.unique(x, return_counts=True)
+    distribution = {
+        "minimum": float(x.min()),
+        "q25": float(np.quantile(x, 0.25)),
+        "median": float(np.quantile(x, 0.5)),
+        "q75": float(np.quantile(x, 0.75)),
+        "maximum": float(x.max()),
+        "iqr": float(np.quantile(x, 0.75) - np.quantile(x, 0.25)),
+        "distinct_values": len(values),
+        "value_counts": {
+            f"{v:.12g}": int(c)
+            for v, c in zip(values, counts, strict=True)
+        },
+    }
+    association = stats(x, net, adverse)
+    effects = effect(x, net, adverse)
+    uncertainty = bootstrap(x, net, adverse)
+    folds = fold_audit(records)
+    delayed = {
+        "associations": stats(x, dnet, dadverse),
+        "tercile_effects": effect(x, dnet, dadverse),
+    }
+    u = uncertainty["statistics"]
+    da, de = delayed["associations"], delayed["tercile_effects"]
+    gates = {
+        "at_least_120_opportunities": len(records) >= 120,
+        "at_least_5_diffusion_values": distribution["distinct_values"] >= 5,
+        "iqr_at_least_one_seventh": distribution["iqr"] >= 1 / 7,
+        "terciles_each_at_least_35": (
+            effects["lower_count"] >= 35 and effects["upper_count"] >= 35
+        ),
+        "net_spearman_positive": association["net_spearman"] > 0,
+        "adverse_spearman_positive": association["adverse_spearman"] > 0,
+        "net_slope_positive": association["net_standardized_slope"] > 0,
+        "adverse_slope_positive": association["adverse_standardized_slope"] > 0,
+        "net_tercile_effect_positive": effects["net_upper_minus_lower"] > 0,
+        "adverse_tercile_effect_positive": (
+            effects["adverse_upper_minus_lower"] > 0
+        ),
+        "net_spearman_lower_95_positive": u["net_spearman"]["lower_95"] > 0,
+        "adverse_spearman_lower_95_positive": (
+            u["adverse_spearman"]["lower_95"] > 0
+        ),
+        "net_slope_lower_95_positive": (
+            u["net_standardized_slope"]["lower_95"] > 0
+        ),
+        "adverse_slope_lower_95_positive": (
+            u["adverse_standardized_slope"]["lower_95"] > 0
+        ),
+        "at_least_3_of_4_positive_net_folds": (
+            folds["positive_net_slope_folds"] >= 3
+        ),
+        "at_least_3_of_4_positive_adverse_folds": (
+            folds["positive_adverse_slope_folds"] >= 3
+        ),
+        "largest_positive_net_fold_share_at_most_60_percent": (
+            folds["largest_positive_net_slope_share"] is not None
+            and folds["largest_positive_net_slope_share"] <= 0.60
+        ),
+        "delayed_net_spearman_positive": da["net_spearman"] > 0,
+        "delayed_adverse_spearman_positive": da["adverse_spearman"] > 0,
+        "delayed_net_slope_positive": da["net_standardized_slope"] > 0,
+        "delayed_adverse_slope_positive": (
+            da["adverse_standardized_slope"] > 0
+        ),
+        "delayed_net_tercile_effect_positive": de["net_upper_minus_lower"] > 0,
+        "delayed_adverse_tercile_effect_positive": (
+            de["adverse_upper_minus_lower"] > 0
+        ),
+        "prefix_invariant": event_hash == prefix_hash,
+    }
+    return {
+        "target": target,
+        "panel": [item for item in UNIVERSE if item != target],
+        "opportunity_count": len(records),
+        "first_opportunity": base.utc_iso(records[0]["execution_open"]),
+        "last_opportunity": base.utc_iso(records[-1]["execution_open"]),
+        "distribution": distribution,
+        "associations": association,
+        "tercile_effects": effects,
+        "bootstrap": uncertainty,
+        "fold_audit": folds,
+        "one_hour_execution_delay": delayed,
+        "event_sha256": event_hash,
+        "prefix_event_sha256": prefix_hash,
+        "gates": gates,
+        "passes": all(gates.values()),
+        "strategy_metrics": {
+            "training": None, "oos": None, "full": None,
+            "benchmark_comparison": None, "turnover": None,
+            "maximum_drawdown": None, "edge_per_turnover": None,
+        },
+    }
+
+
+def report(e: dict[str, Any]) -> str:
+    lines = [
+        "# Fixed-universe directional-diffusion opportunity diagnostic",
+        "",
+        f"- Family: `{FAMILY}`",
+        f"- Exact head: `{e['exact_head']}`",
+        f"- Source contract: `{e['source_contract_passed']}`",
+        f"- Candidate count / grid: `0 / 0`",
+        f"- OOS accessed: `False`",
+        f"- Verdict: `{e['verdict']}`",
+        "",
+    ]
+    if not e["source_contract_passed"]:
+        return "\n".join(lines + [
+            "## Source rejection", "", e["highest_value_failure"], ""
+        ])
+    lines += [
+        "## Training-only information",
+        "",
+        "| Target | Anchors | IQR | Net rho | Adverse rho | Net slope | Adverse slope | Net folds | Adverse folds | Gates |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
+    ]
+    for t in e["targets"]:
+        a, f = t["associations"], t["fold_audit"]
+        lines.append(
+            f"| {t['target']} | {t['opportunity_count']} | "
+            f"{t['distribution']['iqr']:.6f} | {a['net_spearman']:+.6f} | "
+            f"{a['adverse_spearman']:+.6f} | "
+            f"{a['net_standardized_slope']:+.6f} | "
+            f"{a['adverse_standardized_slope']:+.6f} | "
+            f"{f['positive_net_slope_folds']}/4 | "
+            f"{f['positive_adverse_slope_folds']}/4 | "
+            f"{sum(t['gates'].values())}/{len(t['gates'])} |"
+        )
+    lines += [
+        "", "## Highest-value failure", "", e["highest_value_failure"], "",
+        "All strategy train/OOS/full, turnover, drawdown, benchmark and edge-per-turnover fields remain null because this zero-candidate diagnostic did not open sealed OOS.",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--base-script", required=True)
+    parser.add_argument("--tested-head", required=True)
+    parser.add_argument("--output-dir", required=True)
+    args = parser.parse_args()
+    base = load_base(args.base_script)
+    output = Path(args.output_dir)
+    source_root = output / "source"
+    output.mkdir(parents=True, exist_ok=True)
+    series, failures = {}, {}
+    for inst_id in UNIVERSE:
+        try:
+            series[inst_id] = base.acquire_series(inst_id, source_root)
+        except Exception as exc:
+            failures[inst_id] = f"{type(exc).__name__}: {exc}"
+    common_grid = len(series) == len(UNIVERSE) and all(
+        np.array_equal(series[UNIVERSE[0]].open_ms, series[item].open_ms)
+        for item in UNIVERSE[1:]
+    )
+    if len(series) == len(UNIVERSE) and not common_grid:
+        failures["common_grid"] = "fixed arms do not share one exact UTC grid"
+    source_pass = len(series) == len(UNIVERSE) and not failures and common_grid
+    manifest = {
+        "family_id": FAMILY,
+        "acquisition_base_sha256": base.sha256_bytes(
+            Path(args.base_script).read_bytes()
+        ),
+        "provider": "OKX public market data",
+        "bar": "1H",
+        "fixed_universe": list(UNIVERSE),
+        "expected_rows_per_series": base.EXPECTED_ROWS,
+        "series": {
+            key: {
+                "rows": len(value.open_ms),
+                "normalized_sha256": value.normalized_sha256,
+                "instrument_evidence": value.instrument_evidence,
+                "pages": list(value.manifest),
+            }
+            for key, value in series.items()
+        },
+        "failures": failures,
+        "common_grid": common_grid,
+        "source_contract_passed": source_pass,
+    }
+    manifest_hash = base.persist_json(output / "source_manifest.json", manifest)
+    targets = [analyse(base, series, t) for t in TARGETS] if source_pass else []
+    bilateral = bool(targets) and all(t["passes"] for t in targets)
+    if source_pass and not bilateral:
+        failed = []
+        for target in targets:
+            names = [k for k, v in target["gates"].items() if not v]
+            failed.append(f"{target['target']}: {', '.join(names)}")
+        highest = "Bilateral training information support failed: " + "; ".join(failed)
+    elif source_pass:
+        highest = (
+            "No information gate failed; only a separately preregistered "
+            "executable candidate may proceed."
+        )
+    else:
+        highest = "Source contract failed: " + "; ".join(
+            f"{k}: {v}" for k, v in failures.items()
+        )
+    evidence = {
+        "family_id": FAMILY,
+        "exact_head": args.tested_head,
+        "repository_main": MAIN,
+        "generated_at_utc": datetime.now(UTC).isoformat(),
+        "canonical_fee_bps_one_way": 5.0,
+        "bar_interval": "1H",
+        "candidate_count": 0,
+        "parameter_grid_count": 0,
+        "source_contract_passed": source_pass,
+        "source_failures": failures,
+        "source_manifest_sha256": manifest_hash,
+        "source_series_sha256": {
+            k: v.normalized_sha256 for k, v in series.items()
+        },
+        "fixed_universe": list(UNIVERSE),
+        "targets": targets,
+        "sample": {
+            "rows_per_series": base.EXPECTED_ROWS,
+            "training_information": [WARMUP, TRAIN_END],
+            "sealed_oos": [TRAIN_END, OOS_END],
+            "unscored_suffix": [FULL_END, base.EXPECTED_ROWS],
+            "folds": 4,
+            "fold_hours": 2160,
+        },
+        "training_information_labels_accessed": source_pass,
+        "strategy_performance_accessed": False,
+        "oos_accessed": False,
+        "full_sample_accessed": False,
+        "bilateral_training_support_passed": bilateral,
+        "targets_passing": sum(t["passes"] for t in targets),
+        "highest_value_failure": highest,
+        "canonical_strategy_changed": False,
+        "canonical_mutation_authorized": False,
+        "executable_candidate_authorized": bilateral,
+        "prospective_shadow_authorized": False,
+        "paper_trading_authorized": False,
+        "live_trading_authorized": False,
+        "public_data_only": True,
+        "synthetic_market_data_used": False,
+        "interpolation_or_row_repair_used": False,
+        "cross_sectional_ranking_or_selection": False,
+        "fixed_equal_panel_aggregation_only": True,
+        "pairs_or_spreads": False,
+        "cointegration_or_statistical_arbitrage": False,
+        "market_neutral_or_long_short": False,
+        "credentials_used": False,
+        "private_endpoints_used": False,
+        "accounts_or_orders": False,
+        "enabled_adapters": False,
+        "leverage_used": False,
+        "non_1h_or_15m_input_used": False,
+        "verdict": ACCEPT if bilateral else REJECT,
+    }
+    evidence["machine_readable_verdict"] = {
+        k: evidence[k]
+        for k in (
+            "family_id", "candidate_count", "parameter_grid_count",
+            "source_contract_passed", "bilateral_training_support_passed",
+            "strategy_performance_accessed", "oos_accessed",
+            "canonical_strategy_changed", "canonical_mutation_authorized",
+            "paper_trading_authorized", "live_trading_authorized", "verdict",
+        )
+    }
+    evidence_hash = base.persist_json(output / "evidence.json", evidence)
+    protocol = {
+        "family_id": FAMILY,
+        "universe": list(UNIVERSE),
+        "targets": list(TARGETS),
+        "feature": {
+            "s168": "close[t-25] > close[t-193]",
+            "s720": "close[t-25] > close[t-745]",
+            "diffusion": "0.5*(mean(s168)+mean(s720))",
+        },
+        "fee": FEE,
+        "candidate_count": 0,
+        "parameter_grid_count": 0,
+        "bootstrap": {"draws": DRAWS, "block": BLOCK, "seed": SEED},
+        "oos_access": "prohibited",
+    }
+    protocol_hash = base.persist_json(output / "protocol.json", protocol)
+    text = report(evidence)
+    (output / "report.md").write_text(text, encoding="utf-8")
+    (output / "hashes.json").write_text(json.dumps({
+        "evidence_sha256": evidence_hash,
+        "source_manifest_sha256": manifest_hash,
+        "protocol_sha256": protocol_hash,
+        "report_sha256": base.sha256_bytes(text.encode()),
+    }, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps({
+        "family_id": FAMILY,
+        "exact_head": args.tested_head,
+        "source_contract_passed": source_pass,
+        "targets_passing": evidence["targets_passing"],
+        "bilateral_training_support_passed": bilateral,
+        "candidate_count": 0,
+        "parameter_grid_count": 0,
+        "strategy_performance_accessed": False,
+        "oos_accessed": False,
+        "verdict": evidence["verdict"],
+        "highest_value_failure": highest,
+        "evidence_sha256": evidence_hash,
+        "source_manifest_sha256": manifest_hash,
+        "protocol_sha256": protocol_hash,
+    }, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()
