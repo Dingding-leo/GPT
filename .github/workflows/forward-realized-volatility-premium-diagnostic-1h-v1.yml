@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/run_forward_realized_volatility_premium_diagnostic_1h_v1.py"
+      - "scripts/audit_forward_realized_volatility_premium_sources_1h_v1.py"
       - ".github/workflows/forward-realized-volatility-premium-diagnostic-1h-v1.yml"
   workflow_dispatch:
 
@@ -21,8 +22,12 @@ jobs:
           python-version: "3.12"
       - name: Install numerical dependency
         run: python -m pip install --disable-pip-version-check numpy==2.2.6
-      - name: Compile deterministic reproducer
-        run: python -m py_compile scripts/run_forward_realized_volatility_premium_diagnostic_1h_v1.py
+      - name: Compile deterministic reproducers
+        run: |
+          python -m py_compile scripts/audit_forward_realized_volatility_premium_sources_1h_v1.py
+          python -m py_compile scripts/run_forward_realized_volatility_premium_diagnostic_1h_v1.py
+      - name: Audit both immutable target-source arms
+        run: python scripts/audit_forward_realized_volatility_premium_sources_1h_v1.py
       - name: Run immutable real-data diagnostic
         run: python scripts/run_forward_realized_volatility_premium_diagnostic_1h_v1.py
       - name: Verify terminal evidence schema
@@ -31,14 +36,22 @@ jobs:
           import json
           from pathlib import Path
 
-          path = Path("evidence_vrp/evidence.json")
-          evidence = json.loads(path.read_text())
-          assert evidence["family_id"] == "causal-forward-realized-volatility-premium-opportunity-diagnostic-1h-v1"
+          family = "causal-forward-realized-volatility-premium-opportunity-diagnostic-1h-v1"
+          evidence = json.loads(Path("evidence_vrp/evidence.json").read_text())
+          audit = json.loads(Path("evidence_vrp/source_gap_audit.json").read_text())
+          assert evidence["family_id"] == family
+          assert audit["family_id"] == family
           assert evidence["candidate_count"] == 0
           assert evidence["parameter_grid_count"] == 0
           assert evidence["bar"] == "1H"
           assert evidence["fee_one_way"] == 0.0005
           assert evidence["oos_accessed"] is False
+          assert audit["oos_accessed"] is False
+          assert audit["strategy_changed"] is False
+          assert audit["source_provider_changed"] is False
+          assert audit["calendar_changed"] is False
+          assert audit["feature_changed"] is False
+          assert [arm["symbol"] for arm in audit["arms"]] == ["BTCUSDT", "ETHUSDT"]
           assert evidence["candidate_metrics"]["oos"] is None
           assert evidence["verdict"] in {
               "reject_causal_forward_realized_volatility_premium_opportunity_diagnostic_1h_v1",
