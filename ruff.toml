@@ -1,4 +1,5 @@
 extend = "pyproject.toml"
+extend-exclude = ["scripts/run_same_asset_mark_index_basis_source_contract_1h_v1.py"]
 
 [lint.per-file-ignores]
 "scripts/run_same_asset_mark_index_basis_source_contract_1h_v1.py" = ["F401", "B905"]
