@@ -46,6 +46,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p \
+            "$OUTPUT_DIR/raw/acquisition-a/btc" \
+            "$OUTPUT_DIR/raw/acquisition-a/eth" \
+            "$OUTPUT_DIR/raw/acquisition-b/btc" \
+            "$OUTPUT_DIR/raw/acquisition-b/eth" \
+            "$OUTPUT_DIR/raw/probes"
           python scripts/run_public_spot_borrow_rate_source_contract_1h_v1.py \
             --tested-head "$EXPECTED_TESTED_SHA" \
             --output-dir "$OUTPUT_DIR"
