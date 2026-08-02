@@ -6,6 +6,7 @@ on:
       - auto/research/20260802-1158-prospective-simple-trend-shadow-20260802-0200
     paths:
       - "scripts/run_prospective_simple_trend_shadow_20260802_0300.py"
+      - "scripts/run_prospective_simple_trend_shadow_20260802_0300_open.py"
       - ".github/workflows/prospective-simple-trend-shadow-20260802-0300.yml"
   workflow_dispatch:
 
@@ -48,8 +49,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m py_compile scripts/run_prospective_simple_trend_shadow_20260802_0300.py
-          python scripts/run_prospective_simple_trend_shadow_20260802_0300.py --output-dir "$OUTPUT_DIR"
+          python -m py_compile scripts/run_prospective_simple_trend_shadow_20260802_0300_open.py
+          python scripts/run_prospective_simple_trend_shadow_20260802_0300_open.py --output-dir "$OUTPUT_DIR"
 
       - name: Verify machine-readable strategy evidence
         shell: bash
@@ -100,6 +101,18 @@ jobs:
           assert result["training_authorized_correction"]["permitted"] is False
           assert result["training_authorized_correction"]["applied"] is False
           assert result["training_authorized_correction"]["observation_epoch_restarted"] is False
+          assert result["payoff_boundary_repair"]["applied"] is True
+          assert result["payoff_boundary_repair"]["open_endpoint_only"] is True
+          assert result["payoff_boundary_repair"]["future_signal_accessed"] is False
+          assert result["payoff_boundary_repair"]["strategy_value_changed"] is False
+          assert result["payoff_boundary_repair"]["source_changed"] is False
+          assert result["payoff_boundary_repair"]["fee_changed"] is False
+          assert result["payoff_boundary_repair"]["architecture_changed"] is False
+          assert result["payoff_end_open_boundary"]["timestamp"] == "2026-08-02T03:00:00Z"
+          assert result["payoff_end_open_boundary"]["field_used"] == "open"
+          assert result["payoff_end_open_boundary"]["provider_confirm_required"] is False
+          assert result["payoff_end_open_boundary"]["used_only_as_realized_payoff_endpoint"] is True
+          assert result["payoff_end_open_boundary"]["used_for_signal"] is False
           assert result["strategy_facing_discrepancy"]["policy_or_accounting_defect_detected"] is False
           assert result["aggregate_forward_scorecard"]["realized_interval_count"] == 10
           assert len(result["markets"]) == 2
@@ -110,6 +123,9 @@ jobs:
           assert result["abort_conditions"]["triggered"] is False
           assert result["machine_readable_verdict"]["new_signal_bar_count"] == 1
           assert result["machine_readable_verdict"]["new_realized_payoff_intervals"] == 1
+          assert result["machine_readable_verdict"]["payoff_end_open_only"] is True
+          assert result["machine_readable_verdict"]["future_signal_accessed"] is False
+          assert result["machine_readable_verdict"]["strategy_value_changed"] is False
           assert result["machine_readable_verdict"]["policy_changed"] is False
           assert result["machine_readable_verdict"]["live_trading_authorized"] is False
           assert result["verdict"] in {
@@ -137,6 +153,7 @@ jobs:
                   for market in result["markets"]
               ],
               "drift": result["strategy_facing_discrepancy"],
+              "payoff_end_open_boundary": result["payoff_end_open_boundary"],
               "latest_terminal_candidate_context": result["latest_terminal_candidate_context"],
           }
           print("STRATEGY_COMPACT_JSON=" + json.dumps(compact, sort_keys=True))
