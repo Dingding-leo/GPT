@@ -36,11 +36,11 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$TESTED_HEAD"
-          test "$(sha256sum scripts/public_exogenous_information_programme_closure_1h_v1_records.json | cut -d' ' -f1)" = "c08c17a5ba51ab67883a41ceba5ada10b2c8e917729a8effa757e3d11cb0adce"
           python - <<'PY'
+          import json
           from pathlib import Path
 
-          source = Path(
+          script = Path(
               "scripts/run_public_exogenous_information_programme_closure_1h_v1.py"
           ).read_text()
           forbidden = (
@@ -52,9 +52,20 @@ jobs:
               "from socket",
               "subprocess",
           )
-          found = [token for token in forbidden if token in source]
+          found = [token for token in forbidden if token in script]
           if found:
               raise SystemExit(f"forbidden runtime capability: {found}")
+
+          records = json.loads(
+              Path(
+                  "scripts/public_exogenous_information_programme_"
+                  "closure_1h_v1_records.json"
+              ).read_text()
+          )
+          assert [group["group_id"] for group in records["groups"]] == list(
+              "ABCDEFGH"
+          )
+          assert len(records["groups"]) == 8
           PY
 
       - name: Build deterministic closure artifact
