@@ -1,0 +1,170 @@
+name: Fixed Universe Directional Diffusion Opportunity 1H V1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/fixed-universe-directional-diffusion-opportunity-1h-v1.yml"
+      - "scripts/fixed_universe_directional_diffusion_opportunity_1h_v1.txt"
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Check out exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact head and prohibited capabilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha || github.sha }}"
+          ! grep -E '/api/v5/(trade|account|asset|broker)|apiKey|secretKey|passphrase' \
+            scripts/fixed_universe_directional_diffusion_opportunity_1h_v1.txt
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install research dependencies
+        run: python -m pip install -e ".[dev]"
+
+      - name: Materialize pinned acquisition base and diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+
+          commit = "7fd31e61ff48c6c187b0c3ad4ea37bc376127d09"
+          root = "https://raw.githubusercontent.com/Dingding-leo/GPT/" + commit
+          parts = []
+          for index in range(4):
+              url = (
+                  root
+                  + "/scripts/stablecoin_dislocation_acceleration_veto_1h_v1_parts/"
+                  + f"part-{index:02d}.txt"
+              )
+              request = Request(url, headers={"User-Agent": "Dingding-leo-GPT-research/1.0"})
+              with urlopen(request, timeout=60) as response:  # noqa: S310
+                  body = response.read()
+              if not body:
+                  raise RuntimeError(f"empty pinned acquisition part: {url}")
+              parts.append(body)
+          Path("/tmp/frozen_okx_base.py").write_bytes(b"".join(parts))
+
+          source = Path(
+              "scripts/fixed_universe_directional_diffusion_opportunity_1h_v1.txt"
+          ).read_text(encoding="utf-8")
+          source = source.replace(
+              "import importlib.util\n",
+              "import importlib.util\nimport sys\n",
+              1,
+          )
+          source = source.replace(
+              "    module = importlib.util.module_from_spec(spec)\n"
+              "    spec.loader.exec_module(module)\n",
+              "    module = importlib.util.module_from_spec(spec)\n"
+              "    sys.modules[spec.name] = module\n"
+              "    spec.loader.exec_module(module)\n",
+              1,
+          )
+          Path("/tmp/run_directional_diffusion.py").write_text(
+              source,
+              encoding="utf-8",
+          )
+          PY
+          python -m ruff check --fix /tmp/frozen_okx_base.py /tmp/run_directional_diffusion.py
+          python -m ruff format /tmp/frozen_okx_base.py /tmp/run_directional_diffusion.py
+          python -m py_compile /tmp/frozen_okx_base.py /tmp/run_directional_diffusion.py
+
+      - name: Execute real-data training-only diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf evidence/fixed-universe-directional-diffusion-opportunity-1h-v1
+          python /tmp/run_directional_diffusion.py \
+            --base-script /tmp/frozen_okx_base.py \
+            --tested-head "$(git rev-parse HEAD)" \
+            --output-dir evidence/fixed-universe-directional-diffusion-opportunity-1h-v1 \
+            | tee evidence/fixed-universe-directional-diffusion-opportunity-1h-v1/stdout.json
+          cp /tmp/frozen_okx_base.py \
+            evidence/fixed-universe-directional-diffusion-opportunity-1h-v1/frozen_okx_base.py
+          cp /tmp/run_directional_diffusion.py \
+            evidence/fixed-universe-directional-diffusion-opportunity-1h-v1/reproducer.py
+          sha256sum \
+            evidence/fixed-universe-directional-diffusion-opportunity-1h-v1/frozen_okx_base.py \
+            evidence/fixed-universe-directional-diffusion-opportunity-1h-v1/reproducer.py \
+            > evidence/fixed-universe-directional-diffusion-opportunity-1h-v1/reproducer.sha256
+
+      - name: Verify evidence contract and print exact metrics
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("evidence/fixed-universe-directional-diffusion-opportunity-1h-v1")
+          evidence = json.loads((root / "evidence.json").read_text())
+          expected_head = os.environ["GITHUB_SHA"]
+          assert evidence["exact_head"] == expected_head
+          assert evidence["repository_main"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["bar_interval"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["strategy_performance_accessed"] is False
+          assert evidence["oos_accessed"] is False
+          assert evidence["full_sample_accessed"] is False
+          assert evidence["cross_sectional_ranking_or_selection"] is False
+          assert evidence["fixed_equal_panel_aggregation_only"] is True
+          assert evidence["credentials_used"] is False
+          assert evidence["private_endpoints_used"] is False
+          assert evidence["accounts_or_orders"] is False
+          assert evidence["leverage_used"] is False
+          assert evidence["non_1h_or_15m_input_used"] is False
+          print(json.dumps({
+              "source_contract_passed": evidence["source_contract_passed"],
+              "source_series_sha256": evidence["source_series_sha256"],
+              "targets_passing": evidence["targets_passing"],
+              "bilateral_training_support_passed": evidence[
+                  "bilateral_training_support_passed"
+              ],
+              "verdict": evidence["verdict"],
+              "highest_value_failure": evidence["highest_value_failure"],
+          }, indent=2, sort_keys=True))
+          for target in evidence["targets"]:
+              print(json.dumps({
+                  "target": target["target"],
+                  "opportunity_count": target["opportunity_count"],
+                  "distribution": target["distribution"],
+                  "associations": target["associations"],
+                  "tercile_effects": target["tercile_effects"],
+                  "bootstrap": target["bootstrap"],
+                  "fold_audit": target["fold_audit"],
+                  "one_hour_execution_delay": target[
+                      "one_hour_execution_delay"
+                  ],
+                  "gates": target["gates"],
+                  "passes": target["passes"],
+              }, indent=2, sort_keys=True))
+          PY
+
+      - name: Upload immutable evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: fixed-universe-directional-diffusion-opportunity-1h-v1-${{ github.event.pull_request.head.sha || github.sha }}
+          path: evidence/fixed-universe-directional-diffusion-opportunity-1h-v1
+          if-no-files-found: error
+          retention-days: 30
