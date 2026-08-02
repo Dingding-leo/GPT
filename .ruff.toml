@@ -1,0 +1,4 @@
+extend = "pyproject.toml"
+
+[lint.per-file-ignores]
+"scripts/run_public_spot_margin_lending_ratio_source_contract_1h_v1.py" = ["SIM905"]
