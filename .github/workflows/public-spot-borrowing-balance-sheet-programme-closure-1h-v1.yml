@@ -1,0 +1,107 @@
+name: Public Spot Borrowing Balance Sheet Programme Closure 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/close_public_spot_borrowing_balance_sheet_programme_1h_v1.py"
+      - ".github/workflows/public-spot-borrowing-balance-sheet-programme-closure-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spot-borrowing-closure-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/research/public-spot-borrowing-balance-sheet-programme-closure-1h-v1
+      ARTIFACT_NAME: public-spot-borrowing-closure-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact research revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          python -m py_compile \
+            scripts/close_public_spot_borrowing_balance_sheet_programme_1h_v1.py
+
+      - name: Build deterministic programme closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/close_public_spot_borrowing_balance_sheet_programme_1h_v1.py \
+            --tested-head "$EXPECTED_TESTED_SHA" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify terminal closure evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            evidence.json evidence.json.sha256 \
+            source_records.json source_records.json.sha256 \
+            report.md report.md.sha256 \
+            artifact_summary.json artifact_summary.json.sha256; do
+            test -s "$OUTPUT_DIR/$file"
+          done
+          test "$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')" = \
+            "$(cat "$OUTPUT_DIR/evidence.json.sha256")"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = json.loads(
+              (Path(os.environ["OUTPUT_DIR"]) / "evidence.json").read_text()
+          )
+          assert evidence["family_id"] == (
+              "causal-public-spot-borrowing-balance-sheet-programme-closure-1h-v1"
+          )
+          assert evidence["tested_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["repository_main"] == (
+              "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          )
+          assert evidence["issue"] == 989
+          assert evidence["bar"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["new_market_data_rows"] == 0
+          assert evidence["new_target_return_rows"] == 0
+          assert evidence["new_oos_observations"] == 0
+          assert evidence["admissible_groups"] == 0
+          assert len(evidence["groups"]) == 2
+          assert all(value is None for value in evidence["economics"].values())
+          assert all(
+              not row["programme_admissible"]
+              for row in evidence["leave_one_group_out"]
+          )
+          assert evidence["verdict"] == (
+              "reject_reopening_completed_public_spot_borrowing_balance_sheet_mechanisms_1h_v1"
+          )
+          PY
+
+      - name: Upload immutable closure evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 90
