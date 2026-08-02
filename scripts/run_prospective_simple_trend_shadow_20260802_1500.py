@@ -170,8 +170,8 @@ def run(output_dir: Path, base_url: str) -> dict[str, Any]:
         "latest_training_only_architecture"
     ]["verdict"]
 
-    prior.write_result(output_dir, result)
-    prior.write_report(output_dir, result)
+    prior.prior.write_result(output_dir, result)
+    prior.prior.write_report(output_dir, result)
     patch_report(output_dir)
     return result
 
