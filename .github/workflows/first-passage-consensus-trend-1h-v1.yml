@@ -1,0 +1,200 @@
+name: First-Passage Consensus Trend 1H V1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/first_passage_consensus_1h_v1_payload/**"
+      - ".github/workflows/first-passage-consensus-trend-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: first-passage-consensus-trend-1h-v1-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  strategy-research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/research/first-passage-consensus-trend-1h-v1
+      ARTIFACT_NAME: first-passage-consensus-trend-1h-v1-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+      FROZEN_SOURCE_SHA256: 43a401c0a7855b1c23d0eacab50c1197f49fd70b6478366954797f592f8bbdc3
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Materialize and verify frozen strategy
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat scripts/first_passage_consensus_1h_v1_payload/part-*.b64 \
+            | base64 --decode | gzip --decompress \
+            > /tmp/run_first_passage_consensus_trend_1h_v1.py
+          test -s /tmp/run_first_passage_consensus_trend_1h_v1.py
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test "$(sha256sum /tmp/run_first_passage_consensus_trend_1h_v1.py | awk '{print $1}')" = "$FROZEN_SOURCE_SHA256"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+          ! grep -EIn '(/api/v5/(account|trade|asset|broker)|place_order\(|create_order\(|submit_order\(|send_order\()' \
+            /tmp/run_first_passage_consensus_trend_1h_v1.py
+          ! grep -EIn '(15m|leverage|short_position|market_neutral|cointegration)' \
+            /tmp/run_first_passage_consensus_trend_1h_v1.py
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install and verify focused implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+          python -m ruff check --ignore E501 --fix --unsafe-fixes \
+            /tmp/run_first_passage_consensus_trend_1h_v1.py
+          python -m ruff format \
+            /tmp/run_first_passage_consensus_trend_1h_v1.py
+          python -m py_compile \
+            /tmp/run_first_passage_consensus_trend_1h_v1.py
+          python -m ruff check --ignore E501 \
+            /tmp/run_first_passage_consensus_trend_1h_v1.py
+          python -m ruff format --check \
+            /tmp/run_first_passage_consensus_trend_1h_v1.py
+
+      - name: Execute frozen bilateral strategy experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          python /tmp/run_first_passage_consensus_trend_1h_v1.py \
+            --tested-head "$EXPECTED_TESTED_SHA" \
+            --output-dir "$OUTPUT_DIR"
+          cp /tmp/run_first_passage_consensus_trend_1h_v1.py \
+            "$OUTPUT_DIR/strategy.py"
+          sha256sum "$OUTPUT_DIR/strategy.py" | awk '{print $1}' \
+            > "$OUTPUT_DIR/strategy.sha256"
+
+      - name: Verify and print exact strategy evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            evidence.json evidence.sha256 \
+            source_manifest.json source_manifest.sha256 \
+            protocol.json protocol.sha256 \
+            report.md report.sha256 strategy.py strategy.sha256; do
+            test -s "$OUTPUT_DIR/$file"
+          done
+          test "$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')" = \
+            "$(cat "$OUTPUT_DIR/evidence.sha256")"
+          test "$(sha256sum "$OUTPUT_DIR/strategy.py" | awk '{print $1}')" = \
+            "$(cat "$OUTPUT_DIR/strategy.sha256")"
+          cat "$OUTPUT_DIR/report.md"
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((root / "evidence.json").read_text())
+          assert evidence["exact_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["repository_main"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["family_id"] == "causal-volatility-normalized-first-passage-consensus-trend-1h-v1"
+          assert evidence["bar_interval"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["candidate_count"] == 2
+          assert evidence["parameter_grid_count"] == 0
+          for key in (
+              "synthetic_market_data_used",
+              "interpolation_or_row_repair_used",
+              "cross_sectional_selection",
+              "pairs_or_spreads",
+              "cointegration_or_statistical_arbitrage",
+              "market_neutral_or_long_short",
+              "credentials_used",
+              "private_endpoints_used",
+              "accounts_or_orders",
+              "enabled_adapters",
+              "leverage_used",
+              "non_1h_or_15m_input_used",
+              "canonical_strategy_changed",
+              "paper_trading_authorized",
+              "live_trading_authorized",
+          ):
+              assert evidence[key] is False, key
+          assert evidence["public_data_only"] is True
+          if not evidence["source_contract_passed"]:
+              assert evidence["oos_accessed"] is False
+          else:
+              assert {m["market"] for m in evidence["markets"]} == {
+                  "ADA-USDT",
+                  "DOT-USDT",
+              }
+              bilateral = all(m["training_support"]["passes"] for m in evidence["markets"])
+              assert evidence["bilateral_training_support_passed"] is bilateral
+              assert evidence["oos_accessed"] is bilateral
+              if bilateral:
+                  assert evidence["bootstrap_draws"] == 5000
+                  assert all(
+                      len(m["oos_folds"]) == 6
+                      and len(m["oos_years"]) == 2
+                      and m["paired_uncertainty"]["draws"] == 5000
+                      for m in evidence["markets"]
+                  )
+              else:
+                  assert evidence["bootstrap_draws"] == 0
+                  assert all(m["strategies"] is None for m in evidence["markets"])
+          accepted = evidence["oos_accessed"] and evidence["markets_passing_all_gates"] == 2
+          assert evidence["canonical_mutation_authorized"] is accepted
+          assert evidence["verdict"].startswith("accept_" if accepted else "reject_")
+          print("EXACT_STRATEGY_EVIDENCE_BEGIN")
+          print(json.dumps({
+              "family_id": evidence["family_id"],
+              "exact_head": evidence["exact_head"],
+              "source_contract_passed": evidence["source_contract_passed"],
+              "source_failure": evidence["source_failure"],
+              "source_series_sha256": evidence["source_series_sha256"],
+              "sample": evidence["sample"],
+              "bilateral_training_support_passed": evidence["bilateral_training_support_passed"],
+              "performance_accessed": evidence["performance_accessed"],
+              "oos_accessed": evidence["oos_accessed"],
+              "markets_passing_training_support": evidence["markets_passing_training_support"],
+              "markets_passing_all_gates": evidence["markets_passing_all_gates"],
+              "highest_value_failure": evidence["highest_value_failure"],
+              "markets": evidence["markets"],
+              "verdict": evidence["verdict"],
+          }, sort_keys=True, indent=2))
+          print("EXACT_STRATEGY_EVIDENCE_END")
+          for name in (
+              "evidence.json",
+              "source_manifest.json",
+              "protocol.json",
+              "report.md",
+              "strategy.py",
+          ):
+              digest = hashlib.sha256((root / name).read_bytes()).hexdigest()
+              print(f"SHA256 {name} {digest}")
+          PY
+
+      - name: Upload immutable strategy evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
