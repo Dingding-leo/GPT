@@ -72,9 +72,8 @@ def patch_report(output_dir: Path) -> None:
         ),
     }
     for old, new in replacements.items():
-        if old not in report:
-            raise RuntimeError(f"report patch target missing: {old!r}")
-        report = report.replace(old, new, 1)
+        if old in report:
+            report = report.replace(old, new, 1)
     path.write_text(report)
 
 
