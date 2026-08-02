@@ -1,0 +1,160 @@
+name: Stablecoin Supply Impulse Source Contract 1H V1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_stablecoin_supply_impulse_source_contract_1h_v1.py"
+      - "scripts/stablecoin_supply_impulse_source_contract_1h_v1_records.json"
+      - ".github/workflows/stablecoin-supply-impulse-source-contract-1h-v1.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stablecoin-supply-source-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  audit-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TESTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: artifacts/stablecoin-supply-impulse-source-contract-1h-v1
+    steps:
+      - name: Check out exact tested head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.TESTED_HEAD }}
+          persist-credentials: false
+
+      - name: Verify source-only capability boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_HEAD"
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          script = Path(
+              "scripts/run_stablecoin_supply_impulse_source_contract_1h_v1.py"
+          ).read_text()
+          forbidden = (
+              "import requests",
+              "from requests",
+              "import urllib",
+              "from urllib",
+              "import socket",
+              "from socket",
+              "subprocess",
+              "ccxt",
+              "api_key",
+              "secret",
+              "passphrase",
+              "place_order",
+          )
+          found = [token for token in forbidden if token in script.lower()]
+          if found:
+              raise SystemExit(f"forbidden runtime capability: {found}")
+
+          records = json.loads(
+              Path(
+                  "scripts/stablecoin_supply_impulse_"
+                  "source_contract_1h_v1_records.json"
+              ).read_text()
+          )
+          assert records["family_id"] == (
+              "causal-stablecoin-supply-impulse-source-contract-1h-v1"
+          )
+          assert records["bar"] == "1H"
+          assert records["frozen_sample"]["expected_rows_per_arm"] == 24144
+          assert [row["stablecoin"] for row in records["source_arms"]] == [
+              "USDT",
+              "USDC",
+          ]
+          assert len(records["providers"]) == 6
+          PY
+
+      - name: Build deterministic source evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            scripts/run_stablecoin_supply_impulse_source_contract_1h_v1.py
+          python scripts/run_stablecoin_supply_impulse_source_contract_1h_v1.py \
+            --tested-head "$TESTED_HEAD" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify rejection, null economics and identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          output = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((output / "evidence.json").read_text())
+          source = json.loads((output / "source_records.json").read_text())
+
+          assert evidence["family_id"] == (
+              "causal-stablecoin-supply-impulse-source-contract-1h-v1"
+          )
+          assert evidence["verdict"] == (
+              "reject_causal_stablecoin_supply_impulse_source_contract_1h_v1"
+          )
+          assert evidence["tested_head"] == os.environ["TESTED_HEAD"]
+          assert source["tested_head"] == os.environ["TESTED_HEAD"]
+          assert evidence["canonical_main_head"] == (
+              "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          )
+          assert evidence["bar"] == "1H"
+          assert evidence["one_way_fee_bps_if_later_authorized"] == 5.0
+
+          summary = evidence["summary"]
+          assert summary == {
+              "anonymous_direct_historical_1h_interfaces": 0,
+              "candidate_count": 0,
+              "canonical_mutation": False,
+              "expected_rows_per_arm": 24144,
+              "new_target_prices_or_returns": 0,
+              "observed_qualifying_rows_total": 0,
+              "oos_accessed": False,
+              "parameter_grid_count": 0,
+              "performance_accessed": False,
+              "provider_interfaces_audited": 6,
+              "qualifying_provider_interfaces": 0,
+              "source_arms_expected": 2,
+              "source_arms_passing": 0,
+          }
+          assert evidence["gates"]["fixed_provider_catalog_bound"]
+          assert evidence["gates"]["direct_supply_semantics_audited"]
+          assert evidence["gates"]["performance_and_oos_remained_sealed"]
+          assert not evidence["gates"]["complete_bilateral_source_arms"]
+          assert not evidence["performance_accessed"]
+          assert not evidence["oos_accessed"]
+          assert not evidence["canonical_mutation"]
+          assert not evidence["paper_trading_authority"]
+          assert not evidence["live_trading_authority"]
+          assert all(value is None for value in evidence["economics"].values())
+
+          for name in ("evidence.json", "source_records.json", "report.md"):
+              digest = hashlib.sha256((output / name).read_bytes()).hexdigest()
+              stem = name.rsplit(".", 1)[0]
+              sidecar = (output / f"{stem}.sha256").read_text()
+              assert sidecar == f"{digest}  {name}\n"
+          PY
+
+      - name: Upload immutable source evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: stablecoin-supply-impulse-source-contract-1h-v1
+          path: artifacts/stablecoin-supply-impulse-source-contract-1h-v1
+          if-no-files-found: error
+          retention-days: 90
