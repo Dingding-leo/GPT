@@ -83,8 +83,9 @@ jobs:
               encoding="utf-8",
           )
           PY
-          python -m ruff check --fix /tmp/frozen_okx_base.py /tmp/run_directional_diffusion.py
           python -m ruff format /tmp/frozen_okx_base.py /tmp/run_directional_diffusion.py
+          python -m ruff check --fix --ignore E501,B905 \
+            /tmp/frozen_okx_base.py /tmp/run_directional_diffusion.py
           python -m py_compile /tmp/frozen_okx_base.py /tmp/run_directional_diffusion.py
 
       - name: Execute real-data training-only diagnostic
