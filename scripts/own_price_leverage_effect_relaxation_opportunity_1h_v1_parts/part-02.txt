@@ -1,0 +1,140 @@
+                "opportunities": len(subset),
+                "net_standardized_slope": net_slope,
+                "adverse_standardized_slope": adverse_slope,
+            }
+        )
+    positive_net = [
+        float(fold["net_standardized_slope"])
+        for fold in folds
+        if fold["net_standardized_slope"] is not None and float(fold["net_standardized_slope"]) > 0
+    ]
+    return {
+        "folds": folds,
+        "positive_net_slope_folds": len(positive_net),
+        "positive_adverse_slope_folds": sum(
+            fold["adverse_standardized_slope"] is not None and float(fold["adverse_standardized_slope"]) > 0
+            for fold in folds
+        ),
+        "largest_positive_net_slope_share": max(positive_net) / sum(positive_net) if positive_net else None,
+    }
+
+
+def truncated_series(base: Any, series: Any, end: int) -> Any:
+    return base.Series(
+        inst_id=series.inst_id,
+        open_ms=series.open_ms[:end],
+        opens=series.opens[:end],
+        highs=series.highs[:end],
+        lows=series.lows[:end],
+        closes=series.closes[:end],
+        normalized_sha256="training-prefix-only",
+        manifest=(),
+        instrument_evidence={},
+    )
+
+
+def source_prefix_projection(series: Any, end: int) -> list[dict[str, float | int]]:
+    return [
+        {
+            "open_ms": int(series.open_ms[index]),
+            "open": float(series.opens[index]),
+            "high": float(series.highs[index]),
+            "low": float(series.lows[index]),
+            "close": float(series.closes[index]),
+        }
+        for index in range(end)
+    ]
+
+
+def feature_projection(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    keys = (
+        "decision_index",
+        "baseline_first_response_index",
+        "baseline_last_response_index",
+        "recent_first_response_index",
+        "recent_last_response_index",
+        "baseline_first_antecedent_index",
+        "recent_first_antecedent_index",
+        "baseline_leverage",
+        "recent_leverage",
+        "leverage_relaxation",
+    )
+    return [{key: record[key] for key in keys} for record in records]
+
+
+def analyse(base: Any, series: Any, target: str) -> dict[str, Any]:
+    records, grid_audit = opportunities(series, FULL_END)
+    prefix_series = truncated_series(base, series, TRAIN_END)
+    prefix_records, prefix_grid_audit = opportunities(prefix_series, TRAIN_END)
+    event_hash = base.sha256_bytes(base.canonical_bytes(records))
+    prefix_event_hash = base.sha256_bytes(base.canonical_bytes(prefix_records))
+    feature_hash = base.sha256_bytes(base.canonical_bytes(feature_projection(records)))
+    prefix_feature_hash = base.sha256_bytes(base.canonical_bytes(feature_projection(prefix_records)))
+    source_prefix_hash = base.sha256_bytes(base.canonical_bytes(source_prefix_projection(series, TRAIN_END)))
+    truncated_source_prefix_hash = base.sha256_bytes(base.canonical_bytes(source_prefix_projection(prefix_series, TRAIN_END)))
+    x = np.array([record["leverage_relaxation"] for record in records])
+    net = np.array([record["net_24h"] for record in records])
+    adverse = np.array([record["adverse_24h"] for record in records])
+    delayed_net = np.array([record["delayed_net_24h"] for record in records])
+    delayed_adverse = np.array([record["delayed_adverse_24h"] for record in records])
+    values, counts = np.unique(x, return_counts=True)
+    distribution = {
+        "minimum": float(x.min()),
+        "q25": float(np.quantile(x, 0.25)),
+        "median": float(np.quantile(x, 0.5)),
+        "q75": float(np.quantile(x, 0.75)),
+        "maximum": float(x.max()),
+        "iqr": float(np.quantile(x, 0.75) - np.quantile(x, 0.25)),
+        "distinct_values": int(len(values)),
+        "maximum_duplicate_count": int(counts.max()),
+    }
+    associations = summary_stats(x, net, adverse)
+    effects = tercile_effects(x, net, adverse)
+    uncertainty = bootstrap(x, net, adverse)
+    folds = fold_audit(records)
+    delayed = {
+        "associations": summary_stats(x, delayed_net, delayed_adverse),
+        "tercile_effects": tercile_effects(x, delayed_net, delayed_adverse),
+    }
+    lower_bounds = uncertainty["statistics"]
+    delayed_associations = delayed["associations"]
+    delayed_effects = delayed["tercile_effects"]
+    gates = {
+        "at_least_120_opportunities": len(records) >= 120,
+        "no_invalid_feature_anchors": grid_audit["invalid_feature_anchors"] == 0,
+        "exact_frozen_pair_windows": all(
+            record["baseline_first_response_index"] == record["decision_index"] - 912
+            and record["baseline_last_response_index"] == record["decision_index"] - 193
+            and record["recent_first_response_index"] == record["decision_index"] - 192
+            and record["recent_last_response_index"] == record["decision_index"] - 25
+            and record["baseline_first_antecedent_index"] == record["decision_index"] - 913
+            and record["recent_first_antecedent_index"] == record["decision_index"] - 193
+            for record in records
+        ),
+        "latest_feature_endpoint_at_least_24h_before_execution": all(
+            record["recent_last_response_index"] <= record["decision_index"] - 25 for record in records
+        ),
+        "all_delayed_labels_end_before_training_boundary": all(record["decision_index"] + 25 < TRAIN_END for record in records),
+        "at_least_30_distinct_values": distribution["distinct_values"] >= 30,
+        "strictly_positive_iqr": distribution["iqr"] > 0,
+        "terciles_each_at_least_35": effects["lower_count"] >= 35 and effects["upper_count"] >= 35,
+        "net_spearman_positive": associations["net_spearman"] > 0,
+        "adverse_spearman_positive": associations["adverse_spearman"] > 0,
+        "net_slope_positive": associations["net_standardized_slope"] > 0,
+        "adverse_slope_positive": associations["adverse_standardized_slope"] > 0,
+        "net_tercile_effect_positive": effects["net_upper_minus_lower"] > 0,
+        "adverse_tercile_effect_positive": effects["adverse_upper_minus_lower"] > 0,
+        "net_spearman_lower_95_positive": lower_bounds["net_spearman"]["lower_95"] > 0,
+        "adverse_spearman_lower_95_positive": lower_bounds["adverse_spearman"]["lower_95"] > 0,
+        "net_slope_lower_95_positive": lower_bounds["net_standardized_slope"]["lower_95"] > 0,
+        "adverse_slope_lower_95_positive": lower_bounds["adverse_standardized_slope"]["lower_95"] > 0,
+        "at_least_3_of_4_positive_net_folds": folds["positive_net_slope_folds"] >= 3,
+        "at_least_3_of_4_positive_adverse_folds": folds["positive_adverse_slope_folds"] >= 3,
+        "largest_positive_net_fold_share_at_most_60_percent": folds["largest_positive_net_slope_share"] is not None and folds["largest_positive_net_slope_share"] <= 0.60,
+        "delayed_net_spearman_positive": delayed_associations["net_spearman"] > 0,
+        "delayed_adverse_spearman_positive": delayed_associations["adverse_spearman"] > 0,
+        "delayed_net_slope_positive": delayed_associations["net_standardized_slope"] > 0,
+        "delayed_adverse_slope_positive": delayed_associations["adverse_standardized_slope"] > 0,
+        "delayed_net_tercile_effect_positive": delayed_effects["net_upper_minus_lower"] > 0,
+        "delayed_adverse_tercile_effect_positive": delayed_effects["adverse_upper_minus_lower"] > 0,
+        "source_prefix_invariant": source_prefix_hash == truncated_source_prefix_hash,
