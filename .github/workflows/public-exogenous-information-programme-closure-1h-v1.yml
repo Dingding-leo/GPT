@@ -1,0 +1,143 @@
+name: Public Exogenous Information Programme Closure 1H V1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_public_exogenous_information_programme_closure_1h_v1.py"
+      - "scripts/public_exogenous_information_programme_closure_1h_v1_records.json"
+      - ".github/workflows/public-exogenous-information-programme-closure-1h-v1.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-exogenous-closure-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  close-programme:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      TESTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: artifacts/public-exogenous-information-programme-closure-1h-v1
+    steps:
+      - name: Check out exact tested head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.TESTED_HEAD }}
+          persist-credentials: false
+
+      - name: Verify evidence-only capability boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TESTED_HEAD"
+          test "$(sha256sum scripts/public_exogenous_information_programme_closure_1h_v1_records.json | cut -d' ' -f1)" = "c08c17a5ba51ab67883a41ceba5ada10b2c8e917729a8effa757e3d11cb0adce"
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path(
+              "scripts/run_public_exogenous_information_programme_closure_1h_v1.py"
+          ).read_text()
+          forbidden = (
+              "import requests",
+              "from requests",
+              "import urllib",
+              "from urllib",
+              "import socket",
+              "from socket",
+              "subprocess",
+          )
+          found = [token for token in forbidden if token in source]
+          if found:
+              raise SystemExit(f"forbidden runtime capability: {found}")
+          PY
+
+      - name: Build deterministic closure artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            scripts/run_public_exogenous_information_programme_closure_1h_v1.py
+          python \
+            scripts/run_public_exogenous_information_programme_closure_1h_v1.py \
+            --tested-head "$TESTED_HEAD" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify closure gates and identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          output = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((output / "evidence.json").read_text())
+          records = json.loads((output / "source_records.json").read_text())
+
+          expected_summary = {
+              "architecture_groups": 8,
+              "direct_source_feasible_groups": 3,
+              "source_blocked_groups": 5,
+              "adjudicated_groups": 3,
+              "executable_economics_groups": 1,
+              "bilateral_benchmark_relative_support_groups": 0,
+              "bilateral_dependence_support_groups": 0,
+              "bilateral_breadth_and_delay_support_groups": 0,
+              "supportive_leave_one_out_subsets": 0,
+              "candidate_count": 0,
+              "bound_historical_candidate_paths": 4,
+              "parameter_grid_count": 0,
+              "new_market_data": 0,
+              "new_target_returns": 0,
+              "new_oos_consumed": 0,
+              "performance_accessed_in_closure": False,
+              "oos_accessed_in_closure": False,
+          }
+          assert evidence["family_id"] == (
+              "causal-public-exogenous-information-programme-closure-1h-v1"
+          )
+          assert evidence["verdict"] == (
+              "reject_reopening_completed_public_exogenous_information_"
+              "mechanisms_1h_v1"
+          )
+          assert evidence["tested_head"] == os.environ["TESTED_HEAD"]
+          assert records["tested_head"] == os.environ["TESTED_HEAD"]
+          assert evidence["canonical_main_head"] == (
+              "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          )
+          assert evidence["bar"] == "1H"
+          assert evidence["one_way_fee_bps"] == 5.0
+          assert evidence["summary"] == expected_summary
+          assert all(evidence["gates"].values())
+          assert evidence["canonical_mutation"] is False
+          assert evidence["paper_trading_authority"] is False
+          assert evidence["live_trading_authority"] is False
+          assert [group["group_id"] for group in evidence["groups"]] == list(
+              "ABCDEFGH"
+          )
+          assert len(evidence["leave_one_group_out"]) == 8
+          assert not any(
+              row["supportive"] for row in evidence["leave_one_group_out"]
+          )
+
+          for name in ("evidence.json", "source_records.json", "report.md"):
+              digest = hashlib.sha256((output / name).read_bytes()).hexdigest()
+              sidecar = (output / f"{name.rsplit('.', 1)[0]}.sha256").read_text()
+              assert sidecar == f"{digest}  {name}\n"
+          PY
+
+      - name: Upload immutable closure evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: public-exogenous-information-programme-closure-1h-v1
+          path: artifacts/public-exogenous-information-programme-closure-1h-v1
+          if-no-files-found: error
+          retention-days: 90
