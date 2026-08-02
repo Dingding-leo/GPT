@@ -1,0 +1,58 @@
+name: Own Price Event Clock Family Closure 1H
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "reports/research/own-price-event-clock-renewal-timing-family-closure-1h-v1/**"
+      - "scripts/verify_own_price_event_clock_renewal_timing_family_closure.py"
+      - ".github/workflows/own-price-event-clock-renewal-timing-family-closure-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: own-price-event-clock-family-closure-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  family-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      EVIDENCE: reports/research/own-price-event-clock-renewal-timing-family-closure-1h-v1/evidence.json
+      OUTPUT_DIR: reports/generated/own-price-event-clock-renewal-timing-family-closure-1h-v1
+      ARTIFACT_NAME: own-price-event-clock-family-closure-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact evidence-only closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          python -m py_compile scripts/verify_own_price_event_clock_renewal_timing_family_closure.py
+          python scripts/verify_own_price_event_clock_renewal_timing_family_closure.py \
+            --evidence "$EVIDENCE" \
+            --output-dir "$OUTPUT_DIR"
+          expected="$(cat reports/research/own-price-event-clock-renewal-timing-family-closure-1h-v1/evidence.sha256)"
+          actual="$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')"
+          test "$actual" = "$expected"
+          test -s "$OUTPUT_DIR/report.md"
+
+      - name: Upload immutable family-closure evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 30
