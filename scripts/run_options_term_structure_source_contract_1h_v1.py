@@ -54,8 +54,7 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "interface_id": "deribit_volatility_index_data",
         "provider": "Deribit",
         "url": (
-            "https://docs.deribit.com/api-reference/market-data/"
-            "public-get_volatility_index_data.md"
+            "https://docs.deribit.com/api-reference/market-data/public-get_volatility_index_data.md"
         ),
         "documented_object": "aggregate provider volatility-index OHLC history",
         "historical": True,
@@ -67,8 +66,7 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "reconstruction_required": False,
         "bilateral_btc_eth": True,
         "failure_reason": (
-            "one aggregate forward-IV index per currency; "
-            "no near/far maturity dimension"
+            "one aggregate forward-IV index per currency; no near/far maturity dimension"
         ),
         "markers": ("volatility index", "3600", "open", "high", "low", "close"),
     },
@@ -76,8 +74,7 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "interface_id": "deribit_mark_price_history",
         "provider": "Deribit",
         "url": (
-            "https://docs.deribit.com/api-reference/market-data/"
-            "public-get_mark_price_history.md"
+            "https://docs.deribit.com/api-reference/market-data/public-get_mark_price_history.md"
         ),
         "documented_object": "per-instrument historical mark prices",
         "historical": True,
@@ -108,8 +105,7 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "reconstruction_required": True,
         "bilateral_btc_eth": True,
         "failure_reason": (
-            "current per-option snapshot; no direct historical hourly "
-            "maturity-shape series"
+            "current per-option snapshot; no direct historical hourly maturity-shape series"
         ),
         "markers": ("mark_iv", "bid_iv", "ask_iv", "instrument_name"),
     },
@@ -117,8 +113,7 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "interface_id": "deribit_historical_volatility",
         "provider": "Deribit",
         "url": (
-            "https://docs.deribit.com/api-reference/market-data/"
-            "public-get_historical_volatility"
+            "https://docs.deribit.com/api-reference/market-data/public-get_historical_volatility"
         ),
         "documented_object": "historical realised-volatility observations",
         "historical": True,
@@ -130,8 +125,7 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "reconstruction_required": False,
         "bilateral_btc_eth": True,
         "failure_reason": (
-            "backward-looking realised volatility, not option-implied "
-            "maturity term structure"
+            "backward-looking realised volatility, not option-implied maturity term structure"
         ),
         "markers": ("historical volatility", "currency"),
     },
@@ -149,8 +143,7 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "reconstruction_required": False,
         "bilateral_btc_eth": True,
         "failure_reason": (
-            "periods are historical-volatility lookbacks, not option "
-            "expiry tenors or forward IV"
+            "periods are historical-volatility lookbacks, not option expiry tenors or forward IV"
         ),
         "markers": ("historical volatility", "period", "7", "14", "30", "180"),
     },
@@ -168,8 +161,7 @@ INTERFACES: tuple[dict[str, Any], ...] = (
         "reconstruction_required": True,
         "bilateral_btc_eth": True,
         "failure_reason": (
-            "recent per-contract trades require chain, expiry and "
-            "moneyness reconstruction"
+            "recent per-contract trades require chain, expiry and moneyness reconstruction"
         ),
         "markers": ("option trades", "instId", "tradeId"),
     },
@@ -266,9 +258,7 @@ def render_report(evidence: dict[str, Any]) -> str:
         rows.append(
             "| {provider} | {interface_id} | {historical} | {direct_1h} | {implied_volatility} | "
             "{fixed_maturity_dimension} | {reconstruction_required} | "
-            "{qualifies_direct_source_contract} | {failure_reason} |".format(
-                **interface
-            )
+            "{qualifies_direct_source_contract} | {failure_reason} |".format(**interface)
         )
     table = "\n".join(rows)
     table_header = (
