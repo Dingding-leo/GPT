@@ -1,0 +1,16 @@
+                "family_id": FAMILY,
+                "exact_head": args.tested_head,
+                "source_contract_passed": source_passed,
+                "targets_passing": evidence["targets_passing"],
+                "bilateral_training_support_passed": bilateral,
+                "verdict": evidence["verdict"],
+                "highest_value_failure": highest_value_failure,
+                "hashes": hashes,
+            },
+            sort_keys=True,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
