@@ -1,0 +1,223 @@
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import math
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+
+FAMILY = "causal-own-price-hour-of-week-seasonal-projection-opportunity-1h-v1"
+ACCEPT = "accept_causal_own_price_hour_of_week_seasonal_projection_information_premise_1h_v1"
+REJECT = "reject_causal_own_price_hour_of_week_seasonal_projection_information_premise_1h_v1"
+MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+TARGETS = ("BTC-USDT", "ETH-USDT")
+EXPECTED_SOURCE_HASHES = {
+    "BTC-USDT": "0891418c4ed57e424922fe9690f10a7b50c586ba2b37eb62761e88f51926550f",
+    "ETH-USDT": "a058b6f30524ee828ed277cfe41076722b169452c6147094300b39f11377c697",
+}
+EXPECTED_START_MS = 1680307200000
+EXPECTED_END_MS = 1767222000000
+HOUR_MS = 3_600_000
+WARMUP = 2160
+TRAIN_END = 10800
+OOS_END = 23760
+FULL_END = 24144
+BASELINE_HOURS = 1344
+RECENT_HOURS = 168
+DRAWS = 5000
+BLOCK = 7
+SEED = 2026080222
+ROUND_TRIP_FEE = 0.0010
+
+
+def load_base(path: str) -> Any:
+    spec = importlib.util.spec_from_file_location("frozen_okx_base", path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("cannot load frozen acquisition base")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def corr(x: np.ndarray, y: np.ndarray) -> float:
+    xc = x - x.mean()
+    yc = y - y.mean()
+    denominator = math.sqrt(float(np.sum(xc * xc) * np.sum(yc * yc)))
+    return float(np.sum(xc * yc) / denominator) if denominator > 0 else float("nan")
+
+
+def ranks(x: np.ndarray) -> np.ndarray:
+    order = np.argsort(x, kind="mergesort")
+    result = np.empty(len(x), dtype=float)
+    start = 0
+    while start < len(x):
+        end = start + 1
+        while end < len(x) and x[order[end]] == x[order[start]]:
+            end += 1
+        result[order[start:end]] = 0.5 * (start + end - 1) + 1
+        start = end
+    return result
+
+
+def spearman(x: np.ndarray, y: np.ndarray) -> float:
+    return corr(ranks(x), ranks(y))
+
+
+def standardized_slope(x: np.ndarray, y: np.ndarray) -> float:
+    sx = float(np.std(x, ddof=1))
+    sy = float(np.std(y, ddof=1))
+    return corr(x, y) if sx > 0 and sy > 0 else float("nan")
+
+
+def summary_stats(
+    x: np.ndarray,
+    net: np.ndarray,
+    adverse: np.ndarray,
+) -> dict[str, float]:
+    return {
+        "net_spearman": spearman(x, net),
+        "adverse_spearman": spearman(x, adverse),
+        "net_standardized_slope": standardized_slope(x, net),
+        "adverse_standardized_slope": standardized_slope(x, adverse),
+    }
+
+
+def tercile_effects(
+    x: np.ndarray,
+    net: np.ndarray,
+    adverse: np.ndarray,
+) -> dict[str, float | int]:
+    lower_cut = float(np.quantile(x, 1 / 3))
+    upper_cut = float(np.quantile(x, 2 / 3))
+    lower = x <= lower_cut
+    upper = x >= upper_cut
+    return {
+        "lower_cut": lower_cut,
+        "upper_cut": upper_cut,
+        "lower_count": int(lower.sum()),
+        "upper_count": int(upper.sum()),
+        "net_upper_minus_lower": float(net[upper].mean() - net[lower].mean()),
+        "adverse_upper_minus_lower": float(
+            adverse[upper].mean() - adverse[lower].mean()
+        ),
+        "lower_net_mean": float(net[lower].mean()),
+        "upper_net_mean": float(net[upper].mean()),
+        "lower_adverse_mean": float(adverse[lower].mean()),
+        "upper_adverse_mean": float(adverse[upper].mean()),
+    }
+
+
+def bootstrap(
+    x: np.ndarray,
+    net: np.ndarray,
+    adverse: np.ndarray,
+) -> dict[str, Any]:
+    n = len(x)
+    if n < BLOCK:
+        raise ValueError("insufficient observations for moving-block bootstrap")
+    block_count = math.ceil(n / BLOCK)
+    rng = np.random.default_rng(SEED)
+    names = tuple(summary_stats(x, net, adverse))
+    draws = {name: np.empty(DRAWS, dtype=float) for name in names}
+    for draw in range(DRAWS):
+        starts = rng.integers(0, n - BLOCK + 1, size=block_count)
+        indices = (
+            starts[:, None] + np.arange(BLOCK, dtype=int)[None, :]
+        ).reshape(-1)[:n]
+        record = summary_stats(x[indices], net[indices], adverse[indices])
+        for name in names:
+            draws[name][draw] = record[name]
+    result: dict[str, Any] = {}
+    for name in names:
+        values = draws[name]
+        if not np.isfinite(values).all():
+            raise ValueError(f"non-finite bootstrap values for {name}")
+        quantiles = np.percentile(values, [2.5, 50.0, 97.5])
+        result[name] = {
+            "lower_95": float(quantiles[0]),
+            "median": float(quantiles[1]),
+            "upper_95": float(quantiles[2]),
+            "nonpositive_mass": float(np.mean(values <= 0)),
+        }
+    return {
+        "draws": DRAWS,
+        "block_opportunities": BLOCK,
+        "seed": SEED,
+        "paired_non_circular_common_index": True,
+        "statistics": result,
+    }
+
+
+def hour_of_week(open_ms: int) -> int:
+    timestamp = datetime.fromtimestamp(open_ms / 1000, tz=UTC)
+    return timestamp.weekday() * 24 + timestamp.hour
+
+
+def source_grid_audit(series: Any, end: int) -> dict[str, Any]:
+    open_ms = np.asarray(series.open_ms[:end], dtype=np.int64)
+    if len(open_ms) != end:
+        raise ValueError(f"source length {len(open_ms)} does not equal {end}")
+    if open_ms[0] != EXPECTED_START_MS:
+        raise ValueError(f"unexpected first hour: {open_ms[0]}")
+    if end == FULL_END and open_ms[-1] != EXPECTED_END_MS:
+        raise ValueError(f"unexpected last hour: {open_ms[-1]}")
+    if np.any(open_ms % HOUR_MS != 0):
+        raise ValueError("source contains a non-UTC-hour opening")
+    gaps = np.flatnonzero(np.diff(open_ms) != HOUR_MS)
+    if len(gaps):
+        raise ValueError(f"non-contiguous 1H source at index {int(gaps[0])}")
+    bins = np.array([hour_of_week(int(value)) for value in open_ms], dtype=int)
+    expected = np.array(
+        [hour_of_week(int(open_ms[0] + index * HOUR_MS)) for index in range(end)],
+        dtype=int,
+    )
+    if not np.array_equal(bins, expected):
+        raise ValueError("UTC hour-of-week identity mismatch")
+    return {
+        "rows_checked": int(end),
+        "first_open_ms": int(open_ms[0]),
+        "last_open_ms": int(open_ms[-1]),
+        "non_hour_openings": 0,
+        "one_hour_gaps": 0,
+        "utc_bin_identity_passed": True,
+    }
+
+
+def completed_log_returns(series: Any, end: int) -> np.ndarray:
+    closes = np.asarray(series.closes[:end], dtype=float)
+    if len(closes) != end:
+        raise ValueError("close vector has incorrect length")
+    if not np.isfinite(closes).all() or np.any(closes <= 0):
+        raise ValueError("closes must be finite and positive")
+    returns = np.full(end, np.nan, dtype=float)
+    returns[1:] = np.log(closes[1:] / closes[:-1])
+    return returns
+
+
+def seasonal_feature(
+    returns: np.ndarray,
+    open_ms: np.ndarray,
+    t: int,
+) -> dict[str, Any]:
+    baseline_indices = np.arange(t - 1536, t - 192, dtype=int)
+    recent_indices = np.arange(t - 192, t - 24, dtype=int)
+    if len(baseline_indices) != BASELINE_HOURS:
+        raise ValueError("baseline does not contain exactly 1,344 endpoints")
+    if len(recent_indices) != RECENT_HOURS:
+        raise ValueError("recent window does not contain exactly 168 endpoints")
+    baseline_returns = returns[baseline_indices]
+    recent_returns = returns[recent_indices]
+    if not np.isfinite(baseline_returns).all() or not np.isfinite(
+        recent_returns
+    ).all():
+        return {
+            "valid": False,
+            "reason": "non-finite return in frozen window",
+        }
+    baseline_bins = np.array(
