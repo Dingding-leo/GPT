@@ -187,7 +187,10 @@ def build_report(evidence: dict[str, Any]) -> str:
         "",
         "## Group adjudication",
         "",
-        "| Group | Representation | Class | Economic | Risk | Dependence | Breadth | Timing | Turnover |",
+        (
+            "| Group | Representation | Class | Economic | Risk | Dependence | "
+            "Breadth | Timing | Turnover |"
+        ),
         "|---|---|---|---:|---:|---:|---:|---:|---:|",
     ]
     for group in evidence["groups"]:
