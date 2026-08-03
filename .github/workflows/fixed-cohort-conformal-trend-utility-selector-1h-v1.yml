@@ -57,75 +57,8 @@ jobs:
               base64.b85decode(namespace["_PAYLOAD"].encode("ascii"))
           ).decode("utf-8")
           for number, line in enumerate(source.splitlines(), start=1):
-              if number <= 240:
-                  print(f"{number:04d}: {line}")
+              print(f"{number:04d}: {line}")
           PY
 
-      - name: Run frozen bilateral selector experiment
-        env:
-          TESTED_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          python scripts/run_fixed_cohort_conformal_trend_utility_selector_1h_v1.py \
-            --tested-head "$TESTED_HEAD" \
-            --output-dir "$OUTPUT_DIR"
-
-      - name: Verify immutable evidence
-        env:
-          TESTED_HEAD: ${{ github.event.pull_request.head.sha }}
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import hashlib
-          import json
-          import os
-          from pathlib import Path
-
-          root = Path("evidence/fixed-cohort-conformal-trend-utility-selector-1h-v1")
-          evidence = json.loads((root / "evidence.json").read_text(encoding="utf-8"))
-          assert evidence["tested_head"] == os.environ["TESTED_HEAD"]
-          assert evidence["family_id"] == (
-              "causal-fixed-cohort-conformal-trend-utility-selector-1h-v1"
-          )
-          assert evidence["candidate_count"] == 1
-          assert evidence["parameter_grid_count"] == 0
-          assert evidence["canonical_fee_bps_one_way"] == 5.0
-          assert evidence["source_period"]["rows_per_target"] == 43941
-          assert evidence["source_period"]["fold_count"] == 12
-          assert evidence["source_period"]["fold_hours"] == 2160
-          assert evidence["verdict"] in {
-              "accept_causal_fixed_cohort_conformal_trend_utility_selector_for_canonical_review_1h_v1",
-              "reject_causal_fixed_cohort_conformal_trend_utility_selector_1h_v1",
-              "reject_causal_fixed_cohort_conformal_trend_utility_selector_source_contract_1h_v1",
-          }
-          controls = evidence["controls"]
-          for key in (
-              "credentials_accessed",
-              "accounts_accessed",
-              "orders_placed",
-              "leverage_used",
-              "synthetic_market_data",
-              "non_1h_input",
-              "cross_sectional_selection",
-              "pairs_or_spreads",
-              "post_hoc_target_filtering",
-              "paper_trading_authorized",
-              "live_trading_authorized",
-          ):
-              assert controls[key] is False
-          if evidence["source_contract_passed"]:
-              assert set(evidence["results"]) == {"BCH-USDT", "LINK-USDT"}
-          for hash_path in root.rglob("*.sha256"):
-              source_path = hash_path.with_name(hash_path.name[:-7])
-              assert source_path.is_file()
-              actual = hashlib.sha256(source_path.read_bytes()).hexdigest()
-              assert actual == hash_path.read_text(encoding="utf-8").strip()
-          PY
-
-      - name: Upload immutable exact-head evidence
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: fixed-cohort-conformal-trend-utility-selector-${{ github.event.pull_request.head.sha }}
-          path: ${{ env.OUTPUT_DIR }}
-          if-no-files-found: error
-          retention-days: 90
+      - name: Stop after deterministic diagnostic
+        run: exit 1
