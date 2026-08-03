@@ -294,7 +294,8 @@ def persist(output_dir: Path, result: dict[str, Any]) -> str:
 
 def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     configure_checkpoint()
-    result = checkpoint.checkpoint.call_inherited_checkpoint(
+    # 0500 wraps 0400, whose nested checkpoint module owns the inherited core.
+    result = checkpoint.checkpoint.checkpoint.call_inherited_checkpoint(
         output_dir, base_url.rstrip("/")
     )
     result = finalize(result)
