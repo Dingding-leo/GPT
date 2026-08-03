@@ -1,0 +1,130 @@
+name: Linear Supervised Selector Programme Closure 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_linear_supervised_selector_programme_closure_1h_v1.py"
+      - ".github/workflows/linear-supervised-selector-programme-closure-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linear-supervised-selector-closure-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  immutable-evidence-closure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/experiments/causal-own-price-linear-supervised-selector-programme-closure-1h-v1
+      ARTIFACT_NAME: linear-supervised-selector-closure-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable strategy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+          ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
+            scripts/run_linear_supervised_selector_programme_closure_1h_v1.py
+          ! grep -EIn '(15m|quarter-hour|resample\()' \
+            scripts/run_linear_supervised_selector_programme_closure_1h_v1.py
+          ! grep -EIn '(pair.?trade|cointegration|market.neutral|long.short)' \
+            scripts/run_linear_supervised_selector_programme_closure_1h_v1.py
+
+      - name: Compile deterministic closure
+        run: python -m py_compile scripts/run_linear_supervised_selector_programme_closure_1h_v1.py
+
+      - name: Execute immutable evidence adjudication
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/run_linear_supervised_selector_programme_closure_1h_v1.py \
+            --tested-head "$EXPECTED_TESTED_SHA" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Validate machine-readable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.json.sha256"
+          test -s "$OUTPUT_DIR/source-records.json"
+          test -s "$OUTPUT_DIR/report.md"
+          test "$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')" = \
+            "$(cat "$OUTPUT_DIR/evidence.json.sha256")"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((root / "evidence.json").read_text())
+          assert evidence["tested_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["new_market_rows"] == 0
+          assert evidence["new_target_labels"] == 0
+          assert evidence["new_oos_observations"] == 0
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["bound_evidence_units"] == 2
+          assert evidence["independently_supportive_units"] == 0
+          assert evidence["closure_gates_passed"] == 1
+          assert evidence["closure_gates_total"] == 12
+          assert evidence["ridge_exception"]["bilateral_validation_pass"] is False
+          assert evidence["ridge_exception"]["sealed_oos_accessed"] is False
+          assert set(evidence["ridge_exception"]["targets"]) == {
+              "ETC-USDT",
+              "FIL-USDT",
+          }
+          for target in evidence["ridge_exception"]["targets"].values():
+              assert target["source_rows"] == 24144
+              assert target["fit_support"] < target["fit_support_required"]
+              assert target["validation_candidate_net_return"] < 0
+              assert target["validation_candidate_turnover"] > target[
+                  "validation_e2160_turnover"
+              ]
+              assert target["oos"] is None
+              assert target["full"] is None
+              assert target["breadth"] is None
+              assert target["uncertainty"] is None
+              assert target["execution_delay"] is None
+          assert evidence["verdict"] == (
+              "reject_reopening_completed_fixed_linear_supervised_selector_"
+              "mechanisms_1h_v1"
+          )
+          assert all(value is False for value in evidence["controls"].values())
+          print(json.dumps({
+              "verdict": evidence["verdict"],
+              "gates": evidence["closure_gates"],
+              "targets": evidence["ridge_exception"]["targets"],
+          }, sort_keys=True))
+          PY
+          echo "EVIDENCE_SHA256=$(cat "$OUTPUT_DIR/evidence.json.sha256")"
+          echo "REPORT_SHA256=$(cat "$OUTPUT_DIR/report.md.sha256")"
+          echo "SOURCE_RECORDS_SHA256=$(cat "$OUTPUT_DIR/source-records.json.sha256")"
+
+      - name: Upload immutable exact-head evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
