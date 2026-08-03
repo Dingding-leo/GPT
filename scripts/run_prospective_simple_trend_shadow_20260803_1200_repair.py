@@ -7,7 +7,7 @@ import run_prospective_simple_trend_shadow_20260803_1200 as checkpoint
 
 def exact_inherited_core() -> Any:
     return (
-        checkpoint.checkpoint.checkpoint.checkpoint.checkpoint.call_inherited_core
+        checkpoint.checkpoint.checkpoint.checkpoint.checkpoint.checkpoint.call_inherited_core
     )
 
 
