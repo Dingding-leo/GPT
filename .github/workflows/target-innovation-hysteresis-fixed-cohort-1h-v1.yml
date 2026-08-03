@@ -1,0 +1,109 @@
+name: Target innovation hysteresis ADA XRP 1H v1 exact
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  strategy-research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      OUTPUT_DIR: evidence/target-innovation-hysteresis-fixed-cohort-1h-v1
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          set -euo pipefail
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Run frozen bilateral replication
+        env:
+          TESTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python scripts/run_target_innovation_hysteresis_fixed_cohort_1h_v1.py \
+            --tested-head "$TESTED_HEAD" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify terminal immutable evidence
+        env:
+          TESTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path("evidence/target-innovation-hysteresis-fixed-cohort-1h-v1")
+          evidence = json.loads((root / "evidence.json").read_text(encoding="utf-8"))
+          expected_verdicts = {
+              "accept_causal_target_innovation_hysteresis_fixed_cohort_replication_1h_v1_for_canonical_review",
+              "reject_causal_target_innovation_hysteresis_fixed_cohort_replication_1h_v1",
+              "reject_causal_target_innovation_hysteresis_fixed_cohort_source_contract_1h_v1",
+          }
+          assert evidence["tested_head"] == os.environ["TESTED_HEAD"]
+          assert evidence["family_id"] == (
+              "causal-target-innovation-hysteresis-fixed-cohort-replication-1h-v1"
+          )
+          assert evidence["verdict"] in expected_verdicts
+          assert evidence["candidate_count"] == 1
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["source_period"]["rows_per_target"] == 43941
+          assert evidence["source_period"]["fold_count"] == 12
+          assert evidence["source_period"]["fold_hours"] == 2160
+          assert evidence["controls"]["credentials_accessed"] is False
+          assert evidence["controls"]["accounts_accessed"] is False
+          assert evidence["controls"]["orders_placed"] is False
+          assert evidence["controls"]["leverage_used"] is False
+          assert evidence["controls"]["synthetic_market_data"] is False
+          assert evidence["controls"]["non_1h_input"] is False
+          assert evidence["controls"]["cross_sectional_selection"] is False
+          assert evidence["controls"]["pairs_or_spreads"] is False
+          assert evidence["controls"]["post_hoc_target_filtering"] is False
+          assert evidence["controls"]["paper_trading_authorized"] is False
+          assert evidence["controls"]["live_trading_authorized"] is False
+          if evidence["source_contract_passed"]:
+              assert set(evidence["results"]) == {"ADA-USDT", "XRP-USDT"}
+          for hash_path in root.rglob("*.sha256"):
+              source_path = hash_path.with_name(hash_path.name[:-7])
+              assert source_path.is_file()
+              actual = hashlib.sha256(source_path.read_bytes()).hexdigest()
+              assert actual == hash_path.read_text(encoding="utf-8").strip()
+          PY
+
+      - name: Upload immutable exact-head evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: target-innovation-hysteresis-fixed-cohort-1h-v1-${{ github.event.pull_request.head.sha }}
+          path: ${{ env.OUTPUT_DIR }}
+          if-no-files-found: error
+          retention-days: 90
