@@ -43,6 +43,7 @@ LATEST_ARCHITECTURE: dict[str, Any] = {
     "candidate_count": 0,
     "parameter_grid_count": 0,
     "bilateral_pass": False,
+    "bilateral_source_contract_passed": False,
     "target_returns_accessed": True,
     "strategy_performance_accessed": False,
     "benchmark_path_accessed": False,
