@@ -30,12 +30,103 @@ PRIOR_CLOSURE: dict[str, Any] = {
     "new_labels": 0,
     "new_oos": 0,
     "verdict": "reject_reopening_completed_own_history_label_trained_selector_mechanisms_1h_v1",
-    "representative_failures": [
-        "Direct forecasts lost 76.00% OOS in UNI and 21.20% OOS in AAVE.",
-        "Haar classifiers reversed from training gains above 127% to OOS losses above 58%.",
-        "ATOM historical analog failed the one-hour delay despite a positive OOS point estimate.",
-        "LINK BOCPD had only 2/6 profitable folds and no bilateral COMP replication.",
-        "Conformal BCH/LINK fit support was below its frozen minimum and economics stayed sealed.",
+    "group_records": [
+        {
+            "group": "direct_forecasting",
+            "targets": {
+                "UNI-USDT": {
+                    "oos_net_return": -0.7600,
+                    "oos_sharpe": -0.466,
+                    "full_net_return": -0.6380,
+                },
+                "AAVE-USDT": {
+                    "oos_net_return": -0.2120,
+                    "full_net_return": -0.2588,
+                },
+            },
+            "supportive": False,
+        },
+        {
+            "group": "empirical_downside_bounds",
+            "targets": ["ETC-USDT", "COMP-USDT"],
+            "active_oos_weeks": 0,
+            "eligible_oos_weeks": 154,
+            "sharpe": None,
+            "edge_per_turnover": None,
+            "supportive": False,
+        },
+        {
+            "group": "loss_probability_veto",
+            "targets": {
+                "NEAR-USDT": {
+                    "oos_net_return": 1.1330,
+                    "oos_b1_net_return": 3.5998,
+                },
+                "SAND-USDT": {
+                    "oos_net_return": 0.2894,
+                    "full_net_return": -0.1965,
+                    "positive_fold_concentration": 0.7973,
+                },
+            },
+            "supportive": False,
+        },
+        {
+            "group": "payoff_sizing",
+            "targets": {
+                "KSM-USDT": {"oos_net_return": -0.1120},
+                "IOTA-USDT": {
+                    "oos_net_return": 0.1968,
+                    "full_net_return": -0.1810,
+                },
+            },
+            "common_annualized_mean_delta": -0.1834,
+            "common_annualized_mean_delta_ci95": [-0.5553, 0.1628],
+            "supportive": False,
+        },
+        {
+            "group": "haar_classifier",
+            "training_net_return_floor": 1.27,
+            "oos_net_returns": [-0.5899, -0.6588],
+            "turnover_multiple_vs_e2160": 10.3,
+            "supportive": False,
+        },
+        {
+            "group": "historical_analog",
+            "targets": {
+                "ATOM-USDT": {
+                    "oos_net_return": 0.6122,
+                    "oos_sharpe": 1.392,
+                    "delayed_oos_net_return": -0.0514,
+                },
+                "ALGO-USDT": {"underperformed_e2160": True},
+            },
+            "supportive": False,
+        },
+        {
+            "group": "bocpd_entry",
+            "targets": {
+                "LINK-USDT": {
+                    "oos_net_return": 0.4174,
+                    "full_net_return": 0.7891,
+                    "profitable_folds": 2,
+                    "fold_count": 6,
+                    "mean_delta_lower_bound": -0.00000389,
+                },
+                "COMP-USDT": {"negative_economics": True},
+            },
+            "supportive": False,
+        },
+        {
+            "group": "conformal_selector",
+            "targets": {
+                "BCH-USDT": {"fit_positive_count": 39, "fit_count": 330},
+                "LINK-USDT": {"fit_positive_count": 62, "fit_count": 330},
+            },
+            "minimum_fit_positive_count": 80,
+            "labels": None,
+            "economics": None,
+            "supportive": False,
+        },
     ],
 }
 
@@ -186,6 +277,9 @@ def build_report(evidence: dict[str, Any]) -> str:
         "large apparent gains, then reversed to validation losses while suppressing profitable "
         "E2160 exposure and increasing turnover by 6.0x to 13.5x.",
         "",
+        "The artifact also persists all eight original #1022 group scorecards without duplicate "
+        "votes, recomputation or altered acceptance rules.",
+        "",
         "OOS, full-period, fold/year breadth, dependence uncertainty and execution-delay fields "
         "remain null rather than zero because the bilateral validation gate failed.",
         "",
@@ -210,6 +304,10 @@ def main() -> int:
     gates = build_gates()
     if sum(gates.values()) != 1:
         raise AssertionError("closure gate vector changed")
+    if len(PRIOR_CLOSURE["group_records"]) != PRIOR_CLOSURE["bound_groups"]:
+        raise AssertionError("prior closure group matrix is incomplete")
+    if any(group["supportive"] for group in PRIOR_CLOSURE["group_records"]):
+        raise AssertionError("prior closure support disposition changed")
     targets = RIDGE_EXCEPTION["targets"]
     if set(targets) != {"ETC-USDT", "FIL-USDT"}:
         raise AssertionError("fixed target identity changed")
