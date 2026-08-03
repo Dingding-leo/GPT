@@ -42,6 +42,25 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
+      - name: Inspect immediate source-contract failure
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import base64
+          import gzip
+          import runpy
+          from pathlib import Path
+
+          wrapper = Path("scripts/run_fixed_cohort_conformal_trend_utility_selector_1h_v1.py")
+          namespace = runpy.run_path(str(wrapper), run_name="payload_inspection")
+          source = gzip.decompress(
+              base64.b85decode(namespace["_PAYLOAD"].encode("ascii"))
+          ).decode("utf-8")
+          for number, line in enumerate(source.splitlines(), start=1):
+              if number <= 240:
+                  print(f"{number:04d}: {line}")
+          PY
+
       - name: Run frozen bilateral selector experiment
         env:
           TESTED_HEAD: ${{ github.event.pull_request.head.sha }}
