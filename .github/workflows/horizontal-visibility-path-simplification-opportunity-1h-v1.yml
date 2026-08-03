@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py"
+      - "scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1_exact.py"
       - ".github/workflows/horizontal-visibility-path-simplification-opportunity-1h-v1.yml"
   workflow_dispatch:
 
@@ -43,9 +44,11 @@ jobs:
           test -z "${{ secrets.OKX_SECRET_KEY }}"
           test -z "${{ secrets.OKX_PASSPHRASE }}"
           ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
-            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py
+            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py \
+            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1_exact.py
           ! grep -EIn '(15m|quarter-hour|resample\()' \
-            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py
+            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py \
+            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1_exact.py
 
       - name: Install exact project
         run: python -m pip install --disable-pip-version-check -e .
@@ -53,14 +56,15 @@ jobs:
       - name: Compile frozen experiment
         run: |
           python -m py_compile \
-            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py
+            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py \
+            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1_exact.py
 
       - name: Execute training-only bilateral topological diagnostic
         shell: bash
         run: |
           set -euo pipefail
           export GITHUB_SHA="$EXPECTED_TESTED_SHA"
-          python scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py \
+          python scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1_exact.py \
             --output-dir "$OUTPUT_DIR"
 
       - name: Validate machine-readable evidence
@@ -117,6 +121,9 @@ jobs:
               assert target["structural_checks"]["passed"] is True
               assert target["bootstrap"]["draws"] == 5000
               assert target["bootstrap"]["block_opportunities"] == 7
+              assert target["fold_breadth"]["fold_definition"] == (
+                  "four fixed contiguous eligible-opportunity blocks"
+              )
           compact = {
               "exact_head": evidence["exact_head"],
               "verdict": evidence["verdict"],
