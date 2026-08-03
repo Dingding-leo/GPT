@@ -15,7 +15,7 @@ _ORIGINAL_FETCH = MODULE.fetch_okx_one_hour_candles
 
 
 def _fetch_with_repaired_page_budget(*args: Any, **kwargs: Any) -> Any:
-    kwargs["safety_pages"] = max(int(kwargs.get("safety_pages", 0)), 16)
+    kwargs["safety_pages"] = max(int(kwargs.get("safety_pages", 0)), 96)
     return _ORIGINAL_FETCH(*args, **kwargs)
 
 
