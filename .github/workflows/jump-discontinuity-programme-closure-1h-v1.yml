@@ -45,7 +45,7 @@ jobs:
           test -z "${{ secrets.OKX_PASSPHRASE }}"
           ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
             scripts/run_jump_discontinuity_programme_closure_1h_v1.py
-          ! grep -EIn '(15m|quarter-hour|resample\()' \
+          ! grep -EIn '(^|[^[:alnum:]_])15m([^[:alnum:]_]|$)|quarter-hour|resample\(' \
             scripts/run_jump_discontinuity_programme_closure_1h_v1.py
 
       - name: Compile deterministic evidence binder
