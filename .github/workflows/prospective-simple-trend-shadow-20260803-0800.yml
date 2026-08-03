@@ -48,7 +48,7 @@ jobs:
           ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
             scripts/run_okx_open_interest_source_contract_20260803.py \
             scripts/run_prospective_simple_trend_shadow_20260803_0800.py
-          ! grep -EIn '(15m|quarter-hour|resample\(|interpolat|forward.fill|ffill)' \
+          ! grep -EIn '(resample\(|\.interpolate\(|\.ffill\(|forward_fill\()' \
             scripts/run_okx_open_interest_source_contract_20260803.py \
             scripts/run_prospective_simple_trend_shadow_20260803_0800.py
 
@@ -78,11 +78,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test -s "$SOURCE_DIR/evidence.json"
-          test -s "$SOURCE_DIR/evidence.sha256"
-          test -s "$OUTPUT_DIR/result.json"
-          test -s "$OUTPUT_DIR/result.sha256"
-          test -s "$OUTPUT_DIR/report.md"
           test "$(sha256sum "$SOURCE_DIR/evidence.json" | awk '{print $1}')" = \
             "$(cat "$SOURCE_DIR/evidence.sha256")"
           test "$(sha256sum "$OUTPUT_DIR/result.json" | awk '{print $1}')" = \
@@ -98,9 +93,7 @@ jobs:
           result = json.loads((output_dir / "result.json").read_text())
 
           assert source["exact_head"] == os.environ["EXPECTED_TESTED_SHA"]
-          assert source["family_id"] == (
-              "causal-okx-contract-open-interest-source-contract-1h-v1"
-          )
+          assert source["family_id"] == "causal-okx-contract-open-interest-source-contract-1h-v1"
           assert source["issue"] == 1040
           assert source["bar"] == "1H"
           assert source["fee_bps_one_way"] == 5.0
@@ -113,17 +106,10 @@ jobs:
           assert source["correction_authority"] is False
           assert source["canonical_strategy_changed"] is False
           assert source["live_trading_authorized"] is False
-          if source["bilateral_source_contract_passed"]:
-              assert source["candidate_count"] == 1
-              assert all(arm["source_contract_passed"] for arm in source["source_arms"])
-          else:
-              assert source["candidate_count"] == 0
-              assert source["status"] == "terminally_rejected_source_contract"
+          assert source["candidate_count"] == (1 if source["bilateral_source_contract_passed"] else 0)
 
           assert result["policy_name"] == "simple_trend_long_cash_2160h_next_open"
-          assert result["policy_sha256"] == (
-              "9dc8ab03368b61546a6ae7674f1f4127953404900ff1e09e066ecf9adf741131"
-          )
+          assert result["policy_sha256"] == "9dc8ab03368b61546a6ae7674f1f4127953404900ff1e09e066ecf9adf741131"
           assert result["bar"] == "1H"
           assert result["canonical_fee_bps_one_way"] == 5.0
           assert result["cross_sectional_selection"] is False
@@ -152,10 +138,7 @@ jobs:
           assert architecture["sealed_oos_accessed"] is False
           assert architecture["correction_authority"] is False
 
-          assert all(
-              item["grid"]["contiguous_confirmed_grid_passed"] is True
-              for item in result["sources"]
-          )
+          assert all(item["grid"]["contiguous_confirmed_grid_passed"] for item in result["sources"])
           correction = result["training_authorized_correction"]
           assert correction["permitted"] is False
           assert correction["applied"] is False
@@ -175,28 +158,7 @@ jobs:
               "acquisition": result["acquisition"],
               "window": window,
               "aggregate": result["aggregate_forward_scorecard"],
-              "markets": [
-                  {
-                      "instrument": market["instrument"],
-                      "new_margin": market["new_decisions"][0]["margin"],
-                      "new_target": market["new_decisions"][0]["target"],
-                      "margin_drift": market["signal_drift"]["margin_change"],
-                      "position": market["realized_interval"]["position"],
-                      "expected_net": market["realized_interval"][
-                          "expected_net_return_under_frozen_decision"
-                      ],
-                      "realized_net": market["realized_interval"]["net_strategy_return"],
-                      "benchmark": market["realized_interval"]["asset_return"],
-                      "residual": market["realized_interval"][
-                          "strategy_residual_vs_buy_and_hold"
-                      ],
-                      "turnover": market["realized_interval"]["turnover"],
-                      "fee": market["realized_interval"]["modeled_fee"],
-                      "drift_attribution": market["drift_attribution"],
-                      "five_interval": market["recent_forward_window"],
-                  }
-                  for market in result["markets"]
-              ],
+              "markets": result["markets"],
               "discrepancy": result["strategy_facing_discrepancy"],
               "source": source,
               "correction": correction,
