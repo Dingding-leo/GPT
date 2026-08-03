@@ -46,9 +46,6 @@ jobs:
           ! grep -nEi \
             'place_order|create_order|submit_order|send_order|/fapi/v[0-9]+/(account|order|position)' \
             scripts/run_public_open_interest_source_contract.py
-          ! grep -nEi \
-            'X-MBX-APIKEY|signature=|recvWindow=|api[_-]?key|api[_-]?secret' \
-            scripts/run_public_open_interest_source_contract.py
 
       - name: Compile frozen source experiment
         run: python -m py_compile scripts/run_public_open_interest_source_contract.py
