@@ -7,9 +7,7 @@ from typing import Any
 
 from gpt_quant.okx_1h import fetch_okx_one_hour_candles
 
-MODULE_PATH = Path(__file__).with_name(
-    "run_bipower_jump_share_contraction_opportunity_1h_v1.py"
-)
+MODULE_PATH = Path(__file__).with_name("run_bipower_jump_share_contraction_opportunity_1h_v1.py")
 
 
 def _load_experiment() -> ModuleType:
