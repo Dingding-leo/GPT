@@ -56,6 +56,22 @@ def validate_docs_url(url: str) -> None:
         raise core.SourceContractError(f"untrusted Coin Metrics documentation URL: {url}")
 
 
+def persist_document(raw: bytes) -> dict[str, Any]:
+    """Persist exact official documentation bytes beside the source evidence."""
+    directory = core.SOURCE / "reference"
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "fees-doc.html"
+    path.write_bytes(raw)
+    return {
+        "purpose": "FeeTotNtv official detailed documentation",
+        "page": None,
+        "request_url": DOCS_URL,
+        "response_file": str(path),
+        "response_bytes": len(raw),
+        "response_sha256": core.sha256_bytes(raw),
+    }
+
+
 def freeze_semantics() -> dict[str, Any]:
     """Bind compact API reference metadata to the detailed official metric definition."""
     payloads, manifest = core.follow_pages(
@@ -99,14 +115,7 @@ def freeze_semantics() -> dict[str, Any]:
 
     validate_docs_url(DOCS_URL)
     raw = core.fetch(DOCS_URL, byte_limit=15_000_000)
-    docs_record = core.persist_response(
-        directory=core.SOURCE / "reference",
-        filename="fees-doc.html",
-        url=DOCS_URL,
-        raw=raw,
-        provider="Coin Metrics official documentation",
-        page=None,
-    )
+    docs_record = persist_document(raw)
     text = normalize_document(raw)
     required_terms = (
         "feetotntv",
