@@ -1,0 +1,142 @@
+name: Mixture E-Process Trend Evidence Selector 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_mixture_e_process_trend_evidence_selector_1h_v1.py"
+      - ".github/workflows/mixture-e-process-trend-evidence-selector-1h-v1.yml"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mixture-e-process-selector-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  frozen-selector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/experiments/causal-own-price-mixture-e-process-trend-evidence-selector-1h-v1
+      ARTIFACT_NAME: mixture-e-process-selector-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable strategy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+          ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
+            scripts/run_mixture_e_process_trend_evidence_selector_1h_v1.py
+          ! grep -EIn '(15m|quarter-hour|resample\()' \
+            scripts/run_mixture_e_process_trend_evidence_selector_1h_v1.py
+          ! grep -EIn '(pair.?trade|cointegration|market.neutral|long.short|rank.*asset)' \
+            scripts/run_mixture_e_process_trend_evidence_selector_1h_v1.py
+
+      - name: Install exact project
+        run: python -m pip install --disable-pip-version-check -e .
+
+      - name: Compile frozen selector
+        run: python -m py_compile scripts/run_mixture_e_process_trend_evidence_selector_1h_v1.py
+
+      - name: Execute bilateral validation and conditional OOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$EXPECTED_TESTED_SHA"
+          python scripts/run_mixture_e_process_trend_evidence_selector_1h_v1.py \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Validate machine-readable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          test -s "$OUTPUT_DIR/validation-records.json"
+          test "$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')" = \
+            "$(cat "$OUTPUT_DIR/evidence.sha256")"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((root / "evidence.json").read_text())
+          assert evidence["exact_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["candidate_count"] == 1
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["fixed_targets"] == ["XRP-USDT", "ADA-USDT"]
+          assert evidence["bar"] == "1H"
+          assert evidence["expected_rows_per_target"] == 29232
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["mixture_lambdas"] == [0.125, 0.25, 0.5, 1.0]
+          assert evidence["evidence_threshold"] == 20.0
+          assert evidence["minimum_support"] == 120
+          assert len(evidence["targets"]) == 2
+          assert all(value is False for value in evidence["controls"].values())
+          for target in evidence["targets"]:
+              assert target["source"]["rows"] == 29232
+              assert target["source"]["exact_byte_replay_identical"] is True
+              assert target["source"]["repeated_normalization_identical"] is True
+              assert target["source"]["synthetic_rows"] == 0
+              assert target["e_process_identities"]["reset_count"] == 0
+              assert target["validation_prefix_determinism"]["identical"] is True
+              assert target["validation"]["candidate"]["decision_intervals"] > 0
+          if evidence["sealed_oos_performance_accessed"]:
+              assert evidence["bilateral_validation_pass"] is True
+              assert all(target["oos"] is not None for target in evidence["targets"])
+              assert all(target["full"] is not None for target in evidence["targets"])
+              assert all(target["uncertainty"]["draws"] == 5000 for target in evidence["targets"])
+              assert all(len(target["fold_breadth"]["folds"]) == 12 for target in evidence["targets"])
+          else:
+              assert evidence["bilateral_validation_pass"] is False
+              assert all(target["oos"] is None for target in evidence["targets"])
+              assert all(target["full"] is None for target in evidence["targets"])
+              assert all(target["uncertainty"] is None for target in evidence["targets"])
+          allowed = {
+              "reject_causal_own_price_mixture_e_process_trend_evidence_selector_1h_v1",
+              "accept_causal_own_price_mixture_e_process_trend_evidence_selector_for_canonical_review_1h_v1",
+          }
+          assert evidence["verdict"] in allowed
+          compact = {
+              "exact_head": evidence["exact_head"],
+              "verdict": evidence["verdict"],
+              "bilateral_validation_pass": evidence["bilateral_validation_pass"],
+              "oos_accessed": evidence["sealed_oos_performance_accessed"],
+              "promotion_pass": evidence["bilateral_promotion_pass"],
+              "targets": evidence["targets"],
+              "remaining_blocker": evidence["remaining_blocker"],
+              "next_strategy_experiment": evidence["next_strategy_experiment"],
+          }
+          print("STRATEGY_COMPACT_JSON=" + json.dumps(compact, sort_keys=True))
+          PY
+          echo "EVIDENCE_SHA256=$(cat "$OUTPUT_DIR/evidence.sha256")"
+          echo "REPORT_SHA256=$(cat "$OUTPUT_DIR/report.md.sha256")"
+          echo "VALIDATION_RECORDS_SHA256=$(cat "$OUTPUT_DIR/validation-records.json.sha256")"
+
+      - name: Upload immutable exact-head evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
