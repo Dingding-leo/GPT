@@ -184,7 +184,7 @@ def build_report(evidence: dict[str, Any]) -> str:
         "",
         "Both ridge targets were under the frozen fit-support minimum. Both fit paths showed "
         "large apparent gains, then reversed to validation losses while suppressing profitable "
-        "E2160 exposure and increasing turnover by 5.5x to 13.5x.",
+        "E2160 exposure and increasing turnover by 6.0x to 13.5x.",
         "",
         "OOS, full-period, fold/year breadth, dependence uncertainty and execution-delay fields "
         "remain null rather than zero because the bilateral validation gate failed.",
