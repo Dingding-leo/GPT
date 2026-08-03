@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - "scripts/run_bipower_jump_share_contraction_opportunity_1h_v1.py"
+      - "scripts/run_bipower_jump_share_contraction_opportunity_1h_v1_exact_head.py"
       - ".github/workflows/bipower-jump-share-contraction-opportunity-1h-v1.yml"
   workflow_dispatch:
 
@@ -43,22 +44,27 @@ jobs:
           test -z "${{ secrets.OKX_SECRET_KEY }}"
           test -z "${{ secrets.OKX_PASSPHRASE }}"
           ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
-            scripts/run_bipower_jump_share_contraction_opportunity_1h_v1.py
+            scripts/run_bipower_jump_share_contraction_opportunity_1h_v1.py \
+            scripts/run_bipower_jump_share_contraction_opportunity_1h_v1_exact_head.py
           ! grep -EIn '(15m|quarter-hour|resample\()' \
-            scripts/run_bipower_jump_share_contraction_opportunity_1h_v1.py
+            scripts/run_bipower_jump_share_contraction_opportunity_1h_v1.py \
+            scripts/run_bipower_jump_share_contraction_opportunity_1h_v1_exact_head.py
 
       - name: Install exact project
         run: python -m pip install --disable-pip-version-check -e .
 
-      - name: Compile frozen experiment
-        run: python -m py_compile scripts/run_bipower_jump_share_contraction_opportunity_1h_v1.py
+      - name: Compile frozen experiment and pagination repair
+        run: |
+          python -m py_compile \
+            scripts/run_bipower_jump_share_contraction_opportunity_1h_v1.py \
+            scripts/run_bipower_jump_share_contraction_opportunity_1h_v1_exact_head.py
 
       - name: Execute training-only bilateral discontinuity diagnostic
         shell: bash
         run: |
           set -euo pipefail
           export GITHUB_SHA="$EXPECTED_TESTED_SHA"
-          python scripts/run_bipower_jump_share_contraction_opportunity_1h_v1.py \
+          python scripts/run_bipower_jump_share_contraction_opportunity_1h_v1_exact_head.py \
             --output-dir "$OUTPUT_DIR"
 
       - name: Validate machine-readable evidence
