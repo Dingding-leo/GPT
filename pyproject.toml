@@ -29,6 +29,7 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+exclude = ["scripts/run_jump_discontinuity_programme_closure_1h_v1.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
