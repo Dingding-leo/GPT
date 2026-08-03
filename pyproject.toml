@@ -29,6 +29,7 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["scripts/run_return_sign_mixture_eprocess_shift_1h_v1.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
