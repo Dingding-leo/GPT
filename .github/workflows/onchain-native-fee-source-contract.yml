@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/run_onchain_native_fee_source_contract.py'
+      - 'scripts/run_onchain_native_fee_source_contract_repaired.py'
       - '.github/workflows/onchain-native-fee-source-contract.yml'
 
 permissions:
@@ -45,17 +46,21 @@ jobs:
           fi
           ! grep -nEi \
             'place_order|create_order|submit_order|send_order|/api/v5/(account|trade|asset)' \
-            scripts/run_onchain_native_fee_source_contract.py
+            scripts/run_onchain_native_fee_source_contract.py \
+            scripts/run_onchain_native_fee_source_contract_repaired.py
 
       - name: Compile frozen source experiment
-        run: python -m py_compile scripts/run_onchain_native_fee_source_contract.py
+        run: >-
+          python -m py_compile
+          scripts/run_onchain_native_fee_source_contract.py
+          scripts/run_onchain_native_fee_source_contract_repaired.py
 
       - name: Execute immutable public-data source contract
         shell: bash
         run: |
           set -euo pipefail
           export GITHUB_SHA='${{ github.event.pull_request.head.sha }}'
-          python scripts/run_onchain_native_fee_source_contract.py
+          python scripts/run_onchain_native_fee_source_contract_repaired.py
 
       - name: Validate machine-readable source evidence
         shell: bash
@@ -102,6 +107,8 @@ jobs:
               assert evidence['source_arms_passing'] == 2
               assert len(evidence['markets']) == 2
               assert evidence['official_semantics']['semantic_gate_passed'] is True
+              assert evidence['official_semantics']['burned_fee_accounting_documented'] is True
+              assert evidence['official_semantics']['direct_1h_documentation_support'] is True
               for market in evidence['markets']:
                   assert market['source_gate_passed'] is True
                   assert market['expected_rows'] == 24144
