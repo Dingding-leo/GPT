@@ -162,7 +162,10 @@ def build_report(evidence: dict[str, Any]) -> str:
         "The separately preregistered ridge lag-strip exception also failed before OOS, so it "
         "does not change the family disposition.",
         "",
-        "| Target | Fit support | Fit net / Sharpe | Validation candidate | Validation E2160 | Turnover candidate / E2160 |",
+        (
+            "| Target | Fit support | Fit net / Sharpe | Validation candidate | "
+            "Validation E2160 | Turnover candidate / E2160 |"
+        ),
         "|---|---:|---:|---:|---:|---:|",
     ]
     for target, result in ridge.items():
@@ -281,7 +284,7 @@ def main() -> int:
             "without suppressing profitable benchmark exposure or amplifying turnover."
         ),
         "next_strategy_experiment": (
-            "causal-own-price-hour-of-week-deseasonalized-trend-selector-1h-v1"
+            "causal-own-price-mixture-e-process-trend-evidence-selector-1h-v1"
         ),
     }
 
