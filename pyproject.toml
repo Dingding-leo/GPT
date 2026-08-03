@@ -32,3 +32,6 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"scripts/run_own_history_label_trained_selector_programme_closure_1h_v1.py" = ["E501"]
