@@ -1,0 +1,159 @@
+name: Ridge Lag Strip Utility Selector 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_ridge_lag_strip_utility_selector_1h_v1.py"
+      - ".github/workflows/ridge-lag-strip-utility-selector-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ridge-lag-strip-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  frozen-ridge-selector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/experiments/causal-own-price-ridge-lag-strip-utility-selector-1h-v1
+      ARTIFACT_NAME: ridge-lag-strip-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable strategy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+          ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
+            scripts/run_ridge_lag_strip_utility_selector_1h_v1.py
+          ! grep -EIn '(15m|quarter-hour|resample\()' \
+            scripts/run_ridge_lag_strip_utility_selector_1h_v1.py
+          ! grep -EIn '(cross.sectional|pairs|cointegration|market.neutral|long.short)' \
+            scripts/run_ridge_lag_strip_utility_selector_1h_v1.py
+
+      - name: Install exact project
+        run: python -m pip install --disable-pip-version-check -e .
+
+      - name: Compile frozen selector
+        run: python -m py_compile scripts/run_ridge_lag_strip_utility_selector_1h_v1.py
+
+      - name: Execute bilateral validation and conditional OOS
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$EXPECTED_TESTED_SHA"
+          python scripts/run_ridge_lag_strip_utility_selector_1h_v1.py \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Validate machine-readable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          test "$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')" = \
+            "$(cat "$OUTPUT_DIR/evidence.sha256")"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          output_dir = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((output_dir / "evidence.json").read_text())
+          assert evidence["exact_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["candidate_count"] == 1
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["fixed_targets"] == ["ETC-USDT", "FIL-USDT"]
+          assert evidence["bar"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["cross_sectional_selection"] is False
+          assert evidence["target_pooling"] is False
+          assert evidence["shorting"] is False
+          assert evidence["leverage"] is False
+          assert evidence["credentials_used"] is False
+          assert evidence["private_endpoints_used"] is False
+          assert evidence["orders_or_adapters_enabled"] is False
+          assert evidence["synthetic_market_data_used"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert len(evidence["targets"]) == 2
+          for target in evidence["targets"]:
+              assert target["source"]["rows"] == 24144
+              assert target["source"]["repeat_normalization_identical"] is True
+              assert target["model"]["support"] > 0
+              assert len(target["model"]["beta"]) == 30
+              assert len(target["model"]["feature_means"]) == 30
+              assert len(target["model"]["feature_stds"]) == 30
+              assert target["prefix_invariance"]["model_hash_identical"] is True
+              assert target["prefix_invariance"][
+                  "validation_predictions_exactly_identical"
+              ] is True
+          allowed = {
+              "reject_causal_own_price_ridge_lag_strip_utility_selector_1h_v1",
+              "accept_causal_own_price_ridge_lag_strip_utility_selector_"
+              "for_canonical_review_1h_v1",
+          }
+          assert evidence["verdict"] in allowed
+          if evidence["sealed_oos_performance_accessed"]:
+              assert all(target["oos"] is not None for target in evidence["targets"])
+              assert all(target["full"] is not None for target in evidence["targets"])
+              assert all(target["robustness"] is not None for target in evidence["targets"])
+          else:
+              assert all(target["oos"] is None for target in evidence["targets"])
+              assert all(target["full"] is None for target in evidence["targets"])
+              assert all(target["robustness"] is None for target in evidence["targets"])
+          compact = {
+              "exact_head": evidence["exact_head"],
+              "verdict": evidence["verdict"],
+              "bilateral_validation_pass": evidence["bilateral_validation_pass"],
+              "oos_accessed": evidence["sealed_oos_performance_accessed"],
+              "targets": [
+                  {
+                      "instrument": target["instrument"],
+                      "source": target["source"],
+                      "model": target["model"],
+                      "training": target["training"],
+                      "validation": target["validation"],
+                      "gates": target["gates"],
+                      "validation_pass": target["validation_pass"],
+                      "oos": target["oos"],
+                      "full": target["full"],
+                      "robustness": target["robustness"],
+                  }
+                  for target in evidence["targets"]
+              ],
+              "acceptance_vectors": evidence["acceptance_vectors"],
+              "remaining_blocker": evidence["remaining_blocker"],
+              "next_strategy_experiment": evidence["next_strategy_experiment"],
+          }
+          print("STRATEGY_COMPACT_JSON=" + json.dumps(compact, sort_keys=True))
+          PY
+          echo "EVIDENCE_SHA256=$(cat "$OUTPUT_DIR/evidence.sha256")"
+          echo "REPORT_SHA256=$(sha256sum "$OUTPUT_DIR/report.md" | awk '{print $1}')"
+
+      - name: Upload immutable exact-head evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
