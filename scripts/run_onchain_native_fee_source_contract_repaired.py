@@ -120,12 +120,10 @@ def freeze_semantics() -> dict[str, Any]:
     required_terms = (
         "feetotntv",
         "native units",
-        "miner",
-        "validator",
-        "staker",
-        "block producer",
-        "burn",
-        "included in total fees",
+        "miners, transaction validators, stakers and/or block producers",
+        "fees might be burned (destroyed)",
+        "still accounted for in this metric",
+        "this metric includes fees that are burned as part of the protocol",
     )
     missing = [term for term in required_terms if term not in text]
     hourly_supported = bool(
