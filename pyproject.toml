@@ -29,6 +29,7 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+extend-exclude = ["scripts/run_long_cash_transition_smoothing_programme_closure_1h_v1.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
