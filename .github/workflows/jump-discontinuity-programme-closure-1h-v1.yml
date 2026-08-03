@@ -1,0 +1,113 @@
+name: Jump Discontinuity Programme Closure 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_jump_discontinuity_programme_closure_1h_v1.py"
+      - "scripts/jump_discontinuity_programme_closure_1h_v1_records.json"
+      - ".github/workflows/jump-discontinuity-programme-closure-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jump-discontinuity-closure-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  close-completed-jump-discontinuity-programme:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/experiments/causal-own-price-jump-discontinuity-programme-closure-1h-v1
+      ARTIFACT_NAME: jump-discontinuity-closure-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify frozen strategy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+          ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
+            scripts/run_jump_discontinuity_programme_closure_1h_v1.py
+          ! grep -EIn '(15m|quarter-hour|resample\()' \
+            scripts/run_jump_discontinuity_programme_closure_1h_v1.py
+
+      - name: Compile deterministic evidence binder
+        run: python -m py_compile scripts/run_jump_discontinuity_programme_closure_1h_v1.py
+
+      - name: Build immutable closure evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/run_jump_discontinuity_programme_closure_1h_v1.py \
+            --tested-head "$EXPECTED_TESTED_SHA" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Validate machine-readable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/report.md"
+          test -s "$OUTPUT_DIR/source_records.json"
+          test -s "$OUTPUT_DIR/manifest.json"
+          test "$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')" = \
+            "$(awk '{print $1}' "$OUTPUT_DIR/evidence.sha256")"
+          test "$(sha256sum "$OUTPUT_DIR/report.md" | awk '{print $1}')" = \
+            "$(awk '{print $1}' "$OUTPUT_DIR/report.sha256")"
+          test "$(sha256sum "$OUTPUT_DIR/source_records.json" | awk '{print $1}')" = \
+            "$(awk '{print $1}' "$OUTPUT_DIR/source_records.sha256")"
+          test "$(sha256sum "$OUTPUT_DIR/manifest.json" | awk '{print $1}')" = \
+            "$(awk '{print $1}' "$OUTPUT_DIR/manifest.sha256")"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence = json.loads(
+              (Path(os.environ["OUTPUT_DIR"]) / "evidence.json").read_text()
+          )
+          assert evidence["tested_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["bar"] == "1H"
+          assert evidence["fee_bps_one_way"] == 5.0
+          assert evidence["summary"]["bound_mechanism_count"] == 2
+          assert evidence["summary"]["historical_candidate_count"] == 1
+          assert evidence["summary"]["supportive_mechanism_count"] == 0
+          assert evidence["summary"]["supportive_leave_one_mechanism_out_subsets"] == 0
+          assert all(value is None for value in evidence["economics"].values())
+          assert evidence["canonical_mutation_authorized"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert evidence["verdict"] == (
+              "reject_reopening_completed_own_price_jump_discontinuity_mechanisms_1h_v1"
+          )
+          print(json.dumps(evidence["summary"], sort_keys=True))
+          PY
+          echo "EVIDENCE_SHA256=$(awk '{print $1}' "$OUTPUT_DIR/evidence.sha256")"
+          echo "REPORT_SHA256=$(awk '{print $1}' "$OUTPUT_DIR/report.sha256")"
+          echo "SOURCE_RECORDS_SHA256=$(awk '{print $1}' "$OUTPUT_DIR/source_records.sha256")"
+          echo "MANIFEST_SHA256=$(awk '{print $1}' "$OUTPUT_DIR/manifest.sha256")"
+
+      - name: Upload immutable exact-head evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
