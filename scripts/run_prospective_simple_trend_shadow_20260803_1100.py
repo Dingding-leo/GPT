@@ -47,6 +47,7 @@ LATEST_ARCHITECTURE: dict[str, Any] = {
     "new_market_data_rows": 0,
     "new_target_labels": 0,
     "bilateral_pass": False,
+    "bilateral_source_contract_passed": True,
     "target_returns_accessed": False,
     "strategy_performance_accessed": False,
     "benchmark_path_accessed": False,
