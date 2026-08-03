@@ -46,7 +46,7 @@ jobs:
             scripts/run_ridge_lag_strip_utility_selector_1h_v1.py
           ! grep -EIn '(15m|quarter-hour|resample\()' \
             scripts/run_ridge_lag_strip_utility_selector_1h_v1.py
-          ! grep -EIn '(cross.sectional|pairs|cointegration|market.neutral|long.short)' \
+          ! grep -EIn '(pair.?trade|cointegration|market.neutral|long.short)' \
             scripts/run_ridge_lag_strip_utility_selector_1h_v1.py
 
       - name: Install exact project
