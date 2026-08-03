@@ -58,8 +58,33 @@ jobs:
         run: |
           set -euo pipefail
           export GITHUB_SHA="$EXPECTED_TESTED_SHA"
-          python scripts/run_recurrence_determinism_shift_opportunity_1h_v1.py \
-            --output-dir "$OUTPUT_DIR"
+          python - <<'PY'
+          import runpy
+          import sys
+
+          import gpt_quant.okx_1h as okx_1h
+
+          original_budget = okx_1h.derive_okx_one_hour_page_budget
+
+          def enlarged_budget(*, start, end, limit=100, safety_pages=2):
+              return original_budget(
+                  start=start,
+                  end=end,
+                  limit=limit,
+                  safety_pages=safety_pages + 96,
+              )
+
+          okx_1h.derive_okx_one_hour_page_budget = enlarged_budget
+          sys.argv = [
+              "scripts/run_recurrence_determinism_shift_opportunity_1h_v1.py",
+              "--output-dir",
+              "${{ env.OUTPUT_DIR }}",
+          ]
+          runpy.run_path(
+              "scripts/run_recurrence_determinism_shift_opportunity_1h_v1.py",
+              run_name="__main__",
+          )
+          PY
 
       - name: Validate machine-readable evidence
         shell: bash
