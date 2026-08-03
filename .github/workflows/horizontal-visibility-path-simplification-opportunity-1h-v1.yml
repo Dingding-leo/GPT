@@ -1,0 +1,153 @@
+name: Horizontal Visibility Path Simplification Opportunity 1H V1
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py"
+      - ".github/workflows/horizontal-visibility-path-simplification-opportunity-1h-v1.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: horizontal-visibility-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  horizontal-visibility-information-diagnostic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OUTPUT_DIR: reports/experiments/causal-own-price-horizontal-visibility-path-simplification-opportunity-1h-v1
+      ARTIFACT_NAME: horizontal-visibility-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable public-only strategy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+          ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
+            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py
+          ! grep -EIn '(15m|quarter-hour|resample\()' \
+            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py
+
+      - name: Install exact project
+        run: python -m pip install --disable-pip-version-check -e .
+
+      - name: Compile frozen experiment
+        run: |
+          python -m py_compile \
+            scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py
+
+      - name: Execute training-only bilateral topological diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$EXPECTED_TESTED_SHA"
+          python scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Validate machine-readable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$OUTPUT_DIR/evidence.json"
+          test -s "$OUTPUT_DIR/evidence.sha256"
+          test -s "$OUTPUT_DIR/report.md"
+          test "$(sha256sum "$OUTPUT_DIR/evidence.json" | awk '{print $1}')" = \
+            "$(cat "$OUTPUT_DIR/evidence.sha256")"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          output_dir = Path(os.environ["OUTPUT_DIR"])
+          evidence = json.loads((output_dir / "evidence.json").read_text())
+          assert evidence["exact_head"] == os.environ["EXPECTED_TESTED_SHA"]
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["fixed_targets"] == ["SOL-USDT", "BNB-USDT"]
+          assert evidence["bar"] == "1H"
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["sealed_oos_performance_accessed"] is False
+          assert evidence["threshold_or_position_policy_defined"] is False
+          assert evidence["canonical_mutation_authorized"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert evidence["credentials_used"] is False
+          assert evidence["private_endpoints_used"] is False
+          assert evidence["cross_sectional_selection"] is False
+          assert evidence["synthetic_market_data_used"] is False
+          assert len(evidence["sources"]) == 2
+          assert len(evidence["targets"]) == 2
+          assert all(source["rows"] == 24144 for source in evidence["sources"])
+          assert all(
+              source["repeat_normalization_identical"] is True
+              for source in evidence["sources"]
+          )
+          assert all(value is None for value in evidence["economics"].values())
+          allowed = {
+              "accept_causal_own_price_horizontal_visibility_path_simplification_"
+              "information_premise_1h_v1_for_separate_candidate_predeclaration",
+              "reject_causal_own_price_horizontal_visibility_path_simplification_"
+              "information_premise_1h_v1",
+          }
+          assert evidence["verdict"] in allowed
+          for target in evidence["targets"]:
+              assert target["opportunity_support"]["eligible_valid_opportunities"] > 0
+              assert target["prefix_invariance"][
+                  "opportunity_membership_feature_and_labels_identical"
+              ] is True
+              assert target["structural_checks"]["passed"] is True
+              assert target["bootstrap"]["draws"] == 5000
+              assert target["bootstrap"]["block_opportunities"] == 7
+          compact = {
+              "exact_head": evidence["exact_head"],
+              "verdict": evidence["verdict"],
+              "bilateral_pass": evidence["bilateral_pass"],
+              "sources": evidence["sources"],
+              "targets": [
+                  {
+                      "instrument": target["instrument"],
+                      "support": target["opportunity_support"],
+                      "statistics": target["statistics"],
+                      "bootstrap": target["bootstrap"],
+                      "breadth": target["fold_breadth"],
+                      "delay": target["one_hour_delay"],
+                      "gates": target["gates"],
+                      "passed": target["passed"],
+                  }
+                  for target in evidence["targets"]
+              ],
+              "gate_vector": evidence["gate_vector"],
+              "remaining_blocker": evidence["remaining_blocker"],
+              "next_strategy_experiment": evidence["next_strategy_experiment"],
+          }
+          print("STRATEGY_COMPACT_JSON=" + json.dumps(compact, sort_keys=True))
+          PY
+          echo "EVIDENCE_SHA256=$(cat "$OUTPUT_DIR/evidence.sha256")"
+          echo "REPORT_SHA256=$(sha256sum "$OUTPUT_DIR/report.md" | awk '{print $1}')"
+
+      - name: Upload immutable exact-head strategy evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
