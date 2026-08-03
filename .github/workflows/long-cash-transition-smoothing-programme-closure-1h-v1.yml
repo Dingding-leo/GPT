@@ -1,0 +1,98 @@
+name: Long cash transition smoothing programme closure 1H v1
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  strategy-research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      OUTPUT_DIR: evidence/long-cash-transition-smoothing-programme-closure-1h-v1
+
+    steps:
+      - name: Check out exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify exact checkout
+        env:
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Generate frozen closure evidence
+        env:
+          TESTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python scripts/run_long_cash_transition_smoothing_programme_closure_1h_v1.py \
+            --tested-head "$TESTED_HEAD" \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Verify terminal evidence
+        env:
+          TESTED_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          root = Path(
+              "evidence/long-cash-transition-smoothing-programme-closure-1h-v1"
+          )
+          evidence = json.loads((root / "evidence.json").read_text())
+          assert evidence["tested_head"] == os.environ["TESTED_HEAD"]
+          assert evidence["family_id"] == (
+              "causal-long-cash-transition-smoothing-programme-closure-1h-v1"
+          )
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["new_market_data_rows"] == 0
+          assert evidence["new_target_labels"] == 0
+          assert evidence["new_oos_access"] is False
+          assert evidence["canonical_fee_bps_one_way"] == 5.0
+          assert evidence["group_count"] == 7
+          assert evidence["supportive_group_count"] == 0
+          assert evidence["closure_gate_pass_count"] < evidence["closure_gate_total"]
+          assert all(
+              not item["retains_support"]
+              for item in evidence["leave_one_group_out"]
+          )
+          assert evidence["verdict"] == (
+              "reject_reopening_completed_long_cash_transition_smoothing_"
+              "mechanisms_1h_v1"
+          )
+          for hash_path in root.glob("*.sha256"):
+              source_path = hash_path.with_name(hash_path.name[:-7])
+              expected = hash_path.read_text().strip()
+              actual = hashlib.sha256(source_path.read_bytes()).hexdigest()
+              assert actual == expected
+          PY
+
+      - name: Upload immutable exact-head evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: >-
+            long-cash-transition-smoothing-programme-closure-
+            ${{ github.event.pull_request.head.sha }}
+          path: ${{ env.OUTPUT_DIR }}
+          if-no-files-found: error
+          retention-days: 90
