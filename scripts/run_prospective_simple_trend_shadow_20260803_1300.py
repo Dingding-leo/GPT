@@ -128,10 +128,9 @@ def configure_checkpoint() -> None:
 
 
 def inherited_core() -> Any:
-    module: Any = checkpoint
-    while hasattr(module, "checkpoint"):
-        module = module.checkpoint
-    return module.call_inherited_core
+    return (
+        checkpoint.checkpoint.checkpoint.checkpoint.checkpoint.checkpoint.call_inherited_core
+    )
 
 
 def finalize(result: dict[str, Any]) -> dict[str, Any]:
@@ -140,6 +139,16 @@ def finalize(result: dict[str, Any]) -> dict[str, Any]:
     result["active_alpha_context"] = dict(LATEST_ARCHITECTURE)
     result["latest_training_only_architecture"] = dict(LATEST_ARCHITECTURE)
     result["active_strategy_architecture"] = dict(ACTIVE_ARCHITECTURE)
+    result["evidence_wrapper_repair"] = {
+        "failed_run": 30817558239,
+        "failure_stage": "pre_evidence_inherited_core_delegation",
+        "repair": "bound the exact inherited checkpoint delegation depth",
+        "strategy_value_changed": False,
+        "source_changed": False,
+        "fee_changed": False,
+        "architecture_changed": False,
+        "chronology_boundary_changed": False,
+    }
     result["training_authorized_correction"] = {
         "permitted": False,
         "applied": False,
@@ -230,6 +239,14 @@ def validate(result: dict[str, Any]) -> None:
     assert active["sealed_oos_accessed"] is False
     assert active["correction_authority"] is False
 
+    repair = result["evidence_wrapper_repair"]
+    assert repair["failed_run"] == 30817558239
+    assert repair["strategy_value_changed"] is False
+    assert repair["source_changed"] is False
+    assert repair["fee_changed"] is False
+    assert repair["architecture_changed"] is False
+    assert repair["chronology_boundary_changed"] is False
+
     correction = result["training_authorized_correction"]
     assert correction["permitted"] is False
     assert correction["applied"] is False
@@ -266,6 +283,7 @@ def persist(output_dir: Path, result: dict[str, Any]) -> str:
             "latest_training_only_architecture"
         ],
         "active_strategy_architecture": result["active_strategy_architecture"],
+        "evidence_wrapper_repair": result["evidence_wrapper_repair"],
         "correction": result["training_authorized_correction"],
         "abort": result["abort_conditions"],
         "verdict": result["verdict"],
@@ -276,6 +294,10 @@ def persist(output_dir: Path, result: dict[str, Any]) -> str:
         "3 August 2026\n\n"
         "The 12:00 signal bar was provider-confirmed. The 13:00 candle supplied "
         "only its fixed opening price as the payoff endpoint.\n\n"
+        "The initial exact-head attempt stopped before evidence because inherited "
+        "checkpoint delegation traversed one module too far. The repair bound the "
+        "known exact inherited core and changed no strategy value, source, fee, "
+        "architecture or chronology boundary.\n\n"
         "The completed own-price jump/discontinuity programme is terminally "
         "closed with zero admissible mechanisms. The ETC/FIL ridge lag-strip "
         "architecture in issue 1055 remains preregistered but unevaluated and "
