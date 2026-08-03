@@ -30,7 +30,8 @@ addopts = "-q"
 line-length = 100
 target-version = "py311"
 extend-exclude = [
-  "scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py"
+  "scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1.py",
+  "scripts/run_horizontal_visibility_path_simplification_opportunity_1h_v1_exact.py"
 ]
 
 [tool.ruff.lint]
