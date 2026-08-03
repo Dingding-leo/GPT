@@ -1,0 +1,157 @@
+name: Prospective Simple Trend Shadow 20260803 1400
+
+on:
+  pull_request:
+    branches:
+      - auto/research/20260803-2244-prospective-simple-trend-shadow-20260803-1300
+    paths:
+      - "scripts/run_prospective_simple_trend_shadow_20260803_1400.py"
+      - ".github/workflows/prospective-simple-trend-shadow-20260803-1400.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prospective-simple-trend-20260803-1400-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  prospective-strategy-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      EXPECTED_TESTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OKX_BASE_URL: https://www.okx.com
+      OUTPUT_DIR: reports/prospective/simple-trend-20260803T1400Z
+      ARTIFACT_NAME: prospective-simple-trend-20260803-1400-${{ github.run_number }}-attempt-${{ github.run_attempt }}
+
+    steps:
+      - name: Check out exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ env.EXPECTED_TESTED_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify immutable public-only boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$EXPECTED_TESTED_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$EXPECTED_TESTED_SHA"
+          test -z "${{ secrets.OKX_API_KEY }}"
+          test -z "${{ secrets.OKX_SECRET_KEY }}"
+          test -z "${{ secrets.OKX_PASSPHRASE }}"
+          ! grep -EIn '(/private/|place_order\(|create_order\(|submit_order\()' \
+            scripts/run_prospective_simple_trend_shadow_20260803_1400.py
+          ! grep -EIn '(resample\(|\.interpolate\(|\.ffill\(|forward_fill\()' \
+            scripts/run_prospective_simple_trend_shadow_20260803_1400.py
+
+      - name: Compile frozen strategy evidence
+        run: |
+          python -m py_compile \
+            scripts/run_prospective_simple_trend_shadow_20260803_1200.py \
+            scripts/run_prospective_simple_trend_shadow_20260803_1300.py \
+            scripts/run_prospective_simple_trend_shadow_20260803_1400.py
+
+      - name: Execute next prospective 1H checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA="$EXPECTED_TESTED_SHA"
+          python scripts/run_prospective_simple_trend_shadow_20260803_1400.py \
+            --output-dir "$OUTPUT_DIR"
+
+      - name: Validate machine-readable strategy evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum "$OUTPUT_DIR/result.json" | awk '{print $1}')" = \
+            "$(cat "$OUTPUT_DIR/result.sha256")"
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          output_dir = Path(os.environ["OUTPUT_DIR"])
+          result = json.loads((output_dir / "result.json").read_text())
+
+          assert result["policy_name"] == "simple_trend_long_cash_2160h_next_open"
+          assert result["policy_sha256"] == "9dc8ab03368b61546a6ae7674f1f4127953404900ff1e09e066ecf9adf741131"
+          assert result["bar"] == "1H"
+          assert result["canonical_fee_bps_one_way"] == 5.0
+          assert result["cross_sectional_selection"] is False
+          assert result["actual_orders"] is False
+          assert result["credentials_used"] is False
+          assert result["private_endpoints_used"] is False
+          assert result["enabled_adapters"] is False
+          assert result["paper_trading_authorized"] is False
+          assert result["live_trading_authorized"] is False
+
+          window = result["window"]
+          assert window["latest_complete_signal_bar_start"] == "2026-08-03T13:00:00Z"
+          assert window["realized_payoff_interval_start"] == "2026-08-03T13:00:00Z"
+          assert window["realized_payoff_interval_end"] == "2026-08-03T14:00:00Z"
+          assert window["new_signal_bar_count"] == 1
+          assert window["new_realized_payoff_intervals"] == 1
+          assert window["updated_cumulative_realized_hours"] == 637
+
+          latest = result["latest_training_only_architecture"]
+          assert latest["issue"] == 1060
+          assert latest["candidate_count"] == 0
+          assert latest["independently_supportive_units"] == 0
+          assert latest["correction_authority"] is False
+          assert latest["sealed_oos_accessed"] is False
+
+          active = result["active_strategy_architecture"]
+          assert active["issue"] == 1062
+          assert active["status"] == "preregistered_not_evaluated"
+          assert active["candidate_count"] == 1
+          assert active["parameter_grid_count"] == 0
+          assert active["target_returns_accessed"] is False
+          assert active["sealed_oos_accessed"] is False
+          assert active["correction_authority"] is False
+
+          assert all(
+              item["grid"]["contiguous_confirmed_grid_passed"]
+              for item in result["sources"]
+          )
+          correction = result["training_authorized_correction"]
+          assert correction["permitted"] is False
+          assert correction["applied"] is False
+          assert correction["policy_changed"] is False
+          assert correction["observation_epoch_restarted"] is False
+          assert result["abort_conditions"]["triggered"] is False
+          assert result["machine_readable_verdict"]["payoff_end_open_only"] is True
+          assert result["machine_readable_verdict"]["future_signal_accessed"] is False
+          assert result["machine_readable_verdict"]["strategy_value_changed"] is False
+          assert result["machine_readable_verdict"]["live_trading_authorized"] is False
+
+          compact = {
+              "exact_head": os.environ["EXPECTED_TESTED_SHA"],
+              "strategy_verdict": result["verdict"],
+              "generated_at": result["generated_at"],
+              "acquisition": result["acquisition"],
+              "window": window,
+              "aggregate": result["aggregate_forward_scorecard"],
+              "markets": result["markets"],
+              "discrepancy": result["strategy_facing_discrepancy"],
+              "latest_architecture": latest,
+              "active_architecture": active,
+              "correction": correction,
+              "abort": result["abort_conditions"],
+              "next_action": result["next_strategy_action"],
+          }
+          print("STRATEGY_COMPACT_JSON=" + json.dumps(compact, sort_keys=True))
+          PY
+          echo "RESULT_SHA256=$(cat "$OUTPUT_DIR/result.sha256")"
+          echo "REPORT_SHA256=$(sha256sum "$OUTPUT_DIR/report.md" | awk '{print $1}')"
+
+      - name: Upload immutable strategy evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: ${{ env.OUTPUT_DIR }}/
+          if-no-files-found: error
+          retention-days: 14
