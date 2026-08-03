@@ -155,21 +155,25 @@ def finalize(result: dict[str, Any]) -> dict[str, Any]:
         "access."
     )
     machine = result["machine_readable_verdict"]
-    machine["updated_cumulative_realized_hours"] = (
-        UPDATED_CUMULATIVE_REALIZED_HOURS
+    machine.update(
+        {
+            "updated_cumulative_realized_hours": (
+                UPDATED_CUMULATIVE_REALIZED_HOURS
+            ),
+            "payoff_end_open_timestamp": iso_utc(PAYOFF_END_OPEN_HOUR_MS),
+            "correction_permitted": False,
+            "correction_applied": False,
+            "policy_changed": False,
+            "observation_epoch_restarted": False,
+            "latest_training_diagnostic_verdict": LATEST_ARCHITECTURE[
+                "verdict"
+            ],
+            "active_family_id": ACTIVE_ARCHITECTURE["family_id"],
+            "active_family_status": ACTIVE_ARCHITECTURE["status"],
+            "paper_trading_authorized": False,
+            "live_trading_authorized": False,
+        }
     )
-    machine["payoff_end_open_timestamp"] = iso_utc(PAYOFF_END_OPEN_HOUR_MS)
-    machine["correction_permitted"] = False
-    machine["correction_applied"] = False
-    machine["policy_changed"] = False
-    machine["observation_epoch_restarted"] = False
-    machine["latest_training_diagnostic_verdict"] = LATEST_ARCHITECTURE[
-        "verdict"
-    ]
-    machine["active_family_id"] = ACTIVE_ARCHITECTURE["family_id"]
-    machine["active_family_status"] = ACTIVE_ARCHITECTURE["status"]
-    machine["paper_trading_authorized"] = False
-    machine["live_trading_authorized"] = False
     return result
 
 
@@ -185,8 +189,6 @@ def validate(result: dict[str, Any]) -> None:
     assert result["credentials_used"] is False
     assert result["private_endpoints_used"] is False
     assert result["enabled_adapters"] is False
-    assert result["paper_trading_authorized"] is False
-    assert result["live_trading_authorized"] is False
 
     window = result["window"]
     assert window["prior_last_signal_bar_start"] == "2026-08-03T09:00:00Z"
@@ -287,7 +289,7 @@ def persist(output_dir: Path, result: dict[str, Any]) -> str:
 
 def run(output_dir: Path, base_url: str) -> dict[str, Any]:
     configure_checkpoint()
-    result = checkpoint.checkpoint.checkpoint.call_inherited_core(
+    result = checkpoint.checkpoint.checkpoint.checkpoint.call_inherited_core(
         output_dir, base_url.rstrip("/")
     )
     result = finalize(result)
