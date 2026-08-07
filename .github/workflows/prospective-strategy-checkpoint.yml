@@ -1,0 +1,77 @@
+name: Prospective Frozen Strategy Checkpoint
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prospective-frozen-strategy-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  forward_strategy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ github.event.pull_request.head.sha || github.sha }}"
+          actual="$(git rev-parse HEAD)"
+          test "$expected" = "$actual"
+          [[ "$actual" =~ ^[0-9a-f]{40}$ ]]
+
+      - name: Run fresh public 1H forward evidence
+        env:
+          PYTHONUNBUFFERED: "1"
+        run: |
+          python scripts/run_prospective_strategy_checkpoint.py \
+            --output-dir reports/prospective/simple-trend-forward
+
+      - name: Verify machine-readable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s reports/prospective/simple-trend-forward/result.json
+          test -s reports/prospective/simple-trend-forward/result.sha256
+          test -s reports/prospective/simple-trend-forward/report.md
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path("reports/prospective/simple-trend-forward")
+          result = root / "result.json"
+          declared = (root / "result.sha256").read_text().strip()
+          actual = hashlib.sha256(result.read_bytes()).hexdigest()
+          assert declared == actual
+          payload = json.loads(result.read_text())
+          assert payload["policy_boundary"]["bar"] == "1H"
+          assert payload["policy_boundary"]["fee_bps_one_way"] == 5
+          assert payload["policy_boundary"]["per_instrument_only"] is True
+          assert payload["training_authorized_correction"]["applied"] is False
+          assert payload["paper_trading_authorized"] is False
+          assert payload["live_trading_authorized"] is False
+          for market in payload["markets"]:
+              assert market["new_interval_count"] > 0
+              assert market["new_interval_count"] == len(market["intervals"])
+          print("evidence_sha256", actual)
+          PY
+
+      - name: Upload strategy evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prospective-frozen-strategy-${{ github.run_number }}-${{ github.run_attempt }}
+          path: reports/prospective/simple-trend-forward/
+          if-no-files-found: error
+          retention-days: 30
