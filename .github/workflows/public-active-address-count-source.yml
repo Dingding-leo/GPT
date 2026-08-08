@@ -1,0 +1,150 @@
+name: Public Active Address Count Source 1H
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_public_active_address_count_source.py'
+      - '.github/workflows/public-active-address-count-source.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind evidence to exact pull-request head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --quiet
+          test -z "$(git status --porcelain=v1)"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Prove prohibited capabilities are absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          if env | cut -d= -f1 | grep -Eiq '(COINMETRICS|API).*(SECRET|KEY)|API_KEY|API_SECRET'; then
+            exit 1
+          fi
+          ! grep -nEi 'place_order|create_order|submit_order|send_order|/api/v5/(trade|account|asset|market)/' \
+            scripts/run_public_active_address_count_source.py
+          ! grep -nEi 'PriceUSD|history-candles|openInterest|long-short|funding|account-ratio' \
+            scripts/run_public_active_address_count_source.py
+          grep -q 'https://community-api.coinmetrics.io' scripts/run_public_active_address_count_source.py
+          grep -q 'AdrActCnt' scripts/run_public_active_address_count_source.py
+          grep -q 'FREQUENCY = "1h"' scripts/run_public_active_address_count_source.py
+
+      - name: Compile frozen source experiment
+        run: python -m py_compile scripts/run_public_active_address_count_source.py
+
+      - name: Execute immutable public-data source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA='${{ github.event.pull_request.head.sha }}'
+          python scripts/run_public_active_address_count_source.py
+
+      - name: Validate machine-readable source evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          family = 'causal-public-active-address-count-source-contract-1h-v1'
+          root = Path('reports/experiments') / family
+          evidence_path = root / 'evidence.json'
+          evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
+          assert evidence['family_id'] == family
+          assert evidence['issue_number'] == 1129
+          assert evidence['base_main'] == '5a0fcc97d1a882f8223656c51f5bb8055f534e38'
+          assert evidence['exact_head'] == '${{ github.event.pull_request.head.sha }}'
+          assert evidence['candidate_count'] == 0
+          assert evidence['parameter_grid_count'] == 0
+          assert evidence['fixed_source_arms'] == ['btc', 'eth']
+          assert evidence['fixed_target_maps'] == {'btc': 'BTC-USDT', 'eth': 'ETH-USDT'}
+          assert evidence['metric'] == 'AdrActCnt'
+          assert evidence['frequency'] == '1h'
+          assert evidence['frozen_start'] == '2023-04-01T00:00:00Z'
+          assert evidence['frozen_end'] == '2025-12-31T23:00:00Z'
+          assert evidence['expected_rows_per_arm'] == 24144
+          assert evidence['canonical_fee_bps_one_way'] == 5.0
+          assert evidence['public_data_only'] is True
+          assert evidence['credentials_private_endpoints_accounts_orders_adapters_leverage_funds'] is False
+          assert evidence['cross_sectional_or_relative_selection'] is False
+          assert evidence['target_prices_or_returns_accessed'] is False
+          assert evidence['performance_accessed'] is False
+          assert evidence['oos_accessed'] is False
+          assert evidence['canonical_strategy_changed'] is False
+          assert evidence['paper_trading_authorized'] is False
+          assert evidence['live_trading_authorized'] is False
+          assert all(value is None for value in evidence['performance'].values())
+          assert len(evidence['arms']) == 2
+          for arm in evidence['arms']:
+              assert arm['asset'] in {'btc', 'eth'}
+              assert len(arm['probes']) == 3
+              assert {p['label'] for p in arm['probes']} == {'start-probe', 'middle-probe', 'end-probe'}
+          accepted = (
+              'accept_public_bilateral_active_address_count_1h_source_for_separate_'
+              'training_predeclaration'
+          )
+          rejected = 'reject_causal_public_active_address_count_source_contract_1h_v1'
+          assert evidence['verdict'] in {accepted, rejected}
+          if evidence['source_contract_passed']:
+              assert evidence['verdict'] == accepted
+              assert evidence['source_arms_passing'] == 2
+              assert evidence['common_calendar_identical'] is True
+              for arm in evidence['arms']:
+                  assert arm['source_gate_passed'] is True
+                  full = arm['full']
+                  assert full['observed_rows'] == 24144
+                  assert full['distinct_values'] >= 100
+                  assert float(full['iqr']) > 0
+                  assert all(full['gates'].values())
+          else:
+              assert evidence['verdict'] == rejected
+              assert evidence['source_arms_passing'] < 2
+              assert evidence['failure']
+          for stem, filename in (('evidence', 'evidence.json'), ('report', 'report.md')):
+              path = root / filename
+              expected = (root / f'{stem}.sha256').read_text().strip()
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == expected
+          manifest = root / 'artifact-manifest.json'
+          expected_manifest = (root / 'manifest.sha256').read_text().strip()
+          assert hashlib.sha256(manifest.read_bytes()).hexdigest() == expected_manifest
+          print(json.dumps({
+              'exact_head': evidence['exact_head'],
+              'source_arms_passing': evidence['source_arms_passing'],
+              'source_contract_passed': evidence['source_contract_passed'],
+              'target_prices_or_returns_accessed': evidence['target_prices_or_returns_accessed'],
+              'oos_accessed': evidence['oos_accessed'],
+              'verdict': evidence['verdict'],
+              'evidence_sha256': hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+          }, sort_keys=True))
+          PY
+
+      - name: Upload immutable source artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: public-active-address-source-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: reports/experiments/causal-public-active-address-count-source-contract-1h-v1
+          if-no-files-found: error
+          retention-days: 14
