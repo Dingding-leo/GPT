@@ -41,7 +41,7 @@ jobs:
         run: python -m pytest tests/test_okb_risk_appetite.py
 
       - name: Run bilateral real-data diagnostic
-        run: python scripts/run_okb_risk_appetite.py
+        run: python scripts/run_okb_risk_appetite_exact.py
 
       - name: Upload immutable strategy evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
