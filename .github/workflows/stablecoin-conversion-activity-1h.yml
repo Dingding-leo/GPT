@@ -1,0 +1,161 @@
+name: Stablecoin Conversion Activity 1H
+
+on:
+  push:
+    branches:
+      - "auto/research/**"
+    paths:
+      - "scripts/run_stablecoin_conversion_activity.py"
+      - "scripts/stablecoin_conversion_source.py"
+      - ".github/workflows/stablecoin-conversion-activity-1h.yml"
+  pull_request:
+    paths:
+      - "scripts/run_stablecoin_conversion_activity.py"
+      - "scripts/stablecoin_conversion_source.py"
+      - ".github/workflows/stablecoin-conversion-activity-1h.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ github.event.pull_request.head.sha || github.sha }}"
+          actual="$(git rev-parse HEAD)"
+          test "$expected" = "$actual"
+          [[ "$actual" =~ ^[0-9a-f]{40}$ ]]
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Parse frozen diagnostic
+        run: python -m py_compile scripts/stablecoin_conversion_source.py scripts/run_stablecoin_conversion_activity.py
+
+      - name: Execute frozen public 1H diagnostic
+        env:
+          RESEARCH_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PYTHONUNBUFFERED: "1"
+        run: python scripts/run_stablecoin_conversion_activity.py
+
+      - name: Verify and print terminal evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="reports/research/stablecoin-conversion-activity-1h-v1"
+          test -s "$root/evidence.json"
+          test -s "$root/manifest.json"
+          test -s "$root/report.md"
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("reports/research/stablecoin-conversion-activity-1h-v1")
+          evidence_raw = (root / "evidence.json").read_bytes()
+          report_raw = (root / "report.md").read_bytes()
+          manifest_raw = (root / "manifest.json").read_bytes()
+          payload = json.loads(evidence_raw)
+          manifest = json.loads(manifest_raw)
+          expected = "${{ github.event.pull_request.head.sha || github.sha }}"
+
+          assert manifest["evidence_sha256"] == hashlib.sha256(evidence_raw).hexdigest()
+          assert manifest["report_sha256"] == hashlib.sha256(report_raw).hexdigest()
+          assert payload["code_head"] == expected
+          assert payload["family_id"] == "causal-lagged-stablecoin-conversion-activity-opportunity-1h-v1"
+          assert payload["candidate_count"] == 0
+          assert payload["parameter_grid_count"] == 0
+          assert payload["bar"] == "1H"
+          assert payload["fee_bps_one_way"] == 5.0
+          assert payload["round_trip_label_bps"] == 10.0
+          assert payload["fixed_targets"] == ["BTCUSDT", "ETHUSDT"]
+          assert payload["fixed_exogenous"] == "USDCUSDT"
+          assert payload["bootstrap_draws"] == 5000
+          assert payload["bootstrap_block_opportunities"] == 7
+          assert payload["sealed_oos_accessed"] is False
+          assert payload["target_oos_accessed"] is False
+          assert payload["unread_suffix_used_in_feature_or_label"] is False
+          assert payload["strategy_performance_accessed"] is False
+          assert payload["canonical_mutation"] is False
+          assert payload["paper_trading_authorized"] is False
+          assert payload["live_trading_authorized"] is False
+          assert all(v is None for v in payload["strategy_metrics"].values())
+
+          allowed = {
+              "reject_causal_lagged_stablecoin_conversion_activity_source_contract_1h_v1",
+              "reject_causal_lagged_stablecoin_conversion_activity_opportunity_information_premise_1h_v1",
+              "support_causal_lagged_stablecoin_conversion_activity_for_separate_candidate_predeclaration_1h_v1",
+          }
+          assert payload["verdict"] in allowed
+          if payload["source_contract_passed"]:
+              assert payload["target_returns_accessed"] is True
+              assert set(payload["sources"]) == {"BTCUSDT", "ETHUSDT", "USDCUSDT"}
+              for source in payload["sources"].values():
+                  assert source["rows"] == 24144
+                  assert source["bar"] == "1H"
+                  assert source["repeat_identity_passed"] is True
+              assert payload["sources"]["BTCUSDT"]["normalized_sha256"] == "c282320ef644ae526eff1eec09b377868fc7ff73395506d65b6bfde6944a876d"
+              assert payload["sources"]["ETHUSDT"]["normalized_sha256"] == "ecac9b3431afb8875cc00044aa18c434ebe2f4524caef55ed1afce31f9ab7bba"
+              assert payload["sources"]["BTCUSDT"]["training_prefix_sha256"] == "30d38944190ebaa80e65308c806be34a572e03fea2f1e695887fbd24c2607cc6"
+              assert payload["sources"]["ETHUSDT"]["training_prefix_sha256"] == "55f38818ed50e3cf0e97412aa22b3606ae7f4ec42f3a010cb14ef85b3f2f169f"
+              expected_verdict = (
+                  "support_causal_lagged_stablecoin_conversion_activity_for_separate_candidate_predeclaration_1h_v1"
+                  if payload["bilateral_training_pass"]
+                  else "reject_causal_lagged_stablecoin_conversion_activity_opportunity_information_premise_1h_v1"
+              )
+              assert payload["verdict"] == expected_verdict
+          else:
+              assert payload["target_returns_accessed"] is False
+              assert payload["targets"] == {}
+              assert payload["verdict"] == "reject_causal_lagged_stablecoin_conversion_activity_source_contract_1h_v1"
+
+          print("TERMINAL_EVIDENCE_JSON=" + json.dumps({
+              "code_head": payload["code_head"],
+              "source_contract_passed": payload["source_contract_passed"],
+              "source_error": payload["source_error"],
+              "sources": {k: {
+                  "rows": v["rows"],
+                  "normalized_sha256": v["normalized_sha256"],
+                  "training_prefix_sha256": v["training_prefix_sha256"],
+                  "repeat_identity_passed": v["repeat_identity_passed"],
+              } for k, v in payload["sources"].items()},
+              "candidate_count": payload["candidate_count"],
+              "parameter_grid_count": payload["parameter_grid_count"],
+              "strategy_metrics": payload["strategy_metrics"],
+              "targets": payload["targets"],
+              "bilateral_training_pass": payload["bilateral_training_pass"],
+              "verdict": payload["verdict"],
+          }, sort_keys=True, separators=(",", ":")))
+          print("EVIDENCE_SHA256=" + hashlib.sha256(evidence_raw).hexdigest())
+          print("REPORT_SHA256=" + hashlib.sha256(report_raw).hexdigest())
+          print("MANIFEST_SHA256=" + hashlib.sha256(manifest_raw).hexdigest())
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: stablecoin-conversion-activity-1h-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports/research/stablecoin-conversion-activity-1h-v1
+          if-no-files-found: error
+          retention-days: 30
