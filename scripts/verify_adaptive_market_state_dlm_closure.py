@@ -3,9 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-EVIDENCE = Path(
-    "reports/research/adaptive-market-state-dlm-programme-closure-1h-v1/evidence.json"
-)
+REPORT_DIR = Path("reports/research/adaptive-market-state-dlm-programme-closure-1h-v1")
+EVIDENCE = REPORT_DIR / "evidence.json"
 EXPECTED_VERDICT = "reject_queued_adaptive_market_state_dlm_v1_as_superseded_recombination"
 
 
@@ -39,10 +38,8 @@ def main() -> None:
     assert pillars["target_information"]["new_information_object_remaining"] is False
     assert pillars["aggregate_state"]["new_information_object_remaining"] is False
     assert pillars["adaptive_model"]["completed_positive_bilateral_incremental_evidence"] is False
-    assert (
-        pillars["decision_turnover"]["completed_positive_bilateral_incremental_evidence"]
-        is False
-    )
+    decision_gate = pillars["decision_turnover"]["completed_positive_bilateral_incremental_evidence"]
+    assert decision_gate is False
 
     gates = evidence["retention_gates"]
     assert gates["g1_materially_new_information_object_remains"] is False
