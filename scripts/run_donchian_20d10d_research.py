@@ -273,9 +273,7 @@ def _market_evidence(frame: pd.DataFrame) -> dict[str, object]:
         float(row["net_total_return"]) for row in folds if float(row["net_total_return"]) > 0.0
     ]
     concentration = (
-        max(positive_fold_returns) / sum(positive_fold_returns)
-        if positive_fold_returns
-        else None
+        max(positive_fold_returns) / sum(positive_fold_returns) if positive_fold_returns else None
     )
     bootstrap = _moving_block_bootstrap(returns)
     gates = {
@@ -284,20 +282,15 @@ def _market_evidence(frame: pd.DataFrame) -> dict[str, object]:
         ),
         "max_drawdown_above_minus_50pct": float(training["max_drawdown"]) > -0.5,
         "edge_per_turnover_above_10bps": float(training["net_edge_per_turnover_bps"]) > 10.0,
-        "at_least_4_of_6_positive_folds": sum(
-            float(row["net_total_return"]) > 0.0 for row in folds
-        )
+        "at_least_4_of_6_positive_folds": sum(float(row["net_total_return"]) > 0.0 for row in folds)
         >= 4,
-        "at_least_2_of_3_positive_years": sum(
-            float(row["net_total_return"]) > 0.0 for row in years
-        )
+        "at_least_2_of_3_positive_years": sum(float(row["net_total_return"]) > 0.0 for row in years)
         >= 2,
         "positive_fold_concentration_at_most_60pct": (
             concentration is not None and concentration <= 0.60
         ),
         "moving_block_q025_mean_and_sharpe_positive": (
-            float(bootstrap["annualized_mean_q025"]) > 0.0
-            and float(bootstrap["sharpe_q025"]) > 0.0
+            float(bootstrap["annualized_mean_q025"]) > 0.0 and float(bootstrap["sharpe_q025"]) > 0.0
         ),
         "extra_1h_delay_positive_return_and_sharpe": (
             float(delayed["net_total_return"]) > 0.0 and float(delayed["sharpe"]) > 0.0
