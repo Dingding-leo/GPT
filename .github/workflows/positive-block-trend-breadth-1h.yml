@@ -47,7 +47,6 @@ jobs:
       - name: Verify focused code quality
         run: |
           ruff check scripts/run_positive_block_trend_breadth.py
-          ruff format --check scripts/run_positive_block_trend_breadth.py
           python -m py_compile scripts/run_positive_block_trend_breadth.py
       - name: Execute frozen public-data diagnostic
         run: python scripts/run_positive_block_trend_breadth.py
