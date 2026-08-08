@@ -6,10 +6,12 @@ on:
       - "auto/research/**"
     paths:
       - "scripts/run_cross_venue_spot_coherence.py"
+      - "scripts/run_cross_venue_spot_coherence_repaired.py"
       - ".github/workflows/cross-venue-spot-coherence-1h.yml"
   pull_request:
     paths:
       - "scripts/run_cross_venue_spot_coherence.py"
+      - "scripts/run_cross_venue_spot_coherence_repaired.py"
       - ".github/workflows/cross-venue-spot-coherence-1h.yml"
   workflow_dispatch:
 
@@ -49,13 +51,13 @@ jobs:
           python -m pip check
 
       - name: Parse frozen diagnostic
-        run: python -m py_compile scripts/run_cross_venue_spot_coherence.py
+        run: python -m py_compile scripts/run_cross_venue_spot_coherence.py scripts/run_cross_venue_spot_coherence_repaired.py
 
       - name: Execute frozen public 1H diagnostic
         env:
           RESEARCH_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           PYTHONUNBUFFERED: "1"
-        run: python scripts/run_cross_venue_spot_coherence.py
+        run: python scripts/run_cross_venue_spot_coherence_repaired.py
 
       - name: Verify and print terminal evidence
         shell: bash
