@@ -156,11 +156,7 @@ def _acquire_series(inst_id: str) -> tuple[pd.DataFrame, dict[str, object]]:
 
 
 def _training_anchors() -> list[int]:
-    return [
-        anchor
-        for anchor in range(TRAIN_START, TRAIN_END, 24)
-        if anchor + 25 < TRAIN_END
-    ]
+    return [anchor for anchor in range(TRAIN_START, TRAIN_END, 24) if anchor + 25 < TRAIN_END]
 
 
 def _dfa_alpha_from_returns(returns: np.ndarray) -> float:
@@ -238,17 +234,13 @@ def _target_opportunities(candles: pd.DataFrame) -> pd.DataFrame:
         entry = float(open_price[anchor])
         exit_price = float(open_price[anchor + 24])
         net = float(np.log(exit_price / entry) - ROUND_TRIP_FEE)
-        adverse = float(
-            np.min(np.log(low[anchor : anchor + 24] / entry) - ROUND_TRIP_FEE)
-        )
+        adverse = float(np.min(np.log(low[anchor : anchor + 24] / entry) - ROUND_TRIP_FEE))
 
         delay_entry = float(open_price[anchor + 1])
         delay_exit = float(open_price[anchor + 25])
         delay_net = float(np.log(delay_exit / delay_entry) - ROUND_TRIP_FEE)
         delay_adverse = float(
-            np.min(
-                np.log(low[anchor + 1 : anchor + 25] / delay_entry) - ROUND_TRIP_FEE
-            )
+            np.min(np.log(low[anchor + 1 : anchor + 25] / delay_entry) - ROUND_TRIP_FEE)
         )
         rows.append(
             {
@@ -316,9 +308,7 @@ def _moving_block_bootstrap(
             indices.extend(range(start, start + BOOTSTRAP_BLOCK))
         sampled = np.asarray(indices[:n], dtype=int)
         net_rho, net_slope = _stats(feature_values[sampled], outcome_values[sampled, 0])
-        adverse_rho, adverse_slope = _stats(
-            feature_values[sampled], outcome_values[sampled, 1]
-        )
+        adverse_rho, adverse_slope = _stats(feature_values[sampled], outcome_values[sampled, 1])
         draws[draw] = (net_rho, net_slope, adverse_rho, adverse_slope)
 
     intervals: dict[str, list[float]] = {}
@@ -400,10 +390,7 @@ def _structural_identities(candles: pd.DataFrame) -> dict[str, object]:
     chronology_ok = latest_used <= anchor - 25
     return {
         "scale_order_strict": bool(
-            all(
-                a < b
-                for a, b in zip(DFA_SCALES, DFA_SCALES[1:], strict=False)
-            )
+            all(a < b for a, b in zip(DFA_SCALES, DFA_SCALES[1:], strict=False))
         ),
         "all_scales_divide_720": bool(scale_coverage),
         "box_coverage_points": total_points,
@@ -596,9 +583,7 @@ def main() -> None:
         frames[inst_id] = frame
         sources[inst_id] = source
 
-    target_results = {
-        inst_id: _analyze_target(inst_id, frames[inst_id]) for inst_id in TARGETS
-    }
+    target_results = {inst_id: _analyze_target(inst_id, frames[inst_id]) for inst_id in TARGETS}
     bilateral_pass = bool(all(bool(target_results[item]["passed"]) for item in TARGETS))
     verdict = SUPPORT_VERDICT if bilateral_pass else REJECT_VERDICT
     exact_head = os.environ.get("RESEARCH_HEAD_SHA", "unknown")
