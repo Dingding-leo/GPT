@@ -1,6 +1,12 @@
 name: Participation Composition Closure 1H
 
 on:
+  push:
+    branches:
+      - "auto/research/**"
+    paths:
+      - "scripts/run_participation_composition_closure.py"
+      - ".github/workflows/participation-composition-closure-1h.yml"
   pull_request:
     paths:
       - "scripts/run_participation_composition_closure.py"
@@ -12,7 +18,7 @@ permissions:
 
 jobs:
   closure-evidence:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout exact head
@@ -20,6 +26,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
+          persist-credentials: false
 
       - name: Bind exact head
         shell: bash
@@ -30,8 +37,7 @@ jobs:
           test "$actual" = "$expected"
           echo "RESEARCH_HEAD_SHA=$actual" >> "$GITHUB_ENV"
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
@@ -44,7 +50,7 @@ jobs:
           test "$(grep -c 'FEE_ONE_WAY = 0.0005' scripts/run_participation_composition_closure.py)" -eq 1
           ! grep -Eiq 'api[-_ ]?key|secret|private endpoint|order placement|15m|synthetic (price|candle|market data)' scripts/run_participation_composition_closure.py
 
-      - name: Compile reproducer
+      - name: Compile deterministic closure
         run: python -m py_compile scripts/run_participation_composition_closure.py
 
       - name: Execute immutable-evidence closure
@@ -59,10 +65,11 @@ jobs:
           import json
           from pathlib import Path
 
-          family = "causal-participation-composition-programme-closure-1h-v1"
+          family = "causal-public-market-participation-composition-programme-closure-1h-v1"
           out = Path("reports/research") / family
           evidence = json.loads((out / "evidence.json").read_text())
           assert evidence["family_id"] == family
+          assert evidence["issue_number"] == 1141
           assert evidence["base_main"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
           assert evidence["exact_head"] == "${{ github.event.pull_request.head.sha || github.sha }}"
           assert evidence["bar"] == "1H"
@@ -75,17 +82,16 @@ jobs:
           assert evidence["new_oos_access"] == 0
           assert evidence["new_fitting_or_tuning"] == 0
           assert evidence["top_level_group_count"] == 2
-          assert evidence["independently_admissible_top_level_groups"] == 0
-          assert evidence["gates_passed"] == 10
-          assert evidence["gates_total"] == 10
+          assert evidence["supportive_top_level_groups"] == 0
+          assert evidence["gates_passed"] == 10 and evidence["gates_total"] == 10
           assert all(evidence["gates"].values())
-          assert all(x["closure_support_remains_zero"] for x in evidence["leave_one_group_out"])
-          assert evidence["groups"][0]["owner_issue"] == 1090
-          assert evidence["groups"][0]["exact_head"] == "737be22fcb4d32f50f03ab404a5c113c73398003"
-          assert evidence["groups"][1]["owner_issue"] == 1139
-          assert evidence["groups"][1]["exact_head"] == "03958df2da40238818129f29137408a482a5825c"
-          assert evidence["groups"][1]["sealed_oos_accessed"] is False
-          assert evidence["verdict"] == "reject_reopening_completed_participation_composition_mechanisms_1h_v1"
+          assert all(x["support_remains_zero"] for x in evidence["leave_one_group_out"])
+          a, b = evidence["groups"]
+          assert a["issue"] == 1090 and a["head"] == "737be22fcb4d32f50f03ab404a5c113c73398003"
+          assert b["issue"] == 1139 and b["head"] == "03958df2da40238818129f29137408a482a5825c"
+          assert b["report_sha256"] == "33469c2aedf65374b1d12991f21e17e2b6d7422746952b2bcee12457eff9e776"
+          assert b["sealed_oos_accessed"] is False
+          assert evidence["verdict"] == "reject_reopening_completed_public_market_participation_composition_mechanisms_1h_v1"
           assert evidence["canonical_mutation"] is False
           assert evidence["paper_trading_authorized"] is False
           assert evidence["live_trading_authorized"] is False
@@ -93,7 +99,6 @@ jobs:
 
           def sha(path):
               return hashlib.sha256(path.read_bytes()).hexdigest()
-
           assert (out / "evidence.sha256").read_text().strip() == sha(out / "evidence.json")
           assert (out / "report.sha256").read_text().strip() == sha(out / "report.md")
           assert (out / "manifest.sha256").read_text().strip() == sha(out / "manifest.json")
@@ -107,7 +112,7 @@ jobs:
       - name: Upload exact-head closure evidence
         uses: actions/upload-artifact@v4
         with:
-          name: participation-composition-closure-1h-${{ github.event.pull_request.head.sha || github.sha }}
-          path: reports/research/causal-participation-composition-programme-closure-1h-v1/
+          name: public-market-participation-composition-closure-1h-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports/research/causal-public-market-participation-composition-programme-closure-1h-v1/
           if-no-files-found: error
           retention-days: 90
