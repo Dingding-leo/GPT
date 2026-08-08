@@ -1,0 +1,222 @@
+{
+  "bar": "1H",
+  "base_main": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "candidate_count": 0,
+  "canonical_mutation_authorized": false,
+  "classification": "completed-evidence strategy-family closure",
+  "closed_rescue_surface": [
+    "alternate fixed MA pairs and EMA/SMA/WMA substitutions",
+    "MACD-line equivalents",
+    "Donchian/channel-length substitutions",
+    "endpoint-horizon substitutions",
+    "decision-phase changes",
+    "thresholds/hysteresis",
+    "ATR/volatility overlays",
+    "stops or partial sizing",
+    "sign reversal",
+    "favourable-market promotion",
+    "post-hoc combinations of A/B/C"
+  ],
+  "closure_level_performance": {
+    "full": null,
+    "oos": null,
+    "train": null
+  },
+  "context_only_overlap": {
+    "architecture_groups": 4,
+    "family_id": "causal-distributed-slow-trend-representation-family-closure-1h-v1",
+    "independent_vote_in_this_closure": false,
+    "issue": 886,
+    "positive_dependence_breadth_turnover_transport_support_groups": 0,
+    "supportive_groups": 0,
+    "verdict": "reject_causal_distributed_slow_trend_representation_family"
+  },
+  "correction_authority": false,
+  "family_id": "causal-classical-slow-trend-base-rule-programme-closure-1h-v1",
+  "fee_bps_one_way": 5.0,
+  "groups": {
+    "A_endpoint_state_slow_trend": {
+      "available_plus_1h_latency_transport_pass": false,
+      "bilateral_positive_absolute_economics": true,
+      "decisive_failure": "independent cross-market replication, positive-regime stationarity, and daily decision-phase robustness failed; programme gates 5/8",
+      "oos_policy": "completed reference OOS plus independent robustness evidence already consumed",
+      "original_terminal_verdict": "reject_canonical_e2160_as_robust_primary_strategy_benchmark_1h_v1",
+      "permitted_stage_economics": {
+        "BTC-USDT": {
+          "max_drawdown": -0.26546786,
+          "net_return": 1.1968198,
+          "sharpe": 0.953765,
+          "stage": "OOS",
+          "turnover": 45
+        },
+        "ETH-USDT": {
+          "max_drawdown": -0.47765942,
+          "net_return": 0.74516034,
+          "sharpe": 0.645628,
+          "stage": "OOS",
+          "turnover": 30
+        }
+      },
+      "primary_issue": 1114,
+      "source_candidate_count": 0,
+      "source_contract": {
+        "bar": "1H",
+        "causal_long_cash": true,
+        "fee_bps_one_way": 5.0
+      },
+      "source_parameter_grid_count": 0,
+      "source_required_breadth_and_concentration_pass": false,
+      "source_required_dependence_lower_bounds_strictly_positive": false,
+      "supportive_under_original_contract": false,
+      "terminal_pr": 1116,
+      "terminal_pr_head": "2bbff345228710bb760f3d9f956b3a2fd753b3b9",
+      "terminal_pr_state": "closed_unmerged"
+    },
+    "B_fixed_channel_breakout": {
+      "available_plus_1h_latency_transport_pass": false,
+      "bilateral_positive_absolute_economics": false,
+      "decisive_failure": "negative bilateral training economics plus failed fold/year breadth, concentration, moving-block lower bounds, and +1H transport",
+      "oos_policy": "development OOS unread because bilateral training gate failed",
+      "original_terminal_verdict": "reject_causal_own_price_donchian_20d10d_training_economics_1h_v1",
+      "permitted_stage_economics": {
+        "BTC-USDT": {
+          "edge_per_turnover_bps": -100.15,
+          "max_drawdown": -0.457417,
+          "net_return": -0.270132,
+          "plus_1h_delay_net_return": -0.23528,
+          "plus_1h_delay_sharpe": -0.389,
+          "positive_calendar_slices": "1/3",
+          "positive_fold_concentration": 0.9481,
+          "positive_folds": "2/6",
+          "sharpe": -0.4819,
+          "stage": "training",
+          "turnover": 24
+        },
+        "ETH-USDT": {
+          "edge_per_turnover_bps": -21.38,
+          "max_drawdown": -0.364221,
+          "net_return": -0.146875,
+          "plus_1h_delay_net_return": -0.137969,
+          "plus_1h_delay_sharpe": -0.0604,
+          "positive_calendar_slices": "1/3",
+          "positive_fold_concentration": 0.7825,
+          "positive_folds": "3/6",
+          "sharpe": -0.0769,
+          "stage": "training",
+          "turnover": 22
+        }
+      },
+      "primary_issue": 1117,
+      "source_candidate_count": 1,
+      "source_contract": {
+        "bar": "1H",
+        "causal_long_cash": true,
+        "fee_bps_one_way": 5.0
+      },
+      "source_parameter_grid_count": 0,
+      "source_required_breadth_and_concentration_pass": false,
+      "source_required_dependence_lower_bounds_strictly_positive": false,
+      "supportive_under_original_contract": false,
+      "terminal_pr": 1119,
+      "terminal_pr_head": "99e8d533786f421267c24f32e42d48403d52622e",
+      "terminal_pr_state": "closed_unmerged"
+    },
+    "C_fixed_dual_ema_distributed_memory": {
+      "available_plus_1h_latency_transport_pass": false,
+      "bilateral_positive_absolute_economics": false,
+      "decisive_failure": "ETH negative training economics; BTC/ETH failed fold/calendar breadth, concentration/dependence support, and bilateral +1H transport",
+      "oos_policy": "development OOS unread because bilateral training gate failed",
+      "original_terminal_verdict": "reject_causal_own_price_dual_ema_distributed_memory_trend_canonical_replication_training_1h_v1",
+      "permitted_stage_economics": {
+        "BTC-USDT": {
+          "edge_per_turnover_bps": 712.56,
+          "max_drawdown": -0.21731535,
+          "moving_block_q025_annualized_mean": -0.29638,
+          "moving_block_q025_sharpe": -1.1118,
+          "net_return": 0.25345469,
+          "plus_1h_delay_net_return": 0.2328745,
+          "plus_1h_delay_sharpe": 0.636863,
+          "positive_calendar_slices": "1/2",
+          "positive_fold_concentration": 0.9376,
+          "positive_folds": "2/6",
+          "sharpe": 0.675876,
+          "stage": "training",
+          "turnover": 4
+        },
+        "ETH-USDT": {
+          "edge_per_turnover_bps": -332.02,
+          "max_drawdown": -0.48856161,
+          "moving_block_q025_annualized_mean": -0.684826,
+          "moving_block_q025_sharpe": -1.9367,
+          "net_return": -0.29936398,
+          "plus_1h_delay_net_return": -0.27813964,
+          "plus_1h_delay_sharpe": -0.454774,
+          "positive_calendar_slices": "1/2",
+          "positive_folds": "1/6",
+          "sharpe": -0.510792,
+          "stage": "training",
+          "turnover": 8
+        }
+      },
+      "primary_issue": 1120,
+      "source_candidate_count": 1,
+      "source_contract": {
+        "bar": "1H",
+        "causal_long_cash": true,
+        "fee_bps_one_way": 5.0
+      },
+      "source_parameter_grid_count": 0,
+      "source_required_breadth_and_concentration_pass": false,
+      "source_required_dependence_lower_bounds_strictly_positive": false,
+      "supportive_under_original_contract": false,
+      "terminal_pr": 1122,
+      "terminal_pr_head": "0b2a89e567a2afedc562daf8b65fa9be729434cc",
+      "terminal_pr_state": "closed_unmerged"
+    }
+  },
+  "leave_one_group_out": {
+    "omit_A": {
+      "remaining_groups": 2,
+      "retains_at_least_one_supportive_group": false,
+      "supportive_groups": 0
+    },
+    "omit_B": {
+      "remaining_groups": 2,
+      "retains_at_least_one_supportive_group": false,
+      "supportive_groups": 0
+    },
+    "omit_C": {
+      "remaining_groups": 2,
+      "retains_at_least_one_supportive_group": false,
+      "supportive_groups": 0
+    }
+  },
+  "live_trading_authorized": false,
+  "new_fitting_or_tuning": 0,
+  "new_labels": 0,
+  "new_market_rows": 0,
+  "new_oos_observations": 0,
+  "paper_trading_authorized": false,
+  "parameter_grid_count": 0,
+  "position_domain": "unlevered long/cash where executable",
+  "programme_gate_count": 8,
+  "programme_gates": {
+    "1_source_identities_and_contracts_reconcile": true,
+    "2_at_least_2_of_3_originally_accepted": false,
+    "3_at_least_2_of_3_bilateral_positive_absolute_economics": false,
+    "4_at_least_2_of_3_breadth_and_concentration": false,
+    "5_at_least_2_of_3_positive_dependence_lower_bounds": false,
+    "6_at_least_2_of_3_plus_1h_transport": false,
+    "7_no_posthoc_rescue_support": true,
+    "8_leave_one_group_out_retains_support": false
+  },
+  "programme_gates_passed": 2,
+  "repository": "Dingding-leo/GPT",
+  "schema_version": "classical-slow-trend-base-rule-programme-closure-1h-v1",
+  "source_identity_reconciliation_passed": true,
+  "support_count": {
+    "supportive_groups": 0,
+    "total_groups": 3
+  },
+  "verdict": "reject_reopening_classical_slow_trend_base_rule_mechanisms_1h_v1"
+}
