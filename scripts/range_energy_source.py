@@ -221,7 +221,7 @@ def range_share(spot: pd.DataFrame, perpetual: pd.DataFrame) -> tuple[pd.Series,
     scaled_share[scaled_valid] = scaled_perp[scaled_valid] / scaled_total[scaled_valid]
     if not np.array_equal(valid, scaled_valid) or np.nanmax(np.abs(scaled_share - share)) > 1e-12:
         raise ValueError("positive-price-scale invariance failed")
-    structural_zero_total_invalid = not bool((np.asarray([0.0]) > 0)[0])
+    structural_zero_total_invalid = bool(np.all(np.isnan(share[~valid])))
     return pd.Series(share, index=spot.index, name="perp_range_share"), {
         "timestamp_identity": True,
         "nonnegative_energy": True,
