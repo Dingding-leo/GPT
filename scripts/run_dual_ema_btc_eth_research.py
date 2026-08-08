@@ -314,19 +314,13 @@ def _training_evidence(frame: pd.DataFrame, instrument: str) -> dict[str, object
         calendar_slices.append({"year": int(year), "start": start, "end": end, **year_metrics})
 
     positive_fold_returns = [
-        float(row["net_total_return"])
-        for row in folds
-        if float(row["net_total_return"]) > 0.0
+        float(row["net_total_return"]) for row in folds if float(row["net_total_return"]) > 0.0
     ]
     positive_fold_concentration = (
-        max(positive_fold_returns) / sum(positive_fold_returns)
-        if positive_fold_returns
-        else None
+        max(positive_fold_returns) / sum(positive_fold_returns) if positive_fold_returns else None
     )
     bootstrap = _moving_block_bootstrap(returns, BOOTSTRAP_SEEDS[instrument])
-    positive_calendar_count = sum(
-        float(row["net_total_return"]) > 0.0 for row in calendar_slices
-    )
+    positive_calendar_count = sum(float(row["net_total_return"]) > 0.0 for row in calendar_slices)
     gates = {
         "source_chronology_next_open_ema_finite_state": True,
         "positive_training_return_and_sharpe": (
@@ -342,8 +336,7 @@ def _training_evidence(frame: pd.DataFrame, instrument: str) -> dict[str, object
             positive_fold_concentration is not None and positive_fold_concentration <= 0.60
         ),
         "moving_block_q025_mean_and_sharpe_positive": (
-            float(bootstrap["annualized_mean_q025"]) > 0.0
-            and float(bootstrap["sharpe_q025"]) > 0.0
+            float(bootstrap["annualized_mean_q025"]) > 0.0 and float(bootstrap["sharpe_q025"]) > 0.0
         ),
         "extra_1h_delay_positive_return_sharpe_edge": (
             float(delayed["net_total_return"]) > 0.0
@@ -395,8 +388,7 @@ def main() -> None:
 
     evidence = {
         "family_id": (
-            "causal-own-price-dual-ema-distributed-memory-trend-"
-            "canonical-replication-1h-v1"
+            "causal-own-price-dual-ema-distributed-memory-trend-canonical-replication-1h-v1"
         ),
         "issue": 1120,
         "candidate_count": 1,
