@@ -37,13 +37,14 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Compile frozen diagnostic
+      - name: Compile frozen diagnostic and permitted source repair
         run: |
           python -m py_compile scripts/run_negative_e2160_margin_recovery.py
           python -m py_compile scripts/run_negative_e2160_margin_recovery_exact.py
+          python -m py_compile scripts/run_negative_e2160_margin_recovery_source_repair.py
 
       - name: Run bilateral real-data diagnostic
-        run: python scripts/run_negative_e2160_margin_recovery_exact.py
+        run: python scripts/run_negative_e2160_margin_recovery_source_repair.py
 
       - name: Upload immutable strategy evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
