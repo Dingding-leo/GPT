@@ -17,6 +17,26 @@ core = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(core)
 
 
+def _fetch_with_transport_headroom(inst_id: str, end: str) -> object:
+    """Preserve the frozen source request while allowing pagination overlap headroom."""
+    return core.fetch_okx_one_hour_candles(
+        inst_id=inst_id,
+        start=core.START,
+        end=end,
+        limit=100,
+        pause_seconds=0.10,
+        timeout=20.0,
+        safety_pages=4,
+    )
+
+
+# The first exact-head execution exhausted the deterministic two-page transport
+# headroom before reaching the unchanged requested start. Increasing only the
+# pagination budget does not alter the provider, instrument, bar, boundaries,
+# observations, feature, labels, fees, folds, bootstrap, or acceptance gates.
+core._fetch = _fetch_with_transport_headroom
+
+
 def _clean(value: Any) -> Any:
     if isinstance(value, dict):
         return {str(key): _clean(item) for key, item in value.items()}
