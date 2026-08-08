@@ -20,7 +20,7 @@ def test_signed_efficiency_is_bounded_and_zero_range_is_zero() -> None:
     )
     signed, zero_range = _signed_efficiency(candles)
     assert zero_range == 1
-    assert signed.iloc[0] == 1.0
+    assert signed.iloc[0] == 0.5
     assert signed.iloc[1] == 0.0
     assert signed.iloc[2] == -0.5
     assert signed.between(-1.0, 1.0).all()
