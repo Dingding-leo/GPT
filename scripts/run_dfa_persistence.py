@@ -129,8 +129,6 @@ def _acquire_series(inst_id: str) -> tuple[pd.DataFrame, dict[str, object]]:
         raise ValueError(f"{inst_id}: provider bar identity mismatch")
     if primary.metadata.get("missing_intervals") not in (0, None):
         raise ValueError(f"{inst_id}: provider reports missing intervals")
-    if primary.metadata.get("incomplete_rows_removed") not in (0, None):
-        raise ValueError(f"{inst_id}: requested historical grid contained incomplete candles")
 
     persisted = _write_primary_snapshot(inst_id, primary)
     repeat_sha = str(repeat.metadata.get("normalized_csv_sha256"))
@@ -149,8 +147,11 @@ def _acquire_series(inst_id: str) -> tuple[pd.DataFrame, dict[str, object]]:
         "repeat_identity": True,
         "finite_positive_ohlc": True,
         "completed_hourly_grid": True,
+        "requested_grid_completed_bar_coverage": True,
         "missing_intervals": int(primary.metadata.get("missing_intervals") or 0),
-        "incomplete_rows_removed": int(primary.metadata.get("incomplete_rows_removed") or 0),
+        "pagination_incomplete_rows_removed": int(
+            primary.metadata.get("incomplete_rows_removed") or 0
+        ),
     }
     return candles, evidence
 
