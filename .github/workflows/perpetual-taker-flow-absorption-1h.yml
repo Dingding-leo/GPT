@@ -6,10 +6,12 @@ on:
       - "auto/research/**"
     paths:
       - "scripts/run_perpetual_taker_flow_absorption.py"
+      - "scripts/run_perpetual_taker_flow_absorption_exact.py"
       - ".github/workflows/perpetual-taker-flow-absorption-1h.yml"
   pull_request:
     paths:
       - "scripts/run_perpetual_taker_flow_absorption.py"
+      - "scripts/run_perpetual_taker_flow_absorption_exact.py"
       - ".github/workflows/perpetual-taker-flow-absorption-1h.yml"
   workflow_dispatch:
 
@@ -48,14 +50,16 @@ jobs:
           python -m pip install -e ".[dev]"
           python -m pip check
 
-      - name: Verify focused script parses
-        run: python -m py_compile scripts/run_perpetual_taker_flow_absorption.py
+      - name: Verify focused scripts parse
+        run: |
+          python -m py_compile scripts/run_perpetual_taker_flow_absorption.py
+          python -m py_compile scripts/run_perpetual_taker_flow_absorption_exact.py
 
       - name: Execute frozen public-data diagnostic
         env:
           RESEARCH_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           PYTHONUNBUFFERED: "1"
-        run: python scripts/run_perpetual_taker_flow_absorption.py
+        run: python scripts/run_perpetual_taker_flow_absorption_exact.py
 
       - name: Verify terminal evidence
         shell: bash
