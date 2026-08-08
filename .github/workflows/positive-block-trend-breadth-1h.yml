@@ -49,6 +49,8 @@ jobs:
           ruff check scripts/run_positive_block_trend_breadth.py
           python -m py_compile scripts/run_positive_block_trend_breadth.py
       - name: Execute frozen public-data diagnostic
+        env:
+          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: python scripts/run_positive_block_trend_breadth.py
       - name: Verify terminal evidence
         run: |
@@ -67,6 +69,7 @@ jobs:
           payload = json.loads(evidence)
           assert manifest["evidence_sha256"] == hashlib.sha256(evidence).hexdigest()
           assert manifest["report_sha256"] == hashlib.sha256(report).hexdigest()
+          assert payload["code_head"] == "${{ github.event.pull_request.head.sha || github.sha }}"
           assert payload["candidate_count"] == 0
           assert payload["parameter_grid_count"] == 0
           assert payload["bar"] == "1H"
