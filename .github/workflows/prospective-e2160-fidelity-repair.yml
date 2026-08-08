@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
 
+# Evidence refresh only; no strategy semantics change.
 jobs:
   evidence:
     runs-on: ubuntu-latest
