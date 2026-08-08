@@ -1,0 +1,115 @@
+name: Forced Liquidation Source Contract 1H
+
+on:
+  push:
+    branches:
+      - "auto/research/**"
+    paths:
+      - "scripts/run_forced_liquidation_source_contract.py"
+      - ".github/workflows/forced-liquidation-source-contract-1h.yml"
+  pull_request:
+    paths:
+      - "scripts/run_forced_liquidation_source_contract.py"
+      - ".github/workflows/forced-liquidation-source-contract-1h.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Bind exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ github.event.pull_request.head.sha || github.sha }}"
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$expected"
+          echo "RESEARCH_HEAD_SHA=$actual" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Hard strategy boundary proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(grep -c 'CANDIDATE_COUNT = 0' scripts/run_forced_liquidation_source_contract.py)" -eq 1
+          test "$(grep -c 'PARAMETER_GRID_COUNT = 0' scripts/run_forced_liquidation_source_contract.py)" -eq 1
+          test "$(grep -c 'FEE_BPS_ONE_WAY = 5.0' scripts/run_forced_liquidation_source_contract.py)" -eq 1
+          test "$(grep -c '\"target_price_accessed\": False' scripts/run_forced_liquidation_source_contract.py)" -eq 1
+          test "$(grep -c '\"target_return_accessed\": False' scripts/run_forced_liquidation_source_contract.py)" -eq 1
+          test "$(grep -c '\"oos_accessed\": False' scripts/run_forced_liquidation_source_contract.py)" -eq 1
+
+      - name: Compile source audit
+        run: python -m py_compile scripts/run_forced_liquidation_source_contract.py
+
+      - name: Execute source-contract audit
+        run: python scripts/run_forced_liquidation_source_contract.py
+
+      - name: Validate terminal artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          family = "causal-public-forced-liquidation-intensity-source-contract-1h-v1"
+          out = Path("reports/research") / family
+          evidence = json.loads((out / "evidence.json").read_text())
+          assert evidence["family_id"] == family
+          assert evidence["issue_number"] == 1149
+          assert evidence["base_main"] == "5a0fcc97d1a882f8223656c51f5bb8055f534e38"
+          assert evidence["exact_head"] == "${{ github.event.pull_request.head.sha || github.sha }}"
+          assert evidence["bar"] == "1H"
+          assert evidence["future_executable_fee_bps_one_way"] == 5.0
+          assert evidence["candidate_count"] == 0
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["provider_count"] == 3
+          assert evidence["providers_passing"] == 0
+          assert evidence["source_arms_acquired"] == 0
+          assert evidence["new_market_rows"] == 0
+          assert evidence["new_target_labels"] == 0
+          assert evidence["new_oos_observations"] == 0
+          assert evidence["new_fitting_or_tuning"] == 0
+          assert evidence["target_price_accessed"] is False
+          assert evidence["target_return_accessed"] is False
+          assert evidence["oos_accessed"] is False
+          assert evidence["source_gates_passed"] == 3
+          assert evidence["source_gates_total"] == 14
+          assert evidence["source_gates"]["03_direct_provider_defined_completed_1h_history_exists"] is False
+          assert evidence["source_gates"]["14_no_target_or_oos_access_before_bilateral_source_pass"] is True
+          assert all(not p["passes"] for p in evidence["providers_audited"])
+          assert all(not p["data_acquisition_attempted"] for p in evidence["providers_audited"])
+          assert evidence["verdict"] == "reject_causal_public_forced_liquidation_intensity_source_contract_1h_v1"
+          assert evidence["canonical_mutation"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert all(value is None for value in evidence["performance"].values())
+          def sha(path):
+              return hashlib.sha256(path.read_bytes()).hexdigest()
+          assert (out / "evidence.sha256").read_text().strip() == sha(out / "evidence.json")
+          assert (out / "report.sha256").read_text().strip() == sha(out / "report.md")
+          assert (out / "manifest.sha256").read_text().strip() == sha(out / "manifest.json")
+          print(json.dumps({"evidence_sha256": sha(out / "evidence.json"), "report_sha256": sha(out / "report.md"), "manifest_sha256": sha(out / "manifest.json")}, sort_keys=True))
+          PY
+
+      - name: Upload exact-head source evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: forced-liquidation-source-contract-1h-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports/research/causal-public-forced-liquidation-intensity-source-contract-1h-v1/
+          if-no-files-found: error
+          retention-days: 90
