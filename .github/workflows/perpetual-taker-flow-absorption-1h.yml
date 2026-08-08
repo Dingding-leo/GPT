@@ -1,0 +1,114 @@
+name: Same-Asset Perpetual Taker-Flow Absorption 1H
+
+on:
+  push:
+    branches:
+      - "auto/research/**"
+    paths:
+      - "scripts/run_perpetual_taker_flow_absorption.py"
+      - ".github/workflows/perpetual-taker-flow-absorption-1h.yml"
+  pull_request:
+    paths:
+      - "scripts/run_perpetual_taker_flow_absorption.py"
+      - ".github/workflows/perpetual-taker-flow-absorption-1h.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ github.event.pull_request.head.sha || github.sha }}"
+          actual="$(git rev-parse HEAD)"
+          test "$expected" = "$actual"
+          [[ "$actual" =~ ^[0-9a-f]{40}$ ]]
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+
+      - name: Verify focused script parses
+        run: python -m py_compile scripts/run_perpetual_taker_flow_absorption.py
+
+      - name: Execute frozen public-data diagnostic
+        env:
+          RESEARCH_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          PYTHONUNBUFFERED: "1"
+        run: python scripts/run_perpetual_taker_flow_absorption.py
+
+      - name: Verify terminal evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s reports/research/perpetual-taker-flow-absorption-1h-v1/evidence.json
+          test -s reports/research/perpetual-taker-flow-absorption-1h-v1/manifest.json
+          test -s reports/research/perpetual-taker-flow-absorption-1h-v1/report.md
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("reports/research/perpetual-taker-flow-absorption-1h-v1")
+          evidence = (root / "evidence.json").read_bytes()
+          manifest = json.loads((root / "manifest.json").read_text())
+          payload = json.loads(evidence)
+          expected = "${{ github.event.pull_request.head.sha || github.sha }}"
+          assert manifest["evidence_sha256"] == hashlib.sha256(evidence).hexdigest()
+          assert payload["code_head"] == expected
+          assert payload["family_id"] == "causal-same-asset-perpetual-taker-flow-absorption-opportunity-1h-v1"
+          assert payload["candidate_count"] == 0
+          assert payload["parameter_grid_count"] == 0
+          assert payload["bar"] == "1H"
+          assert payload["fee_bps_one_way"] == 5.0
+          assert payload["round_trip_label_bps"] == 10.0
+          assert payload["sealed_oos_accessed"] is False
+          assert payload["strategy_performance_accessed"] is False
+          assert payload["canonical_mutation"] is False
+          assert payload["correction_authority"] is False
+          assert payload["paper_trading_authorized"] is False
+          assert payload["live_trading_authorized"] is False
+          assert set(payload["targets_fixed_preperformance"]) == {"SOL-USDT", "XRP-USDT"}
+          assert all(value is None for value in payload["strategy_metrics"].values())
+          if payload["source_contract_passed"]:
+              assert payload["target_returns_accessed"] is True
+              assert set(payload["targets"]) == {"SOL-USDT", "XRP-USDT"}
+              assert payload["verdict"] in {
+                  "reject_causal_same_asset_perpetual_taker_flow_absorption_information_premise_1h_v1",
+                  "support_causal_same_asset_perpetual_taker_flow_absorption_for_separate_candidate_predeclaration_1h_v1",
+              }
+          else:
+              assert payload["target_returns_accessed"] is False
+              assert payload["targets"] == {}
+              assert payload["verdict"] == "reject_causal_same_asset_perpetual_taker_flow_absorption_source_contract_1h_v1"
+          print(payload["verdict"])
+          print("EVIDENCE_SHA256", manifest["evidence_sha256"])
+          PY
+
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: perpetual-taker-flow-absorption-1h-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports/research/perpetual-taker-flow-absorption-1h-v1
+          if-no-files-found: error
+          retention-days: 30
