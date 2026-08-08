@@ -399,7 +399,12 @@ def _structural_identities(candles: pd.DataFrame) -> dict[str, object]:
     latest_used = anchor - FEATURE_EMBARGO_HOURS
     chronology_ok = latest_used <= anchor - 25
     return {
-        "scale_order_strict": bool(all(a < b for a, b in zip(DFA_SCALES, DFA_SCALES[1:]))),
+        "scale_order_strict": bool(
+            all(
+                a < b
+                for a, b in zip(DFA_SCALES, DFA_SCALES[1:], strict=False)
+            )
+        ),
         "all_scales_divide_720": bool(scale_coverage),
         "box_coverage_points": total_points,
         "all_scales_cover_exactly_720": bool(
