@@ -1,0 +1,30 @@
+name: Prospective E2160 Fidelity Repair
+
+on:
+  pull_request:
+    paths:
+      - "scripts/run_prospective_strategy_checkpoint_fidelity_repair.py"
+      - ".github/workflows/prospective-e2160-fidelity-repair.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run exact E2160 public-data fidelity repair
+        run: python scripts/run_prospective_strategy_checkpoint_fidelity_repair.py
+      - name: Upload immutable strategy evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: prospective-e2160-fidelity-repair-${{ github.run_number }}-${{ github.run_attempt }}
+          path: reports/prospective/e2160-fidelity-repair
+          if-no-files-found: error
+          retention-days: 30
