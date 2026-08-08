@@ -1,0 +1,151 @@
+name: Lagged Public Macro Price Proxy Closure 1H
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_lagged_public_macro_price_proxy_closure.py'
+      - '.github/workflows/lagged-public-macro-price-proxy-closure-1h.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  closure-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind evidence to exact pull-request head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --quiet
+          test -z "$(git status --porcelain=v1)"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Prove hard strategy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/run_lagged_public_macro_price_proxy_closure.py')
+          text = path.read_text(encoding='utf-8')
+          lower = text.lower()
+          forbidden = [
+              'urllib', 'requests.', 'http://', 'https://', '.resample(',
+              'place_order', 'create_order', 'submit_order', 'send_order',
+              '/api/v5/trade/', '/api/v5/account/', '/api/v5/asset/',
+              "'5m'", '"5m"', "'15m'", '"15m"',
+              'cointegration', 'top_n', 'top-n', 'cross_sectional', 'cross-sectional',
+          ]
+          hits = [token for token in forbidden if token in lower]
+          if hits:
+              raise SystemExit(f'prohibited capability tokens: {hits}')
+          required = [
+              'FAMILY_ID = "causal-lagged-public-macro-price-regime-proxy-programme-closure-1h-v1"',
+              'ISSUE_NUMBER = 1137',
+              'BASE_MAIN = "5a0fcc97d1a882f8223656c51f5bb8055f534e38"',
+              'BAR = "1H"',
+              'FEE_ONE_WAY = 0.0005',
+              'CANDIDATE_COUNT = 0',
+              'PARAMETER_GRID_COUNT = 0',
+          ]
+          missing = [token for token in required if token not in text]
+          if missing:
+              raise SystemExit(f'frozen closure token missing: {missing}')
+          PY
+
+      - name: Compile deterministic closure
+        run: python -m py_compile scripts/run_lagged_public_macro_price_proxy_closure.py
+
+      - name: Execute immutable-evidence closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          export RESEARCH_HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+          python scripts/run_lagged_public_macro_price_proxy_closure.py
+
+      - name: Validate machine-readable closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          family = 'causal-lagged-public-macro-price-regime-proxy-programme-closure-1h-v1'
+          root = Path('reports/research') / family
+          evidence_path = root / 'evidence.json'
+          evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
+          verdict = 'reject_reopening_completed_lagged_public_macro_price_regime_proxies_1h_v1'
+
+          assert evidence['family_id'] == family
+          assert evidence['issue_number'] == 1137
+          assert evidence['base_main'] == '5a0fcc97d1a882f8223656c51f5bb8055f534e38'
+          assert evidence['exact_head'] == '${{ github.event.pull_request.head.sha }}'
+          assert evidence['bar'] == '1H'
+          assert evidence['fee_bps_one_way_where_economics_defined'] == 5.0
+          assert evidence['candidate_count'] == 0
+          assert evidence['parameter_grid_count'] == 0
+          assert evidence['new_market_data_rows'] == 0
+          assert evidence['new_target_labels'] == 0
+          assert evidence['new_oos_access'] == 0
+          assert evidence['new_fitting_or_tuning'] == 0
+          assert evidence['top_level_group_count'] == 2
+          assert evidence['independently_admissible_top_level_groups'] == 0
+          assert set(g['owner_issue'] for g in evidence['groups']) == {1074, 1135}
+          assert evidence['groups'][0]['independently_admissible_internal_mechanisms'] == 0
+          assert evidence['groups'][1]['target_training']['target_oos_accessed'] is False
+          assert evidence['groups'][1]['target_training']['unread_suffix_accessed'] is False
+          assert evidence['groups'][1]['candidate_count'] == 0
+          assert evidence['groups'][1]['parameter_grid_count'] == 0
+          assert evidence['gates_total'] == 10
+          assert evidence['gates_passed'] == 10
+          assert all(evidence['gates'].values())
+          assert all(value is None for value in evidence['performance'].values())
+          assert evidence['canonical_mutation'] is False
+          assert evidence['correction_authority'] is False
+          assert evidence['paper_trading_authorized'] is False
+          assert evidence['live_trading_authorized'] is False
+          assert evidence['verdict'] == verdict
+
+          for stem, filename in [('evidence', 'evidence.json'), ('report', 'report.md')]:
+              path = root / filename
+              expected = (root / f'{stem}.sha256').read_text().strip()
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == expected
+          manifest = root / 'manifest.json'
+          expected_manifest = (root / 'manifest.sha256').read_text().strip()
+          assert hashlib.sha256(manifest.read_bytes()).hexdigest() == expected_manifest
+          print(json.dumps({
+              'exact_head': evidence['exact_head'],
+              'gates': f"{evidence['gates_passed']}/{evidence['gates_total']}",
+              'support': f"{evidence['independently_admissible_top_level_groups']}/{evidence['top_level_group_count']}",
+              'verdict': evidence['verdict'],
+              'evidence_sha256': hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+              'report_sha256': hashlib.sha256((root / 'report.md').read_bytes()).hexdigest(),
+          }, sort_keys=True))
+          PY
+
+      - name: Upload immutable closure artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lagged-public-macro-price-proxy-closure-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: reports/research/causal-lagged-public-macro-price-regime-proxy-programme-closure-1h-v1
+          if-no-files-found: warn
+          retention-days: 14
