@@ -1,0 +1,66 @@
+name: Onchain Transfer Size Breadth 1H
+
+on:
+  push:
+    branches:
+      - "auto/research/**"
+    paths:
+      - "scripts/run_onchain_transfer_size_breadth.py"
+      - ".github/workflows/onchain-transfer-size-breadth-1h.yml"
+  pull_request:
+    paths:
+      - "scripts/run_onchain_transfer_size_breadth.py"
+      - ".github/workflows/onchain-transfer-size-breadth-1h.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+      - name: Compile focused research script
+        run: python -m py_compile scripts/run_onchain_transfer_size_breadth.py
+      - name: Execute frozen public-data diagnostic
+        run: python scripts/run_onchain_transfer_size_breadth.py
+      - name: Verify terminal evidence
+        run: |
+          test -s reports/research/onchain-transfer-size-breadth-1h-v1/evidence.json
+          test -s reports/research/onchain-transfer-size-breadth-1h-v1/evidence.sha256
+          test -s reports/research/onchain-transfer-size-breadth-1h-v1/report.md
+          python - <<'PY'
+          import hashlib, json
+          from pathlib import Path
+          root = Path('reports/research/onchain-transfer-size-breadth-1h-v1')
+          data = (root / 'evidence.json').read_bytes()
+          assert hashlib.sha256(data).hexdigest() == (root / 'evidence.sha256').read_text().strip()
+          payload = json.loads(data)
+          assert payload['candidate_count'] == 0
+          assert payload['parameter_grid_count'] == 0
+          assert payload['bar'] == '1H'
+          assert payload['fee_bps_one_way'] == 5.0
+          assert payload['sealed_oos_accessed'] is False
+          assert payload['canonical_mutation'] is False
+          assert payload['paper_trading_authorized'] is False
+          assert payload['live_trading_authorized'] is False
+          print(payload['verdict'])
+          PY
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: onchain-transfer-size-breadth-1h-${{ github.sha }}
+          path: reports/research/onchain-transfer-size-breadth-1h-v1
+          if-no-files-found: error
+          retention-days: 30
