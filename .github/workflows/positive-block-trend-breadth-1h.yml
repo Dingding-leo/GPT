@@ -49,9 +49,7 @@ jobs:
           ruff check scripts/run_positive_block_trend_breadth.py
           python -m py_compile scripts/run_positive_block_trend_breadth.py
       - name: Execute frozen public-data diagnostic
-        env:
-          GITHUB_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: python scripts/run_positive_block_trend_breadth.py
+        run: GITHUB_SHA="${{ github.event.pull_request.head.sha || github.sha }}" python scripts/run_positive_block_trend_breadth.py
       - name: Verify terminal evidence
         run: |
           test -s reports/research/positive-block-trend-breadth-1h-v1/evidence.json
