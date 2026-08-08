@@ -1,0 +1,156 @@
+name: Public PAXG Macro Risk Source 1H
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_public_paxg_macro_risk_source.py'
+      - '.github/workflows/public-paxg-macro-risk-source.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  source-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind evidence to exact pull-request head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --quiet
+          test -z "$(git status --porcelain=v1)"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install frozen research package
+        run: python -m pip install -e .
+
+      - name: Prove prohibited capabilities are absent
+        shell: bash
+        run: |
+          set -euo pipefail
+          if env | cut -d= -f1 | grep -Eiq '(OKX|API).*(SECRET|KEY)|API_KEY|API_SECRET'; then
+            exit 1
+          fi
+          ! grep -nEi 'place_order|create_order|submit_order|send_order|/api/v5/(trade|account|asset)/' \
+            scripts/run_public_paxg_macro_risk_source.py
+          ! grep -nEi '15m|5m|leverage|private endpoint|enabled adapter' \
+            scripts/run_public_paxg_macro_risk_source.py
+          grep -q 'INSTRUMENT = "PAXG-USDT"' scripts/run_public_paxg_macro_risk_source.py
+          grep -q 'BAR = "1H"' scripts/run_public_paxg_macro_risk_source.py
+          grep -q 'EXPECTED_ROWS = 6_720' scripts/run_public_paxg_macro_risk_source.py
+          grep -q 'HISTORY_PATH = "/api/v5/market/history-candles"' \
+            scripts/run_public_paxg_macro_risk_source.py
+
+      - name: Compile frozen source experiment
+        run: python -m py_compile scripts/run_public_paxg_macro_risk_source.py
+
+      - name: Execute immutable public-data source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          export GITHUB_SHA='${{ github.event.pull_request.head.sha }}'
+          python scripts/run_public_paxg_macro_risk_source.py
+
+      - name: Validate machine-readable source evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          family = 'causal-public-paxg-macro-risk-source-contract-1h-v1'
+          root = Path('reports/experiments') / family
+          evidence_path = root / 'evidence.json'
+          evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
+          accepted = 'accept_public_paxg_macro_risk_1h_source_for_separate_training_predeclaration'
+          rejected = 'reject_causal_public_paxg_macro_risk_source_contract_1h_v1'
+
+          assert evidence['family_id'] == family
+          assert evidence['issue_number'] == 1133
+          assert evidence['base_main'] == '5a0fcc97d1a882f8223656c51f5bb8055f534e38'
+          assert evidence['exact_head'] == '${{ github.event.pull_request.head.sha }}'
+          assert evidence['candidate_count'] == 0
+          assert evidence['parameter_grid_count'] == 0
+          assert evidence['exogenous_source'] == 'PAXG-USDT'
+          assert evidence['future_target_sleeves'] == ['BTC-USDT', 'ETH-USDT']
+          assert evidence['bar'] == '1H'
+          assert evidence['frozen_start'] == '2025-11-01T00:00:00Z'
+          assert evidence['frozen_end'] == '2026-08-07T23:00:00Z'
+          assert evidence['expected_rows'] == 6720
+          assert evidence['canonical_fee_bps_one_way'] == 5.0
+          assert evidence['public_data_only'] is True
+          assert evidence['credentials_private_endpoints_accounts_orders_adapters_leverage_funds'] is False
+          assert evidence['cross_sectional_or_relative_selection'] is False
+          assert evidence['target_prices_or_returns_accessed'] is False
+          assert evidence['performance_accessed'] is False
+          assert evidence['oos_accessed'] is False
+          assert evidence['canonical_strategy_changed'] is False
+          assert evidence['paper_trading_authorized'] is False
+          assert evidence['live_trading_authorized'] is False
+          assert all(value is None for value in evidence['performance'].values())
+          assert evidence['verdict'] in {accepted, rejected}
+
+          if evidence['source_contract_passed']:
+              assert evidence['verdict'] == accepted
+              assert evidence['failure'] is None
+              assert evidence['observed_rows'] == 6720
+              assert evidence['instrument']['passed'] is True
+              assert evidence['instrument']['instId'] == 'PAXG-USDT'
+              assert evidence['instrument']['instType'] == 'SPOT'
+              assert evidence['instrument']['state'] == 'live'
+              assert all(evidence['source_gates'].values())
+              assert evidence['support']['distinct_close_values'] >= 500
+              assert float(evidence['support']['close_iqr']) > 0
+              assert evidence['primary']['observed_rows'] == 6720
+              assert evidence['repeat']['observed_rows'] == 6720
+              assert evidence['extension']['observed_rows'] == 6721
+              assert (
+                  evidence['primary']['normalized_panel_sha256']
+                  == evidence['repeat']['normalized_panel_sha256']
+              )
+          else:
+              assert evidence['verdict'] == rejected
+              assert evidence['failure']
+
+          for stem, filename in (('evidence', 'evidence.json'), ('report', 'report.md')):
+              path = root / filename
+              expected = (root / f'{stem}.sha256').read_text().strip()
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == expected
+          manifest = root / 'artifact-manifest.json'
+          expected_manifest = (root / 'manifest.sha256').read_text().strip()
+          assert hashlib.sha256(manifest.read_bytes()).hexdigest() == expected_manifest
+          print(json.dumps({
+              'exact_head': evidence['exact_head'],
+              'source_contract_passed': evidence['source_contract_passed'],
+              'observed_rows': evidence['observed_rows'],
+              'target_prices_or_returns_accessed': evidence['target_prices_or_returns_accessed'],
+              'oos_accessed': evidence['oos_accessed'],
+              'verdict': evidence['verdict'],
+              'evidence_sha256': hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+          }, sort_keys=True))
+          PY
+
+      - name: Upload immutable source artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: public-paxg-macro-risk-source-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: reports/experiments/causal-public-paxg-macro-risk-source-contract-1h-v1
+          if-no-files-found: warn
+          retention-days: 14
