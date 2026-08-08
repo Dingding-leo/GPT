@@ -1,0 +1,85 @@
+name: E2160 Lag Endpoint Roll Support 1H
+
+on:
+  push:
+    branches:
+      - "auto/research/**"
+    paths:
+      - "scripts/run_e2160_lag_endpoint_roll_support.py"
+      - ".github/workflows/e2160-lag-endpoint-roll-support-1h.yml"
+  pull_request:
+    paths:
+      - "scripts/run_e2160_lag_endpoint_roll_support.py"
+      - ".github/workflows/e2160-lag-endpoint-roll-support-1h.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact head
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected="${{ github.event.pull_request.head.sha || github.sha }}"
+          actual="$(git rev-parse HEAD)"
+          test "$expected" = "$actual"
+          [[ "$actual" =~ ^[0-9a-f]{40}$ ]]
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+      - name: Verify focused script parses
+        run: python -m py_compile scripts/run_e2160_lag_endpoint_roll_support.py
+      - name: Execute frozen public-data diagnostic
+        run: GITHUB_SHA="${{ github.event.pull_request.head.sha || github.sha }}" python scripts/run_e2160_lag_endpoint_roll_support.py
+      - name: Verify terminal evidence
+        run: |
+          test -s reports/research/e2160-lag-endpoint-roll-support-1h-v1/evidence.json
+          test -s reports/research/e2160-lag-endpoint-roll-support-1h-v1/manifest.json
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("reports/research/e2160-lag-endpoint-roll-support-1h-v1")
+          evidence = (root / "evidence.json").read_bytes()
+          manifest = json.loads((root / "manifest.json").read_text())
+          payload = json.loads(evidence)
+          assert manifest["evidence_sha256"] == hashlib.sha256(evidence).hexdigest()
+          assert payload["code_head"] == "${{ github.event.pull_request.head.sha || github.sha }}"
+          assert payload["candidate_count"] == 0
+          assert payload["parameter_grid_count"] == 0
+          assert payload["bar"] == "1H"
+          assert payload["fee_bps_one_way"] == 5.0
+          assert payload["sealed_oos_accessed"] is False
+          assert payload["canonical_mutation"] is False
+          assert payload["paper_trading_authorized"] is False
+          assert payload["live_trading_authorized"] is False
+          assert set(payload["targets"]) == {"DOGE-USDT", "TRX-USDT"}
+          assert all(value is None for value in payload["strategy_metrics"].values())
+          print(payload["verdict"])
+          print("EVIDENCE_SHA256", manifest["evidence_sha256"])
+          PY
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2160-lag-endpoint-roll-support-1h-${{ github.event.pull_request.head.sha || github.sha }}
+          path: reports/research/e2160-lag-endpoint-roll-support-1h-v1
+          if-no-files-found: error
+          retention-days: 30
