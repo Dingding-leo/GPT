@@ -1,0 +1,45 @@
+name: VWAP Cost Basis Migration 1H
+
+on:
+  push:
+    branches:
+      - "auto/research/**"
+    paths:
+      - "scripts/run_vwap_cost_basis_migration.py"
+      - ".github/workflows/vwap-cost-basis-migration-1h.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip check
+      - name: Compile focused research script
+        run: python -m py_compile scripts/run_vwap_cost_basis_migration.py
+      - name: Execute immutable public-data diagnostic
+        run: python scripts/run_vwap_cost_basis_migration.py
+      - name: Hash terminal evidence
+        run: |
+          sha256sum reports/research/vwap-cost-basis-migration-1h-v1/evidence.json
+          sha256sum reports/research/vwap-cost-basis-migration-1h-v1/report.md
+          sha256sum reports/research/vwap-cost-basis-migration-1h-v1/manifest.json
+      - name: Upload exact-head evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: vwap-cost-basis-migration-1h-${{ github.sha }}
+          path: reports/research/vwap-cost-basis-migration-1h-v1
+          if-no-files-found: error
+          retention-days: 30
