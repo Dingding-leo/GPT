@@ -32,4 +32,6 @@ def test_training_and_delay_labels_remain_before_sealed_oos() -> None:
     assert anchors
     assert all(anchor + 25 < TRAIN_END for anchor in anchors)
     assert anchors == sorted(anchors)
-    assert all(right - left == 24 for left, right in zip(anchors, anchors[1:]))
+    assert all(
+        right - left == 24 for left, right in zip(anchors, anchors[1:], strict=False)
+    )
