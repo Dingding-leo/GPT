@@ -45,16 +45,32 @@ jobs:
           if env | cut -d= -f1 | grep -Eiq '(OKX|API).*(SECRET|KEY)|API_KEY|API_SECRET'; then
             exit 1
           fi
-          ! grep -nEi 'place_order|create_order|submit_order|send_order|/api/v5/(trade|account|asset)/' \
-            scripts/run_lagged_paxg_defensive_momentum.py
-          ! grep -nEi '\.resample\(|bar[[:space:]]*=[[:space:]]*["'"'](5m|15m)["'"']|pair|spread|cointegration|top[_-]?n|cross.?section' \
-            scripts/run_lagged_paxg_defensive_momentum.py
-          grep -q 'BAR = "1H"' scripts/run_lagged_paxg_defensive_momentum.py
-          grep -q 'FEE_ONE_WAY = 0.0005' scripts/run_lagged_paxg_defensive_momentum.py
-          grep -q 'PAXG = "PAXG-USDT"' scripts/run_lagged_paxg_defensive_momentum.py
-          grep -q 'ANCHORS = tuple(range(216, 4753, 24))' scripts/run_lagged_paxg_defensive_momentum.py
-          grep -q 'SOURCE_NORMALIZED_SHA256 = "9706000030143e6ab6f7350dca51b7383b8238124be66c1f1995426a60dddc8e"' \
-            scripts/run_lagged_paxg_defensive_momentum.py
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/run_lagged_paxg_defensive_momentum.py')
+          text = path.read_text(encoding='utf-8')
+          lower = text.lower()
+          forbidden = [
+              'place_order', 'create_order', 'submit_order', 'send_order',
+              '/api/v5/trade/', '/api/v5/account/', '/api/v5/asset/',
+              '.resample(', "'5m'", '"5m"', "'15m'", '"15m"',
+              'cointegration', 'top_n', 'top-n', 'cross_sectional', 'cross-sectional',
+          ]
+          hits = [token for token in forbidden if token in lower]
+          if hits:
+              raise SystemExit(f'prohibited capability tokens: {hits}')
+          required = [
+              'BAR = "1H"',
+              'FEE_ONE_WAY = 0.0005',
+              'PAXG = "PAXG-USDT"',
+              'ANCHORS = tuple(range(216, 4753, 24))',
+              'SOURCE_NORMALIZED_SHA256 = "9706000030143e6ab6f7350dca51b7383b8238124be66c1f1995426a60dddc8e"',
+          ]
+          missing = [token for token in required if token not in text]
+          if missing:
+              raise SystemExit(f'frozen contract token missing: {missing}')
+          PY
 
       - name: Compile frozen training experiment
         run: python -m py_compile scripts/run_lagged_paxg_defensive_momentum.py
@@ -101,7 +117,7 @@ jobs:
           assert evidence['live_trading_authorized'] is False
           assert all(value is None for value in evidence['performance'].values())
           assert set(evidence['targets']) == {'BTC-USDT', 'ETH-USDT'}
-          for target, result in evidence['targets'].items():
+          for result in evidence['targets'].values():
               assert result['opportunities'] == 190
               assert result['chronology']['target_oos_requested_or_parsed'] is False
               assert result['chronology']['structural_checks'] is True
