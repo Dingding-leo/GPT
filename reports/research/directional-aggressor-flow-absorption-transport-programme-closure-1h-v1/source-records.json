@@ -1,0 +1,259 @@
+{
+  "family_id": "causal-directional-aggressor-flow-absorption-transport-programme-closure-1h-v1",
+  "fee_bps_one_way_where_executable": 5.0,
+  "frozen_at_main": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "groups": [
+    {
+      "artifact_id": 8816068422,
+      "artifact_zip_sha256": "5630645f18f5f5064a6c82eaefc40b4d688cf88ab8ea9674d3bc7bdc22b088d0",
+      "candidate_count_note": "terminal #861 does not expose an additive family candidate total; preserve null rather than infer",
+      "dimension_pass_counts": {
+        "dependence_aware_support": 0,
+        "positive_economics_or_information": 0,
+        "replication_or_latency": 0,
+        "source_executable": 3,
+        "temporal_breadth": 1
+      },
+      "evidence_head": "6a80e38f6e132cabaf3338d30975f7f3c4b2adf0",
+      "evidence_sha256": "1aa3fa4261e8f6f4246fd9ccd90ed5ab054ba1d2770f06651be1efad9a9d563b",
+      "family_id": "causal-microstructure-resilience-family-closure-1h-v1",
+      "group_id": "spot_microstructure_resilience_closure",
+      "historical_candidate_count": null,
+      "independently_admissible": false,
+      "internal_group_count": 4,
+      "issue": 861,
+      "leave_one_internal_group_out_retains_support": false,
+      "report_sha256": "72bc309e06e14eba33f2ec5ebc689319ca008feb1935ccfe29fe3081a331fab1",
+      "source_records_sha256": "7d9c58ce70fd0e04ae3edd7c464b7fd1a9d0574a74eddecf63d355af6eaafce8",
+      "strongest_executable_highlight": {
+        "bilateral_replication": false,
+        "full": {
+          "benchmark_net_return": 2.153458732053486,
+          "benchmark_sharpe": 1.210972774995332,
+          "candidate_edge_per_turnover_bps": 469.84643417414674,
+          "candidate_max_drawdown": -0.22678924124019284,
+          "candidate_net_return": 2.8217715672899213,
+          "candidate_sharpe": 1.3922126586623091,
+          "candidate_turnover": 33.0
+        },
+        "improved_folds": [
+          2,
+          8
+        ],
+        "largest_event_share": 0.6601402981728585,
+        "markets_evaluated": [
+          "BTC-USDT"
+        ],
+        "markets_required": [
+          "BTC-USDT",
+          "ETH-USDT"
+        ],
+        "mean_delta_95": [
+          0.0,
+          0.0935611978193556
+        ],
+        "mechanism": "onset_aggressive_flow_absorption",
+        "oos": {
+          "benchmark_edge_per_turnover_bps": 375.08342612256223,
+          "benchmark_max_drawdown": -0.22678924124019195,
+          "benchmark_net_return": 1.2395456951243475,
+          "benchmark_sharpe": 1.3026229339811768,
+          "benchmark_turnover": 25.0,
+          "candidate_edge_per_turnover_bps": 593.5808028191545,
+          "candidate_max_drawdown": -0.22678924124019195,
+          "candidate_net_return": 1.4069516018807713,
+          "candidate_sharpe": 1.4055880993762582,
+          "candidate_turnover": 17.0
+        },
+        "positive_fold_concentration": 0.41044060628390433,
+        "price_only_shadow_identical": true,
+        "profitable_folds": [
+          5,
+          8
+        ],
+        "profitable_years": [
+          2,
+          3
+        ],
+        "sharpe_delta_95": [
+          0.0,
+          0.26912848241392534
+        ],
+        "training": {
+          "benchmark_net_return": 0.408079656029706,
+          "benchmark_sharpe": 1.0526266383646299,
+          "candidate_edge_per_turnover_bps": 338.37866748882595,
+          "candidate_max_drawdown": -0.2261194012173673,
+          "candidate_net_return": 0.587805739136432,
+          "candidate_sharpe": 1.3718406587998568,
+          "candidate_turnover": 16.0
+        }
+      },
+      "supportive_internal_groups": 0,
+      "terminal_verdict": "reject_causal_microstructure_resilience_family"
+    },
+    {
+      "artifact_id": 8845886112,
+      "artifact_zip_sha256": "56180347933cf65ac63fc0bc7416f5b8ca1024cd8a156255cde396909b5b90f0",
+      "closure_gates_passed": 3,
+      "closure_gates_total": 12,
+      "evidence_head": "270f9951b1bd16f06227da768aad74b375552e85",
+      "evidence_sha256": "88fe4559e5d73dcc3f41a93cef6250515c32f69cd758feb052084a0d12976583",
+      "family_id": "causal-own-price-volume-directional-interaction-programme-closure-1h-v1",
+      "group_id": "own_price_directional_volume_interaction_closure",
+      "historical_candidate_count": 8,
+      "independently_admissible": false,
+      "internal_group_count": 6,
+      "issue": 1027,
+      "overlap_note": "aggregate taker-flow source #566 overlaps group A and is counted once as a historical source, not as an extra candidate or vote",
+      "pr": 1029,
+      "report_sha256": "8ea748c50ec2fa3ec1eaee563bb8a21207c064e111d8607dc13cee2c5f040532",
+      "source_records_sha256": "189ac90f0f980eea0d78ac6223da7a740a7a11199c2942860d92d6327cd704ea",
+      "strongest_executable_highlight": {
+        "candidate_count": 1,
+        "issue": 642,
+        "mechanism": "volume_weighted_directional_persistence_entry",
+        "oos": {
+          "BTC-USDT": {
+            "benchmark_edge_per_turnover_bps": 212.75,
+            "benchmark_max_drawdown": -0.2655,
+            "benchmark_net_return": 1.1968,
+            "benchmark_sharpe": 0.954,
+            "benchmark_turnover": 45,
+            "candidate_edge_per_turnover_bps": 451.96,
+            "candidate_max_drawdown": -0.3094,
+            "candidate_net_return": 1.4118,
+            "candidate_sharpe": 1.071,
+            "candidate_turnover": 23,
+            "mean_delta_lower_95": -0.0787,
+            "profitable_folds": [
+              6,
+              12
+            ],
+            "sharpe_delta_lower_95": -0.2
+          },
+          "ETH-USDT": {
+            "benchmark_edge_per_turnover_bps": 283.58,
+            "benchmark_max_drawdown": -0.4777,
+            "benchmark_net_return": 0.7452,
+            "benchmark_sharpe": 0.646,
+            "benchmark_turnover": 30,
+            "candidate_edge_per_turnover_bps": 1159.89,
+            "candidate_max_drawdown": -0.449,
+            "candidate_net_return": 1.407,
+            "candidate_sharpe": 0.899,
+            "candidate_turnover": 10,
+            "mean_delta_lower_95": -0.0193,
+            "profitable_folds": [
+              6,
+              12
+            ],
+            "sharpe_delta_lower_95": -0.028
+          }
+        },
+        "parameter_grid_count": 0,
+        "training_net_return": {
+          "BTC-USDT": -0.2465,
+          "ETH-USDT": -0.2411
+        }
+      },
+      "supportive_internal_groups": 0,
+      "terminal_verdict": "reject_reopening_completed_own_price_volume_directional_interaction_mechanisms_1h_v1"
+    },
+    {
+      "artifact_id": 9019895913,
+      "artifact_zip_sha256": "80fd1e526c2bd42af2256aba5dcacbcc6e6677b57d6405b6cd0004bad33b7e2f",
+      "evidence_head": "ad097893ff793bf958dac4a28be8f4467e796d1c",
+      "evidence_sha256": "d5908b9dc8173567a0693e572d1c28ff7152c6657b41b5497ec16c18898675ab",
+      "family_id": "causal-same-asset-perpetual-taker-flow-absorption-opportunity-1h-v1",
+      "fixed_targets": [
+        "SOL-USDT",
+        "XRP-USDT"
+      ],
+      "group_id": "same_underlying_perpetual_taker_flow_absorption",
+      "historical_candidate_count": 0,
+      "independently_admissible": false,
+      "issue": 1105,
+      "manifest_sha256": "222298b4ddb17e636ce87353ac45c33c1b0546ccc50afa3dc063d078f9a5afba",
+      "parameter_grid_count": 0,
+      "pr": 1107,
+      "report_sha256": "cbb6abecc81d7cedfab023a2b364b48a9e67cbdd1e9eb3efbdefd02c53877b23",
+      "sealed_oos_accessed": false,
+      "source_rows_per_arm": 24144,
+      "targets": {
+        "SOL-USDT": {
+          "adverse_rho": -0.08235073311638555,
+          "adverse_slope": -0.0013666758774293318,
+          "adverse_tercile_effect": -0.004015032564412643,
+          "bootstrap_95": {
+            "adverse_rho": [
+              -0.214175112863281,
+              0.06084334995410266
+            ],
+            "adverse_slope": [
+              -0.008043170398417777,
+              0.006440494833162681
+            ],
+            "net_rho": [
+              -0.10971686234286093,
+              0.10028028222458635
+            ],
+            "net_slope": [
+              -0.003651403886610799,
+              0.006131980787365061
+            ]
+          },
+          "delay_transport_pass": false,
+          "margin_strata_pass": false,
+          "net_rho": -0.003256379456830633,
+          "net_slope": 0.0010296512147799752,
+          "net_tercile_effect": 0.005227611371684423,
+          "opportunities": 320,
+          "positive_adverse_folds": 1,
+          "positive_net_fold_concentration": 0.7966446371168202,
+          "positive_net_folds": 2
+        },
+        "XRP-USDT": {
+          "adverse_rho": -0.11018014604574262,
+          "adverse_slope": -0.006812582710916999,
+          "adverse_tercile_effect": -0.013369443588172117,
+          "bootstrap_95": {
+            "adverse_rho": [
+              -0.26236769078710465,
+              0.03358758256943809
+            ],
+            "adverse_slope": [
+              -0.013116387001310962,
+              -0.0012408635602278984
+            ],
+            "net_rho": [
+              -0.1925636378944983,
+              0.05615399744333414
+            ],
+            "net_slope": [
+              -0.006181577446777839,
+              0.00041150046452476563
+            ]
+          },
+          "delay_transport_pass": false,
+          "margin_strata_pass": false,
+          "net_rho": -0.05516843483053182,
+          "net_slope": -0.0024479383650238607,
+          "net_tercile_effect": -0.0033243075542399468,
+          "opportunities": 191,
+          "positive_adverse_folds": 0,
+          "positive_net_fold_concentration": null,
+          "positive_net_folds": 0
+        }
+      },
+      "terminal_verdict": "reject_causal_same_asset_perpetual_taker_flow_absorption_information_premise_1h_v1",
+      "workflow_run": 31250404146
+    }
+  ],
+  "new_candidate_count": 0,
+  "new_fitting_or_tuning": 0,
+  "new_market_data_rows": 0,
+  "new_oos_access": false,
+  "new_target_labels": 0,
+  "parameter_grid_count": 0
+}
