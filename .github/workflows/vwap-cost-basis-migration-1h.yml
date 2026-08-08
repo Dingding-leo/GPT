@@ -7,6 +7,10 @@ on:
     paths:
       - "scripts/run_vwap_cost_basis_migration.py"
       - ".github/workflows/vwap-cost-basis-migration-1h.yml"
+  pull_request:
+    paths:
+      - "scripts/run_vwap_cost_basis_migration.py"
+      - ".github/workflows/vwap-cost-basis-migration-1h.yml"
   workflow_dispatch:
 
 permissions:
