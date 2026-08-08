@@ -1,0 +1,56 @@
+name: Dual EMA Distributed Memory 1H Research
+
+on:
+  pull_request:
+    paths:
+      - "scripts/run_dual_ema_distributed_memory_trend.py"
+      - ".github/workflows/dual-ema-distributed-memory-research.yml"
+      - "src/gpt_quant/okx_1h.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project
+        run: python -m pip install -e .
+      - name: Compile frozen strategy runner
+        run: python -m py_compile scripts/run_dual_ema_distributed_memory_trend.py
+      - name: Run frozen LTC DOGE dual-EMA experiment
+        run: python scripts/run_dual_ema_distributed_memory_trend.py
+      - name: Verify terminal artifact
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p = Path("reports/research/dual-ema-distributed-memory-trend-1h-v1/evidence.json")
+          m = Path("reports/research/dual-ema-distributed-memory-trend-1h-v1/manifest.json")
+          assert p.exists() and m.exists()
+          evidence = json.loads(p.read_text())
+          assert evidence["candidate_count"] == 1
+          assert evidence["parameter_grid_count"] == 0
+          assert evidence["canonical_mutation"] is False
+          assert evidence["paper_trading_authorized"] is False
+          assert evidence["live_trading_authorized"] is False
+          assert evidence["verdict"] in {
+              "reject_causal_own_price_dual_ema_distributed_memory_trend_source_contract_1h_v1",
+              "reject_causal_own_price_dual_ema_distributed_memory_trend_1h_v1",
+              "accept_causal_own_price_dual_ema_distributed_memory_trend_for_canonical_review_1h_v1",
+          }
+          PY
+      - name: Upload exact strategy evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dual-ema-distributed-memory-1h-${{ github.sha }}
+          path: reports/research/dual-ema-distributed-memory-trend-1h-v1
+          if-no-files-found: error
+          retention-days: 90
