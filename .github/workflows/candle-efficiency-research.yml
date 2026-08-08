@@ -38,7 +38,7 @@ jobs:
           python -m pip check
 
       - name: Run candle-efficiency structural tests
-        run: pytest tests/test_candle_efficiency_state.py
+        run: python -m pytest tests/test_candle_efficiency_state.py
 
       - name: Run bilateral real-data diagnostic
         run: python scripts/run_candle_efficiency_state.py
