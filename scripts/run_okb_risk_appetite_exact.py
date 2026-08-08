@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from scripts import run_okb_risk_appetite as base
+import run_okb_risk_appetite as base
 
 SOURCE_SAFETY_PAGES = 64
 
