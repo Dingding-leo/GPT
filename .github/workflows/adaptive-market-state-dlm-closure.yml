@@ -1,0 +1,30 @@
+name: Adaptive Market State DLM Closure
+
+on:
+  pull_request:
+    paths:
+      - "reports/research/adaptive-market-state-dlm-programme-closure-1h-v1/**"
+      - "scripts/verify_adaptive_market_state_dlm_closure.py"
+      - ".github/workflows/adaptive-market-state-dlm-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify deterministic closure evidence
+        run: python scripts/verify_adaptive_market_state_dlm_closure.py
+      - name: Upload exact closure evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: adaptive-market-state-dlm-closure-${{ github.sha }}
+          path: reports/research/adaptive-market-state-dlm-programme-closure-1h-v1
+          if-no-files-found: error
+          retention-days: 90
