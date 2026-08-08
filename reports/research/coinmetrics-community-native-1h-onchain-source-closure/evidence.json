@@ -1,0 +1,130 @@
+{
+  "bar": "1H",
+  "candidate_count": 0,
+  "canonical_fee_bps_one_way_where_applicable": 5.0,
+  "canonical_mutation": false,
+  "classification": "completed-evidence source-programme closure",
+  "closed_rescue_scope": [
+    "Community aliases or unit substitutions for the bound metrics",
+    "alternate windows/lags/smoothing/signs after inspection",
+    "daily-to-hour expansion, interpolation, forward fill or local resampling",
+    "shorter favorable calendars",
+    "single-market promotion or target deletion",
+    "credentials, paid tiers, private/account endpoints",
+    "provider stitching solely to bypass the frozen Community-source failure"
+  ],
+  "correction_authority": false,
+  "family_id": "causal-coinmetrics-community-native-1h-onchain-source-programme-closure-v1",
+  "generated_at_utc": "2026-08-08T15:20:00Z",
+  "group_count": 3,
+  "groups": [
+    {
+      "artifact_zip_sha256": "7acae07e142be39b0f8339ce7a6cdd663de4b12b5b0b3e5797ba1152a6fee516",
+      "bilateral_provider_native_credential_free_1h_source": false,
+      "evidence_sha256": "1d973dfeab8d989055f3bfac8180c1703d125d13d61d889ad8b8ee24200976e8",
+      "exact_head": "ff9033c753ff23198cda9b56480ac9a37921ac65",
+      "failure": "TxCnt failed first DOGE source request; BTC/ETH FeeTotUSD and FeeTotNtv direct Community 1H access failed. No bilateral native-1H source was established.",
+      "group_id": "A-community-base-activity-fees",
+      "manifest_sha256": "a4e6901ec5db4a7632435f89dd8c3de91469a7fd0550f52393d7f025a96bf8c7",
+      "mechanisms": [
+        "TxCnt DOGE/LTC",
+        "FeeTotUSD BTC/ETH",
+        "FeeTotNtv BTC/ETH"
+      ],
+      "nonconstant_complete_bilateral_source": false,
+      "owner_issue": 1033,
+      "performance_fields": null,
+      "report_sha256": "4b670b5ad809f5ede61b39f8f747efef5ba177e93822a941241dc9091b116d2e",
+      "target_return_or_economics_authorized": false,
+      "terminal_verdict": "reject_causal_public_onchain_activity_source_family_1h_v2",
+      "workflow_run": 30793141251
+    },
+    {
+      "artifact_id": 9018098410,
+      "artifact_zip_sha256": "37614c1c7a54486de3a6ccad79dbde45a2d48e4b56facf6877873191369a4861",
+      "bilateral_provider_native_credential_free_1h_source": false,
+      "candidate_count": 0,
+      "evidence_sha256": "3c44aef6cb4574bc1b1bef1ec3777ec867d9bfd340271c135964c3e53b6d09d2",
+      "exact_head": "a5c844710090a68f1edf66b6e33023a17f09e938",
+      "failure": "Coin Metrics Community catalog did not declare BCH TxTfrValMeanNtv at 1h; source rejected before target-return access.",
+      "group_id": "B-transfer-size-breadth",
+      "mechanism": "BCH/LTC TxTfrValMeanNtv transfer-size breadth",
+      "nonconstant_complete_bilateral_source": false,
+      "owner_issue": 1093,
+      "owner_pull_request": 1095,
+      "parameter_grid_count": 0,
+      "performance_fields": null,
+      "report_sha256": "59b8a45bb77960aa25e11c5432e3325dcf37791ac97b26764e67f0688246e4a5",
+      "sealed_oos_accessed": false,
+      "strategy_performance_accessed": false,
+      "target_return_or_economics_authorized": false,
+      "target_returns_accessed": false,
+      "terminal_verdict": "reject_causal_onchain_transfer_size_breadth_source_contract_1h_v1",
+      "workflow_run": 31244537171
+    },
+    {
+      "artifact_id": 9023111171,
+      "artifact_zip_sha256": "447b4f2185e5b435e2262188b53e297d07b059446caff7b39b59ce1204413884",
+      "bilateral_provider_native_credential_free_1h_source": false,
+      "candidate_count": 0,
+      "evidence_sha256": "12a049ef38c54ec2aa0246d214846723cabd8c5fceffa692fe8dac943da088ea",
+      "exact_head": "e516f6f8c9a3ae70ed8935a6d1cd161453736011",
+      "failure": "Community catalog exposed AdrActCnt at 1d rather than 1h; all six frozen 96H 1h probes returned HTTP 403.",
+      "group_id": "C-active-address-count",
+      "mechanism": "BTC/ETH AdrActCnt active-address breadth",
+      "nonconstant_complete_bilateral_source": false,
+      "owner_issue": 1129,
+      "owner_pull_request": 1130,
+      "parameter_grid_count": 0,
+      "performance_fields": null,
+      "report_sha256": "74cd0907f400edfb4bbfe4f65b40dfadd2e9148e281a8e147d52aa4ad2a4a40f",
+      "sealed_oos_accessed": false,
+      "strategy_performance_accessed": false,
+      "target_return_or_economics_authorized": false,
+      "target_returns_accessed": false,
+      "terminal_verdict": "reject_causal_public_active_address_count_source_contract_1h_v1",
+      "workflow_run": 31262239534
+    }
+  ],
+  "highest_value_diagnosis": "Across transaction count, fee pressure, transfer-size distribution and active-address breadth, the frozen Coin Metrics Community contracts never established one complete bilateral credential-free provider-native 1H source. Reopening adjacent Community metrics or aliases would be source/multiplicity hunting rather than strategy evidence. This is a source-programme rejection, not evidence that on-chain information is economically useless.",
+  "independently_source_admissible_groups": 0,
+  "issue": 1131,
+  "leave_one_group_out": [
+    {
+      "omit": "A",
+      "programme_supportive": false,
+      "remaining_admissible_groups": 0
+    },
+    {
+      "omit": "B",
+      "programme_supportive": false,
+      "remaining_admissible_groups": 0
+    },
+    {
+      "omit": "C",
+      "programme_supportive": false,
+      "remaining_admissible_groups": 0
+    }
+  ],
+  "live_trading_authorized": false,
+  "new_fitting_or_tuning": 0,
+  "new_market_rows": 0,
+  "new_oos_observations": 0,
+  "new_target_labels": 0,
+  "observation_epoch_restart_authorized": false,
+  "paper_trading_authorized": false,
+  "parameter_grid_count": 0,
+  "programme_gates": {
+    "at_least_one_complete_bilateral_native_1h_source": false,
+    "at_least_one_complete_nonconstant_bilateral_source": false,
+    "at_least_one_group_originally_authorized_target_return_or_economics": false,
+    "leave_one_group_out_has_no_exception": true,
+    "source_feasibility_not_counted_as_alpha": true,
+    "unavailable_economics_preserved_as_null": true
+  },
+  "programme_gates_passed": 3,
+  "programme_gates_total": 6,
+  "repository": "Dingding-leo/GPT",
+  "schema_version": "coinmetrics-community-native-1h-onchain-source-programme-closure-v1",
+  "terminal_verdict": "reject_reopening_coinmetrics_community_native_1h_onchain_source_mechanisms_v1"
+}
