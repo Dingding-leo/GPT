@@ -95,7 +95,7 @@ python scripts/run_dual_ema_btc_eth_research.py \
   --output reports/research/dual-ema-canonical-replication-1h-v1/evidence.json
 ```
 
-- runner SHA-256: `a6620c922a81be7d30934bc18f49823dc8390f57bca728830a8dd123a2420d6d`;
+- runner SHA-256: `466fd91c750f7f306de4f34d9f4031098deb6fd47b6039205fc1cee1df45730a`;
 - evidence JSON SHA-256: `7022ebade4d825aeee4db45a3de40dde67ffeed54098cab788d37a91ea6afa60`;
 - candidate count: `1`;
 - parameter-grid count: `0`;
