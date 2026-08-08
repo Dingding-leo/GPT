@@ -91,7 +91,7 @@ python scripts/run_donchian_20d10d_research.py \
   --output reports/research/donchian-20d10d-1h-v1/evidence.json
 ```
 
-- script SHA-256: `74a1c57eaf4c9e6a10b63ffa75819b3591507b2cd950294e0a6e17b05a522b16`
+- script SHA-256: `5d7900804ef28d21c2f7e6323d7c63ff350410d7516847efc5275ba7f98316e5`
 - evidence JSON SHA-256: `66542f5c50323c34d0f01b77104bfdb68f4f54aaa839d6e8559552c2ec9bbdf4`
 - candidate count: `1`
 - parameter grid count: `0`
