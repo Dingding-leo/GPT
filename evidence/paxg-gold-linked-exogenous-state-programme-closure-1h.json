@@ -1,0 +1,235 @@
+{
+  "bar": "1H",
+  "candidate_count": 0,
+  "canonical_mutation_authorized": false,
+  "closed_rescue_scope": [
+    "PAXG momentum/level/trend",
+    "PAXG realized volatility",
+    "return covariance/beta/correlation variants",
+    "absolute/rank correlation",
+    "alternate lags/windows",
+    "price ratios or spreads",
+    "E2160 interaction",
+    "thresholds/smoothing/fitted combinations",
+    "target-specific settings or favorable-period deletion",
+    "BTC-only/ETH-only promotion",
+    "another tokenized-gold symbol",
+    "post-hoc provider substitution",
+    "post-hoc executable mapping"
+  ],
+  "family_id": "causal-public-paxg-gold-linked-exogenous-state-programme-closure-1h-v1",
+  "groups": {
+    "A": {
+      "artifact": 9024461785,
+      "artifact_sha256": "a09da78352425318345138eeaf8b7672311b604b787835bfb880a4098ee34494",
+      "candidate_count": 0,
+      "evidence_sha256": "42973a762ae911bc815a97197e40ea093c04107fc977a40e886d3588e9cf165e",
+      "exact_head": "e813f9a9611716a114d276feb55f3aeabeecb1d7",
+      "executable_strategy_exists": false,
+      "family": "causal-lagged-paxg-defensive-momentum-opportunity-1h-v1",
+      "independently_admissible": false,
+      "issue": 1135,
+      "metrics": {
+        "BTC-USDT": {
+          "adverse_rho": 0.001199,
+          "adverse_slope": 0.000699,
+          "adverse_upper_minus_lower_tercile": 0.001654,
+          "calendar_transport_passed": false,
+          "dependence_supported": false,
+          "negative_adverse_folds": 2,
+          "negative_net_folds": 1,
+          "net_rho": -0.030834,
+          "net_slope": -0.001047,
+          "net_upper_minus_lower_tercile": 0.001183,
+          "plus_1h_transport_passed": false
+        },
+        "ETH-USDT": {
+          "adverse_rho": -0.028208,
+          "adverse_slope": -0.00135,
+          "adverse_upper_minus_lower_tercile": -0.001252,
+          "calendar_transport_passed": false,
+          "dependence_supported": false,
+          "negative_adverse_folds": 2,
+          "negative_net_fold_concentration_approx": 0.89,
+          "negative_net_folds": 2,
+          "net_rho": -0.074618,
+          "net_slope": -0.002768,
+          "net_upper_minus_lower_tercile": -0.001654,
+          "plus_1h_transport_passed": true
+        }
+      },
+      "opportunities": {
+        "BTC-USDT": 190,
+        "ETH-USDT": 190
+      },
+      "parameter_grid_count": 0,
+      "pr": 1136,
+      "sealed_oos_accessed": false,
+      "target_training_rows": {
+        "BTC-USDT": 4800,
+        "ETH-USDT": 4800
+      },
+      "terminal_verdict": "reject_causal_lagged_paxg_defensive_momentum_opportunity_1h_v1",
+      "workflow": 31267000268
+    },
+    "B": {
+      "artifact": 9028739998,
+      "artifact_sha256": "c6e5c17af1b4b87711854e2f8a717319e9042b55622921627179654c6b590c6e",
+      "candidate_count": 0,
+      "evidence_sha256": "ef02940be9e33d3d0b4f00904e7207801d7cd97186640d6ad8e1e67f968d6b15",
+      "exact_head": "fb2455cfaaebb9ca01860eb57ccb309fae86d6ad",
+      "executable_strategy_exists": false,
+      "family": "causal-lagged-paxg-crypto-correlation-regime-opportunity-1h-v1",
+      "independently_admissible": false,
+      "issue": 1162,
+      "manifest_sha256": "88a3a9f025041042ae260ad47b97c20cee6731243e66294fc469b0a10ba3d73e",
+      "metrics": {
+        "BTC-USDT": {
+          "adverse_rho": -0.1061498,
+          "adverse_slope": -0.00320543,
+          "adverse_upper_minus_lower_tercile": -0.007541,
+          "dependence_intervals": {
+            "adverse_rho": [
+              -0.3184,
+              0.10224
+            ],
+            "adverse_slope": [
+              -0.008257,
+              0.001182
+            ],
+            "net_rho": [
+              -0.2088,
+              0.10183
+            ],
+            "net_slope": [
+              -0.006054,
+              0.001856
+            ]
+          },
+          "dependence_supported": false,
+          "negative_adverse_folds": 2,
+          "negative_net_fold_concentration": 0.4651,
+          "negative_net_folds": 3,
+          "net_rho": -0.04478495,
+          "net_slope": -0.00181519,
+          "net_upper_minus_lower_tercile": -0.004856,
+          "plus_1h_all_six_signs_negative": true,
+          "second_half_adverse_tercile": 0.000419,
+          "time_split_passed": false
+        },
+        "ETH-USDT": {
+          "adverse_rho": -0.0878319,
+          "adverse_slope": -0.00364555,
+          "adverse_upper_minus_lower_tercile": -0.010531,
+          "dependence_intervals": {
+            "adverse_rho": [
+              -0.27971,
+              0.10586
+            ],
+            "adverse_slope": [
+              -0.009982,
+              0.001361
+            ],
+            "net_rho": [
+              -0.16741,
+              0.12399
+            ],
+            "net_slope": [
+              -0.006772,
+              0.003263
+            ]
+          },
+          "dependence_supported": false,
+          "negative_adverse_folds": 3,
+          "negative_net_fold_concentration": 0.4246,
+          "negative_net_folds": 3,
+          "net_rho": -0.02092465,
+          "net_slope": -0.00140576,
+          "net_upper_minus_lower_tercile": -0.005322,
+          "plus_1h_all_six_signs_negative": true,
+          "time_split_passed": true
+        }
+      },
+      "parameter_grid_count": 0,
+      "pr": 1163,
+      "report_sha256": "d5c4d8137921b568d634a35193d845572fc90aa605a8d8eb4c5f068007ea0a1d",
+      "sealed_oos_accessed": false,
+      "target_training_rows": {
+        "BTC-USDT": 4800,
+        "ETH-USDT": 4800
+      },
+      "terminal_verdict": "reject_causal_lagged_paxg_crypto_correlation_regime_information_premise_1h_v1",
+      "valid_opportunities": {
+        "BTC-USDT": 160,
+        "ETH-USDT": 160
+      },
+      "workflow": 31282105235
+    }
+  },
+  "independently_supportive_groups": 0,
+  "issue": 1164,
+  "leave_one_group_out": {
+    "omit_A": {
+      "independently_admissible": 0,
+      "remaining_groups": [
+        "B"
+      ],
+      "retains_support": false
+    },
+    "omit_B": {
+      "independently_admissible": 0,
+      "remaining_groups": [
+        "A"
+      ],
+      "retains_support": false
+    }
+  },
+  "live_trading_authorized": false,
+  "modeled_fee_bps_one_way_where_labels_exist": 5.0,
+  "new_fitting_or_tuning": 0,
+  "new_market_rows": 0,
+  "new_oos_observations": 0,
+  "new_target_labels": 0,
+  "paper_trading_authorized": false,
+  "parameter_grid_count": 0,
+  "performance": {
+    "benchmark_comparison": null,
+    "dependence_uncertainty": null,
+    "edge_per_turnover": null,
+    "fold_year_breadth": null,
+    "full_return": null,
+    "maximum_drawdown": null,
+    "modeled_fee_drag": null,
+    "oos_return": null,
+    "plus_1h_strategy_performance": null,
+    "sharpe": null,
+    "train_return": null,
+    "turnover": null
+  },
+  "programme_gates": {
+    "1_identity_reconciliation": true,
+    "2_any_group_passed_all_original_bilateral_gates": false,
+    "3_any_group_direction_support_all_required_btc_eth_stats": true,
+    "4_any_group_bilateral_dependence_support": false,
+    "5_any_group_bilateral_fold_breadth_and_concentration": false,
+    "6_any_group_bilateral_plus_1h_transport": true,
+    "7_support_requires_no_posthoc_rescue": true,
+    "8_each_leave_one_group_out_retains_admissible_mechanism": false
+  },
+  "programme_gates_passed": 4,
+  "programme_gates_total": 8,
+  "schema_version": "paxg-gold-linked-exogenous-state-programme-closure-1h-v1",
+  "source_context": {
+    "economic_support_vote": false,
+    "instrument": "PAXG-USDT SPOT",
+    "normalized_sha256": "9706000030143e6ab6f7350dca51b7383b8238124be66c1f1995426a60dddc8e",
+    "rows": 6720,
+    "source_result": "accepted_for_separate_training_only_research",
+    "window_utc": [
+      "2025-11-01T00:00:00Z",
+      "2026-08-07T23:00:00Z"
+    ]
+  },
+  "top_level_group_count": 2,
+  "verdict": "reject_reopening_completed_public_paxg_gold_linked_exogenous_state_mechanisms_1h_v1"
+}
