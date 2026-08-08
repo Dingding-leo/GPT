@@ -47,7 +47,7 @@ jobs:
             'place_order|create_order|submit_order|send_order|/api/v5/(trade|account|asset)/' \
             scripts/run_public_contract_long_short_account_ratio_source.py
           ! grep -nEi \
-            'BTC-USDT|ETH-USDT.*(candles|return|close|open)' \
+            '/api/v5/market/(candles|history-candles|ticker|tickers)' \
             scripts/run_public_contract_long_short_account_ratio_source.py
 
       - name: Compile frozen source experiment
