@@ -35,7 +35,8 @@ def test_training_anchor_maturity_guard_never_reads_sealed_oos() -> None:
     anchors = _training_anchors()
     assert anchors[0] == TRAIN_START
     assert anchors[-1] == 10_752
-    assert all(right - left == 24 for left, right in zip(anchors, anchors[1:], strict=True))
+    pairs = zip(anchors[:-1], anchors[1:], strict=True)
+    assert all(right - left == 24 for left, right in pairs)
     assert all(anchor + 25 < TRAIN_END for anchor in anchors)
     assert 10_776 not in anchors
 
