@@ -1,0 +1,183 @@
+{
+  "bar": "1H",
+  "base_main": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "candidate_count": 0,
+  "canonical_mutation": false,
+  "closure_strategy_metrics": {
+    "edge_per_turnover": null,
+    "fees": null,
+    "full_return": null,
+    "maximum_drawdown": null,
+    "oos_return": null,
+    "sharpe": null,
+    "train_return": null,
+    "turnover": null
+  },
+  "correction_authority": false,
+  "evidence_dimensions": {
+    "A_reference_btc_eth_economics": {
+      "BTC": {
+        "full_return": 0.2897393,
+        "full_sharpe": 0.331752,
+        "full_turnover": 73,
+        "oos_max_drawdown": -0.26546786,
+        "oos_return": 1.1968198,
+        "oos_sharpe": 0.953765,
+        "oos_turnover": 45,
+        "training_return": -0.41290619,
+        "training_sharpe": -0.840267
+      },
+      "ETH": {
+        "full_return": 0.03682097,
+        "full_sharpe": 0.233035,
+        "full_turnover": 53,
+        "oos_max_drawdown": -0.47765942,
+        "oos_return": 0.74516034,
+        "oos_sharpe": 0.645628,
+        "oos_turnover": 30,
+        "training_return": -0.40588784,
+        "training_sharpe": -0.584178
+      },
+      "independent_validation_vote": false,
+      "note": "Descriptive reference economics only; not an independent robustness vote.",
+      "phase0_reproduced": true,
+      "provenance_reconciled": true
+    },
+    "B_independent_cross_market_replication": {
+      "bootstrap_one_sided_95_lower_bound_annualized_mean": -0.2685,
+      "independently_admissible": false,
+      "issue": 562,
+      "markets": [
+        "CFX-USDT",
+        "DOGE-USDT",
+        "FIL-USDT",
+        "LTC-USDT",
+        "SOL-USDT",
+        "XRP-USDT"
+      ],
+      "markets_with_at_least_6_of_12_profitable_folds": "1/6",
+      "median_residual_sharpe_vs_buy_hold": -0.108,
+      "original_terminal_verdict": "rejected_as_next_active_architecture",
+      "positive_net_markets": "3/6",
+      "survivorship_conditioned": true,
+      "terminal_artifact_id": 8689948931,
+      "terminal_artifact_sha256": "dc6da3988a80f7b8854062f23785327848bbf4ff53bb0a12183906bec280b1b4",
+      "terminal_head": "1609c75f398b0cbf93b8d44391d9eaa52f10d18c",
+      "terminal_workflow_run": 30361747798,
+      "worst_market_return": -0.61
+    },
+    "C_positive_regime_stationarity": {
+      "BTC": {
+        "active_labels": 246,
+        "day_weight_net": -0.002781,
+        "max_positive_contribution_share": 0.7575,
+        "positive_folds": "2/6",
+        "positive_net_regimes": 3,
+        "positive_years": "1/3",
+        "regimes": 15
+      },
+      "ETH": {
+        "active_labels": 272,
+        "day_weight_net": -0.002368,
+        "max_positive_contribution_share": 0.6242,
+        "positive_folds": "2/6",
+        "positive_net_regimes": 3,
+        "positive_years": "1/3",
+        "regimes": 12
+      },
+      "candidate_count": 0,
+      "dependence_lower_bounds_positive": false,
+      "head": "24b9b70caccf95aa74b64a37707fc0126603da1b",
+      "independently_admissible": false,
+      "issue": 808,
+      "leave_one_regime_out_supportive": false,
+      "markets_passing": "0/2",
+      "oos_accessed": false,
+      "original_terminal_verdict": "reject_positive_regime_opportunity_stationarity_premise",
+      "parameter_grid_count": 0
+    },
+    "D_daily_decision_phase_robustness": {
+      "BTC": {
+        "delayed_positive_return_phases": "24/24",
+        "median_path_mean_ci_lower": -0.02537,
+        "median_path_sharpe_ci_lower": -0.07282,
+        "oos_phase_median_return": 1.270984,
+        "oos_phase_median_sharpe": 0.9844,
+        "phases_with_at_least_7_of_12_profitable_folds": "0/24",
+        "positive_return_sharpe_phases": "24/24"
+      },
+      "ETH": {
+        "delayed_positive_return_phases": "24/24",
+        "median_path_mean_ci_lower": -0.15139,
+        "median_path_sharpe_ci_lower": -0.3491,
+        "oos_phase_median_return": 0.824706,
+        "oos_phase_median_sharpe": 0.6801,
+        "phases_with_at_least_7_of_12_profitable_folds": "0/24",
+        "positive_return_sharpe_phases": "24/24"
+      },
+      "artifact_id": 9020717912,
+      "artifact_sha256": "7dd4b17c4aad788d45d8bf65a2033c1687afcfc91c81b5f61eca8d94ee0fbd4c",
+      "evidence_sha256": "485a6e9c48dce163a6f830052ccdc95bbac9d0273f949f6e4ad74d5601dd3d7c",
+      "failed_gates": [
+        "at_least_18_of_24_have_7_of_12_profitable_folds",
+        "median_path_moving_block_lower_bounds_positive"
+      ],
+      "head": "dac1421ea26743d535f674a2bcdd76d90ee79a92",
+      "independently_admissible": false,
+      "issue": 1110,
+      "original_terminal_verdict": "reject_canonical_e2160_daily_decision_phase_robustness_1h_v1",
+      "pr": 1113,
+      "workflow_run": 31253511514
+    }
+  },
+  "fee_bps_one_way_where_executable": 5.0,
+  "frozen_programme_gates": {
+    "1_reference_provenance_and_phase0_reproduction": true,
+    "2_btc_eth_reference_oos_return_and_sharpe_positive": true,
+    "3_independent_cross_market_replication_original_gates_pass": false,
+    "4_positive_regime_stationarity_original_bilateral_gates_pass": false,
+    "5_24_phase_original_bilateral_robustness_gates_pass": false,
+    "6_no_posthoc_market_phase_regime_deletion_or_ranking_required": true,
+    "7_leave_one_validation_dimension_out_cannot_rescue_failed_units": true,
+    "8_aggregate_point_estimates_do_not_override_failed_breadth_dependence_gates": true
+  },
+  "generated_at_utc": "2026-08-08T11:20:00Z",
+  "historical_comparator_status": "retain_for_descriptive_backward_compatibility_only",
+  "leave_one_validation_dimension_out": {
+    "drop_A_reference": "reject_B_C_D_still_fail",
+    "drop_B_replication": "reject_C_D_still_fail",
+    "drop_C_stationarity": "reject_B_D_still_fail",
+    "drop_D_phase_robustness": "reject_B_C_still_fail"
+  },
+  "live_trading_authorized": false,
+  "new_fitting_or_tuning": 0,
+  "new_market_rows": 0,
+  "new_oos_observations": 0,
+  "new_target_labels": 0,
+  "paper_trading_authorized": false,
+  "parameter_grid_count": 0,
+  "primary_benchmark_status": "rejected_as_robust_primary_strategy_benchmark",
+  "programme_gates_passed": "5/8",
+  "repository": "Dingding-leo/GPT",
+  "schema_version": "canonical-e2160-primary-benchmark-robustness-programme-closure-1h-v1",
+  "source_identity_reconciliation": {
+    "disposition": "fail_closed_on_frozen_evidence_identity_mismatch",
+    "frozen_issue_1114_binding": {
+      "artifact_id": 8689946218,
+      "artifact_sha256": "8551c4727076b07f45f18fa86f24785a9178e80577e998d0212ac96d298e9c4c",
+      "head": "7dfe07462dd5d14981e08f9e4046b56a56140b28",
+      "issue": 562,
+      "status": "superseded_c0_close_to_close_attribution",
+      "workflow_run": 30361641250
+    },
+    "passed": false,
+    "terminal_issue_562_identity": {
+      "artifact_id": 8689948931,
+      "artifact_sha256": "dc6da3988a80f7b8854062f23785327848bbf4ff53bb0a12183906bec280b1b4",
+      "head": "1609c75f398b0cbf93b8d44391d9eaa52f10d18c",
+      "verdict": "rejected_as_next_active_architecture",
+      "workflow_run": 30361747798
+    }
+  },
+  "verdict": "reject_canonical_e2160_as_robust_primary_strategy_benchmark_1h_v1"
+}
