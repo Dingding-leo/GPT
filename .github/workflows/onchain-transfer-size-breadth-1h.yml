@@ -6,10 +6,12 @@ on:
       - "auto/research/**"
     paths:
       - "scripts/run_onchain_transfer_size_breadth.py"
+      - "scripts/run_onchain_transfer_size_breadth_exact.py"
       - ".github/workflows/onchain-transfer-size-breadth-1h.yml"
   pull_request:
     paths:
       - "scripts/run_onchain_transfer_size_breadth.py"
+      - "scripts/run_onchain_transfer_size_breadth_exact.py"
       - ".github/workflows/onchain-transfer-size-breadth-1h.yml"
   workflow_dispatch:
 
@@ -44,10 +46,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
           python -m pip check
-      - name: Compile focused research script
-        run: python -m py_compile scripts/run_onchain_transfer_size_breadth.py
+      - name: Compile focused research scripts
+        run: |
+          python -m py_compile scripts/run_onchain_transfer_size_breadth.py
+          python -m py_compile scripts/run_onchain_transfer_size_breadth_exact.py
       - name: Execute frozen public-data diagnostic
-        run: python scripts/run_onchain_transfer_size_breadth.py
+        run: python scripts/run_onchain_transfer_size_breadth_exact.py
       - name: Verify terminal evidence
         run: |
           test -s reports/research/onchain-transfer-size-breadth-1h-v1/evidence.json
