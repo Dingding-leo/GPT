@@ -1,0 +1,24 @@
+{
+  "schema_version": "canonical-e2160-primary-benchmark-closure-provenance-correction-v1",
+  "supersedes_field": "evidence.json.generated_at_utc",
+  "superseded_value": "2026-08-08T11:20:00Z",
+  "reason": "The original generated_at_utc value post-dated the evidence commit and is chronologically impossible. It must not be used for freshness/provenance ordering.",
+  "authoritative_chronology": {
+    "evidence_commit_time_utc": "2026-08-08T11:17:04Z",
+    "reviewed_closure_commit_time_utc": "2026-08-08T11:18:15Z",
+    "review_detected_at_utc": "2026-08-08T11:20:32Z"
+  },
+  "economic_evidence_changed": false,
+  "programme_gate_vector_changed": false,
+  "verdict_changed": false,
+  "terminal_verdict": "reject_canonical_e2160_as_robust_primary_strategy_benchmark_1h_v1",
+  "candidate_count": 0,
+  "parameter_grid_count": 0,
+  "new_market_rows": 0,
+  "new_target_labels": 0,
+  "new_oos_observations": 0,
+  "new_fitting_or_tuning": 0,
+  "canonical_mutation": false,
+  "paper_trading_authorized": false,
+  "live_trading_authorized": false
+}
