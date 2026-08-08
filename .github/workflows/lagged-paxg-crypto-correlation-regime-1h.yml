@@ -1,0 +1,194 @@
+name: Lagged PAXG Crypto Correlation Regime Training 1H
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_lagged_paxg_crypto_correlation_regime.py'
+      - '.github/workflows/lagged-paxg-crypto-correlation-regime-1h.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  training-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Bind evidence to exact pull-request head
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "${{ github.event.pull_request.head.sha }}"
+          git diff --quiet
+          test -z "$(git status --porcelain=v1)"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install frozen research package
+        run: python -m pip install -e .
+
+      - name: Prove hard strategy boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if env | cut -d= -f1 | grep -Eiq '(OKX|API).*(SECRET|KEY)|API_KEY|API_SECRET'; then
+            exit 1
+          fi
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/run_lagged_paxg_crypto_correlation_regime.py')
+          text = path.read_text(encoding='utf-8')
+          lower = text.lower()
+          forbidden = [
+              'place_order', 'create_order', 'submit_order', 'send_order',
+              '/api/v5/trade/', '/api/v5/account/', '/api/v5/asset/',
+              '.resample(', "'5m'", '"5m"', "'15m'", '"15m"',
+              'cointegration', 'top_n', 'top-n', 'cross_sectional', 'cross-sectional',
+          ]
+          hits = [token for token in forbidden if token in lower]
+          if hits:
+              raise SystemExit(f'prohibited capability tokens: {hits}')
+          required = [
+              'BAR = "1H"',
+              'FEE_ONE_WAY = 0.0005',
+              'PAXG = "PAXG-USDT"',
+              'ANCHORS = tuple(range(912, 4753, 24))',
+              'BOOTSTRAP_DRAWS = 5_000',
+              'BOOTSTRAP_BLOCK = 7',
+              '202608092201',
+              '202608092202',
+              'SOURCE_NORMALIZED_SHA256 = "9706000030143e6ab6f7350dca51b7383b8238124be66c1f1995426a60dddc8e"',
+          ]
+          missing = [token for token in required if token not in text]
+          if missing:
+              raise SystemExit(f'frozen contract token missing: {missing}')
+          PY
+
+      - name: Compile frozen training experiment
+        run: python -m py_compile scripts/run_lagged_paxg_crypto_correlation_regime.py
+
+      - name: Execute training-only information experiment
+        shell: bash
+        run: |
+          set -euo pipefail
+          export RESEARCH_HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+          python scripts/run_lagged_paxg_crypto_correlation_regime.py
+
+      - name: Validate machine-readable evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          family = 'causal-lagged-paxg-crypto-correlation-regime-opportunity-1h-v1'
+          root = Path('reports/research') / family
+          evidence_path = root / 'evidence.json'
+          evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
+          supported = 'support_causal_lagged_paxg_crypto_correlation_regime_for_separate_candidate_predeclaration_1h_v1'
+          rejected = 'reject_causal_lagged_paxg_crypto_correlation_regime_information_premise_1h_v1'
+
+          assert evidence['family_id'] == family
+          assert evidence['issue_number'] == 1162
+          assert evidence['base_main'] == '5a0fcc97d1a882f8223656c51f5bb8055f534e38'
+          assert evidence['exact_head'] == '${{ github.event.pull_request.head.sha }}'
+          assert evidence['candidate_count'] == 0
+          assert evidence['parameter_grid_count'] == 0
+          assert evidence['bar'] == '1H'
+          assert evidence['fee_bps_one_way'] == 5.0
+          assert evidence['round_trip_label_bps'] == 10.0
+          assert evidence['scheduled_anchors'] == 161
+          assert evidence['source_identity_reproduced'] is True
+          assert evidence['source_observed_sha256'] == '9706000030143e6ab6f7350dca51b7383b8238124be66c1f1995426a60dddc8e'
+          assert evidence['target_returns_accessed'] is True
+          assert evidence['target_oos_accessed'] is False
+          assert evidence['sealed_target_suffix_accessed'] is False
+          assert evidence['canonical_mutation'] is False
+          assert evidence['correction_authority'] is False
+          assert evidence['paper_trading_authorized'] is False
+          assert evidence['live_trading_authorized'] is False
+          assert all(value is None for value in evidence['performance'].values())
+          assert set(evidence['targets']) == {'BTC-USDT', 'ETH-USDT'}
+          expected_target_hashes = {
+              'BTC-USDT': 'ab592ae5e75149a44dc677b3a2c7bd5e7fa6d4da0079e84fcf059401ffbe1752',
+              'ETH-USDT': '9f8e4a2d1d3c7753cee84f4851100773e91b643a7e3a7d0587dcaeafb6717a50',
+          }
+          assert evidence['target_expected_sha256'] == expected_target_hashes
+          expected_gates = {
+              'source_and_target_identity',
+              'opportunity_and_feature_support',
+              'negative_net_association',
+              'negative_adverse_association',
+              'net_dependence_upper_bounds_negative',
+              'adverse_dependence_upper_bounds_negative',
+              'fold_breadth',
+              'net_fold_concentration',
+              'chronological_half_breadth',
+              'one_hour_delay_transport',
+              'chronology_algebra_scale_prefix_invariance',
+          }
+          for target, result in evidence['targets'].items():
+              assert result['opportunities'] == 160
+              assert result['scheduled_anchors'] == 161
+              assert result['invalid_anchors'] == [912]
+              assert result['outer_tercile_count_each'] == 53
+              assert [fold['n'] for fold in result['folds']] == [40, 40, 40, 40]
+              assert [half['n'] for half in result['chronological_halves']] == [80, 80]
+              assert result['chronology']['first_valid_anchor_index'] == 936
+              assert result['chronology']['last_anchor_index'] == 4752
+              assert result['chronology']['latest_feature_return_lag_hours'] == 25
+              assert result['chronology']['recent_return_count'] == 168
+              assert result['chronology']['baseline_return_count'] == 720
+              assert result['chronology']['target_oos_requested_or_parsed'] is False
+              assert result['chronology']['source_prefix_invariant'] is True
+              assert result['chronology']['positive_price_scale_invariant'] is True
+              assert result['chronology']['fee_accounting_exact'] is True
+              assert result['chronology']['structural_checks'] is True
+              assert set(result['gates']) == expected_gates
+              assert evidence['target_sources'][target]['normalized_csv_sha256'] == expected_target_hashes[target]
+          assert evidence['verdict'] in {supported, rejected}
+          assert evidence['bilateral_training_pass'] == all(
+              result['all_training_gates_pass'] for result in evidence['targets'].values()
+          )
+          assert evidence['verdict'] == (
+              supported if evidence['bilateral_training_pass'] else rejected
+          )
+
+          for stem, filename in [('evidence', 'evidence.json'), ('report', 'report.md')]:
+              path = root / filename
+              expected = (root / f'{stem}.sha256').read_text().strip()
+              assert hashlib.sha256(path.read_bytes()).hexdigest() == expected
+          manifest = root / 'manifest.json'
+          expected_manifest = (root / 'manifest.sha256').read_text().strip()
+          assert hashlib.sha256(manifest.read_bytes()).hexdigest() == expected_manifest
+          print(json.dumps({
+              'exact_head': evidence['exact_head'],
+              'bilateral_training_pass': evidence['bilateral_training_pass'],
+              'target_oos_accessed': evidence['target_oos_accessed'],
+              'verdict': evidence['verdict'],
+              'evidence_sha256': hashlib.sha256(evidence_path.read_bytes()).hexdigest(),
+          }, sort_keys=True))
+          PY
+
+      - name: Upload immutable training artifact
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: lagged-paxg-crypto-correlation-regime-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: reports/research/causal-lagged-paxg-crypto-correlation-regime-opportunity-1h-v1
+          if-no-files-found: warn
+          retention-days: 14
