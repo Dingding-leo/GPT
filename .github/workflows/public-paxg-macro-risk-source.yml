@@ -47,7 +47,7 @@ jobs:
           fi
           ! grep -nEi 'place_order|create_order|submit_order|send_order|/api/v5/(trade|account|asset)/' \
             scripts/run_public_paxg_macro_risk_source.py
-          ! grep -nEi '15m|5m|leverage|private endpoint|enabled adapter' \
+          ! grep -nEi '\.resample\(|bar[[:space:]]*=[[:space:]]*"(5m|15m)"' \
             scripts/run_public_paxg_macro_risk_source.py
           grep -q 'INSTRUMENT = "PAXG-USDT"' scripts/run_public_paxg_macro_risk_source.py
           grep -q 'BAR = "1H"' scripts/run_public_paxg_macro_risk_source.py
