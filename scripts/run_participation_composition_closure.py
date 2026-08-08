@@ -22,28 +22,18 @@ def canonical_json(value: Any) -> bytes:
     return (json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True) + "\n").encode()
 
 
-def sha256(raw: bytes) -> str:
+def digest(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def null_strategy_metrics() -> dict[str, None]:
-    return {
-        "train_return": None,
-        "train_sharpe": None,
-        "oos_return": None,
-        "oos_sharpe": None,
-        "full_return": None,
-        "full_sharpe": None,
-        "benchmark_comparison": None,
-        "turnover": None,
-        "modeled_fee_drag": None,
-        "maximum_drawdown": None,
-        "edge_per_turnover": None,
-        "fold_breadth": None,
-        "year_breadth": None,
-        "dependence_uncertainty": None,
-        "one_hour_delay": None,
-    }
+def null_metrics() -> dict[str, None]:
+    keys = (
+        "train_return", "train_sharpe", "oos_return", "oos_sharpe",
+        "full_return", "full_sharpe", "benchmark_comparison", "turnover",
+        "modeled_fee_drag", "maximum_drawdown", "edge_per_turnover",
+        "fold_breadth", "year_breadth", "dependence_uncertainty", "one_hour_delay",
+    )
+    return {key: None for key in keys}
 
 
 def group_a() -> dict[str, Any]:
@@ -67,66 +57,43 @@ def group_a() -> dict[str, Any]:
         "evidence_sha256": "d78caaba25b3fc36073045a8c66581c1181f2444bed7063772cd6c5d41cb6158",
         "report_sha256": "7b1178bfd812ffbb464e612589672fafac29a4d0408c2d265190a597d0e60b7b",
         "source_evidence_zip_sha256": {
-            "aggregate_participation_issue_909": "3ecb3b74cf5117f69f40901f95a2a2f58d3c2888512dcbc9de3a13e0c8150708",
-            "directional_price_volume_issue_1027": "56180347933cf65ac63fc0bc7416f5b8ca1024cd8a156255cde396909b5b90f0",
-            "cost_basis_issue_1088": "47b8aa42c5b12b29cbf43d3512f5ee5d85fdfc87209f70c36265ef76736966fa",
+            "issue_909": "3ecb3b74cf5117f69f40901f95a2a2f58d3c2888512dcbc9de3a13e0c8150708",
+            "issue_1027": "56180347933cf65ac63fc0bc7416f5b8ca1024cd8a156255cde396909b5b90f0",
+            "issue_1088": "47b8aa42c5b12b29cbf43d3512f5ee5d85fdfc87209f70c36265ef76736966fa",
         },
         "strongest_historical_point_estimate": {
             "mechanism": "volume_weighted_directional_persistence_issue_642",
             "BTC-USDT": {
-                "train_return": -0.2465,
-                "train_sharpe": -0.428,
-                "oos_return": 1.4118,
-                "oos_sharpe": 1.071,
-                "full_return": 0.8172,
-                "full_sharpe": 0.566,
-                "benchmark_oos_return": 1.1968,
-                "benchmark_oos_sharpe": 0.954,
-                "oos_turnover": 23.0,
-                "benchmark_oos_turnover": 45.0,
+                "train_return": -0.2465, "train_sharpe": -0.428,
+                "oos_return": 1.4118, "oos_sharpe": 1.071,
+                "full_return": 0.8172, "full_sharpe": 0.566,
+                "benchmark_oos_return": 1.1968, "benchmark_oos_sharpe": 0.954,
+                "oos_turnover": 23.0, "benchmark_oos_turnover": 45.0,
                 "oos_edge_per_turnover_bps": 451.96,
                 "benchmark_oos_edge_per_turnover_bps": 212.75,
-                "oos_max_drawdown": -0.3094,
-                "benchmark_oos_max_drawdown": -0.2655,
-                "profitable_oos_folds": 6,
-                "oos_folds": 12,
-                "mean_delta_lower_95": -0.0787,
-                "sharpe_delta_lower_95": -0.1997,
+                "oos_max_drawdown": -0.3094, "benchmark_oos_max_drawdown": -0.2655,
+                "profitable_oos_folds": 6, "oos_folds": 12,
+                "mean_delta_lower_95": -0.0787, "sharpe_delta_lower_95": -0.1997,
             },
             "ETH-USDT": {
-                "train_return": -0.2411,
-                "train_sharpe": -0.287,
-                "oos_return": 1.4070,
-                "oos_sharpe": 0.899,
-                "full_return": 0.8267,
-                "full_sharpe": 0.523,
-                "benchmark_oos_return": 0.7452,
-                "benchmark_oos_sharpe": 0.646,
-                "oos_turnover": 10.0,
-                "benchmark_oos_turnover": 30.0,
+                "train_return": -0.2411, "train_sharpe": -0.287,
+                "oos_return": 1.4070, "oos_sharpe": 0.899,
+                "full_return": 0.8267, "full_sharpe": 0.523,
+                "benchmark_oos_return": 0.7452, "benchmark_oos_sharpe": 0.646,
+                "oos_turnover": 10.0, "benchmark_oos_turnover": 30.0,
                 "oos_edge_per_turnover_bps": 1159.89,
                 "benchmark_oos_edge_per_turnover_bps": 283.58,
-                "profitable_oos_folds": 6,
-                "oos_folds": 12,
-                "mean_delta_lower_95": -0.0193,
-                "sharpe_delta_lower_95": -0.0280,
+                "profitable_oos_folds": 6, "oos_folds": 12,
+                "mean_delta_lower_95": -0.0193, "sharpe_delta_lower_95": -0.0280,
             },
         },
         "cost_basis_replication": {
-            "1INCH-USDT": {
-                "net_rho": -0.024829,
-                "net_standardized_slope": -0.003833,
-                "net_outer_tercile_bp": -41.10,
-            },
-            "SNX-USDT": {
-                "net_rho": -0.034144,
-                "net_standardized_slope": -0.001114,
-                "net_outer_tercile_bp": -105.28,
-            },
+            "1INCH-USDT": {"net_rho": -0.024829, "net_standardized_slope": -0.003833, "net_outer_tercile_bp": -41.10},
+            "SNX-USDT": {"net_rho": -0.034144, "net_standardized_slope": -0.001114, "net_outer_tercile_bp": -105.28},
             "dependence_support": False,
             "delay_support": False,
         },
-        "decisive_failure": "no independent mechanism passed bilateral training/transport, breadth, risk and dependence gates; the strongest OOS point estimate had negative training economics and non-positive dependence lower bounds",
+        "decisive_failure": "zero independently admissible mechanisms; #642 combines negative bilateral training economics, 6/12 profitable OOS folds and non-positive dependence lower bounds",
         "independently_admissible": False,
     }
 
@@ -152,85 +119,47 @@ def group_b() -> dict[str, Any]:
         "parameter_grid_count": 0,
         "source": "Binance official monthly SPOT and USD-M perpetual 1h archives plus companion checksums",
         "sample": {
-            "start": "2023-04-01T00:00:00Z",
-            "end": "2025-12-31T23:00:00Z",
-            "rows_per_source_arm": 24144,
-            "source_arms": 4,
-            "train": [2208, 10800],
-            "sealed_oos": [10800, 23760],
-            "unread_suffix": [23760, 24144],
+            "start": "2023-04-01T00:00:00Z", "end": "2025-12-31T23:00:00Z",
+            "rows_per_source_arm": 24144, "source_arms": 4,
+            "train": [2208, 10800], "sealed_oos": [10800, 23760], "unread_suffix": [23760, 24144],
         },
         "source_contract_passed": True,
         "sealed_oos_accessed": False,
         "strategy_performance_accessed": False,
+        "frozen_expected_sign": "negative",
         "targets": {
             "BTCUSDT": {
-                "opportunities": 285,
-                "feature_distinct": 285,
-                "feature_iqr": 0.007051,
-                "net_rho": 0.053952,
-                "net_standardized_slope": 0.001326,
-                "net_outer_tercile_bp": 31.95,
-                "adverse_rho": 0.040057,
-                "adverse_standardized_slope": 0.001678,
-                "adverse_outer_tercile_bp": 20.24,
-                "negative_net_folds": 1,
-                "negative_adverse_folds": 1,
-                "folds": 4,
-                "negative_net_fold_concentration": 1.0,
-                "negative_adverse_fold_concentration": 1.0,
-                "net_rho_ci95": [-0.0644395, 0.1701068],
-                "net_slope_ci95": [-0.0016647, 0.0042588],
-                "adverse_rho_ci95": [-0.0661491, 0.1565453],
-                "adverse_slope_ci95": [-0.00190885, 0.0058895],
-                "lower_margin_stratum_net_tercile_bp": 57.19,
-                "lower_margin_stratum_adverse_tercile_bp": 76.90,
-                "upper_margin_stratum_net_tercile_bp": -15.18,
-                "upper_margin_stratum_adverse_tercile_bp": -21.33,
-                "delay_net_rho": 0.044079,
-                "delay_net_slope": 0.001187,
-                "delay_net_tercile_bp": 21.19,
-                "delay_adverse_rho": 0.041165,
-                "delay_adverse_slope": 0.001580,
-                "delay_adverse_tercile_bp": 22.99,
+                "opportunities": 285, "feature_distinct": 285, "feature_iqr": 0.007051,
+                "net_rho": 0.053952, "net_standardized_slope": 0.001326, "net_outer_tercile_bp": 31.95,
+                "adverse_rho": 0.040057, "adverse_standardized_slope": 0.001678, "adverse_outer_tercile_bp": 20.24,
+                "negative_net_folds": 1, "negative_adverse_folds": 1, "folds": 4,
+                "negative_net_fold_concentration": 1.0, "negative_adverse_fold_concentration": 1.0,
+                "net_rho_ci95": [-0.0644395, 0.1701068], "net_slope_ci95": [-0.0016647, 0.0042588],
+                "adverse_rho_ci95": [-0.0661491, 0.1565453], "adverse_slope_ci95": [-0.00190885, 0.0058895],
+                "lower_margin_stratum_net_tercile_bp": 57.19, "lower_margin_stratum_adverse_tercile_bp": 76.90,
+                "upper_margin_stratum_net_tercile_bp": -15.18, "upper_margin_stratum_adverse_tercile_bp": -21.33,
+                "delay_net_rho": 0.044079, "delay_net_slope": 0.001187, "delay_net_tercile_bp": 21.19,
+                "delay_adverse_rho": 0.041165, "delay_adverse_slope": 0.001580, "delay_adverse_tercile_bp": 22.99,
                 "all_original_gates_passed": False,
             },
             "ETHUSDT": {
-                "opportunities": 241,
-                "feature_distinct": 241,
-                "feature_iqr": 0.007589,
-                "net_rho": 0.072702,
-                "net_standardized_slope": 0.000953,
-                "net_outer_tercile_bp": 18.54,
-                "adverse_rho": 0.078884,
-                "adverse_standardized_slope": 0.002521,
-                "adverse_outer_tercile_bp": 43.76,
-                "negative_net_folds": 2,
-                "negative_adverse_folds": 1,
-                "folds": 4,
-                "negative_net_fold_concentration": 0.9971,
-                "negative_adverse_fold_concentration": 1.0,
-                "net_rho_ci95": [-0.056386, 0.192373],
-                "net_slope_ci95": [-0.001098, 0.003041],
-                "adverse_rho_ci95": [-0.052791, 0.216451],
-                "adverse_slope_ci95": [-0.001800, 0.006599],
-                "lower_margin_stratum_net_tercile_bp": -11.42,
-                "lower_margin_stratum_adverse_tercile_bp": -60.73,
-                "upper_margin_stratum_net_tercile_bp": 48.16,
-                "upper_margin_stratum_adverse_tercile_bp": 176.999,
-                "delay_net_rho": 0.095435,
-                "delay_net_slope": 0.001437,
-                "delay_net_tercile_bp": 30.28,
-                "delay_adverse_rho": 0.115909,
-                "delay_adverse_slope": 0.003099,
-                "delay_adverse_tercile_bp": 62.56,
+                "opportunities": 241, "feature_distinct": 241, "feature_iqr": 0.007589,
+                "net_rho": 0.072702, "net_standardized_slope": 0.000953, "net_outer_tercile_bp": 18.54,
+                "adverse_rho": 0.078884, "adverse_standardized_slope": 0.002521, "adverse_outer_tercile_bp": 43.76,
+                "negative_net_folds": 2, "negative_adverse_folds": 1, "folds": 4,
+                "negative_net_fold_concentration": 0.9971, "negative_adverse_fold_concentration": 1.0,
+                "net_rho_ci95": [-0.056386, 0.192373], "net_slope_ci95": [-0.001098, 0.003041],
+                "adverse_rho_ci95": [-0.052791, 0.216451], "adverse_slope_ci95": [-0.001800, 0.006599],
+                "lower_margin_stratum_net_tercile_bp": -11.42, "lower_margin_stratum_adverse_tercile_bp": -60.73,
+                "upper_margin_stratum_net_tercile_bp": 48.16, "upper_margin_stratum_adverse_tercile_bp": 176.999,
+                "delay_net_rho": 0.095435, "delay_net_slope": 0.001437, "delay_net_tercile_bp": 30.28,
+                "delay_adverse_rho": 0.115909, "delay_adverse_slope": 0.003099, "delay_adverse_tercile_bp": 62.56,
                 "all_original_gates_passed": False,
             },
         },
-        "frozen_expected_sign": "negative",
         "observed_bilateral_direction": "positive_wrong_sign",
+        "decisive_failure": "fixed negative leverage-dominance hypothesis is wrong-signed bilaterally and fails dependence, breadth/concentration, margin-strata and +1H transport gates before OOS",
         "independently_admissible": False,
-        "decisive_failure": "the fixed leverage-dominance hypothesis is wrong-signed bilaterally and fails dependence, fold concentration, margin-strata and +1H transport gates before OOS",
     }
 
 
@@ -241,44 +170,35 @@ def main() -> None:
     assert all(g["pr_closed"] and not g["pr_merged"] for g in groups)
     assert sum(bool(g["independently_admissible"]) for g in groups) == 0
 
-    leave_one_group_out = []
+    leave_one = []
     for omitted in ("A", "B"):
         retained = [g for g in groups if g["group"] != omitted]
         support = sum(bool(g["independently_admissible"]) for g in retained)
-        leave_one_group_out.append(
-            {
-                "omitted_group": omitted,
-                "retained_groups": [g["group"] for g in retained],
-                "independently_admissible_mechanisms": support,
-                "closure_support_remains_zero": support == 0,
-            }
-        )
+        leave_one.append({
+            "omitted_group": omitted,
+            "retained_groups": [g["group"] for g in retained],
+            "independently_admissible_mechanisms": support,
+            "closure_support_remains_zero": support == 0,
+        })
 
+    a = groups[0]["strongest_historical_point_estimate"]
+    b = groups[1]
     gates = {
         "01_terminal_identities_reconcile": all(g["pr_closed"] and not g["pr_merged"] for g in groups),
         "02_real_immutable_completed_1h_and_5bps_contract": BAR == "1H" and FEE_ONE_WAY == 0.0005,
         "03_group_a_terminal_support_zero": groups[0]["independently_admissible_mechanisms"] == 0,
-        "04_group_b_failed_original_training_information_contract_before_oos": (
-            not groups[1]["independently_admissible"] and not groups[1]["sealed_oos_accessed"]
-        ),
+        "04_group_b_failed_original_training_information_contract_before_oos": not b["independently_admissible"] and not b["sealed_oos_accessed"],
         "05_no_bilateral_positive_dependence_support": (
-            groups[0]["strongest_historical_point_estimate"]["BTC-USDT"]["mean_delta_lower_95"] <= 0
-            and groups[0]["strongest_historical_point_estimate"]["ETH-USDT"]["mean_delta_lower_95"] <= 0
-            and groups[1]["targets"]["BTCUSDT"]["net_rho_ci95"][0] <= 0
-            and groups[1]["targets"]["ETHUSDT"]["net_rho_ci95"][0] <= 0
+            a["BTC-USDT"]["mean_delta_lower_95"] <= 0 and a["ETH-USDT"]["mean_delta_lower_95"] <= 0
+            and b["targets"]["BTCUSDT"]["net_rho_ci95"][0] <= 0 and b["targets"]["ETHUSDT"]["net_rho_ci95"][0] <= 0
         ),
         "06_no_bilateral_breadth_concentration_delay_support": (
-            groups[0]["strongest_historical_point_estimate"]["BTC-USDT"]["profitable_oos_folds"] == 6
-            and groups[0]["strongest_historical_point_estimate"]["ETH-USDT"]["profitable_oos_folds"] == 6
-            and not groups[1]["targets"]["BTCUSDT"]["all_original_gates_passed"]
-            and not groups[1]["targets"]["ETHUSDT"]["all_original_gates_passed"]
+            a["BTC-USDT"]["profitable_oos_folds"] == 6 and a["ETH-USDT"]["profitable_oos_folds"] == 6
+            and not b["targets"]["BTCUSDT"]["all_original_gates_passed"] and not b["targets"]["ETHUSDT"]["all_original_gates_passed"]
         ),
-        "07_strongest_point_estimate_recorded_as_fragile_not_promoted": (
-            groups[0]["strongest_historical_point_estimate"]["BTC-USDT"]["train_return"] < 0
-            and groups[0]["strongest_historical_point_estimate"]["ETH-USDT"]["train_return"] < 0
-        ),
-        "08_leave_one_group_out_support_zero": all(x["closure_support_remains_zero"] for x in leave_one_group_out),
-        "09_source_feasibility_not_counted_as_alpha": groups[1]["source_contract_passed"] and not groups[1]["independently_admissible"],
+        "07_strongest_point_estimate_recorded_as_fragile_not_promoted": a["BTC-USDT"]["train_return"] < 0 and a["ETH-USDT"]["train_return"] < 0,
+        "08_leave_one_group_out_support_zero": all(x["closure_support_remains_zero"] for x in leave_one),
+        "09_source_feasibility_not_counted_as_alpha": b["source_contract_passed"] and not b["independently_admissible"],
         "10_no_posthoc_rescue_required": True,
     }
     assert len(gates) == 10 and all(gates.values())
@@ -302,20 +222,14 @@ def main() -> None:
         "independently_admissible_top_level_groups": 0,
         "groups": groups,
         "non_voting_overlap_exclusions": [
-            {
-                "issue": 1108,
-                "reason": "directional aggressor-flow/absorption is already a terminal flow family and is not an independent participation-composition vote",
-            },
-            {
-                "issue": 957,
-                "reason": "cash-venue fragmentation source work is a source-feasibility group and is not a third participation-composition vote",
-            },
+            {"issue": 1108, "reason": "directional aggressor-flow/absorption is a terminal flow family, not an independent participation-composition vote"},
+            {"issue": 957, "reason": "cash-venue fragmentation is source-feasibility evidence, not a third participation-composition vote"},
         ],
-        "leave_one_group_out": leave_one_group_out,
+        "leave_one_group_out": leave_one,
         "gates": gates,
         "gates_passed": sum(gates.values()),
         "gates_total": len(gates),
-        "performance": null_strategy_metrics(),
+        "performance": null_metrics(),
         "closed_rescue_surface": [
             "spot/perpetual quote-volume shares and futures-to-spot activity ratios",
             "volume/trade-count participation ratios and turnover-fragmentation re-expressions",
@@ -337,7 +251,7 @@ def main() -> None:
     evidence_raw = canonical_json(evidence)
     (OUT / "evidence.json").write_bytes(evidence_raw)
 
-    report = f"""# Participation-composition programme closure 1H\n\n"
+    report = f"# Participation-composition programme closure 1H\n\n"
     report += f"- exact head: `{exact_head}`\n"
     report += f"- canonical main: `{BASE_MAIN}`\n"
     report += f"- candidate/grid: `{CANDIDATE_COUNT}/{PARAMETER_GRID_COUNT}`; historical candidates bound: `{HISTORICAL_CANDIDATES}`\n"
@@ -347,31 +261,31 @@ def main() -> None:
     report += f"- verdict: `{VERDICT}`\n\n"
     report += "## Strategy conclusion\n\n"
     report += (
-        "The own-market participation/cost-basis programme and the independent perpetual-versus-spot "
-        "activity-share experiment contain no unchanged bilateral mechanism that survives training transport, "
-        "dependence-aware uncertainty, temporal breadth/concentration and execution-delay requirements. "
-        "The strongest historical OOS point estimate (#642) remains explicitly recorded, but negative bilateral "
-        "training economics, only 6/12 profitable OOS folds and non-positive dependence lower bounds prohibit promotion. "
-        "The fresh leverage-dominance feature is wrong-signed in BTC and ETH and failed before OOS.\n\n"
+        "The own-market participation/cost-basis programme and independent perpetual-versus-spot activity-share experiment "
+        "contain no unchanged bilateral mechanism surviving training transport, dependence-aware uncertainty, temporal breadth/concentration "
+        "and execution-delay requirements. The strongest historical OOS point estimate (#642) remains explicit, but negative bilateral "
+        "training economics, 6/12 profitable OOS folds and non-positive dependence lower bounds prohibit promotion. The fresh leverage-dominance "
+        "feature is wrong-signed in BTC and ETH and failed before OOS.\n\n"
     )
     report += "Closure-level train/OOS/full economics, benchmark comparison, turnover, drawdown and edge-per-turnover are null because this run creates no executable path.\n"
     report_raw = report.encode()
     (OUT / "report.md").write_bytes(report_raw)
 
-    evidence_digest = sha256(evidence_raw)
-    report_digest = sha256(report_raw)
-    (OUT / "evidence.sha256").write_text(evidence_digest + "\n")
-    (OUT / "report.sha256").write_text(report_digest + "\n")
+    evidence_sha = digest(evidence_raw)
+    report_sha = digest(report_raw)
+    (OUT / "evidence.sha256").write_text(evidence_sha + "\n")
+    (OUT / "report.sha256").write_text(report_sha + "\n")
     manifest = {
         "family_id": FAMILY_ID,
         "exact_head": exact_head,
-        "evidence_sha256": evidence_digest,
-        "report_sha256": report_digest,
+        "evidence_sha256": evidence_sha,
+        "report_sha256": report_sha,
         "files": ["evidence.json", "report.md", "evidence.sha256", "report.sha256"],
     }
     manifest_raw = canonical_json(manifest)
+    manifest_sha = digest(manifest_raw)
     (OUT / "manifest.json").write_bytes(manifest_raw)
-    (OUT / "manifest.sha256").write_text(sha256(manifest_raw) + "\n")
+    (OUT / "manifest.sha256").write_text(manifest_sha + "\n")
 
     print(json.dumps({
         "family_id": FAMILY_ID,
@@ -379,9 +293,9 @@ def main() -> None:
         "support": "0/2",
         "gates": f"{sum(gates.values())}/{len(gates)}",
         "verdict": VERDICT,
-        "evidence_sha256": evidence_digest,
-        "report_sha256": report_digest,
-        "manifest_sha256": sha256(manifest_raw),
+        "evidence_sha256": evidence_sha,
+        "report_sha256": report_sha,
+        "manifest_sha256": manifest_sha,
     }, sort_keys=True))
 
 
