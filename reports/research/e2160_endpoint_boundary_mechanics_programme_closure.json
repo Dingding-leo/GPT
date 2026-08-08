@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "family_id": "causal-e2160-endpoint-boundary-mechanics-programme-closure-1h-v1",
+  "classification": "zero-candidate immutable-evidence strategy-family closure",
+  "base_main": "5a0fcc97d1a882f8223656c51f5bb8055f534e38",
+  "bar": "1H",
+  "canonical_fee_bps_one_way": 5.0,
+  "new_candidate_count": 0,
+  "new_parameter_grid_count": 0,
+  "new_market_rows": 0,
+  "new_labels": 0,
+  "new_oos_access": 0,
+  "historical_candidate_executions": 6,
+  "groups": [
+    {
+      "group": "A",
+      "mechanism": "onset margin-source attribution",
+      "issues": [702],
+      "prs": [703],
+      "candidate_count": 1,
+      "parameter_grid_count": 0,
+      "targets": ["BTC-USDT", "ETH-USDT"],
+      "independently_admissible": false,
+      "terminal_verdict": "reject_exact_trend_onset_margin_source_attribution_selector_family",
+      "oos": {
+        "BTC-USDT": {"candidate_return": -0.0107, "candidate_sharpe": 0.050, "candidate_max_drawdown": -0.1513, "candidate_turnover": 14, "candidate_edge_per_turn_bps": 15.53, "benchmark_return": 1.1968, "benchmark_sharpe": 0.954, "benchmark_max_drawdown": -0.2655, "benchmark_turnover": 45, "benchmark_edge_per_turn_bps": 212.75, "profitable_folds": "1/12", "profitable_years": "1/4", "residual_sharpe": -1.036, "mean_delta_ci95": [-0.6906, 0.0057], "sharpe_delta_ci95": [-2.172, 0.257]},
+        "ETH-USDT": {"candidate_return": 0.6659, "candidate_sharpe": 0.765, "candidate_max_drawdown": -0.2963, "candidate_turnover": 10, "candidate_edge_per_turn_bps": 622.07, "benchmark_return": 0.7452, "benchmark_sharpe": 0.646, "benchmark_max_drawdown": -0.4777, "benchmark_turnover": 30, "benchmark_edge_per_turn_bps": 283.58, "profitable_folds": "3/12", "profitable_years": "2/4", "residual_sharpe": -0.221, "mean_delta_ci95": [-0.5091, 0.3160], "sharpe_delta_ci95": [-0.936, 1.086]}
+      },
+      "train": null,
+      "full": null,
+      "decisive_failure": "BTC OOS return/Sharpe/edge collapsed versus B1; bilateral breadth and dependence lower bounds failed."
+    },
+    {
+      "group": "B",
+      "mechanism": "exit margin-source attribution with fresh BCH/LINK replication",
+      "issues": [715, 761],
+      "prs": [716, 762],
+      "candidate_count": 2,
+      "parameter_grid_count": 0,
+      "independently_admissible": false,
+      "primary_oos": {
+        "BTC-USDT": {"candidate_return": 1.1682, "benchmark_return": 1.1968, "candidate_sharpe": 0.939, "benchmark_sharpe": 0.954, "candidate_max_drawdown": -0.2575, "benchmark_max_drawdown": -0.2655, "candidate_turnover": 39, "benchmark_turnover": 45, "candidate_edge_per_turn_bps": 242.32, "benchmark_edge_per_turn_bps": 212.75, "profitable_folds": "5/12", "profitable_years": "3/4", "residual_sharpe": -0.180, "mean_delta_ci95": [-0.0241, 0.0105], "sharpe_delta_ci95": [-0.075, 0.030]},
+        "ETH-USDT": {"candidate_return": 0.6863, "benchmark_return": 0.7452, "candidate_sharpe": 0.619, "benchmark_sharpe": 0.646, "candidate_max_drawdown": -0.4729, "benchmark_max_drawdown": -0.4777, "candidate_turnover": 27, "benchmark_turnover": 30, "candidate_edge_per_turn_bps": 303.08, "benchmark_edge_per_turn_bps": 283.58, "profitable_folds": "6/12", "profitable_years": "3/4", "residual_sharpe": -0.306, "mean_delta_ci95": [-0.0483, 0.0186], "sharpe_delta_ci95": [-0.111, 0.040]}
+      },
+      "fresh_replication_oos": {
+        "BCH-USDT": {"candidate_return": -0.2648, "benchmark_return": -0.2501, "candidate_sharpe": 0.150, "benchmark_sharpe": 0.159, "candidate_max_drawdown": -0.6302, "benchmark_max_drawdown": -0.6252, "candidate_turnover": 49, "benchmark_turnover": 53, "candidate_edge_per_turn_bps": 57.13, "benchmark_edge_per_turn_bps": 55.70, "profitable_folds": "4/12", "profitable_years": "1/4", "positive_fold_concentration": 0.6192, "residual_sharpe": -0.093, "mean_delta_ci95": [-0.0491, 0.0459], "sharpe_delta_ci95": [-0.078, 0.074], "full_return": -0.1336},
+        "LINK-USDT": {"candidate_return": 0.3443, "benchmark_return": 0.2065, "candidate_sharpe": 0.485, "benchmark_sharpe": 0.431, "candidate_max_drawdown": -0.6162, "benchmark_max_drawdown": -0.6162, "candidate_turnover": 32, "benchmark_turnover": 33, "candidate_edge_per_turn_bps": 300.71, "benchmark_edge_per_turn_bps": 258.57, "profitable_folds": "3/12", "profitable_years": "2/4", "positive_fold_concentration": 0.4741, "residual_sharpe": 1.542, "mean_delta_ci95": [-0.0000, 0.1158], "sharpe_delta_ci95": [-0.000, 0.178], "full_return": -0.6079}
+      },
+      "train": null,
+      "decisive_failure": "Primary BTC/ETH underperformed B1 on return and Sharpe; fresh BCH/LINK replication passed 0/2 markets and both full returns were negative."
+    },
+    {
+      "group": "C",
+      "mechanism": "endpoint-margin change / acceleration",
+      "issues": [728, 730, 753],
+      "prs": [729, 731, 754],
+      "candidate_count": 3,
+      "parameter_grid_count": 0,
+      "independently_admissible": false,
+      "representative_fixed_duration_oos": {
+        "BTC-USDT": {"candidate_return": 1.2113, "benchmark_return": 1.1968, "candidate_sharpe": 0.975, "benchmark_sharpe": 0.954, "candidate_max_drawdown": -0.2268, "benchmark_max_drawdown": -0.2655, "candidate_turnover": 50, "benchmark_turnover": 45, "profitable_folds": "5/12", "profitable_years": "3/4", "residual_sharpe": -0.010, "mean_delta_ci95": [-0.0499, 0.0416], "sharpe_delta_ci95": [-0.126, 0.144]},
+        "ETH-USDT": {"candidate_return": 0.5993, "benchmark_return": 0.7452, "candidate_sharpe": 0.583, "benchmark_sharpe": 0.646, "candidate_max_drawdown": -0.4631, "benchmark_max_drawdown": -0.4777, "candidate_turnover": 34, "benchmark_turnover": 30, "profitable_folds": "6/12", "profitable_years": "2/4", "residual_sharpe": -0.623, "mean_delta_ci95": [-0.0832, 0.0345], "sharpe_delta_ci95": [-0.171, 0.079]}
+      },
+      "daily_confirmation_oos": {
+        "BTC-USDT": {"candidate_return": 0.7097, "benchmark_return": 1.2362, "candidate_sharpe": 0.882, "benchmark_sharpe": 0.972, "candidate_max_drawdown": -0.2851, "benchmark_max_drawdown": -0.2587, "candidate_turnover": 328, "benchmark_turnover": 45, "candidate_edge_per_turn_bps": 21.64, "benchmark_edge_per_turn_bps": 274.71, "profitable_folds": "4/12", "profitable_years": "1/4", "residual_sharpe": -0.496},
+        "ETH-USDT": {"candidate_return": 0.9596, "benchmark_return": 0.8691, "candidate_sharpe": 0.921, "benchmark_sharpe": 0.698, "candidate_max_drawdown": -0.2306, "benchmark_max_drawdown": -0.4725, "candidate_turnover": 272, "benchmark_turnover": 31, "candidate_edge_per_turn_bps": 35.28, "benchmark_edge_per_turn_bps": 280.36, "profitable_folds": "6/12", "profitable_years": "2/4", "residual_sharpe": -0.120}
+      },
+      "decisive_failure": "No preregistered member passed bilaterally; fixed-duration repair failed ETH and dependence/breadth, while daily confirmation exploded turnover and destroyed edge per turnover."
+    },
+    {
+      "group": "D",
+      "mechanism": "boundary occupancy / clearance",
+      "issues": [798],
+      "prs": [800],
+      "candidate_count": 0,
+      "parameter_grid_count": 0,
+      "independently_admissible": false,
+      "strategy_economics": null,
+      "training_information": {
+        "BTC-USDT": {"opportunities": 85, "gross_rho": 0.1652, "gross_rho_ci95": [-0.1720, 0.4488], "adverse_rho": 0.2397, "adverse_rho_ci95": [-0.0880, 0.5166], "gross_breadth": "1/6,1/3", "adverse_breadth": "3/6,1/3", "occupancy_iqr": 0.0417},
+        "ETH-USDT": {"opportunities": 85, "gross_rho": 0.1049, "gross_rho_ci95": [-0.1262, 0.3313], "adverse_rho": 0.1124, "adverse_rho_ci95": [-0.1579, 0.3957], "gross_breadth": "3/6,2/3", "adverse_breadth": "2/6,1/3", "occupancy_iqr": 0.2500}
+      },
+      "terminal_verdict": "reject_trend_boundary_occupancy_opportunity_premise",
+      "decisive_failure": "All dependence-aware intervals crossed zero; state balance and temporal breadth failed; 0/2 markets passed."
+    },
+    {
+      "group": "E",
+      "mechanism": "known future lag-endpoint roll support",
+      "issues": [1100],
+      "prs": [1101],
+      "candidate_count": 0,
+      "parameter_grid_count": 0,
+      "independently_admissible": false,
+      "strategy_economics": null,
+      "exact_evidence_head": "e801c1f736e22df16b6a64c6739fa5afc3d56ca6",
+      "workflow": 31247267804,
+      "artifact": 9018928839,
+      "evidence_sha256": "9c93ee81b21c695e80de8506a2b17f4034c9cf06b90a2d98bfbc83352d9e693e",
+      "training_information": {
+        "DOGE-USDT": {"opportunities": 223, "net_rho": 0.000238, "net_slope": -0.002462, "net_tercile_bps": -74.63, "adverse_rho": 0.002244, "adverse_slope": -0.001184, "profitable_slope_folds": "2/4 net; 1/4 adverse", "delayed_net_tercile_bps": -50.77},
+        "TRX-USDT": {"opportunities": 304, "net_rho": -0.000507, "net_slope": 0.000713, "net_tercile_bps": 0.17, "adverse_rho": 0.016847, "adverse_slope": 0.001837, "profitable_slope_folds": "3/4 net; 3/4 adverse", "lower_margin_net_tercile_bps": -10.89, "delayed_net_tercile_bps": -4.70}
+      },
+      "terminal_verdict": "reject_causal_own_price_e2160_lag_endpoint_roll_support_information_premise_1h_v1",
+      "decisive_failure": "DOGE was directionally adverse; TRX had no robust net-return dependence and failed low-margin and +1H transport."
+    }
+  ],
+  "programme_gates": {
+    "1_exact_reconciliation": true,
+    "2_any_independently_admissible_group": false,
+    "3_positive_train_oos_full_bilateral_executable_group": false,
+    "4_bilateral_b1_return_and_sharpe_superiority": false,
+    "5_bilateral_drawdown_turnover_edge_per_turnover_improvement_exists": true,
+    "6_bilateral_fold_year_breadth": false,
+    "7_bilateral_positive_dependence_lower_bounds": false,
+    "8_all_applicable_delay_transport_supportive": false,
+    "9_source_attribution_survives_bch_link": false,
+    "10_boundary_information_survives_doge_trx": false,
+    "11_leave_one_group_out_retains_support": false,
+    "12_no_support_requires_forbidden_rescue": true
+  },
+  "programme_gates_passed": 3,
+  "programme_gates_total": 12,
+  "leave_one_group_out_independently_admissible_counts": {"without_A": 0, "without_B": 0, "without_C": 0, "without_D": 0, "without_E": 0},
+  "leave_one_cohort_out_independently_admissible_counts": {"without_BTC_ETH_development": 0, "without_BCH_LINK_replication": 0, "without_DOGE_TRX_roll_support": 0},
+  "mechanism_class_support": {"crossing_source_decomposition": 0, "margin_derivative_acceleration": 0, "boundary_occupancy": 0, "known_denominator_roll": 0},
+  "closure_strategy_metrics": {"train_return": null, "train_sharpe": null, "oos_return": null, "oos_sharpe": null, "full_return": null, "full_sharpe": null, "benchmark_comparison": null, "turnover": null, "fee_drag": null, "max_drawdown": null, "edge_per_turnover": null, "fold_year_breadth": null, "uncertainty": null},
+  "verdict": "reject_reopening_completed_e2160_endpoint_boundary_mechanics_1h_v1",
+  "closed_rescue_surface": ["current-leg versus lag-leg ratios/signs/dominance", "12H/24H/48H/168H endpoint-source decomposition", "margin level/slope/acceleration/second-difference thresholds", "lag-endpoint roll horizon/sign/scaling changes", "boundary occupancy/distance/clearance transforms", "endpoint-driven onset veto/exit bridge/partial sizing/checkpoint/hysteresis wrappers", "post-hoc combinations of rejected boundary mechanics", "single-market promotion or target substitution"],
+  "canonical_mutation": false,
+  "paper_authorized": false,
+  "live_authorized": false
+}
