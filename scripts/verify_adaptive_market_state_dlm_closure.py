@@ -39,16 +39,22 @@ def main() -> None:
     assert pillars["target_information"]["new_information_object_remaining"] is False
     assert pillars["aggregate_state"]["new_information_object_remaining"] is False
     assert pillars["adaptive_model"]["completed_positive_bilateral_incremental_evidence"] is False
-    assert pillars["decision_turnover"]["completed_positive_bilateral_incremental_evidence"] is False
+    assert (
+        pillars["decision_turnover"]["completed_positive_bilateral_incremental_evidence"]
+        is False
+    )
 
     gates = evidence["retention_gates"]
-    assert gates == {
-        "g1_materially_new_information_object_remains": False,
-        "g2_adaptive_or_decision_component_has_completed_bilateral_positive_incremental_value": False,
-        "g3_case_does_not_depend_on_combining_rejected_mechanisms": False,
-        "g4_aggregate_state_respects_same_target_causal_boundary": True,
-        "g5_leave_one_evidence_group_out_retains_material_independent_rationale": False,
-    }
+    assert gates["g1_materially_new_information_object_remains"] is False
+    assert (
+        gates[
+            "g2_adaptive_or_decision_component_has_completed_bilateral_positive_incremental_value"
+        ]
+        is False
+    )
+    assert gates["g3_case_does_not_depend_on_combining_rejected_mechanisms"] is False
+    assert gates["g4_aggregate_state_respects_same_target_causal_boundary"] is True
+    assert gates["g5_leave_one_evidence_group_out_retains_material_independent_rationale"] is False
     assert evidence["retention_gates_passed"] == 1
     assert evidence["retention_gate_count"] == 5
     assert set(evidence["leave_one_evidence_group_out"].values()) == {"reject"}
