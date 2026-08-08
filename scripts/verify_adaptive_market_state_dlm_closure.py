@@ -38,7 +38,8 @@ def main() -> None:
     assert pillars["target_information"]["new_information_object_remaining"] is False
     assert pillars["aggregate_state"]["new_information_object_remaining"] is False
     assert pillars["adaptive_model"]["completed_positive_bilateral_incremental_evidence"] is False
-    decision_gate = pillars["decision_turnover"]["completed_positive_bilateral_incremental_evidence"]
+    decision_turnover = pillars["decision_turnover"]
+    decision_gate = decision_turnover["completed_positive_bilateral_incremental_evidence"]
     assert decision_gate is False
 
     gates = evidence["retention_gates"]
