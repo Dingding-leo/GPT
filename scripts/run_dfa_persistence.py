@@ -99,7 +99,7 @@ def _fetch(inst_id: str) -> object:
         limit=100,
         pause_seconds=0.12,
         timeout=20.0,
-        safety_pages=2,
+        safety_pages=64,
     )
 
 
